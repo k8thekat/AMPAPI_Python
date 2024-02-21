@@ -3,6 +3,9 @@ from typing import Union
 from dataclass_wizard import fromdict
 from .types import *
 from .base import Base
+from .bridge import Bridge
+
+import pprint
 
 __all__ = ("Core",)
 
@@ -168,7 +171,7 @@ class Core(Base):
         await self._call_api('Core/EndUserSession', parameters)
         return
 
-    async def getActiveAMPSessions(self) -> Session | str | bool | int | None:
+    async def getActiveAMPSessions(self) -> list[Session] | str | bool | int | None:
         """
         Returns currently active AMP Sessions.\n
         **Requires ADS**
@@ -177,14 +180,14 @@ class Core(Base):
             Session | str | bool | int | None: Returns a dataclass Session.
                 See `types.py -> Session`
         """
-        if not isinstance(self, Controller):
-            return self.ADS_ONLY
+        # if not isinstance(self, Controller):
+        #     return self.ADS_ONLY
 
         await self._connect()
         result = await self._call_api('Core/GetActiveAMPSessions')
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return Session(**result)  # type:ignore
+        return list(fromdict(Session, user) for user in result)
 
     async def getAMPUserInfo(self, name: str) -> User | str | bool | dict | None:
         """

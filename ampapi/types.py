@@ -6,6 +6,23 @@ from datetime import datetime
 from enum import Enum
 
 
+@dataclass()
+class APIparams():
+    """
+    A class to hold Login information for AMP API.\n
+    **`DO NOT SET OR UPDATE _session_id`** The API handle's this.
+
+    """
+
+    def __init__(self, url: str, user: str, password: str, use_2fa: bool = False, token: str = ""):
+        self.url: str = url
+        self.user: str = user
+        self.password: str = password
+        self.use_2fa: bool = use_2fa
+        self.token: str = token
+        self._session_id: str = "0"
+
+
 class State_enum(Enum):
     """
     Represents the state of an instance
@@ -77,6 +94,9 @@ class Login_UserInfo():
         Returns:
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
+        if isinstance(self._LastLogin, datetime):
+            return self._LastLogin
+
         return datetime.fromtimestamp(int(self._LastLogin[6:-2]) / 1000)
 
     @LastLogin.setter
@@ -223,6 +243,10 @@ class Console_Entries():
         Returns:
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
+
+        if isinstance(self._Timestamp, datetime):
+            return self._Timestamp
+
         return datetime.fromtimestamp(int(self._Timestamp[6:-2]) / 1000)
 
     @Timestamp.setter
@@ -360,6 +384,10 @@ class Controller():
         Returns:
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
+
+        if isinstance(self._LastUpdated, datetime):
+            return self._LastUpdated
+
         return datetime.fromtimestamp(int(self._LastUpdated[6:-2]) / 1000)
 
     @LastUpdated.setter
@@ -468,6 +496,10 @@ class User():
         Returns:
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
+
+        if isinstance(self._LastLogin, datetime):
+            return self._LastLogin
+
         return datetime.fromtimestamp(int(self._LastLogin[6:-2]) / 1000)
 
     @LastLogin.setter
@@ -554,6 +586,10 @@ class Directory():
             datetime | str: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
                 `Will return str on windowsOS if out of range(1970-2038)`
         """
+
+        if isinstance(self._Created, datetime):
+            return self._Created
+
         try:
             return datetime.fromtimestamp(int(self._Created[6:-2]) / 1000)
         except OSError:
@@ -573,6 +609,10 @@ class Directory():
             datetime | str: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
                 `Will return str on windowsOS if out of range(1970-2038)`
         """
+
+        if isinstance(self._Modified, datetime):
+            return self._Modified
+
         try:
             return datetime.fromtimestamp(int(self._Modified[6:-2]) / 1000)
         except OSError:
@@ -605,6 +645,10 @@ class Session():
         Returns:
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
+
+        if isinstance(self._StartTime, datetime):
+            return self._StartTime
+
         return datetime.fromtimestamp(int(self._StartTime[6:-2]) / 1000)
 
     @StartTime.setter
@@ -619,6 +663,10 @@ class Session():
         Returns:
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
+
+        if isinstance(self._LastActivity, datetime):
+            return self._LastActivity
+
         return datetime.fromtimestamp(int(self._LastActivity[6:-2]) / 1000)
 
     @LastActivity.setter

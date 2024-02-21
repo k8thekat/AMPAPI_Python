@@ -3,3 +3,5 @@ build/*
 *.egg-info
 */__pycache__
 *.bash
+local.py
+.vscode/settings.json

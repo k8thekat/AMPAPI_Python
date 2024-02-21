@@ -7,5 +7,4 @@ __all__ = ("EmailSenderPlugin",)
 
 
 class EmailSenderPlugin(Base):
-    def __init__(self):
-        print()
+    pass

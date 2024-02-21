@@ -26,8 +26,6 @@ __license__ = "GNU"
 __version__ = "0.0.23a"
 __credits__ = "AMP by CubeCoders and associates."
 
-
-from .base import *
 from .util import *
 from .filemanager import *
 from .filebackup import *
