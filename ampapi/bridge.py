@@ -1,10 +1,11 @@
 from typing import Self
-from .types import APIparams
+from .types import APIParams
+from dataclasses import fields
 
 __all__ = ("Bridge",)
 
 
-class Bridge():
+class Bridge(APIParams):
     """
     Handles the API login credentials for connecting to AMP.
 
@@ -13,13 +14,13 @@ class Bridge():
                 `APICore = Core() #this will pull login details from the Bridge class`
 
     """
-    apiparams: APIparams
+    apiparams: APIParams
 
     @classmethod
     def get_bridge(cls) -> Self:
         """
         Retrieves an existing Bridge class object.\n
-        **`DO NOT CALL THIS METHOD OUTSIDE OF API CLASSES`**
+        **`DO NOT CALL THIS METHOD OUTSIDE OF AN API CLASS (ADSModule, Core, etc..)`**
 
         Raises:
             ValueError: If the Bridge class does not exist.
@@ -31,10 +32,20 @@ class Bridge():
             raise ValueError("Failed to setup connection. You need to initiate `<class Bridge>` first.")
         return cls._instance
 
-    def __new__(cls, apiparams: APIparams | None = None, *args, **kwargs) -> Self | None:
+    def __new__(cls, api_params: APIParams | None = None, *args, **kwargs) -> Self | None:
         if not hasattr(cls, "_instance"):
             cls._instance = super(Bridge, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def __init__(self, apiparams: APIparams, *args, **kwargs) -> None:
-        self.apiparams: APIparams = apiparams
+    def __init__(self, api_params: APIParams, *args, **kwargs) -> None:
+        print("DEBUG", "Bridge __init__()")
+        self.api_params: APIParams = api_params
+        # We parse the api params for easier usage.
+        for field in fields(api_params):
+            setattr(self, field.name, getattr(self.api_params, field.name))
+
+    # @property
+    # def apiparams(self):
+    #     if isinstance(self, APIparams):
+    #         for field in fields(self):
+    #             setattr(self, field.name, getattr(self, field.name))

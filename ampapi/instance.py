@@ -1,9 +1,9 @@
-from ampapi.types import Instance
-from ampapi.adsmodule import ADSModule
-from ampapi.core import Core
-from ampapi.emailsender import EmailSenderPlugin
-from ampapi.filebackup import LocalFileBackupPlugin
-from ampapi.filemanager import FileManagerPlugin
+from .types import Instance
+from .adsmodule import ADSModule
+from .core import Core
+from .emailsender import EmailSenderPlugin
+from .filebackup import LocalFileBackupPlugin
+from .filemanager import FileManagerPlugin
 
 
 class AMPInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlugin, Instance):

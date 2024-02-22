@@ -21,6 +21,7 @@ class Base():
 
     """
     _logger: logging.Logger = logging.getLogger()
+    InstanceId: str = "0"
 
     # self.FAILED_LOGIN: str = ""
     NO_DATA: str = "Failed to recieve any data from post request."
@@ -50,32 +51,38 @@ class Base():
             ValueError: If 2FA Token is not provided and `_use_2fa == True`.
             ValueError: If 2FA Token is not enclosed in single(',') or double(",") quotes.
         """
-        if bridge.apiparams is not None:
-            # We use this later on in _connect to update `apiparams._session_id`;
-            # so all connections will use the same session id (if possible)
-            self._bridge: Bridge = bridge
+        # if bridge.apiparams is not None:
 
-            self._amp_user: str = bridge.apiparams.user
-            self._amp_password: str = bridge.apiparams.password
-            self._url: str = bridge.apiparams.url
-            self._use_2fa: bool = bridge.apiparams.use_2fa
-            self._session_id: str = bridge.apiparams._session_id
+        # We use this later on in _connect to update `_session_id`;
+        # so all connections will use the same session id (if possible)
+        self._bridge: Bridge = bridge  # Just in case I need the entire object.
 
-            if self._use_2fa == True:
-                if self._amp_2fa_token == "":
-                    raise ValueError("You must provide a 2FA Token if you are using 2FA.")
-                if self._amp_2fa_token.startswith(("'", '"')) == False or self._amp_2fa_token.endswith(("'", '"')) == False:
-                    raise ValueError("2FA Token must be enclosed in quotes.")
+        # TODO - Possibly pull from bridge and do not set self attributes.
+        self._amp_user: str = bridge.user
+        self._amp_password: str = bridge.password
+        self._url: str = bridge.url
+        self._use_2fa: bool = bridge.use_2fa
+        # self._sessionId: str = bridge._session_id
 
-            self._amp_2fa_token: str = bridge.apiparams.token
-            # print(self._amp_user, self._amp_password, self._url, self._use_2fa, self._amp_2fa_token)
+        # TODO - New Session handling
+        # A way to manage Instance ID -> Session ID correlation
+        self._sessions: dict[str, str] = bridge._sessions
+
+        if self._use_2fa == True:
+            if self._amp_2fa_token == "":
+                raise ValueError("You must provide a 2FA Token if you are using 2FA.")
+            if self._amp_2fa_token.startswith(("'", '"')) == False or self._amp_2fa_token.endswith(("'", '"')) == False:
+                raise ValueError("2FA Token must be enclosed in quotes.")
+
+        self._amp_2fa_token: str = bridge.token
+        # print(self._amp_user, self._amp_password, self._url, self._use_2fa, self._amp_2fa_token)
 
     def parse_data(self, data: Controller | Instance) -> Self:
         for field in fields(data):
             setattr(self, field.name, getattr(data, field.name))
         return self
 
-    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> None | str | bool | dict | list[Any]:
+    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> None | str | bool | dict[str, Any] | list[Any]:
         """
         Uses aiohttp.ClientSession() post request to access the AMP API endpoints. \n
         Will automatically populate the `SESSIONID` parameter if it is not provided.
@@ -100,8 +107,13 @@ class Base():
         if parameters == None:
             parameters = {}
 
-        if self._session_id != "0":
-            parameters["SESSIONID"] = self._session_id
+        # TODO - New sessionId implementation
+        amp_session_id = self._bridge._sessions.get(self.InstanceId, "0")
+        if amp_session_id != "0":
+            parameters["SESSIONID"] = amp_session_id
+
+        # if self._session_id != "0":
+        #     parameters["SESSIONID"] = self._session_id
 
         json_data = json.dumps(parameters)
 
@@ -159,7 +171,9 @@ class Base():
                 data = post_req_json["Title"]
                 if isinstance(data, str) and data == "Unauthorized Access":
                     self._logger.error(f'{api} failed because of {post_req_json}')
-                    self._session_id = "0"
+                    # self._session_id = "0"
+                    # TODO - New sessionID implementation.
+                    self._bridge._sessions.update({self.InstanceId: "0"})
                     raise PermissionError(self.UNAUTHORIZED_ACCESS)
             else:
                 return post_req_json
@@ -179,9 +193,18 @@ class Base():
             Otherwise returns true and sets the class's sessionID value.
         """
         amp_2fa_code: Union[str, TOTP] = ""
-        if isinstance(self._session_id, str) == False:
-            raise ValueError("You must provide a session id as a string.")
-        if self._session_id == "0":
+
+        # TODO - New Session handling
+        # get our InstanceID and use it to key for session_id
+        sessionID: str = self._sessions.get(self.InstanceId, "0")
+
+        if isinstance(sessionID, str) == False:
+            raise ValueError(f"You must provide a session id as a string. {sessionID}")
+
+        # if isinstance(self._session_id, str) == False:
+        #     raise ValueError("You must provide a session id as a string.")
+        # if self._session_id == "0":
+        if sessionID == "0":
             if self._use_2fa == True:
                 try:
                     # Handles time based 2Factory Auth Key/Code
@@ -206,9 +229,14 @@ class Base():
                     elif isinstance(result, dict):
                         login = LoginResults(**result)
                         # This is local for any re-occurence of class usage.
-                        self._session_id = login.sessionID
-                        # This is the Bridge object; so any other API class will use an existing sessionID.
-                        self._bridge.apiparams._session_id = login.sessionID
+                        # self._session_id = login.sessionId
+
+                        # This is the Bridge object; so any other API class will use an existing sessionId.
+                        # self._bridge.apiparams._session_id = login.sessionId
+
+                        # TODO - New Session handling
+                        # This is our new sessions table to correlate InstanceId to a sessionId.
+                        self._bridge._sessions.update({self.InstanceId: login.sessionID})
                         return login
 
                     else:
@@ -217,7 +245,7 @@ class Base():
                 except Exception as e:
                     self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
 
-    async def callEndPoint(self, api: str, parameters: None | dict[str, Any] = None) -> list | dict | str | bool | int | None:
+    async def call_end_point(self, api: str, parameters: None | dict[str, Any] = None) -> list | dict | str | bool | int | None:
         """
         Universal API method for calling any API endpoint. Some API endpoints require ADS and some may require an Instance ID. \n
 

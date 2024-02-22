@@ -8,6 +8,10 @@ __all__ = ("Core",)
 
 
 class Core(Base):
+    """
+    Contains the base functions for any `/API/Core/` AMP API endpoints.
+
+    """
     async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults | str | dict[str, Any] | list | bool | int | None:
         """
         AMP API login function. \n
@@ -132,9 +136,10 @@ class Core(Base):
         """
         await self._connect()
         result = await self._call_api('Core/GetUserList')
-        if isinstance(result, dict):
+        if isinstance(result, list):
             # TODO- Needs to be validated.
-            return Players(data=result)
+            return list(Players(data=player) for player in result)
+            # return Players(data=result)
         return result
 
     async def get_schedule_data(self) -> ScheduleData | str | dict[str, Any] | list | bool | int | None:
@@ -162,9 +167,6 @@ class Core(Base):
         Returns:
             None: ""
         """
-        if not isinstance(self, Controller):
-            return self.ADS_ONLY
-
         await self._connect()
         parameters = {
             'Id': session_id
@@ -181,9 +183,6 @@ class Core(Base):
             Session | str | dict[str, Any] | list | bool | int | None: Returns a dataclass Session.
                 See `types.py -> Session`
         """
-        # if not isinstance(self, Controller):
-        #     return self.ADS_ONLY
-
         await self._connect()
         result = await self._call_api('Core/GetActiveAMPSessions')
         if isinstance(result, list):

@@ -7,4 +7,8 @@ __all__ = ("EmailSenderPlugin",)
 
 
 class EmailSenderPlugin(Base):
+    """
+    Contains the base functions for any `/API/EmailSenderPlugin/` AMP API endpoints.
+
+    """
     pass

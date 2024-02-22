@@ -8,7 +8,11 @@ __all__ = ("FileManagerPlugin",)
 
 
 class FileManagerPlugin(Base):
-    async def copyFile(self, source: str, destination: str) -> ActionResult | str | bool | int | None:
+    """
+    Contains the base functions for any `/API/FileManagerPlugin/` AMP API endpoints.
+
+    """
+    async def copy_file(self, source: str, destination: str) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Moves a file from the source directory to the destination. The path is relative to the Server/Instance home directory.\n
             Example `await Instance.copyFile("eula.txt", "test")` would move `/eula.txt` to `/test/eula.txt`
@@ -19,7 +23,7 @@ class FileManagerPlugin(Base):
             destination (str): Similar to source; do not include the file name. (eg. "test")
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -28,11 +32,11 @@ class FileManagerPlugin(Base):
             'TargetDirectory': destination
         }
         result = await self._call_api('FileManagerPlugin/CopyFile', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def renameFile(self, original: str, new: str) -> ActionResult | str | bool | int | None:
+    async def rename_file(self, original: str, new: str) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Changes the name of a file. \n
             Path's are absolute and relative to the Instances home directory. Do not include the (`/`)
@@ -42,7 +46,7 @@ class FileManagerPlugin(Base):
             new (str): The file name to be changed; no path needed. (eg. "renamed_myfile.txt")
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
             See `types.py -> ActionResult`
         """
         await self._connect()
@@ -51,11 +55,11 @@ class FileManagerPlugin(Base):
             'NewFilename': new
         }
         result = await self._call_api('FileManagerPlugin/RenameFile', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def renameDirectory(self, oldDirectory: str, newDirectoryName: str) -> ActionResult | str | bool | int | None:
+    async def rename_directory(self, oldDirectory: str, newDirectoryName: str) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Changes the name of a file.\n
             Path's are absolute and relative to the Instances home directory. Do not include the (`/`)
@@ -65,7 +69,7 @@ class FileManagerPlugin(Base):
             newDirectoryName (str): The name component of the new directory (not the full path).
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -74,11 +78,11 @@ class FileManagerPlugin(Base):
             'newDirectoryName': newDirectoryName
         }
         result = await self._call_api('FileManagerPlugin/RenameDirectory', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def getDirectoryListing(self, directory: str = "") -> list[Directory] | str | bool | int | None:
+    async def get_directory_listing(self, directory: str = "") -> list[Directory] | str | dict[str, Any] | list | bool | int | None:
         """
         Returns a dictionary of the directory's properties and the files contained in the directory and their properties.
 
@@ -86,7 +90,7 @@ class FileManagerPlugin(Base):
             directory (str): Relative to the Server root directory . eg `Minecraft/` - If a file has a similar name it may return the file instead of the directory.
 
         Returns:
-            list[Directory] | str | bool | int | None: Returns a list of Directory dataclasses.
+            list[Directory] | str | dict[str, Any] | list | bool | int | None: Returns a list of Directory dataclasses.
                 See `types.py -> Directory`
         """
 
@@ -95,11 +99,11 @@ class FileManagerPlugin(Base):
             'Dir': directory
         }
         result = await self._call_api('FileManagerPlugin/GetDirectoryListing', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return list(Directory(**directory) for directory in result)
+        if isinstance(result, dict):
+            return list(Directory(**directory) for directory in result)
+        return result
 
-    async def getFileChunk(self, name: str, position: int, length: int) -> FileChunk | str | bool | int | None:
+    async def get_file_chunk(self, name: str, position: int, length: int) -> FileChunk | str | dict[str, Any] | list | bool | int | None:
         """
         Returns a specific section of Base64Data from a file.
 
@@ -109,7 +113,7 @@ class FileManagerPlugin(Base):
             length (int): How far to read from the start position.
 
         Returns:
-            FileChunk | str | bool | int | None: Returns a FileChunk dataclass.
+            FileChunk | str | dict[str, Any] | list | bool | int | None: Returns a FileChunk dataclass.
                 See `types.py -> FileChunk`
         """
         await self._connect()
@@ -119,11 +123,11 @@ class FileManagerPlugin(Base):
             'Length': length
         }
         result = await self._call_api('FileManagerPlugin/GetFileChunk', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return FileChunk(**result)  # type:ignore
+        if isinstance(result, dict):
+            return FileChunk(**result)
+        return result
 
-    async def writeFileChunk(self, filename: str, data: str, offset: int, finalChunk: bool) -> ActionResult | str | bool | int | None:
+    async def write_file_chunk(self, filename: str, data: str, offset: int, finalChunk: bool) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Write data to a file with an offset.
 
@@ -134,7 +138,7 @@ class FileManagerPlugin(Base):
             finalChunk (bool): UNK
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -145,11 +149,11 @@ class FileManagerPlugin(Base):
             "FinalChunk": finalChunk
         }
         result = await self._call_api('FileManagerPlugin/WriteFileChunk', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def trashDirectory(self, dir_name: str) -> ActionResult | str | bool | int | None:
+    async def trash_directory(self, dir_name: str) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Moves a directory to the trash, files must be trashed before they can be `emptied`.\n
         See emptyTrash().
@@ -158,7 +162,7 @@ class FileManagerPlugin(Base):
             dir_name (str): Directory name; relative to the Server/Instance root. Supports pathing. eg `/home/config`
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call. 
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -166,11 +170,11 @@ class FileManagerPlugin(Base):
             'DirectoryName': dir_name
         }
         result = await self._call_api('FileManagerPlugin/TrashDirectory', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def trashFile(self, filename: str) -> ActionResult | str | bool | int | None:
+    async def trash_file(self, filename: str) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Moves a file to the trash, files must be trashed before they can be `emptied`. \n
         See emptyTrash().
@@ -179,7 +183,7 @@ class FileManagerPlugin(Base):
             filename (str): File name; relative to the Server/Instance root. Supports pathing. eg `/home/config`
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call. 
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -187,11 +191,11 @@ class FileManagerPlugin(Base):
             'Filename': filename
         }
         result = await self._call_api('FileManagerPlugin/TrashFile', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def emptyTrash(self, trash_dir: str) -> ActionResult | str | bool | int | None:
+    async def empty_trash(self, trash_dir: str) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Empties a trash bin for the AMP Server/Instance.
 
@@ -200,7 +204,7 @@ class FileManagerPlugin(Base):
             Typically the directory is called `Trashed Files`, it is case sensitive and located in the Server/Instance root directory.
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call. 
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -208,6 +212,6 @@ class FileManagerPlugin(Base):
             'TrashDirectoryName': trash_dir
         }
         result = await self._call_api('FileManagerPlugin/EmptyTrash', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result

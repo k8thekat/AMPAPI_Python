@@ -7,20 +7,18 @@ from enum import Enum
 
 
 @dataclass()
-class APIparams():
+class APIParams():
     """
     A class to hold Login information for AMP API.\n
     **`DO NOT SET OR UPDATE _session_id`** The API handle's this.
 
     """
-
-    def __init__(self, url: str, user: str, password: str, use_2fa: bool = False, token: str = ""):
-        self.url: str = url
-        self.user: str = user
-        self.password: str = password
-        self.use_2fa: bool = use_2fa
-        self.token: str = token
-        self._session_id: str = "0"
+    url: str
+    user: str
+    password: str
+    use_2fa: bool = False
+    token: str = ""
+    _sessions: dict[str, str] = field(init=False, default_factory=dict)
 
 
 class State_enum(Enum):
@@ -456,16 +454,16 @@ class Players():
     """
     Represents the Data returned from the AMP API call `getUserlist()`
     The attributes are not 100% accurate. Used Minecraft Module as a test.
-    `{'6eb7be5e-3d33-4b40-8aab-7889c243cc1a': 'Anth0kage', 'ac2d31c0-1ae6-400e-9748-df40a4d9c7b2': 'Razgro'}`
+    `{'6eb7be5e-3d33-4b40-8aab-7889c243cc1a': 'Anth0kage'}`
 
     """
     id: str = ""
     name: str = ""
 
     def __init__(self, data: dict[str, str]):
-        for key, value in data.items():
-            setattr(self, "id", key)
-            setattr(self, "name", value)
+        for id, name in data.items():
+            setattr(self, "id", id)
+            setattr(self, "name", name)
 
 
 @dataclass()

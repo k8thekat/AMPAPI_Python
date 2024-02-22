@@ -32,6 +32,8 @@ from .filebackup import *
 from .emailsender import *
 from .core import *
 from .adsmodule import *
+from .ads import *
+from .instance import *
 
 from typing import NamedTuple, Literal
 
