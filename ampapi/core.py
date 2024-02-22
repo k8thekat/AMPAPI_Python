@@ -3,15 +3,12 @@ from typing import Union
 from dataclass_wizard import fromdict
 from .types import *
 from .base import Base
-from .bridge import Bridge
-
-import pprint
 
 __all__ = ("Core",)
 
 
 class Core(Base):
-    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults | None | bool | int | str:
+    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults | str | dict[str, Any] | list | bool | int | None:
         """
         AMP API login function. \n
 
@@ -22,7 +19,7 @@ class Core(Base):
             rememberME (bool, optional): Remember me token.. Defaults to False.
 
         Returns:
-            LoginResults | None | bool | int | str: On success returns a LoginResult dataclass.
+            LoginResults | str | dict[str, Any] | list | bool | int | None: On success returns a LoginResult dataclass.
                 See `types.py -> LoginResult`
         """
         parameters = {
@@ -31,25 +28,25 @@ class Core(Base):
             'token': token,
             'rememberMe': rememberME}
         result = await self._call_api('Core/Login', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return fromdict(LoginResults, result)  # type:ignore
+        if isinstance(result, dict):
+            return fromdict(LoginResults, result)
+        return result
 
-    async def getUpdates(self) -> Updates | str | bool | int | None:
+    async def get_updates(self) -> Updates | str | dict[str, Any] | list | bool | int | None:
         """
         Requests the recent entries of the Instance Updates; will acquire all updates from previous API call of `getUpdate()`
 
         Returns:
-            Updates | str | bool | int | None: On success returns a Updates dataclass.
+            Updates | str | dict[str, Any] | list | bool | int | None None: On success returns a Updates dataclass.
                 See `types.py -> Updates`
         """
         await self._connect()
         result = await self._call_api('Core/GetUpdates')
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return fromdict(Updates, result)  # type:ignore
+        if isinstance(result, dict):
+            return fromdict(Updates, result)
+        return result
 
-    async def sendConsoleMessage(self, msg: str) -> None:
+    async def send_console_message(self, msg: str) -> None:
         """
         Sends a string to the Console. (eg `/list`)
 
@@ -61,19 +58,21 @@ class Core(Base):
         await self._call_api('Core/SendConsoleMessage', parameters)
         return
 
-    async def startInstance(self) -> str | dict | list | bool | int | None:
+    async def start_instance(self) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Starts the AMP Server/Instance
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
         await self._connect()
         result = await self._call_api('Core/Start')
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def stopInstance(self) -> None:
+    async def stop_instance(self) -> None:
         """
         Stops the AMP Server/Instance
 
@@ -84,19 +83,21 @@ class Core(Base):
         await self._call_api('Core/Stop')
         return
 
-    async def restartInstance(self) -> str | dict | list | bool | int | None:
+    async def restart_instance(self) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Restarts the AMP Server/Instance
 
         Returns:
-            ActionResult | str | bool | int | None: Results from the API call.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
         await self._connect()
         result = await self._call_api('Core/Restart')
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def killInstance(self) -> None:
+    async def kill_instance(self) -> None:
         """
         Kills the AMP Server/Instance
 
@@ -107,50 +108,50 @@ class Core(Base):
         await self._call_api('Core/Kill')
         return
 
-    async def getStatus(self) -> Status | str | bool | int | None:
+    async def get_status(self) -> Status | str | dict[str, Any] | list | bool | int | None:
         """
         Gets the AMP Server/Instance Status information.
 
         Returns:
-            Status | str | bool | int | None: On success returns a Status dataclass.
+            Status | str | dict[str, Any] | list | bool | int | None: On success returns a Status dataclass.
                 See `types.py -> Status`
         """
         await self._connect()
         result = await self._call_api('Core/GetStatus')
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return fromdict(Status, result)  # type:ignore
+        if isinstance(result, dict):
+            return fromdict(Status, result)
+        return result
 
-    async def getUserList(self) -> Players | str | bool | int | None:
+    async def get_user_list(self) -> Players | str | dict[str, Any] | list | bool | int | None:
         """
         Returns a dictionary of the connected Users to the Server.
 
         Returns:
-            Players | str | bool | int | None: on success returns a Player dataclass.
+            Players | str | dict[str, Any] | list | bool | int | None: on success returns a Player dataclass.
                 See `types.py -> Players`
         """
         await self._connect()
         result = await self._call_api('Core/GetUserList')
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        # TODO- Needs to be validated.
-        return Players(data=result)  # type:ignore
+        if isinstance(result, dict):
+            # TODO- Needs to be validated.
+            return Players(data=result)
+        return result
 
-    async def getScheduleData(self) -> ScheduleData | str | bool | int | None:
+    async def get_schedule_data(self) -> ScheduleData | str | dict[str, Any] | list | bool | int | None:
         """
         Returns a dictionary of the Server/Instance Schedule events and triggers.
 
         Returns:
-            ScheduleData | str | bool | int | None: On success returns a ScheduleData dataclass.
+            ScheduleData | str | dict[str, Any] | list | bool | int | None: On success returns a ScheduleData dataclass.
                 See `types.py -> ScheduleData`
         """
         await self._connect()
         result = await self._call_api('Core/GetScheduleData')
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return fromdict(ScheduleData, result)  # type:ignore
+        if isinstance(result, dict):
+            return fromdict(ScheduleData, result)
+        return result
 
-    async def endUserSession(self, session_id: str) -> str | None:
+    async def end_user_session(self, session_id: str) -> str | None:
         """
         Closes the specified User's session ID to AMP.\n
         **Requires ADS**
@@ -171,13 +172,13 @@ class Core(Base):
         await self._call_api('Core/EndUserSession', parameters)
         return
 
-    async def getActiveAMPSessions(self) -> list[Session] | str | bool | int | None:
+    async def get_active_amp_sessions(self) -> list[Session] | str | dict[str, Any] | list | bool | int | None:
         """
         Returns currently active AMP Sessions.\n
         **Requires ADS**
 
         Returns:
-            Session | str | bool | int | None: Returns a dataclass Session.
+            Session | str | dict[str, Any] | list | bool | int | None: Returns a dataclass Session.
                 See `types.py -> Session`
         """
         # if not isinstance(self, Controller):
@@ -185,11 +186,11 @@ class Core(Base):
 
         await self._connect()
         result = await self._call_api('Core/GetActiveAMPSessions')
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return list(fromdict(Session, user) for user in result)
+        if isinstance(result, list):
+            return list(fromdict(Session, user) for user in result)
+        return result
 
-    async def getAMPUserInfo(self, name: str) -> User | str | bool | dict | None:
+    async def get_amp_user_info(self, name: str) -> User | str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves the AMP User information for the provided username.\n
 
@@ -197,7 +198,7 @@ class Core(Base):
             name (str): AMP User name.
 
         Returns:
-            User | str | bool | dict: On success returns a User dataclass. 
+            User | str | dict[str, Any] | list | bool | int | None: On success returns a User dataclass. 
                 See `types.py -> User`
         """
 
@@ -206,11 +207,11 @@ class Core(Base):
             'Username': name
         }
         result = await self._call_api('Core/GetAMPUserInfo', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return User(**result)  # type:ignore
+        if isinstance(result, dict):
+            return User(**result)
+        return result
 
-    async def currentSessionHasPermission(self, permission_node: str) -> str | bool | dict | list | None:
+    async def current_session_has_permission(self, permission_node: str) -> str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves the current Session IDs permissions. This will differ between the ADS and a Server/Instance.
 
@@ -220,16 +221,18 @@ class Core(Base):
             Supports wildcards `*`. eg `Core.RoleManagement.*`
 
         Returns:
-            str | bool | dict | list | None: On success returns a bool.
+            str | dict[str, Any] | list | bool | int | None: On success returns a bool.
         """
         await self._connect()
         parameters = {
             'PermissionNode': permission_node
         }
         result = await self._call_api('Core/CurrentSessionHasPermission', parameters)
+        if isinstance(result, bool):
+            return result
         return result
 
-    async def getAMPRolePermissions(self, role_id: str) -> str | bool | dict | list | None:
+    async def get_amp_role_permissions(self, role_id: str) -> str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves the AMP Role permission nodes for the provided role ID.
 
@@ -237,38 +240,46 @@ class Core(Base):
             role_id (str): The role ID. eg `5d6566e0-fae2-41d7-bfb6-d21033247f2e`
 
         Returns:
-            str | bool | dict | list | None: On success returns a list containing all the permission nodes for the provided role ID.
+            str | dict[str, Any] | list | bool | int | None: On success returns a list containing all the permission nodes for the provided role ID.
         """
         await self._connect()
         parameters = {
             'RoleId': role_id
         }
         result = await self._call_api("Core/GetAMPRolePermissions", parameters)
+        if isinstance(result, list):
+            return result
         return result
 
-    async def getPermissionsSpec(self) -> str | bool | dict | list | None:
+    async def get_permissions_spec(self) -> str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves the AMP Permissions node tree.
 
         Returns:
-            str | bool | dict | list | None: On success returns a dictionary containing all the permission nodes, descriptions and other attributes.
+            str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing all the permission nodes, descriptions and other attributes.
         """
         await self._connect()
         result = await self._call_api("Core/GetPermissionsSpec")
+        if isinstance(result, dict):
+            return result
         return result
 
-    async def getRoleIds(self) -> str | bool | dict | list | None:
+    async def get_role_ids(self) -> str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves all the Roles AMP currently has and the role IDs.
 
         Returns:
-            Roles | str | bool | dict | list | None: On success returns a Roles dataclass containing all the roles and their IDs. Example below. \n
+            Roles | str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing all the roles and their IDs. \n
+            *Example*
+            `{'00000000-0000-0000-0000-000000000000': 'Default','cb984b09-a1c6-4cc0-b005-df8907f06590': 'Super Admins'}`
         """
         await self._connect()
         result = await self._call_api('Core/GetRoleIds')
+        if isinstance(result, dict):
+            return result
         return result
 
-    async def createRole(self, name: str, as_common_role: bool = False) -> ActionResult | str | bool | dict | list | None:
+    async def create_role(self, name: str, as_common_role: bool = False) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Creates an AMP Role.
 
@@ -277,7 +288,7 @@ class Core(Base):
             as_common_role (bool, optional): A role that everyone has. Defaults to False.
 
         Returns:
-            ActionResult | str | bool | dict | list | None: On success returns a ActionResult dataclass.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: On success returns a ActionResult dataclass.
                 See `types.py -> ActionResult`
 
         """
@@ -287,11 +298,11 @@ class Core(Base):
             'AsCommonRole': as_common_role
         }
         result = await self._call_api('Core/CreateRole', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def getRole(self, role_id: str) -> Role | str | bool | dict | list | None:
+    async def get_role(self, role_id: str) -> Role | str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves the AMP Role information for the provided role ID.
 
@@ -299,7 +310,7 @@ class Core(Base):
             role_id (str): The role ID to get information for.
 
         Returns:
-            str | bool | dict: On success returns a Role dataclass.
+            Role | str | dict[str, Any] | list | bool | int | None: On success returns a Role dataclass.
                 See `types.py -> Role`
 
         """
@@ -308,11 +319,11 @@ class Core(Base):
             'RoleId': role_id
         }
         result = await self._call_api('Core/GetRole', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return Role(**result)  # type:ignore
+        if isinstance(result, dict):
+            return Role(**result)
+        return result
 
-    async def setAMPUserRoleMembership(self, user_id: str, role_id: str, is_member: bool) -> ActionResult | str | bool | dict | list | None:
+    async def set_amp_user_role_membership(self, user_id: str, role_id: str, is_member: bool) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Adds a user to an AMP role.
 
@@ -322,7 +333,7 @@ class Core(Base):
             is_member (bool): `True` to add the user to the role, `False` to remove the user from the role.
 
         Returns:
-            ActionResult | str | bool | dict | list | None: On success returns a ActionResult dataclass.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: On success returns a ActionResult dataclass.
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -332,11 +343,11 @@ class Core(Base):
             'IsMember': is_member
         }
         result = await self._call_api('Core/SetAMPUserRoleMembership', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def setAMPRolePermission(self, role_id: str, permission_node: str, enabled: Union[None, bool]) -> ActionResult | str | bool | dict | list | None:
+    async def set_amp_role_permission(self, role_id: str, permission_node: str, enabled: Union[None, bool]) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
         """
         Set a permission node to `True` or `False` for the provided AMP role.
 
@@ -346,7 +357,7 @@ class Core(Base):
             enabled (Union[None, bool]): Set a permission to `True`, `False` or `None` depending on the results you can disable or enable an entire tree node of permissions.
 
         Returns:
-            ActionResult | str | bool | dict | list | None: On success returns a ActionResult dataclass.
+            ActionResult | str | dict[str, Any] | list | bool | int | None: On success returns a ActionResult dataclass.
                 See `types.py -> ActionResult`
         """
         await self._connect()
@@ -356,23 +367,25 @@ class Core(Base):
             'Enabled': enabled
         }
         result = await self._call_api('Core/SetAMPRolePermission', parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return ActionResult(**result)  # type:ignore
+        if isinstance(result, dict):
+            return ActionResult(**result)
+        return result
 
-    async def getSettingsSpec(self) -> str | bool | dict | list | None:
+    async def get_settings_spec(self) -> str | dict[str, Any] | list | bool | int | None:
         """
         Retrieves a Server/Instance nodes list.
         See `util.getNodespec` for a list of possible nodes.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing all of the Server/Instance nodes and there information.
+            str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing all of the Server/Instance nodes and there information.
         """
         await self._connect()
         result = await self._call_api('Core/GetSettingsSpec')
+        if isinstance(result, dict):
+            return result
         return result
 
-    async def getConfig(self, node: str) -> Node | str | bool | dict | list | None:
+    async def get_config(self, node: str) -> Node | str | dict[str, Any] | list | bool | int | None:
         # TODO - Need to figure out how this command works entirely. Possible need a new node list
         """
         Returns the config settings for a specific node.
@@ -381,18 +394,18 @@ class Core(Base):
             node (str): The AMP node to inspect eg `ADSModule.Networking.BaseURL`
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing the following. \n
+            Node | str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing the following. \n
         """
         await self._connect()
         parameters = {
             "node": node
         }
         result = await self._call_api("Core/GetConfig", parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return Node(**result)  # type:ignore
+        if isinstance(result, dict):
+            return Node(**result)
+        return result
 
-    async def getConfigs(self, nodes: list[str]) -> list[Node] | str | bool | dict | list | None:
+    async def get_configs(self, nodes: list[str]) -> list[Node] | str | dict[str, Any] | list | bool | int | None:
         # TODO - Need to figure out how this command works entirely. Possible need a new node list
         """
         Returns the config settings for each node in the list.
@@ -401,7 +414,7 @@ class Core(Base):
             node (list[str]): List of nodes to look at.
 
         Returns:
-            str | bool | dict: On success returns a list of Node dataclasses.
+            list[Node] | str | dict[str, Any] | list | bool | int | None: On success returns a list of Node dataclasses.
                 See `types.py -> Node`
         """
         await self._connect()
@@ -409,34 +422,34 @@ class Core(Base):
             "nodes": nodes
         }
         result = await self._call_api("Core/GetConfigs", parameters)
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return list(Node(**node) for node in result)
+        if isinstance(result, list):
+            return list(Node(**node) for node in result)
+        return result
 
-    async def getUpdateInfo(self) -> UpdateInfo | str | int | bool | None:
+    async def get_update_info(self) -> UpdateInfo | str | dict[str, Any] | list | bool | int | None:
         """
         Returns a data class `UpdateInfo` and `UpdateInfo.Build = AMP_Version` to access Version information for AMP.
 
         Returns:
-            UpdateInfo | str | int | bool | None: On success returns a UpdateInfo dataclass.
+            UpdateInfo | str | dict[str, Any] | list | bool | int | None: On success returns a UpdateInfo dataclass.
                 See `types.py -> UpdateInfo`
         """
         await self._connect()
         result = await self._call_api("Core/GetUpdateInfo")
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return UpdateInfo(**result)  # type:ignore
+        if isinstance(result, dict):
+            return UpdateInfo(**result)
+        return result
 
-    async def getAllAMPUserInfo(self) -> list[User] | str | int | bool | None:
+    async def get_all_amp_user_info(self) -> list[User] | str | dict[str, Any] | list | bool | int | None:
         """
         Represents all the AMP User info.
 
         Returns:
-            list[User] | str | int | bool | None: On success returns a list of User dataclasses.
+            list[User] | str | dict[str, Any] | list | bool | int | None: On success returns a list of User dataclasses.
                 See `types.py -> User`
         """
         await self._connect()
         result = await self._call_api("Core/GetAllAMPUserInfo")
-        if isinstance(result, Union[None, bool, int, str]):
-            return result
-        return list(User(**user) for user in result)
+        if isinstance(result, list):
+            return list(User(**user) for user in result)
+        return result
