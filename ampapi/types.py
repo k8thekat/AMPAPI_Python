@@ -10,7 +10,7 @@ from enum import Enum
 class APIParams():
     """
     A class to hold Login information for AMP API.\n
-    **`DO NOT SET OR UPDATE _session_id`** The API handle's this.
+    **`DO NOT SET OR UPDATE _sessions`** The API handle's this.
 
     """
     url: str
@@ -18,7 +18,17 @@ class APIParams():
     password: str
     use_2fa: bool = False
     token: str = ""
-    _sessions: dict[str, str] = field(init=False, default_factory=dict)
+    _sessions: dict[str, APISession] = field(init=False, default_factory=dict)
+
+
+@dataclass()
+class APISession():
+    """
+    Stores the Session ID and the TTL or time to live/last usage of the session ID.
+
+    """
+    id: str
+    ttl: datetime
 
 
 class State_enum(Enum):

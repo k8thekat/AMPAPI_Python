@@ -100,6 +100,7 @@ class FileManagerPlugin(Base):
         }
         result = await self._call_api('FileManagerPlugin/GetDirectoryListing', parameters)
         if isinstance(result, dict):
+            # TODO - Check this data.
             return list(Directory(**directory) for directory in result)
         return result
 

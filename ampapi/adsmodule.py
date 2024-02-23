@@ -47,7 +47,7 @@ class ADSModule(Base):
         await self._connect()
         parameters = {}
         result = await self._call_api("ADSModule/GetInstances", parameters)
-        if isinstance(result, dict):
+        if isinstance(result, list):
             # TODO - Check result data type.
             return list(fromdict(Controller, controller) for controller in result)
         else:

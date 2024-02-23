@@ -8,8 +8,6 @@ from .filemanager import FileManagerPlugin
 
 from typing import Self
 
-from pprint import pprint
-
 __all__ = ("ADSInstance",)
 
 
@@ -32,7 +30,7 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
     #     # self.data: Controller = data
     #     # self.parse_data(data)
 
-    async def get_instances(self) -> list[Self] | str | bool | int | None:
+    async def get_instances(self) -> list[Controller | Self] | str | bool | dict[str, Any] | int | None:
         """
         Returns a list of all Instances on the AMP Panel.\n
         `**ADSInstance Only**`
@@ -41,11 +39,16 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
             list[Self] | str | bool | int | None: On success returns a list of Self dataclasses. 
 
         """
-        if not isinstance(self, Self):
-            return self.ADS_ONLY
-
-        res = await super().get_instances()
-        pprint(res)
+        ads_list = []
+        result = await super().get_instances()
+        if isinstance(result, list):
+            for i in range(len(result)):
+                if i == 0:
+                    self.parse_data(data=result[i])  # Need to update our self object.
+                ads_list.append(ADSInstance().parse_data(data=result[i]))
+            return ads_list
+        else:
+            return result
 
     async def get_instance_statuses(self) -> list[InstanceStatus] | dict | str | bool | int | None:
         """
@@ -57,10 +60,6 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
                 See `types.py -> InstanceStatus`
 
         """
-
-        if not isinstance(self, Self):
-            return self.ADS_ONLY
-
         return await super().get_instance_statuses()
 
     async def get_instance(self, instanceID: str) -> Instance | str | dict[str, Any] | list | bool | int | None:
@@ -74,10 +73,6 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
         Returns:
             Instance | str | bool | int | None: On success returns a Instance dataclass. 
         """
-
-        if not isinstance(self, Self):
-            return self.ADS_ONLY
-
         return await super().get_instance(instanceID)
 
     async def end_user_session(self, session_id: str) -> str | None:
@@ -91,9 +86,6 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
         Returns:
             None: ""
         """
-        if not isinstance(self, Self):
-            return self.ADS_ONLY
-
         return await super().end_user_session(session_id)
 
     async def get_active_amp_sessions(self) -> list[Session] | str | dict[str, Any] | list | bool | int | None:
@@ -105,7 +97,4 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
             Session | str | dict[str, Any] | list | bool | int | None: Returns a dataclass Session.
                 See `types.py -> Session`
         """
-        if not isinstance(self, Self):
-            return self.ADS_ONLY
-
         return await super().get_active_amp_sessions()

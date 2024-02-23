@@ -2,13 +2,14 @@ from __future__ import annotations
 from .base import Base
 from .core import Core
 from pathlib import Path
+from typing import Any
 
 
 class Util(Base):
     """
     AMP API util functions to parse specific API calls for specific Data.
     """
-    async def getNodespec(self, amp: Core) -> list[str] | str | None | bool:
+    async def getNodespec(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
         """
         Creates a `setting_nodes.txt` in the script directory with nodes from api `Core/GetSettingSpec`
 
@@ -18,7 +19,7 @@ class Util(Base):
         See -> `amp/util/setting_nodes.txt` 
 
         """
-        res = await amp.getSettingsSpec()
+        res = await amp.get_settings_spec()
         dir = Path(__file__).parent.joinpath("setting_nodes.md")
         mode = "x"
         if dir.exists():
@@ -34,7 +35,7 @@ class Util(Base):
                     if entry.lower() == "node":
                         file.write(f"{value[entry]} \n")
 
-    async def getPermissionNodes(self, amp: Core) -> str | bool | dict | list | None:
+    async def getPermissionNodes(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
         """
         Creates a `permission_nodes.txt` in the script directory with nodes from api `Core/GetPermissionsSpec`
 
@@ -43,7 +44,7 @@ class Util(Base):
 
         See -> `amp/util/permission_nodes.txt`  
         """
-        res = await amp.getPermissionsSpec()
+        res = await amp.get_permissions_spec()
         if isinstance(res, list):
             self.node_scrape(text=res)
         else:

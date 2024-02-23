@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import timedelta
 from typing import Union, Any, Self
 import json
 import traceback
@@ -8,7 +9,9 @@ from dataclasses import fields
 import aiohttp
 from aiohttp import ClientResponse
 
-from pyotp import TOTP  # 2Factor Authentication Python Module
+from pyotp import TOTP
+
+from ampapi.types import APISession  # 2Factor Authentication Python Module
 from .types import *
 from .bridge import Bridge
 
@@ -22,12 +25,14 @@ class Base():
     """
     _logger: logging.Logger = logging.getLogger()
     InstanceId: str = "0"
+    session_ttl: int = 240  # Seconds (Typically a session expires after 5 minutes of inactivity.)
 
     # self.FAILED_LOGIN: str = ""
     NO_DATA: str = "Failed to recieve any data from post request."
     ADS_ONLY: str = "This API call is only available on ADS instances."
     UNAUTHORIZED_ACCESS: str = "The user does not have the required permissions to interact with this instance."
     NO_BRIDGE: str = "Failed to setup connection. You need to initiate `<class Bridge>` first."
+    # NO_VALID_SESSION: str = "Failed to find a valid session id, please login again."
 
     def __init__(self) -> None:
         bridge: Bridge = Bridge.get_bridge()
@@ -51,31 +56,15 @@ class Base():
             ValueError: If 2FA Token is not provided and `_use_2fa == True`.
             ValueError: If 2FA Token is not enclosed in single(',') or double(",") quotes.
         """
-        # if bridge.apiparams is not None:
-
         # We use this later on in _connect to update `_session_id`;
         # so all connections will use the same session id (if possible)
-        self._bridge: Bridge = bridge  # Just in case I need the entire object.
+        self._bridge: Bridge = bridge
 
-        # TODO - Possibly pull from bridge and do not set self attributes.
-        self._amp_user: str = bridge.user
-        self._amp_password: str = bridge.password
-        self._url: str = bridge.url
-        self._use_2fa: bool = bridge.use_2fa
-        # self._sessionId: str = bridge._session_id
-
-        # TODO - New Session handling
-        # A way to manage Instance ID -> Session ID correlation
-        self._sessions: dict[str, str] = bridge._sessions
-
-        if self._use_2fa == True:
-            if self._amp_2fa_token == "":
+        if bridge.use_2fa == True:
+            if bridge.token == "":
                 raise ValueError("You must provide a 2FA Token if you are using 2FA.")
-            if self._amp_2fa_token.startswith(("'", '"')) == False or self._amp_2fa_token.endswith(("'", '"')) == False:
+            if bridge.token.startswith(("'", '"')) == False or bridge.token.endswith(("'", '"')) == False:
                 raise ValueError("2FA Token must be enclosed in quotes.")
-
-        self._amp_2fa_token: str = bridge.token
-        # print(self._amp_user, self._amp_password, self._url, self._use_2fa, self._amp_2fa_token)
 
     def parse_data(self, data: Controller | Instance) -> Self:
         for field in fields(data):
@@ -108,16 +97,13 @@ class Base():
             parameters = {}
 
         # TODO - New sessionId implementation
-        amp_session_id = self._bridge._sessions.get(self.InstanceId, "0")
-        if amp_session_id != "0":
-            parameters["SESSIONID"] = amp_session_id
-
-        # if self._session_id != "0":
-        #     parameters["SESSIONID"] = self._session_id
+        api_session: APISession = self._bridge._sessions.get(self.InstanceId, APISession(id="0", ttl=datetime.now()))
+        if isinstance(api_session, APISession):
+            parameters["SESSIONID"] = api_session.id
 
         json_data = json.dumps(parameters)
 
-        _url = self._url + "/API/" + api
+        _url: str = self._bridge.url + "/API/" + api
         print("DEBUG", api, _url)
         async with aiohttp.ClientSession() as session:
             try:
@@ -173,7 +159,8 @@ class Base():
                     self._logger.error(f'{api} failed because of {post_req_json}')
                     # self._session_id = "0"
                     # TODO - New sessionID implementation.
-                    self._bridge._sessions.update({self.InstanceId: "0"})
+                    api_session = APISession(id="0", ttl=datetime.now())
+                    self._bridge._sessions.update({self.InstanceId: api_session})
                     raise PermissionError(self.UNAUTHORIZED_ACCESS)
             else:
                 return post_req_json
@@ -192,24 +179,24 @@ class Base():
             bool | None: Returns False if an exception is thrown or the login attempt fails to provide a sessionID value. \n
             Otherwise returns true and sets the class's sessionID value.
         """
-        amp_2fa_code: Union[str, TOTP] = ""
+        code: Union[str, TOTP] = ""
 
         # TODO - New Session handling
         # get our InstanceID and use it to key for session_id
-        sessionID: str = self._sessions.get(self.InstanceId, "0")
+        session: APISession = self._bridge._sessions.get(self.InstanceId, APISession(id="0", ttl=datetime.now()))
 
-        if isinstance(sessionID, str) == False:
-            raise ValueError(f"You must provide a session id as a string. {sessionID}")
+        if isinstance(session, APISession):
+            ttl: timedelta = datetime.now() - session.ttl
+            if ttl.seconds > 240:
+                sessionID = "0"
+            else:
+                sessionID: str = session.id
 
-        # if isinstance(self._session_id, str) == False:
-        #     raise ValueError("You must provide a session id as a string.")
-        # if self._session_id == "0":
         if sessionID == "0":
-            if self._use_2fa == True:
+            if self._bridge.use_2fa == True:
                 try:
                     # Handles time based 2Factory Auth Key/Code
-                    amp_2fa_code = TOTP(self._amp_2fa_token)
-                    amp_2fa_code.now()
+                    code = TOTP(self._bridge.token).now()
 
                 except AttributeError:
                     raise ValueError("Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!")
@@ -217,9 +204,9 @@ class Base():
                 try:
 
                     parameters = {
-                        'username': self._amp_user,
-                        'password': self._amp_password,
-                        'token': amp_2fa_code,
+                        'username': self._bridge.user,
+                        'password': self._bridge.password,
+                        'token': code,
                         'rememberMe': True}
 
                     result = await self._call_api('Core/Login', parameters)
@@ -236,7 +223,8 @@ class Base():
 
                         # TODO - New Session handling
                         # This is our new sessions table to correlate InstanceId to a sessionId.
-                        self._bridge._sessions.update({self.InstanceId: login.sessionID})
+                        api_session = APISession(id=login.sessionID, ttl=datetime.now())
+                        self._bridge._sessions.update({self.InstanceId: api_session})
                         return login
 
                     else:
