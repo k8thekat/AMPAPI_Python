@@ -38,7 +38,7 @@ class Bridge(APIParams):
         return cls._instance
 
     def __init__(self, api_params: APIParams, *args, **kwargs) -> None:
-        print("DEBUG", "Bridge __init__()")
+        print("DEBUG Bridge __init__")
         self.api_params: APIParams = api_params
         # We parse the api params for easier usage.
         for field in fields(api_params):

@@ -1,15 +1,15 @@
 from __future__ import annotations
-from .base import Base
 from .core import Core
 from pathlib import Path
 from typing import Any
 
 
-class Util(Base):
+class APIUtil():
     """
     AMP API util functions to parse specific API calls for specific Data.
     """
-    async def getNodespec(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
+
+    async def get_node_spec(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
         """
         Creates a `setting_nodes.txt` in the script directory with nodes from api `Core/GetSettingSpec`
 
@@ -20,7 +20,7 @@ class Util(Base):
 
         """
         res = await amp.get_settings_spec()
-        dir = Path(__file__).parent.joinpath("setting_nodes.md")
+        dir = Path(__file__).parent.joinpath("../docs/setting_nodes.md")
         mode = "x"
         if dir.exists():
             mode = "w"
@@ -34,8 +34,9 @@ class Util(Base):
                 for entry in value:
                     if entry.lower() == "node":
                         file.write(f"{value[entry]} \n")
+        file.close()
 
-    async def getPermissionNodes(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
+    async def get_permission_nodes(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
         """
         Creates a `permission_nodes.txt` in the script directory with nodes from api `Core/GetPermissionsSpec`
 
@@ -58,7 +59,7 @@ class Util(Base):
             text (list): The list of dictionary's
             file (_type_, optional): The file object to dump text to. Defaults to None. `**LEAVE NONE**`
         """
-        dir = Path(__file__).parent.joinpath("permission_nodes.md")
+        dir = Path(__file__).parent.joinpath("../docs/permission_nodes.md")
         mode = "x"
         if dir.exists():
             mode = "w"
@@ -67,10 +68,39 @@ class Util(Base):
             file = open(dir, mode)
 
         if not isinstance(text, list):
-            return
+            return None
 
         for index in text:
             if "Node" in index:
                 file.write(f'{index["Node"]} \n')
             if "Children" in index:
                 self.node_scrape(text=index["Children"], file=file)
+        file.close()
+
+    async def parse_get_api_spec(self, data: dict) -> None | str | dict[str, Any] | list | bool | int | None:
+        """
+        Creates a `api_spec.txt` in the script directory with nodes from api `Core/GetAPISpec`
+        #TODO - Improve formatting of the Markdown file.
+        Args:
+            amp (Core): API_Core class object signed in.
+
+        See -> `../docs/api_spec.md` 
+        """
+        # res = await amp.get_api_spec()
+        dir = Path(__file__).parent.joinpath("../docs/api_spec.md")
+        mode = "x"
+        if dir.exists():
+            mode = "w"
+        file = open(dir, mode)
+
+        if not isinstance(data, dict):
+            return None
+        else:
+            for parent, parent_value in data.items():
+                if isinstance(parent_value, dict):
+                    for child, child_value in parent_value.items():
+                        file.write(f"{parent}.{child}:({child_value}) \n")
+                else:
+                    file.write(f"{parent}({parent_value}) \n")
+
+        file.close()

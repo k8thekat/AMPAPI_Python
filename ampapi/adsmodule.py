@@ -13,6 +13,12 @@ class ADSModule(Base):
     Contains the base functions for any `/API/ADSModule/` AMP API endpoints.
 
     """
+    async def add_datastore(self, newDatastore: Any) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
+
+        parameters = {"newDatastore": newDatastore}
+        result = await self._call_api("ADSModule/AddDatastore", parameters)
+        return result
+
     async def get_instance(self, instanceID: str) -> Instance | str | dict[str, Any] | list | bool | int | None:
         """
         Returns the Instance information for the provided Instance ID.\n
@@ -26,7 +32,9 @@ class ADSModule(Base):
                 See `types.py -> Instance`
         """
 
-        await self._connect()
+        if self.Module != "ADS":
+            raise RuntimeError(self.ADS_ONLY)
+
         parameters = {"InstanceId": instanceID}
         result = await self._call_api("ADSModule/GetInstance", parameters)
         if isinstance(result, dict):
@@ -44,11 +52,12 @@ class ADSModule(Base):
                 See `types.py -> Controller`\n
         """
 
-        await self._connect()
+        if self.Module != "ADS":
+            raise RuntimeError(self.ADS_ONLY)
+
         parameters = {}
         result = await self._call_api("ADSModule/GetInstances", parameters)
         if isinstance(result, list):
-            # TODO - Check result data type.
             return list(fromdict(Controller, controller) for controller in result)
         else:
             return result
@@ -63,11 +72,11 @@ class ADSModule(Base):
                 See `types.py -> InstanceStatus`
 
         """
+        if self.Module != "ADS":
+            raise RuntimeError(self.ADS_ONLY)
 
-        await self._connect()
         result = await self._call_api('ADSModule/GetInstanceStatuses')
-        if isinstance(result, dict):
-            # TODO - Check result data type.
+        if isinstance(result, list):
             return list(InstanceStatus(**instance)for instance in result)
         else:
             return result

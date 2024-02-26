@@ -26,7 +26,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'Origin': source,
             'TargetDirectory': destination
@@ -49,7 +49,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
             See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'Filename': original,
             'NewFilename': new
@@ -72,7 +72,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'oldDirectory': oldDirectory,
             'newDirectoryName': newDirectoryName
@@ -94,13 +94,11 @@ class FileManagerPlugin(Base):
                 See `types.py -> Directory`
         """
 
-        await self._connect()
         parameters = {
             'Dir': directory
         }
         result = await self._call_api('FileManagerPlugin/GetDirectoryListing', parameters)
-        if isinstance(result, dict):
-            # TODO - Check this data.
+        if isinstance(result, list):
             return list(Directory(**directory) for directory in result)
         return result
 
@@ -117,7 +115,7 @@ class FileManagerPlugin(Base):
             FileChunk | str | dict[str, Any] | list | bool | int | None: Returns a FileChunk dataclass.
                 See `types.py -> FileChunk`
         """
-        await self._connect()
+
         parameters = {
             'Filename': name,
             'Position': position,
@@ -142,7 +140,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call.
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'Filename': filename,
             'Data': data,
@@ -166,7 +164,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'DirectoryName': dir_name
         }
@@ -187,7 +185,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'Filename': filename
         }
@@ -208,7 +206,7 @@ class FileManagerPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             'TrashDirectoryName': trash_dir
         }

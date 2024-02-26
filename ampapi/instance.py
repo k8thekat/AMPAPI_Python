@@ -13,11 +13,12 @@ class AMPInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
 
 
     """
+    Module: str = "Instance"
 
-    def __init__(self):
-        print("AMPInstance __init__")
+    def __init__(self, data: Instance | None):
+        print(f"DEBUG AMPInstance __init__")
         super().__init__()
-        self._url = f"/ADSModule/Servers/{self.InstanceID}"  # may need to add `/API` to these.
+        if isinstance(data, Instance):
+            self.parse_data(data=data)
 
-    def test(self):
-        print()
+        self.url = f"{self._bridge.url}/API/ADSModule/Servers/{self.InstanceID}"

@@ -25,7 +25,7 @@ class LocalFileBackupPlugin(Base):
             ActionResult | str | dict[str, Any] | list | bool | int | None: Results from the API call. 
                 See `types.py -> ActionResult`
         """
-        await self._connect()
+
         parameters = {
             "Title": title,
             "Description": description,

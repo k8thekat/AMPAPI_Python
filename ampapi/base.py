@@ -15,6 +15,7 @@ from ampapi.types import APISession  # 2Factor Authentication Python Module
 from .types import *
 from .bridge import Bridge
 
+
 __all__ = ("Base",)
 
 
@@ -24,8 +25,10 @@ class Base():
 
     """
     _logger: logging.Logger = logging.getLogger()
-    InstanceId: str = "0"
+    InstanceID: str = "0"
+    Module: str = ""
     session_ttl: int = 240  # Seconds (Typically a session expires after 5 minutes of inactivity.)
+    url: str = ""
 
     # self.FAILED_LOGIN: str = ""
     NO_DATA: str = "Failed to recieve any data from post request."
@@ -59,7 +62,7 @@ class Base():
         # We use this later on in _connect to update `_session_id`;
         # so all connections will use the same session id (if possible)
         self._bridge: Bridge = bridge
-
+        self.url = bridge.url
         if bridge.use_2fa == True:
             if bridge.token == "":
                 raise ValueError("You must provide a 2FA Token if you are using 2FA.")
@@ -67,7 +70,21 @@ class Base():
                 raise ValueError("2FA Token must be enclosed in quotes.")
 
     def parse_data(self, data: Controller | Instance) -> Self:
+        """
+        Takes in a Controller or Instance dataclass and iterates through it's attributes and 
+        set's the values as attributes of the class that called this function.
+
+        Args:
+            data (Controller | Instance): The Controller or Instance dataclass.
+
+        Returns:
+            Self: Returns the class that called this function.
+        """
         for field in fields(data):
+            # This is to deal with improperly cased InstanceId.
+            if field.name == "InstanceId":
+                setattr(self, "InstanceID", getattr(data, field.name))
+                continue
             setattr(self, field.name, getattr(data, field.name))
         return self
 
@@ -88,6 +105,7 @@ class Base():
         Returns:
             None | str | bool | dict | list[Any]: Returns unmodified JSON response from the API call. Typically a string or dict.
         """
+        await self._connect()
         header: dict = {"Accept": "text/javascript"}
         post_req: ClientResponse | None
         self._logger.debug(f"_call_api -> {api} was called with {parameters}")
@@ -97,14 +115,14 @@ class Base():
             parameters = {}
 
         # TODO - New sessionId implementation
-        api_session: APISession = self._bridge._sessions.get(self.InstanceId, APISession(id="0", ttl=datetime.now()))
+        api_session: APISession = self._bridge._sessions.get(self.InstanceID, APISession(id="0", ttl=datetime.now()))
         if isinstance(api_session, APISession):
             parameters["SESSIONID"] = api_session.id
 
         json_data = json.dumps(parameters)
 
-        _url: str = self._bridge.url + "/API/" + api
-        print("DEBUG", api, _url)
+        _url: str = self.url + "/API/" + api
+        print("DEBUG", self.InstanceID, api, _url)
         async with aiohttp.ClientSession() as session:
             try:
                 post_req = await session.post(_url, headers=header, data=json_data)
@@ -160,7 +178,7 @@ class Base():
                     # self._session_id = "0"
                     # TODO - New sessionID implementation.
                     api_session = APISession(id="0", ttl=datetime.now())
-                    self._bridge._sessions.update({self.InstanceId: api_session})
+                    self._bridge._sessions.update({self.InstanceID: api_session})
                     raise PermissionError(self.UNAUTHORIZED_ACCESS)
             else:
                 return post_req_json
@@ -183,7 +201,7 @@ class Base():
 
         # TODO - New Session handling
         # get our InstanceID and use it to key for session_id
-        session: APISession = self._bridge._sessions.get(self.InstanceId, APISession(id="0", ttl=datetime.now()))
+        session: APISession = self._bridge._sessions.get(self.InstanceID, APISession(id="0", ttl=datetime.now()))
 
         if isinstance(session, APISession):
             ttl: timedelta = datetime.now() - session.ttl
@@ -224,7 +242,7 @@ class Base():
                         # TODO - New Session handling
                         # This is our new sessions table to correlate InstanceId to a sessionId.
                         api_session = APISession(id=login.sessionID, ttl=datetime.now())
-                        self._bridge._sessions.update({self.InstanceId: api_session})
+                        self._bridge._sessions.update({self.InstanceID: api_session})
                         return login
 
                     else:
@@ -246,6 +264,6 @@ class Base():
         Returns:
             list | dict | str | bool | int | None: Returns the JSON response from the API call.
         """
-        await self._connect()
+
         result = await self._call_api(api, parameters)
         return result
