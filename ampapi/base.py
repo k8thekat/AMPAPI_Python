@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import timedelta
-from typing import Union, Any, Self
+from typing import Union, Any, TYPE_CHECKING
 import json
 import traceback
 import logging
@@ -15,6 +15,8 @@ from ampapi.types import APISession  # 2Factor Authentication Python Module
 from .types import *
 from .bridge import Bridge
 
+if TYPE_CHECKING:
+    from typing import Self
 
 __all__ = ("Base",)
 

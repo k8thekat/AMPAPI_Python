@@ -26,6 +26,10 @@ setup(
     author='Katelynn Cadwallader',
     author_email='Cadwalladerkatelynn+AMPAPI@gmail.com',
     license='GNU',
+    project_urls={
+        'GitHub': 'https://github.com/k8thekat/AMPAPI_Python',
+        'Changelog': 'https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md',
+    },
     packages=packages,
     package_data={
         "docs": ["docs/api_spec.md", "docs/permission_nodes.md", "docs/setting_nodes.md"],
