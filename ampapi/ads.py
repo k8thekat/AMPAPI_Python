@@ -5,6 +5,7 @@ from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
+from .instance import AMPInstance
 
 from typing import Self
 
@@ -17,15 +18,25 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
 
 
     """
-    # TODO -
-    # - Overwrite any ADS only type commands
-    # -- Possibly overwrite return types and return Self with populated data.
-    # - Try out modified `self._url` on Base and see if it still works.
-    # - Possible Properties
-    # -- Make a property to return Instances (possibly populated classes of `instance.py`)
+    Module: str = "ADS"
+
+    @property
+    def AvailableInstances(self) -> list[AMPInstance]:
+        return self._AvailableInstances
+
+    @AvailableInstances.setter
+    def AvailableInstances(self, instances: list[Instance]):
+        # TODO - Need to see what an empty server list is (Possbily [{}])
+        # TODO - Need to check the Module for Minecraft to return its special API class
+        self._AvailableInstances: list[AMPInstance] = []
+        if isinstance(instances, list):
+            for i in range(0, len(instances)):
+                if instances[i].Module == "ADS":
+                    continue
+                self._AvailableInstances.append(AMPInstance(data=instances[i]))
 
     def __init__(self):
-        print("ADSInstance __init__")
+        print(f"DEBUG ADSInstance __init__")
         super().__init__()
     #     # self.data: Controller = data
     #     # self.parse_data(data)
@@ -39,12 +50,12 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
             list[Self] | str | bool | int | None: On success returns a list of Self dataclasses. 
 
         """
+
         ads_list = []
         result = await super().get_instances()
         if isinstance(result, list):
-            for i in range(len(result)):
-                if i == 0:
-                    self.parse_data(data=result[i])  # Need to update our self object.
+            self.parse_data(data=result[0])  # Need to update our self object.
+            for i in range(1, len(result)):
                 ads_list.append(ADSInstance().parse_data(data=result[i]))
             return ads_list
         else:
