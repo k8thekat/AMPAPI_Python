@@ -26,15 +26,17 @@ __license__ = "GNU"
 __version__ = "0.0.30a"
 __credits__ = "AMP by CubeCoders and associates."
 
-from .util import *
+from .ads import *
+from .adsmodule import *
+from .bridge import *
+from .core import *
+from .emailsender import *
 from .filemanager import *
 from .filebackup import *
-from .emailsender import *
-from .core import *
-from .adsmodule import *
-from .ads import *
 from .instance import *
 from .minecraft import *
+from .types import *
+from .util import *
 
 from typing import NamedTuple, Literal
 
