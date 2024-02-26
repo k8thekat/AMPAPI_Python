@@ -16,7 +16,7 @@ with open('ampapi/__init__.py') as file:
 if not version:
     raise RuntimeError("version is not set")
 
-packages = ["AMPapi",]
+packages = ["ampapi",]  # I believe this will affect the open #LN13
 
 setup(
     name='cubecoders_amp_api',
@@ -27,6 +27,11 @@ setup(
     author_email='Cadwalladerkatelynn+AMPAPI@gmail.com',
     license='GNU',
     packages=packages,
+    package_data={
+        "docs": ["docs/api_spec.md", "docs/permission_nodes.md", "docs/setting_nodes.md"],
+        "license": ["LICENSE"],
+        "requirements": ["requirements.txt"],
+        "readme": ["README.md"]},
     long_description=readme,
     long_description_content_type="text/markdown",
     install_requires=requirements,

@@ -23,7 +23,7 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "0.0.23a"
+__version__ = "0.0.30a"
 __credits__ = "AMP by CubeCoders and associates."
 
 from .util import *
@@ -34,6 +34,7 @@ from .core import *
 from .adsmodule import *
 from .ads import *
 from .instance import *
+from .minecraft import *
 
 from typing import NamedTuple, Literal
 

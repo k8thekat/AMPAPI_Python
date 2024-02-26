@@ -5,3 +5,4 @@ build/*
 *.bash
 local.py
 .vscode/settings.json
+build.notes.md
