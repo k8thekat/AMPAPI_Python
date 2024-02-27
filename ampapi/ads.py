@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 from ampapi.types import Any, InstanceStatus, Session
 from .types import Controller, Instance
 from .adsmodule import ADSModule
@@ -7,7 +8,9 @@ from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .instance import AMPInstance, AMPMinecraftInstance
 
-from typing import Self
+if TYPE_CHECKING:
+    from typing import Self
+
 
 __all__ = ("ADSInstance",)
 

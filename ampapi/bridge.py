@@ -1,8 +1,11 @@
-from typing import Self
+from typing import TYPE_CHECKING
 from .types import APIParams
 from dataclasses import fields
 
 __all__ = ("Bridge",)
+
+if TYPE_CHECKING:
+    from typing import Self
 
 
 class Bridge(APIParams):

@@ -1,3 +1,57 @@
+## Version - 0.0.32a - [a3973cc](https://github.com/k8thekat/AMPAPI_Python/commit/a3973cc)
+#### __init__.py
+- Version bump to `0.0.32a`.
+- Version bump `0.0.31a`
+
+#### Changelog.md
+- Fixed layout of Version line.
+
+#### ads.py
+- Added logic to check `Instance.Module` attribute to create `AMPMinecraftInstance`.
+- Updated `ADSInstance.AvailableInstances` return types to include `AMPMinecraftInstance`.
+
+#### adsmodule.py
+- Added docstring to `add_datastore()`.
+- Added `await self._connect()` to all methods.
+
+#### base.py
+- Added `MINECRAFT_ONLY` attribute for logic checks.
+- Removed `await self._connect()` from `_call_api()`.
+
+#### core.py
+- Added `await self._connect()` to all methods.
+
+#### filebackup.py
+- Added `await self._connect()` to all methods.
+
+#### filemanager.py
+- Added `await self._connect()` to all methods.
+- Added comments for remaining filemanager methods.
+
+#### instance.py
+- Updated `__init__()` print debug for better naming conventions.
+- Added `__all__` property to include `AMPInstance` and `AMPMinecraftInstance`.
+- Added `AMPMinecraftInstance` class.
+
+#### minecraft.py
+- Creation of all Minecraft specific API endpoints and methods pertaining to them.
+- Partial completion of dataclasses, docstrings and return types.
+- Implemented logic to check `.Module` != `Minecraft` on all calls to prevent failure outside of the Instance class.
+- Prefixed all methods with `mc_`.
+
+#### types.py
+- Added `BukkitPlugin()` dataclass.
+"
+"# Changelog.md
+- Creation of Changelog.md and added `0.0.30a` under `0.0.31a`
+
+#### Setup.py
+- Added `project_urls` to `setup()`
+	- Github and Changelog links
+
+#### Base.py
+- Added `TYPE_CHECKING` to fix `Self` import at runtime error.
+
 ## Version - 0.0.31a - [8dce4d6](https://github.com/k8thekat/AMPAPI_Python/commit/8dce4d668550a3dd2794c4040596d9f5077aba02)
 #### Overall Changes -
 - Update "DEBUG" prints to provide better information. 
