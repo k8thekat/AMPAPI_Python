@@ -1,3 +1,16 @@
+## Version - 0.0.33a - [4df55fa](https://github.com/k8thekat/AMPAPI_Python/commit/4df55fa)
+#### __init__.py
+- Version bump `0.0.33a`.
+
+#### Changelog.md
+- Version bump `0.0.33a`.
+
+#### ads.py
+- Added `if TYPE_CHECKING` for Self
+
+#### bridge.py
+- Added `if TYPE_CHECKING` for Self
+
 ## Version - 0.0.32a - [a3973cc](https://github.com/k8thekat/AMPAPI_Python/commit/a3973cc)
 #### __init__.py
 - Version bump to `0.0.32a`.
