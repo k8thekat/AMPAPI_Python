@@ -26,6 +26,7 @@ class LocalFileBackupPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             "Title": title,
             "Description": description,

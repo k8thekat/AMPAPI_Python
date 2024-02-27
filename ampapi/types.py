@@ -680,3 +680,34 @@ class Session():
     @LastActivity.setter
     def LastActivity(self, value: str) -> None:
         self._LastActivity = value
+
+
+@dataclass
+class BukkitPlugin():
+    """
+    Represents a Bukkit Plugin
+
+    """
+
+    author: dict[str, int]
+    category: dict[str, int]
+    contributors: str
+    donationLink: str
+    downloads: int
+    existenceStatus: int
+    external: bool
+    file: dict[str, str | int]
+    icon: dict[str, str]
+    id: int
+    likes: int
+    links: dict[str, str]
+    name: str
+    premium: bool
+    rating: dict[str, float | int]
+    releaseDate: int  # 1417419240
+    sourceCodeLink: str
+    supportedLanguages: str
+    tag: str
+    testedVersions: list[str]
+    updateDate: int  # 1708187123
+    version: dict[str, int | str]

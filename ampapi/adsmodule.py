@@ -14,7 +14,17 @@ class ADSModule(Base):
 
     """
     async def add_datastore(self, newDatastore: Any) -> ActionResult | str | dict[str, Any] | list | bool | int | None:
+        """
+        add_datastore _summary_
 
+        Args:
+            newDatastore (Any): _description_
+
+        Returns:
+            ActionResult | str | dict[str, Any] | list | bool | int | None: _description_
+        """
+
+        await self._connect()
         parameters = {"newDatastore": newDatastore}
         result = await self._call_api("ADSModule/AddDatastore", parameters)
         return result
@@ -35,6 +45,7 @@ class ADSModule(Base):
         if self.Module != "ADS":
             raise RuntimeError(self.ADS_ONLY)
 
+        await self._connect()
         parameters = {"InstanceId": instanceID}
         result = await self._call_api("ADSModule/GetInstance", parameters)
         if isinstance(result, dict):
@@ -55,6 +66,7 @@ class ADSModule(Base):
         if self.Module != "ADS":
             raise RuntimeError(self.ADS_ONLY)
 
+        await self._connect()
         parameters = {}
         result = await self._call_api("ADSModule/GetInstances", parameters)
         if isinstance(result, list):
@@ -75,6 +87,7 @@ class ADSModule(Base):
         if self.Module != "ADS":
             raise RuntimeError(self.ADS_ONLY)
 
+        await self._connect()
         result = await self._call_api('ADSModule/GetInstanceStatuses')
         if isinstance(result, list):
             return list(InstanceStatus(**instance)for instance in result)

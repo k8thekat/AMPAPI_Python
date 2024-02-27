@@ -37,6 +37,7 @@ class Base():
     ADS_ONLY: str = "This API call is only available on ADS instances."
     UNAUTHORIZED_ACCESS: str = "The user does not have the required permissions to interact with this instance."
     NO_BRIDGE: str = "Failed to setup connection. You need to initiate `<class Bridge>` first."
+    MINECRAFT_ONLY: str = "This API call is only available on Minecraft instances."
     # NO_VALID_SESSION: str = "Failed to find a valid session id, please login again."
 
     def __init__(self) -> None:
@@ -107,7 +108,7 @@ class Base():
         Returns:
             None | str | bool | dict | list[Any]: Returns unmodified JSON response from the API call. Typically a string or dict.
         """
-        await self._connect()
+
         header: dict = {"Accept": "text/javascript"}
         post_req: ClientResponse | None
         self._logger.debug(f"_call_api -> {api} was called with {parameters}")

@@ -5,7 +5,7 @@ from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
-from .instance import AMPInstance
+from .instance import AMPInstance, AMPMinecraftInstance
 
 from typing import Self
 
@@ -21,22 +21,26 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
     Module: str = "ADS"
 
     @property
-    def AvailableInstances(self) -> list[AMPInstance]:
+    def AvailableInstances(self) -> list[AMPInstance | AMPMinecraftInstance]:
         return self._AvailableInstances
 
     @AvailableInstances.setter
     def AvailableInstances(self, instances: list[Instance]):
         # TODO - Need to see what an empty server list is (Possbily [{}])
-        # TODO - Need to check the Module for Minecraft to return its special API class
         self._AvailableInstances: list[AMPInstance] = []
         if isinstance(instances, list):
             for i in range(0, len(instances)):
                 if instances[i].Module == "ADS":
                     continue
-                self._AvailableInstances.append(AMPInstance(data=instances[i]))
+
+                elif instances[i].Module == "Minecraft":
+                    self._AvailableInstances.append(AMPMinecraftInstance(data=instances[i]))
+
+                else:
+                    self._AvailableInstances.append(AMPInstance(data=instances[i]))
 
     def __init__(self):
-        print(f"DEBUG ADSInstance __init__")
+        print(f"DEBUG {type(self).__name__} __init__")
         super().__init__()
     #     # self.data: Controller = data
     #     # self.parse_data(data)

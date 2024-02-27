@@ -1,5 +1,4 @@
-## Version - 0.0.31a (8dce4d668550a3dd2794c4040596d9f5077aba02)
-
+## Version - 0.0.31a - [8dce4d6](https://github.com/k8thekat/AMPAPI_Python/commit/8dce4d668550a3dd2794c4040596d9f5077aba02)
 #### Overall Changes -
 - Update "DEBUG" prints to provide better information. 
 - Added *ADS Only* requirements to specific end points to prevent failure. -

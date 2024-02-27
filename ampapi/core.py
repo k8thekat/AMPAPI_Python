@@ -44,6 +44,8 @@ class Core(Base):
         Returns:
             None | str | bool | dict[str, Any] | list[Any]: A dictionary containing all of the API specs, their parameters and return types for the ADS or Instance.
         """
+
+        await self._connect()
         result = await self._call_api('Core/GetAPISpec')
         return result
 
@@ -56,6 +58,7 @@ class Core(Base):
                 See `types.py -> Updates`
         """
 
+        await self._connect()
         result = await self._call_api('Core/GetUpdates')
         if isinstance(result, dict):
             return fromdict(Updates, result)
@@ -69,6 +72,7 @@ class Core(Base):
             None: ""
         """
 
+        await self._connect()
         parameters = {'message': msg}
         await self._call_api('Core/SendConsoleMessage', parameters)
         return
@@ -82,6 +86,7 @@ class Core(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         result = await self._call_api('Core/Start')
         if isinstance(result, dict):
             return ActionResult(**result)
@@ -95,6 +100,7 @@ class Core(Base):
             None: ""
         """
 
+        await self._connect()
         await self._call_api('Core/Stop')
         return
 
@@ -107,6 +113,7 @@ class Core(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         result = await self._call_api('Core/Restart')
         if isinstance(result, dict):
             return ActionResult(**result)
@@ -120,6 +127,7 @@ class Core(Base):
             None: ""
         """
 
+        await self._connect()
         await self._call_api('Core/Kill')
         return
 
@@ -132,6 +140,7 @@ class Core(Base):
                 See `types.py -> Status`
         """
 
+        await self._connect()
         result = await self._call_api('Core/GetStatus')
         if isinstance(result, dict):
             return fromdict(Status, result)
@@ -146,6 +155,7 @@ class Core(Base):
                 See `types.py -> Players`
         """
 
+        await self._connect()
         result = await self._call_api('Core/GetUserList')
         if isinstance(result, list):
             # TODO- Needs to be validated.
@@ -162,6 +172,7 @@ class Core(Base):
                 See `types.py -> ScheduleData`
         """
 
+        await self._connect()
         result = await self._call_api('Core/GetScheduleData')
         if isinstance(result, dict):
             return fromdict(ScheduleData, result)
@@ -182,6 +193,7 @@ class Core(Base):
         if self.Module != "ADS":
             raise RuntimeError(self.ADS_ONLY)
 
+        await self._connect()
         parameters = {
             'Id': session_id
         }
@@ -201,6 +213,7 @@ class Core(Base):
         if self.Module != "ADS":
             raise RuntimeError(self.ADS_ONLY)
 
+        await self._connect()
         result = await self._call_api('Core/GetActiveAMPSessions')
         if isinstance(result, list):
             return list(fromdict(Session, user) for user in result)
@@ -218,6 +231,7 @@ class Core(Base):
                 See `types.py -> User`
         """
 
+        await self._connect()
         parameters = {
             'Username': name
         }
@@ -239,6 +253,7 @@ class Core(Base):
             str | dict[str, Any] | list | bool | int | None: On success returns a bool.
         """
 
+        await self._connect()
         parameters = {
             'PermissionNode': permission_node
         }
@@ -258,6 +273,7 @@ class Core(Base):
             str | dict[str, Any] | list | bool | int | None: On success returns a list containing all the permission nodes for the provided role ID.
         """
 
+        await self._connect()
         parameters = {
             'RoleId': role_id
         }
@@ -274,6 +290,7 @@ class Core(Base):
             str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing all the permission nodes, descriptions and other attributes.
         """
 
+        await self._connect()
         result = await self._call_api("Core/GetPermissionsSpec")
         if isinstance(result, dict):
             return result
@@ -289,6 +306,7 @@ class Core(Base):
             `{'00000000-0000-0000-0000-000000000000': 'Default','cb984b09-a1c6-4cc0-b005-df8907f06590': 'Super Admins'}`
         """
 
+        await self._connect()
         result = await self._call_api('Core/GetRoleIds')
         if isinstance(result, dict):
             return result
@@ -308,6 +326,7 @@ class Core(Base):
 
         """
 
+        await self._connect()
         parameters = {
             'Name': name,
             'AsCommonRole': as_common_role
@@ -330,6 +349,7 @@ class Core(Base):
 
         """
 
+        await self._connect()
         parameters = {
             'RoleId': role_id
         }
@@ -352,6 +372,7 @@ class Core(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'UserId': user_id,
             'RoleId': role_id,
@@ -376,6 +397,7 @@ class Core(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'RoleId': role_id,
             'PermissionNode': permission_node,
@@ -395,6 +417,7 @@ class Core(Base):
             str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing all of the Server/Instance nodes and there information.
         """
 
+        await self._connect()
         result = await self._call_api('Core/GetSettingsSpec')
         if isinstance(result, dict):
             return result
@@ -412,6 +435,7 @@ class Core(Base):
             Node | str | dict[str, Any] | list | bool | int | None: On success returns a dictionary containing the following. \n
         """
 
+        await self._connect()
         parameters = {
             "node": node
         }
@@ -433,6 +457,7 @@ class Core(Base):
                 See `types.py -> Node`
         """
 
+        await self._connect()
         parameters = {
             "nodes": nodes
         }
@@ -450,6 +475,7 @@ class Core(Base):
                 See `types.py -> UpdateInfo`
         """
 
+        await self._connect()
         result = await self._call_api("Core/GetUpdateInfo")
         if isinstance(result, dict):
             return UpdateInfo(**result)
@@ -464,6 +490,7 @@ class Core(Base):
                 See `types.py -> User`
         """
 
+        await self._connect()
         result = await self._call_api("Core/GetAllAMPUserInfo")
         if isinstance(result, list):
             return list(User(**user) for user in result)

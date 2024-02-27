@@ -27,6 +27,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'Origin': source,
             'TargetDirectory': destination
@@ -50,6 +51,7 @@ class FileManagerPlugin(Base):
             See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'Filename': original,
             'NewFilename': new
@@ -73,6 +75,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'oldDirectory': oldDirectory,
             'newDirectoryName': newDirectoryName
@@ -94,6 +97,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> Directory`
         """
 
+        await self._connect()
         parameters = {
             'Dir': directory
         }
@@ -116,6 +120,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> FileChunk`
         """
 
+        await self._connect()
         parameters = {
             'Filename': name,
             'Position': position,
@@ -141,6 +146,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'Filename': filename,
             'Data': data,
@@ -165,6 +171,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'DirectoryName': dir_name
         }
@@ -186,6 +193,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'Filename': filename
         }
@@ -207,6 +215,7 @@ class FileManagerPlugin(Base):
                 See `types.py -> ActionResult`
         """
 
+        await self._connect()
         parameters = {
             'TrashDirectoryName': trash_dir
         }
@@ -214,3 +223,23 @@ class FileManagerPlugin(Base):
         if isinstance(result, dict):
             return ActionResult(**result)
         return result
+
+
+# FileManagerPlugin.Dummy:({'Parameters': [], 'ReturnTypeName': 'Void', 'IsComplexType': False})
+# FileManagerPlugin.CalculateFileMD5Sum:({'Parameters': [{'Name': 'FilePath', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult<String>', 'IsComplexType': True})
+# FileManagerPlugin.ChangeExclusion:({'Parameters': [{'Name': 'ModifyPath', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'AsDirectory', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}, {'Name': 'Exclude', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.CreateArchive:({'Parameters': [{'Name': 'PathToArchive', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.ExtractArchive:({'Parameters': [{'Name': 'ArchivePath', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'DestinationPath', 'TypeName': 'String', 'Description': '', 'Optional': True}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.GetDirectoryListing:({'Parameters': [{'Name': 'Dir', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'IEnumerable<JObject>', 'IsComplexType': True})
+# FileManagerPlugin.GetFileChunk:({'Parameters': [{'Name': 'Filename', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Position', 'TypeName': 'Int64', 'Description': '', 'Optional': False}, {'Name': 'Length', 'TypeName': 'Int32', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'JObject', 'IsComplexType': True})
+# FileManagerPlugin.AppendFileChunk:({'Parameters': [{'Name': 'Filename', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Data', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Delete', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
+# FileManagerPlugin.ReadFileChunk:({'Parameters': [{'Name': 'Filename', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Offset', 'TypeName': 'Int64', 'Description': '', 'Optional': False}, {'Name': 'ChunkSize', 'TypeName': 'Int64', 'Description': '', 'Optional': True}], 'ReturnTypeName': 'ActionResult<String>', 'IsComplexType': True})
+# FileManagerPlugin.WriteFileChunk:({'Parameters': [{'Name': 'Filename', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Data', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Offset', 'TypeName': 'Int64', 'Description': '', 'Optional': False}, {'Name': 'FinalChunk', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.DownloadFileFromURL:({'Parameters': [{'Name': 'Source', 'TypeName': 'Uri', 'Description': '', 'Optional': False}, {'Name': 'TargetDirectory', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.RenameFile:({'Parameters': [{'Name': 'Filename', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'NewFilename', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.CopyFile:({'Parameters': [{'Name': 'Origin', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'TargetDirectory', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.TrashFile:({'Description': 'Moves a file to trash, files must be trashed before they can be deleted.', 'Returns': '', 'Parameters': [{'Name': 'Filename', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.TrashDirectory:({'Description': 'Moves a directory to trash, files must be trashed before they can be deleted.', 'Returns': '', 'Parameters': [{'Name': 'DirectoryName', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.EmptyTrash:({'Description': 'Empties a trash bin', 'Returns': '', 'Parameters': [{'Name': 'TrashDirectoryName', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.CreateDirectory:({'Description': 'Creates a new directory. The parent directory must already exist.', 'Returns': '', 'Parameters': [{'Name': 'NewPath', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+# FileManagerPlugin.RenameDirectory:({'Description': 'Renames a directory', 'Returns': '', 'Parameters': [{'Name': 'oldDirectory', 'TypeName': 'String', 'Description': 'The full path to the old directory', 'Optional': False}, {'Name': 'NewDirectoryName', 'TypeName': 'String', 'Description': 'The name component of the new directory (not the full path)', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
