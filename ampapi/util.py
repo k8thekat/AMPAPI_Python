@@ -77,7 +77,7 @@ class APIUtil():
                 self.node_scrape(text=index["Children"], file=file)
         file.close()
 
-    async def parse_get_api_spec(self, data: dict) -> None | str | dict[str, Any] | list | bool | int | None:
+    async def parse_get_api_spec(self, instance_type: str, data: dict) -> None | str | dict[str, Any] | list | bool | int | None:
         """
         Creates a `api_spec.txt` in the script directory with nodes from api `Core/GetAPISpec`
         #TODO - Improve formatting of the Markdown file.
@@ -87,7 +87,7 @@ class APIUtil():
         See -> `../docs/api_spec.md` 
         """
         # res = await amp.get_api_spec()
-        dir = Path(__file__).parent.joinpath("../docs/api_spec.md")
+        dir = Path(__file__).parent.joinpath(f"../docs/{instance_type}_api_spec.md")
         mode = "x"
         if dir.exists():
             mode = "w"
