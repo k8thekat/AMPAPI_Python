@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Union
 from dataclass_wizard import fromdict
 from .types import *
-from .base import Base
+from .base import Base, FORMAT_DATA
 
 __all__ = ("MinecraftModule",)
 
@@ -14,65 +14,68 @@ class MinecraftModule(Base):
     """
 
     # MinecraftModule.BukGetCategories: ({'Parameters': [], 'ReturnTypeName': 'JSONRawResponse', 'IsComplexType': True})
-    async def mc_buk_get_categories(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_buk_get_categories(self) -> list[dict[str, Any]]:
         """
         Get Bukkit categories.
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: Returns a list of dictionarys containing plugin categories.\n
+            list[dict[str, Any]]: Returns a list of dictionaries containing plugin categories.\n
 
-            [{'id': 2, 'name': 'Bungee - Spigot'},
-            {'id': 3, 'name': 'Bungee - Proxy'},
-            {'id': 4, 'name': 'Spigot'},
-            {'id': 5, 'name': 'Transportation'},
-            {'id': 6, 'name': 'Chat'},
-            {'id': 7, 'name': 'Tools and Utilities'},
-            {'id': 8, 'name': 'Misc'},
-            {'id': 9, 'name': 'Libraries / APIs'},
-            {'id': 10, 'name': 'Transportation'},
-            {'id': 11, 'name': 'Chat'}]
+        ### CATEGORIES:
+        {'id': 2, 'name': 'Bungee - Spigot'}
+        {'id': 3, 'name': 'Bungee - Proxy'}
+        {'id': 4, 'name': 'Spigot'}
+        {'id': 5, 'name': 'Transportation'}
+        {'id': 6, 'name': 'Chat'}
+        {'id': 7, 'name': 'Tools and Utilities'}
+        {'id': 8, 'name': 'Misc'}
+        {'id': 9, 'name': 'Libraries / APIs'}
+        {'id': 10, 'name': 'Transportation'}
+        {'id': 11, 'name': 'Chat'}
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/BukGetCategories')
+        result = await self._call_api(api='MinecraftModule/BukGetCategories')
         return result
 
     # MinecraftModule.BukGetPopularPlugins: ({'Parameters': [], 'ReturnTypeName': 'JSONRawResponse', 'IsComplexType': True})
-    async def mc_buk_get_popular_plugins(self) -> list[BukkitPlugin] | None | str | bool | dict[str, Any]:
+    async def mc_buk_get_popular_plugins(self, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
         """
         Get Bukkit popular plugins.
 
+        Args:
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
-            list[BukkitPlugin] | None | str | bool | dict[str, Any]: Returns a list of BukkitPlugin dataclasses.
+            list[BukkitPlugin]: Returns a list of BukkitPlugin dataclasses.
+                See `types.py -> BukkitPlugin`
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/BukGetPopularPlugins')
-        if isinstance(result, list):
-            return list(BukkitPlugin(**plugin)for plugin in result)
+        result = await self._call_api(api='MinecraftModule/BukGetPopularPlugins', format_data=format_data, format=BukkitPlugin)
         return result
 
     # MinecraftModule.BukGetPluginsForCategory: ({'Parameters': [{'Name': 'CategoryId', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'PageNumber', 'TypeName': 'Int32', 'Description': '', 'Optional': False}, {'Name': 'PageSize', 'TypeName': 'Int32', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'JSONRawResponse', 'IsComplexType': True})
-    async def mc_buk_get_plugins_for_category(self, CategoryId: str, PageNumber: int, PageSize: int) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_buk_get_plugins_for_category(self, category_id: str, page_number: int = 1, page_size: int = 10, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
         """
         Get Bukkit plugins from category.
-        #TODO - What does it return.
 
         Args:
-            CategoryId (str): Plugin category ID. See -> `mc_buk_get_categories()`
-            PageNumber (int): Page Number
-            PageSize (int): Page Size
+            category_id (str): Plugin category ID. See -> `mc_buk_get_categories()`
+            page_number (int): Page Number. Default: 1
+            page_size (int): Page Size. Default: 10
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            list[BukkitPlugin]: On success returns a list of BukkitPlugin dataclasses.
+                See `types.py -> BukkitPlugin`
         """
 
         if self.Module != "Minecraft":
@@ -80,27 +83,26 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "CategoryId": CategoryId,
-            "PageNumber": PageNumber,
-            "PageSize": PageSize
+            "CategoryId": category_id,
+            "PageNumber": page_number,
+            "PageSize": page_size
         }
 
-        result = await self._call_api('MinecraftModule/BukGetPluginsForCategory', parameters)
-        if isinstance(result, list):
-            return list(BukkitPlugin(**plugin)for plugin in result)
+        result = await self._call_api(api='MinecraftModule/BukGetPluginsForCategory', parameters=parameters, format_data=format_data, format=BukkitPlugin)
         return result
 
     # MinecraftModule.BukGetPluginInfo: ({'Parameters': [{'Name': 'PluginId', 'TypeName': 'Int32', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'JSONRawResponse', 'IsComplexType': True})
-    async def mc_buk_get_plugin_info(self, PluginId: int) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_buk_get_plugin_info(self, plugin_id: int, format_data: Union[bool, None] = None) -> Any:
         """
         Get Bukkit plugin info.
 
+
         Args:
-            PluginId (int): The plugin ID.
-        #TODO - What does it return.
+            plugin_id (int): The plugin ID.
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            Any: UNK data returned by the API.
         """
 
         if self.Module != "Minecraft":
@@ -108,39 +110,41 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "PluginId": PluginId
+            "PluginId": plugin_id
         }
-        result = await self._call_api('MinecraftModule/BukGetPluginInfo', parameters)
+        result = await self._call_api(api='MinecraftModule/BukGetPluginInfo', parameters=parameters, format_data=format_data)
         return result
 
     # MinecraftModule.BukGetInstalledPlugins: ({'Parameters': [], 'ReturnTypeName': 'JSONRawResponse', 'IsComplexType': True})
-    async def mc_buk_get_installed_plugins(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_buk_get_installed_plugins(self, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
         """
         Get Bukkit installed plugins.
-        #TODO - What does it return.
+
+        Args:
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)        
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            list[BukkitPlugin]: On success returns a list of BukkitPlugin dataclasses.
+                See `types.py -> BukkitPlugin`
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/BukGetInstalledPlugins')
+        result = await self._call_api(api='MinecraftModule/BukGetInstalledPlugins', format_data=format_data, format=BukkitPlugin)
         return result
 
     # MinecraftModule.BukGetRemovePlugin: ({'Parameters': [{'Name': 'PluginId', 'TypeName': 'Int32', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_buk_get_remove_plugin(self, PluginId: int) -> None:
+    async def mc_buk_get_remove_plugin(self, plugin_id: int) -> None:
         """
         Remove Bukkit plugin.
-        #TODO - What does it return.
 
         Args:
-            PluginId (int): The plugin ID.
+            plugin_id (int): The plugin ID.
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            None: ""
         """
 
         if self.Module != "Minecraft":
@@ -148,22 +152,23 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "PluginId": PluginId
+            "PluginId": plugin_id
         }
-        await self._call_api('MinecraftModule/BukGetRemovePlugin', parameters)
+        await self._call_api(api='MinecraftModule/BukGetRemovePlugin', parameters=parameters)
         return
 
     # MinecraftModule.BukGetInstallUpdatePlugin: ({'Parameters': [{'Name': 'pluginId', 'TypeName': 'Int32', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'RunningTask', 'IsComplexType': True})
-    async def mc_buk_get_install_update_plugin(self, PluginId: int) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_buk_get_install_update_plugin(self, plugin_id: int, format_data: Union[bool, None] = None) -> RunningTask:
         """
         Get update for Bukkit plugin.
-        #TODO - What does it return.
 
         Args:
-            PluginId (int): The plugin ID.
+            plugin_id (int): The plugin ID.
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            RunningTask: On success returns a RunningTask dataclass.
+                See `types.py -> RunningTask`
         """
 
         if self.Module != "Minecraft":
@@ -171,24 +176,25 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "pluginId": PluginId
+            "pluginId": plugin_id
         }
-        result = await self._call_api('MinecraftModule/BukGetInstallUpdatePlugin', parameters)
+        result = await self._call_api(api='MinecraftModule/BukGetInstallUpdatePlugin', parameters=parameters, format_data=format_data, format=RunningTask)
         return result
 
     # MinecraftModule.BukGetSearch: ({'Parameters': [{'Name': 'Query', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'PageNumber', 'TypeName': 'Int32', 'Description': '', 'Optional': False}, {'Name': 'PageSize', 'TypeName': 'Int32', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'JSONRawResponse', 'IsComplexType': True})
-    async def mc_buk_get_search(self, Query: str, PageNumber: int, PageSize: int) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_buk_get_search(self, query: str, page_number: int = 0, page_size: int = 10, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
         """
         Search for Bukkit plugins.
-        #TODO - What does it return.
 
         Args:
             Query (str): Search string.
-            PageNumber (int): Page number.
-            PageSize (int): Page size.
+            PageNumber (int): Page number. Defaults to 0.
+            PageSize (int): Page size. Defaults to 10.
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            list[BukkitPlugin]: On success returns a list of BukkitPlugin dataclasses.
+                See `types.py -> BukkitPlugin`
         """
 
         if self.Module != "Minecraft":
@@ -196,25 +202,24 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "Query": Query,
-            "PageNumer": PageNumber,
-            "PageSize": PageSize
+            "Query": query,
+            "PageNumber": page_number,
+            "PageSize": page_size
 
         }
-        result = await self._call_api('MinecraftModule/BukGetSearch', parameters)
+        result = await self._call_api(api='MinecraftModule/BukGetSearch', parameters=parameters, format_data=format_data, format=BukkitPlugin)
         return result
 
     # MinecraftModule.GetHeadByUUID: ({'Description': 'Get a skin as a base64 string', 'Returns': '', 'Parameters': [{'Name': 'id', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'String', 'IsComplexType': False})
-    async def mc_get_head_by_uuid(self, id: str):
+    async def mc_get_head_by_uuid(self, id: str) -> str:
         """
         Get a skin as a base64 string.
-        #TODO - What does it return.
 
         Args:
             id (str): Minecraft UUID.
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            str: base64 string. eg. (data:image/gif;base64, data)
         """
 
         if self.Module != "Minecraft":
@@ -224,53 +229,51 @@ class MinecraftModule(Base):
         parameters = {
             "id": id
         }
-        result = await self._call_api('MinecraftModule/GetHeadByUUID', parameters)
+        result = await self._call_api(api='MinecraftModule/GetHeadByUUID', parameters=parameters)
         return result
 
     # MinecraftModule.GetFailureReason: ({'Parameters': [], 'ReturnTypeName': 'String', 'IsComplexType': False})
-    async def mc_get_failure_reason(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_get_failure_reason(self) -> str:
         """
-        UNKNOWN
-        #TODO - What does it return.
+        Get the failure reason.
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            str: On success returns a string representation of the failure reason.
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/GetFailureReason')
+        result = await self._call_api(api='MinecraftModule/GetFailureReason')
         return result
 
     # MinecraftModule.AcceptEULA: ({'Parameters': [], 'ReturnTypeName': 'Boolean', 'IsComplexType': False})
-    async def mc_accept_eula(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_accept_eula(self) -> bool:
         """
         Accept the EULA summary.
-        #TODO - Need to be Validated
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: On success returns a Bool.
+            bool: On success returns a Bool.
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/AcceptEULA')
+        result = await self._call_api(api='MinecraftModule/AcceptEULA')
         return result
 
     # MinecraftModule.BanUserByID: ({'Parameters': [{'Name': 'ID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_ban_user_by_id(self, ID: str) -> None:
+    async def mc_ban_user_by_id(self, id: str) -> None:
         """
         Ban the specified Minecraft UUID.
 
         Args:
-            ID (str): Minecraft UUID.
+            id (str): Minecraft UUID.
 
         Returns:
-            None
+            None: ""
         """
 
         if self.Module != "Minecraft":
@@ -278,18 +281,18 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "ID": ID
+            "ID": id
         }
-        await self._call_api('MinecraftModule/BanUserByID', parameters)
+        await self._call_api(api='MinecraftModule/BanUserByID', parameters=parameters)
         return
 
     # MinecraftModule.KickUserByID: ({'Parameters': [{'Name': 'ID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_kick_user_by_id(self, ID: str) -> None:
+    async def mc_kick_user_by_id(self, id: str) -> None:
         """
         Kick the specified User ID.
 
         Args:
-            ID (str): Minecraft UUID.
+            id (str): Minecraft UUID.
 
         Returns:
             None
@@ -301,19 +304,18 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "ID": ID
+            "ID": id
         }
-        await self._call_api('MinecraftModule/KickUserByID', parameters)
+        await self._call_api(api='MinecraftModule/KickUserByID', parameters=parameters)
         return
 
     # MinecraftModule.ClearInventoryByID: ({'Parameters': [{'Name': 'ID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_clear_inventory_by_id(self, ID: str) -> None:
+    async def mc_clear_inventory_by_id(self, id: str) -> None:
         """
         Clear a players inventory. 
-        #TODO - Need to be Validated
 
         Args:
-            ID (str): Minecraft UUID.
+            id (str): Minecraft UUID.
 
         Returns:
             None
@@ -324,18 +326,18 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "ID": ID
+            "ID": id
         }
-        await self._call_api('MinecraftModule/ClearInventoryByID', parameters)
+        await self._call_api(api='MinecraftModule/ClearInventoryByID', parameters=parameters)
         return
 
     # MinecraftModule.KillByID: ({'Parameters': [{'Name': 'ID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_kill_by_id(self, ID: str) -> None:
+    async def mc_kill_by_id(self, id: str) -> None:
         """
-        kill_by_id _summary_
+        Kill the Minecraft player.
 
         Args:
-            ID (str): Minecraft UUID.
+            id (str): Minecraft UUID.
 
         Returns:
             None
@@ -346,18 +348,18 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "ID": ID
+            "ID": id
         }
-        await self._call_api('MinecraftModule/KillByID', parameters)
+        await self._call_api(api='MinecraftModule/KillByID', parameters=parameters)
         return
 
     # MinecraftModule.SmiteByID: ({'Description': 'Strike a player with lightning', 'Returns': '', 'Parameters': [{'Name': 'ID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_smite_by_id(self, ID: str) -> None:
+    async def mc_smite_by_id(self, id: str) -> None:
         """
         Strike a player with lightning
 
         Args:
-            ID (str): Minecraft UUID.
+            id (str): Minecraft UUID.
         """
 
         if self.Module != "Minecraft":
@@ -365,72 +367,78 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "ID": ID
+            "ID": id
         }
-        await self._call_api('MinecraftModule/SmiteByID', parameters)
+        await self._call_api(api='MinecraftModule/SmiteByID', parameters=parameters)
         return
 
     # MinecraftModule.GetOPWhitelist: ({'Parameters': [], 'ReturnTypeName': 'JObject', 'IsComplexType': True})
-    async def mc_get_op_whitelist(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_get_op_whitelist(self, format_data: Union[bool, None] = None) -> OPWhitelist:
         """
         Get the OP whitelist.
-        #TODO - See what it returns. (create dataclass)
+
+        Args:
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: 
+            OPWhitelist: On success returns an OPWhitelist dataclass.
+                See `types.py -> OPWhitelist`
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/GetOPWhitelist')
+        result = await self._call_api(api='MinecraftModule/GetOPWhitelist', format_data=format_data, format=OPWhitelist)
         return result
 
     # MinecraftModule.GetWhitelist: ({'Parameters': [], 'ReturnTypeName': 'IEnumerable<JObject>', 'IsComplexType': True})
-    async def mc_get_whitelist(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_get_whitelist(self, format_data: Union[bool, None] = None) -> list[MCUser]:
         """
         Get the whitelist.
-        #TODO - See what it returns (create dataclass)
+
+        Args:
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: _description_
+            list[Whitelist]: Returns a list of strings containing Minecraft UUIDs.
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/GetWhitelist')
+        result = await self._call_api(api='MinecraftModule/GetWhitelist', format_data=format_data, format=MCUser)
         return result
 
     # MinecraftModule.LoadOPList: ({'Parameters': [], 'ReturnTypeName': 'IEnumerable<JObject>', 'IsComplexType': True})
-    async def mc_load_op_list(self) -> None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_load_op_list(self, format_data: Union[bool, None] = None) -> list[OPList]:
         """
         Get the OP list.
-        #TODO - See what it reutrns (create dataclass)
 
         Returns:
-            None | str | bool | dict[str, Any] | list[Any]: _description_
+            list[OPList]: On success returns a list of OPList dataclasses.
+                See `types.py -> OPList`
         """
 
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
-        result = await self._call_api('MinecraftModule/LoadOPList')
+        result = await self._call_api(api='MinecraftModule/LoadOPList', format_data=format_data, format=OPList)
         return result
 
     # MinecraftModule.AddOPEntry: ({'Parameters': [{'Name': 'UserOrUUID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
-    async def mc_add_op_entry(self, UserOrUUID: str) -> ActionResult | None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_add_op_entry(self, user_or_uuid: str, format_data: Union[bool, None] = None) -> ActionResult:
         """
         Add an entry to the OP list.
 
         Args:
-            UserOrUUID (str): Minecraft UUID or Username.
+            user_or_uuid (str): Minecraft UUID or Username.
 
         Returns:
-            ActionResult | None | str | bool | dict[str, Any] | list[Any]: On success returns an ActionResult dataclass.
+            ActionResult: On success returns an ActionResult dataclass.
+                See `types.py -> ActionResult`
         """
 
         if self.Module != "Minecraft":
@@ -438,42 +446,41 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "UserOrUUID": UserOrUUID
+            "UserOrUUID": user_or_uuid
         }
 
-        result = await self._call_api('MinecraftModule/AddOPEntry', parameters)
-        if isinstance(result, dict):
-            return ActionResult(**result)
+        result = await self._call_api(api='MinecraftModule/AddOPEntry', parameters=parameters, format_data=format_data, format=ActionResult)
         return result
 
     # MinecraftModule.RemoveOPEntry: ({'Parameters': [{'Name': 'UserOrUUID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_remove_op_entry(self, UserOrUUID: str) -> None:
+    async def mc_remove_op_entry(self, user_or_uuid: str) -> None:
         """
         Remove an entry from the OP list.
 
         Args:
-            UserOrUUID (str): Minecraft UUID or Username.
+            user_or_uuid (str): Minecraft UUID or Username.
         """
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
         parameters = {
-            "UserOrUUID": UserOrUUID
+            "UserOrUUID": user_or_uuid
         }
-        await self._call_api('MinecraftModule/RemoveOPEntry', parameters)
+        await self._call_api(api='MinecraftModule/RemoveOPEntry', parameters=parameters)
         return
 
     # MinecraftModule.AddToWhitelist: ({'Parameters': [{'Name': 'UserOrUUID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
-    async def mc_add_to_whitelist(self, UserOrUUID: str) -> ActionResult | None | str | bool | dict[str, Any] | list[Any]:
+    async def mc_add_to_whitelist(self, user_or_uuid: str, format_data: Union[bool, None] = None) -> ActionResult:
         """
         Add a user to the whitelist.
 
         Args:
-            UserOrUUID (str): Minecraft UUID or Username.
+            user_or_uuid (str): Minecraft UUID or Username.
 
         Returns:
-            ActionResult | None | str | bool | dict[str, Any] | list[Any]: On success returns an ActionResult dataclass.
+            ActionResult: On success returns an ActionResult dataclass.
+                See `types.py -> ActionResult`
         """
 
         if self.Module != "Minecraft":
@@ -481,27 +488,25 @@ class MinecraftModule(Base):
 
         await self._connect()
         parameters = {
-            "UserOrUUID": UserOrUUID
+            "UserOrUUID": user_or_uuid
         }
-        result = await self._call_api('MinecraftModule/AddToWhitelist', parameters)
-        if isinstance(result, dict):
-            return ActionResult(**result)
+        result = await self._call_api(api='MinecraftModule/AddToWhitelist', parameters=parameters, format_data=format_data, format=ActionResult)
         return result
 
     # MinecraftModule.RemoveWhitelistEntry: ({'Parameters': [{'Name': 'UserOrUUID', 'TypeName': 'String', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def mc_remove_whitelist_entry(self, UserOrUUID: str) -> None:
+    async def mc_remove_whitelist_entry(self, user_or_uuid: str) -> None:
         """
         Remove a user from the whitelist.
 
         Args:
-            UserOrUUID (str): Minecraft UUID or Username.
+            user_or_uuid (str): Minecraft UUID or Username.
         """
         if self.Module != "Minecraft":
             raise RuntimeError(self.MINECRAFT_ONLY)
 
         await self._connect()
         parameters = {
-            "UserOrUUID": UserOrUUID
+            "UserOrUUID": user_or_uuid
         }
-        await self._call_api('MinecraftModule/RemoveWhitelistEntry', parameters)
+        await self._call_api(api='MinecraftModule/RemoveWhitelistEntry', parameters=parameters)
         return

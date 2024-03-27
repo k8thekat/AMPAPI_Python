@@ -20,8 +20,9 @@ class AMPInstance(Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlu
     Module: str = "Instance"
 
     def __init__(self, data: Instance | None):
-        print(f"DEBUG {type(self).__name__} __init__")
+        # print(f"DEBUG {type(self).__name__} __init__")
         super().__init__()
+
         if isinstance(data, Instance):
             self.parse_data(data=data)
 

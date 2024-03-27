@@ -1,14 +1,18 @@
-# AMPAPI_Python
+# AMPAPI_Python_wrapper
 ___
-CubeCoders AMP API for Python
+CubeCoders AMP API wrapper in Python
 
-Developed to be used alongside [Gatekeeper](https://github.com/k8thekat/GatekeeperV2) or as a stand alone package.
+Can be used as a stand alone package.
+
+See usage examples:
+[Gatekeeper](https://github.com/k8thekat/GatekeeperV2)
 
 ### Key Features
 ___
 
-- Pythonic API using `async` and `await`.
-- Most data is in dataclasses for easier management and interaction.
+- Pythonic API wrapper using `async` and `await`.
+- Data is in dataclasses for easier management and interaction.
+    - Optional parameter per function or global to disable formatting of data.
 
 ### Installing
 ___

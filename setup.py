@@ -19,9 +19,9 @@ if not version:
 packages = ["ampapi",]  # I believe this will affect the open #LN13
 
 setup(
-    name='cubecoders_amp_api',
+    name='cubecoders_amp_api_wrapper',
     version=version,
-    description='A python API package to interact with the AMP API by CubeCoders',
+    description='A python wrapper for the AMP API by CubeCoders',
     url='https://github.com/k8thekat/AMPAPI_Python',
     author='Katelynn Cadwallader',
     author_email='Cadwalladerkatelynn+AMPAPI@gmail.com',
