@@ -1,4 +1,4 @@
-from typing import Self
+from typing import TYPE_CHECKING, Self
 from .types import APIParams
 from dataclasses import fields
 
@@ -38,14 +38,8 @@ class Bridge(APIParams):
         return cls._instance
 
     def __init__(self, api_params: APIParams, *args, **kwargs) -> None:
-        print("DEBUG Bridge __init__")
+        # print("DEBUG Bridge __init__")
         self.api_params: APIParams = api_params
         # We parse the api params for easier usage.
         for field in fields(api_params):
             setattr(self, field.name, getattr(self.api_params, field.name))
-
-    # @property
-    # def apiparams(self):
-    #     if isinstance(self, APIparams):
-    #         for field in fields(self):
-    #             setattr(self, field.name, getattr(self, field.name))
