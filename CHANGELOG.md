@@ -1,3 +1,81 @@
+## Version - 0.0.34b - [9ac1e3c](https://github.com/k8thekat/AMPAPI_Python/commit/9ac1e3c)
+#### __init__.py
+- Switched from `ALPHA` to `BETA`
+- Version bump `0.0.34b`
+
+#### Readme.md
+- Updated documentation.
+- Referenced the package as a wrapper now.
+
+#### setup.py
+- Updated name and description to properly represent the package as a wrapper.
+
+#### ads.py
+- Removed prints from development.
+- Updated doc strings and methods for `format_data` parameter.
+- Added logic for when there is no instances from `get_instances()`
+
+#### adsmodule.py
+- Added all endpoints for "API/ADSModule/".
+- Formatted `get_instance()` to pep8.
+
+#### base.py
+- Added global var `FORMAT_DATA`
+- Added time to live value for sessions. See `session_ttl`, default 240 seconds.
+- Added `FAILED_API` for exception raising.
+- Added `format_data` property to access the global `FORMAT_DATA`
+- Added `camel_case_data()` method to camel case keys of a dictionary.
+- Added `dataclass_to_dict()` to unpack a dataclass into a dictionary.
+- Added `json_to_dataclass()` to format the JSON response from API calls into dataclasses.
+- Refactored `_call_api()` and added support for `FORMAT_DATA`.
+	- Moved data formatting into `json_to_dataclass()` method.
+- Refactored `_connect()` and improved session handling.
+
+#### bridge.py
+- Removed commented out code and commented out print statements.
+- Revered `Self` change due to import error.
+
+#### core.py
+- Added remaining `API/Core` endpoints and added `format_data` functionality.
+- Updated doc strings.
+
+#### filebackup.py
+- Updated method functionality to support `format_data`.
+	- Updated doc strings to match.
+- Finished remaining API endpoints.
+	- TODO - Finish return types.
+
+#### filemanager.py
+- Updated method functionality to support `format_data`.
+	- Updated doc strings to match.
+- Finished remaining API endpoints.
+	- TODO - Finish return types.
+
+#### instance.py
+- Commented out print statements.
+
+#### minecraft.py
+- Updated method functionality to support `format_data`.
+	- Updated doc strings to match.
+
+#### types.py
+- Added multiple dataclasses to support added Endpoints.
+- Added `APIParams()` to better assist users with connection setup.
+- Added `APISession()` to better handle session TTL values.
+- Updated multiple dataclasses to better handle data formatting.
+"
+"# Overall
+- Removed `api_spec.md` and created Instance Module specific documents.
+
+#### utils.py
+- Added `instance_type` parameter to `parse_get_api_spec()` to differentiate API endpoint specs in files.
+"
+"# setup.py
+- Added `CHANGELOG.md` to packages.
+
+#### Changelog.md
+- Version bump `0.0.33a`.
+
 ## Version - 0.0.33a - [4df55fa](https://github.com/k8thekat/AMPAPI_Python/commit/4df55fa)
 #### __init__.py
 - Version bump `0.0.33a`.
