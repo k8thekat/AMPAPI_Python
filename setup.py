@@ -1,16 +1,16 @@
 from setuptools import setup
 import re
 
-requirements: list[str] = []
-with open("requirements.txt") as file:
-    requirements = file.read().splitlines()
+# requirements: list[str] = []
+# with open("./requirements.txt") as file:
+#     requirements = file.read().splitlines()
 
 readme = ''
-with open('README.md') as file:
+with open('./README.md') as file:
     readme: str = file.read()
 
 version = ''
-with open('ampapi/__init__.py') as file:
+with open('./ampapi/__init__.py') as file:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', file.read(), re.MULTILINE).group(1)  # type:ignore
 
 if not version:
@@ -39,7 +39,11 @@ setup(
         "changelog": ["CHANGELOG.md"]},
     long_description=readme,
     long_description_content_type="text/markdown",
-    install_requires=requirements,
+    install_requires=[
+        "aiohttp==3.7.4.post0",
+        "dataclass_wizard==0.22.2",
+        "pyotp==2.6.0"
+    ],
     python_requires='>=3.9.0',
     classifiers=[
         'Development Status :: 3 - Alpha',

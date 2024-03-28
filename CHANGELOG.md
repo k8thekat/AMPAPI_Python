@@ -1,3 +1,10 @@
+## Version - 0.0.37b - [63121cc](https://github.com/k8thekat/AMPAPI_Python/commit/63121cc)
+#### __init__.py
+- Version bump `0.0.37b`
+
+#### requirements.txt
+- Removed `setuptools`
+
 ## Version - 0.0.36b - [c9417a3](https://github.com/k8thekat/AMPAPI_Python/commit/c9417a3)
 #### __init__.py
 - Version bump `0.0.36b`
