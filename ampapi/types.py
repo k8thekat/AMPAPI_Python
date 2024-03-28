@@ -214,9 +214,9 @@ class Metric():
 
 
 @dataclass()
-class Status():
+class AppStatus():
     """
-    Tied to `Updates()`, represents the Instance stats.
+    Tied to `get_status()`, represents the Instance stats.
 
     """
 
@@ -228,7 +228,7 @@ class Status():
 @dataclass()
 class InstanceStatus():
     """
-    Represents the data returned from `getInstanceStatus()`
+    Represents the data returned from `get_instance_status()`
 
     """
 
@@ -329,7 +329,7 @@ class Updates():
     """
 
     ConsoleEntries: list[Console_Entries]
-    Status: Status
+    Status: AppStatus
     Messages: list[Messages]  # No ideal usage at this time.
     Ports: list[Port] = field(default_factory=list)  # No ideal usage at this time.
     Tasks: list[Task] = field(default_factory=list)  # No ideal usage at this time.
@@ -779,6 +779,7 @@ class InstanceDatastore():
 class RunningTask():
     """
     Represents the data returned from some API calls that return RunningTask.\n
+
     https://github.com/p0t4t0sandwich/ampapi-py/blob/main/ampapi/types.py#L887
 
     """

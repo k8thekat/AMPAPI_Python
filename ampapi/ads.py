@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Self, Union
-from ampapi.types import Any, InstanceStatus, Session
 from .types import Controller, Instance
 from .adsmodule import ADSModule
 from .core import Core
@@ -44,7 +43,7 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
 
     async def get_instances(self, format_data: Union[bool, None] = None) -> list[Controller | Self]:
         """
-        Returns a list of all Instances on the AMP Panel.\n
+        Returns a list of all Instances on the AMP Panel and updates our self object.
         `**ADSInstance Only**`
 
         Args:
@@ -56,7 +55,7 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
         """
 
         ads_list = []
-        result = await super().get_instances(format_data=format_data)
+        result: list[Controller] = await super().get_instances(format_data=format_data)
         if isinstance(result, list):
             self.parse_data(data=result[0])  # Need to update our self object.
             for i in range(1, len(result)):
@@ -64,66 +63,3 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
             return ads_list
         else:
             return result
-
-    async def get_instance_statuses(self, format_data: Union[bool, None] = None) -> list[InstanceStatus]:
-        """
-        Returns a dictionary of the Server/Instance Status. \n
-        `**ADSInstance Only**`
-
-        Args:
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
-
-        Returns:
-            list[InstanceStatus] | dict | str | bool | int | None: Returns a list of InstanceStatus dataclasses.
-                See `types.py -> InstanceStatus`
-
-        """
-
-        return await super().get_instance_statuses(format_data=format_data)
-
-    async def get_instance(self, instance_id: str, format_data: Union[bool, None] = None) -> Instance:
-        """
-        Returns the Instance information for the provided Instance ID.\n
-        `**ADSInstance Only**`
-
-        Args:
-            instance_id (str): The Instance ID to get information for.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
-
-        Returns:
-            Instance | str | bool | int | None: On success returns a Instance dataclass. 
-
-        """
-
-        return await super().get_instance(instance_id=instance_id, format_data=format_data)
-
-    async def end_user_session(self, session_id: str) -> str | None:
-        """
-        Closes the specified User's session ID to AMP.\n
-        `**ADSInstance Only**`
-
-        Args:
-            session_id (str): session ID to end.
-
-        Returns:
-            None: ""
-
-        """
-
-        return await super().end_user_session(session_id)
-
-    async def get_active_amp_sessions(self, format_data: Union[bool, None] = None) -> list[Session]:
-        """
-        Returns currently active AMP Sessions.\n
-        `**ADSInstance Only**`
-
-        Args:
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
-
-        Returns:
-            Session | str | dict[str, Any] | list | bool | int | None: Returns a dataclass Session.
-                See `types.py -> Session`
-
-        """
-
-        return await super().get_active_amp_sessions(format_data=format_data)

@@ -107,7 +107,7 @@ class Base():
             if bridge.token.startswith(("'", '"')) == False or bridge.token.endswith(("'", '"')) == False:
                 raise ValueError("2FA Token must be enclosed in quotes.")
 
-    def parse_data(self, data: Controller | Instance) -> Self:
+    def parse_data(self, data: Controller | Instance | AppStatus | Updates) -> Self:
         """
         Takes in a Controller or Instance dataclass and iterates through it's attributes and 
         set's the values as attributes of the class that called this function.

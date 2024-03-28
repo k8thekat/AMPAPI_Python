@@ -23,7 +23,7 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "0.0.34b"
+__version__ = "0.0.35b"
 __credits__ = "AMP by CubeCoders and associates."
 
 from .ads import *
