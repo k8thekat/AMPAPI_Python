@@ -1,3 +1,53 @@
+## Version - 0.0.38b - [970db4b](https://github.com/k8thekat/AMPAPI_Python/commit/970db4b)
+#### setup.py
+- Changed `install_requires` to a list instead of a prepopulated list.
+
+#### __init__.py
+- Version bump `0.0.38b`
+
+## Version - 0.0.37b - [63121cc](https://github.com/k8thekat/AMPAPI_Python/commit/63121cc)
+#### __init__.py
+- Version bump `0.0.37b`
+
+#### requirements.txt
+- Removed `setuptools`
+
+## Version - 0.0.36b - [c9417a3](https://github.com/k8thekat/AMPAPI_Python/commit/c9417a3)
+#### __init__.py
+- Version bump `0.0.36b`
+
+#### Changelog.md
+- Fixed typos.
+
+## Version - 0.0.35b - [585ecf3](https://github.com/k8thekat/AMPAPI_Python/commit/585ecf3)
+#### __init__.py
+- Version bump `0.0.35b`
+
+#### README.md
+- Updated description and key features.
+- Added coding examples.
+
+#### requirements.txt
+- Added `setuptools` to requirements.
+
+#### ads.py
+- Removed unused methods.
+
+#### base.py
+- Changed type check of `parse_data()` data parameter.
+
+#### core.py
+- Changed return type `Status` to `AppStatus`.
+
+#### types.py
+- Changed `Status` to `AppStatus`.
+
+#### instance.py
+- Added `State` property to return `AppState`
+- Added `AppStatus` and `Updates` to class inheritance.
+- Added `.get_status()` methods to AMPInstance to set self class attributes.
+- Added `get_updates()` methods to AMPInstance to set self class attributes.
+
 ## Version - 0.0.34b - [9ac1e3c](https://github.com/k8thekat/AMPAPI_Python/commit/9ac1e3c)
 #### __init__.py
 - Switched from `ALPHA` to `BETA`
@@ -63,14 +113,14 @@
 - Added `APIParams()` to better assist users with connection setup.
 - Added `APISession()` to better handle session TTL values.
 - Updated multiple dataclasses to better handle data formatting.
-"
-"# Overall
+
+# Overall
 - Removed `api_spec.md` and created Instance Module specific documents.
 
 #### utils.py
 - Added `instance_type` parameter to `parse_get_api_spec()` to differentiate API endpoint specs in files.
-"
-"# setup.py
+
+# setup.py
 - Added `CHANGELOG.md` to packages.
 
 #### Changelog.md
@@ -132,8 +182,8 @@
 
 #### types.py
 - Added `BukkitPlugin()` dataclass.
-"
-"# Changelog.md
+
+# Changelog.md
 - Creation of Changelog.md and added `0.0.30a` under `0.0.31a`
 
 #### Setup.py

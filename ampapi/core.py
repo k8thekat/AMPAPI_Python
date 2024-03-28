@@ -168,7 +168,7 @@ class Core(Base):
         await self._call_api(api='Core/Resume')
         return
 
-    async def get_status(self, format_data: Union[bool, None] = None) -> Status:
+    async def get_status(self, format_data: Union[bool, None] = None) -> AppStatus:
         """
         Gets the AMP Server/Instance Status information.
 
@@ -181,10 +181,10 @@ class Core(Base):
         """
 
         await self._connect()
-        result = await self._call_api(api='Core/GetStatus', format_data=format_data, format=Status)
+        result = await self._call_api(api='Core/GetStatus', format_data=format_data, format=AppStatus)
         return result
 
-    async def get_user_list(self, format_data: Union[bool, None] = None) -> Players:
+    async def get_user_list(self, format_data: Union[bool, None] = None) -> list[Players]:
         """
         Returns a dictionary of the connected Users to the Server.
 
@@ -193,7 +193,7 @@ class Core(Base):
 
         Returns:
             Players: on success returns a Player dataclass.
-                See `types.py -> Players`
+                See `types.py -> list[Players]`
         """
 
         await self._connect()
