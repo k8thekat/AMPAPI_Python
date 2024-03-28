@@ -1,3 +1,10 @@
+## Version - 0.0.36b - [c9417a3](https://github.com/k8thekat/AMPAPI_Python/commit/c9417a3)
+#### __init__.py
+- Version bump `0.0.36b`
+
+#### Changelog.md
+- Fixed typos.
+
 ## Version - 0.0.35b - [585ecf3](https://github.com/k8thekat/AMPAPI_Python/commit/585ecf3)
 #### __init__.py
 - Version bump `0.0.35b`
