@@ -1,9 +1,9 @@
 from setuptools import setup
 import re
 
-# requirements: list[str] = []
-# with open("./requirements.txt") as file:
-#     requirements = file.read().splitlines()
+requirements: list[str] = []
+with open("./requirements.txt") as file:
+    requirements = file.read().splitlines()
 
 readme = ''
 with open('./README.md') as file:
@@ -39,11 +39,7 @@ setup(
         "changelog": ["CHANGELOG.md"]},
     long_description=readme,
     long_description_content_type="text/markdown",
-    install_requires=[
-        "aiohttp==3.7.4.post0",
-        "dataclass_wizard==0.22.2",
-        "pyotp==2.6.0"
-    ],
+    install_requires=requirements,
     python_requires='>=3.9.0',
     classifiers=[
         'Development Status :: 3 - Alpha',

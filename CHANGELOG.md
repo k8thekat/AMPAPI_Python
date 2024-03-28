@@ -1,3 +1,10 @@
+## Version - 0.0.38b - [970db4b](https://github.com/k8thekat/AMPAPI_Python/commit/970db4b)
+#### setup.py
+- Changed `install_requires` to a list instead of a prepopulated list.
+
+#### __init__.py
+- Version bump `0.0.38b`
+
 ## Version - 0.0.37b - [63121cc](https://github.com/k8thekat/AMPAPI_Python/commit/63121cc)
 #### __init__.py
 - Version bump `0.0.37b`
