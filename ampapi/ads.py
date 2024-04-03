@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Self, Union
-from .types import Controller, Instance
+
 from .adsmodule import ADSModule
 from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .instance import AMPInstance, AMPMinecraftInstance
-
+from .types import Controller, Instance
 
 __all__ = ("ADSInstance",)
 

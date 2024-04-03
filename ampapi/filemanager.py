@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from typing import Union
 
+from .base import FORMAT_DATA, Base
 from .types import *
-from .base import Base, FORMAT_DATA
 
 __all__ = ("FileManagerPlugin",)
 

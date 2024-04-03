@@ -1,20 +1,21 @@
 from __future__ import annotations
-from datetime import timedelta
-from typing import Union, Any, TYPE_CHECKING
+
 import json
-import traceback
 import logging
+import traceback
 from dataclasses import fields
-from dataclass_wizard import fromdict
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any, Union
 
 import aiohttp
 from aiohttp import ClientResponse
-
+from dataclass_wizard import fromdict
 from pyotp import TOTP
 
 from ampapi.types import APISession  # 2Factor Authentication Python Module
-from .types import *
+
 from .bridge import Bridge
+from .types import *
 
 if TYPE_CHECKING:
     from typing import Self

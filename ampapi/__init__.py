@@ -23,22 +23,22 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "0.0.39b"
+__version__ = "0.0.40b"
 __credits__ = "AMP by CubeCoders and associates."
+
+from typing import Literal, NamedTuple
 
 from .ads import *
 from .adsmodule import *
 from .bridge import *
 from .core import *
 from .emailsender import *
-from .filemanager import *
 from .filebackup import *
+from .filemanager import *
 from .instance import *
 from .minecraft import *
 from .types import *
 from .util import *
-
-from typing import NamedTuple, Literal
 
 
 class VersionInfo(NamedTuple):

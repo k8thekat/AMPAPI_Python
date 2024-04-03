@@ -1,12 +1,12 @@
 from typing import Union
-from .types import Instance, AppStatus, Updates, State_enum
+
 from .adsmodule import ADSModule
 from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .minecraft import MinecraftModule
-
+from .types import AppStatus, Instance, State_enum, Updates
 
 __all__ = ("AMPInstance", "AMPMinecraftInstance")
 

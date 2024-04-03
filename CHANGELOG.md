@@ -1,3 +1,11 @@
+## Version - 0.0.39b - [778bb87](https://github.com/k8thekat/AMPAPI_Python/commit/778bb87)
+#### __init__.py
+- Version bump `0.0.39b`
+- Added `MANIFEST.in`
+
+#### setup.py
+- Re-added requirements.txt
+
 ## Version - 0.0.38b - [970db4b](https://github.com/k8thekat/AMPAPI_Python/commit/970db4b)
 #### setup.py
 - Changed `install_requires` to a list instead of a prepopulated list.
