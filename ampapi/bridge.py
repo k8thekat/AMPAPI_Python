@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Self
-from .types import APIParams
 from dataclasses import fields
+from typing import TYPE_CHECKING, Self
+
+from .types import APIParams
 
 __all__ = ("Bridge",)
 

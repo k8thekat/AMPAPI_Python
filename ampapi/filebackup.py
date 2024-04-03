@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from typing import Union
 
-from .types import *
 from .base import Base
+from .types import *
 
 __all__ = ("LocalFileBackupPlugin",)
 

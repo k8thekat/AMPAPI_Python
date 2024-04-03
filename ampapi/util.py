@@ -1,7 +1,9 @@
 from __future__ import annotations
-from .core import Core
+
 from pathlib import Path
 from typing import Any
+
+from .core import Core
 
 
 class APIUtil():

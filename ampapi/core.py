@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from typing import Any, Union
-from .types import *
+
 from .base import Base
+from .types import *
 
 __all__ = ("Core",)
 

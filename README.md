@@ -18,13 +18,14 @@ ___
 
 To install run the below command to install the required pip packages from [Requirements](./requirements.txt)
 
-### TestPypi
+### Pypi 
+-> https://pypi.org/project/cubecoders-amp-api-wrapper/
 ```bash
 # Linux/macOS
-python3 -m pip install -i https://test.pypi.org/simple/ cubecoders-amp-api-wrapper
+pip install cubecoders-amp-api-wrapper
 
 # Windows
-python -m pip install -i https://test.pypi.org/simple/ cubecoders-amp-api-wrapper
+pip install cubecoders-amp-api-wrapper
 ```
 
 

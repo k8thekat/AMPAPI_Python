@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .types import *
 from .base import Base
+from .types import *
 
 __all__ = ("EmailSenderPlugin",)
 

@@ -1,9 +1,10 @@
 # API class types
 from __future__ import annotations
-from typing import Any, Union
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Union
 
 
 class State_enum(Enum):

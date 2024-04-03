@@ -1,9 +1,10 @@
 from __future__ import annotations
+
+from dataclasses import fields
 from typing import Union
 
-from .types import *
 from .base import Base
-from dataclasses import fields
+from .types import *
 
 __all__ = ("ADSModule",)
 
