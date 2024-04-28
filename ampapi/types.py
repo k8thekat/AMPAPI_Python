@@ -466,6 +466,8 @@ class Triggers():
     Description: str = ""
     TriggerType: str = ""
     Emits: list[str] = field(default_factory=list[str])
+    LastExecuteError: bool = field(default=False)
+    LastErrorReason: str = field(default="")
 
 
 @dataclass()

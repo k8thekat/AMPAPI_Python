@@ -1,3 +1,14 @@
+## Version - 0.0.40b - [b055fb3](https://github.com/k8thekat/AMPAPI_Python/commit/b055fb3)
+#### Readme.md
+- Changed TestPypi to Pypi
+	- Updated bash commands for installing package.
+
+#### init.py
+- Version bump `0.0.40b`
+
+#### Overall
+- `isort` imports
+
 ## Version - 0.0.39b - [778bb87](https://github.com/k8thekat/AMPAPI_Python/commit/778bb87)
 #### __init__.py
 - Version bump `0.0.39b`

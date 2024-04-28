@@ -37,20 +37,17 @@ class Base():
     session_ttl: int = 240
     url: str = ""
 
-    # self.FAILED_LOGIN: str = ""
     NO_DATA: str = "Failed to receive any data from post request."
     ADS_ONLY: str = "This API call is only available on ADS instances."
     UNAUTHORIZED_ACCESS: str = "The user does not have the required permissions to interact with this instance."
     NO_BRIDGE: str = "Failed to setup connection. You need to initiate `<class Bridge>` first."
     MINECRAFT_ONLY: str = "This API call is only available on Minecraft instances."
     FAILED_API: str = "The API call returned a non-proper response."
-    # NO_VALID_SESSION: str = "Failed to find a valid session id, please login again."
 
     def __init__(self) -> None:
         bridge: Bridge = Bridge.get_bridge()
         # Validate the bridge object is at the same memory address.
         self._logger.debug(f"bridge object -> {bridge}")
-        # print("DEBUG", f"bridge object -> {bridge}")
         if bridge == None:
             raise ValueError(self.NO_BRIDGE)
 
