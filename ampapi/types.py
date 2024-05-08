@@ -376,7 +376,7 @@ class Instance():
     Description: str = ""
 
 
-@dataclass()
+@dataclass(repr=False)
 class Controller():
     """
     Represents an AMP Controller (aka Target manager) that manages the Instances it has access to.

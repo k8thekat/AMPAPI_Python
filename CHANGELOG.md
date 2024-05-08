@@ -1,3 +1,16 @@
+## Version - 0.0.41b - [5b0aed8](https://github.com/k8thekat/AMPAPI_Python/commit/5b0aed8)
+#### __init__.py
+- Version bump `0.0.41b
+
+#### types.py
+- Added `LastExecuteError` and `LastErrorReason` to `Triggers()` dataclass.
+
+#### base.py
+- Removed un-used code.
+
+#### Changelog.md
+- Version log - `0.0.40b`
+
 ## Version - 0.0.40b - [b055fb3](https://github.com/k8thekat/AMPAPI_Python/commit/b055fb3)
 #### Readme.md
 - Changed TestPypi to Pypi

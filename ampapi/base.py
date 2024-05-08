@@ -52,7 +52,7 @@ class Base():
             raise ValueError(self.NO_BRIDGE)
 
         if isinstance(bridge, Bridge):
-            self.parse_bridge(bridge=bridge)  # type:ignore
+            self.parse_bridge(bridge=bridge)
 
     @property
     def format_data(self) -> bool:
@@ -68,7 +68,7 @@ class Base():
         return FORMAT_DATA
 
     @format_data.setter
-    def format_data(self, value: bool):
+    def format_data(self, value: bool) -> None:
         global FORMAT_DATA
         FORMAT_DATA = value
 
@@ -278,11 +278,11 @@ class Base():
                 self._logger.error(f"{api} failed because of Status: {post_req_json}")
                 return ConnectionError(self.FAILED_API)
 
-        # print("DEBUG", "FORMAT->", format_data, format)
-        if format is None or format_data is False:
+        self._logger.debug(msg=f"DEBUG _call_api | format_data = {format_data} | FORMAT_DATA = {FORMAT_DATA} | FORMAT-> {format}")
+        if (format is None or format_data is False) or (format_data is None and FORMAT_DATA is False):
             return post_req_json
 
-        elif format_data is True or format_data is None and FORMAT_DATA is True:
+        elif (format_data is True) or (format_data is None and FORMAT_DATA is True):
             return self.json_to_dataclass(json=post_req_json, format=format, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack)
 
     async def _connect(self) -> LoginResults | None:

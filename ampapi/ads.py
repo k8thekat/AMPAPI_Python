@@ -37,8 +37,8 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
                 else:
                     self._AvailableInstances.append(AMPInstance(data=instances[i]))
 
-    def __init__(self):
-        # print(f"DEBUG {type(self).__name__} __init__")
+    def __init__(self) -> None:
+        self._logger.debug(msg=f"DEBUG {type(self).__name__} __init__")
         super().__init__()
 
     async def get_instances(self, format_data: Union[bool, None] = None) -> list[Controller | Self]:
@@ -54,9 +54,9 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
 
         """
 
-        ads_list = []
+        ads_list: list[ADSInstance | Controller] = []
         result: list[Controller] = await super().get_instances(format_data=format_data)
-        if isinstance(result, list):
+        if isinstance(result, list) and isinstance(result[0], Controller):
             self.parse_data(data=result[0])  # Need to update our self object.
             for i in range(1, len(result)):
                 ads_list.append(ADSInstance().parse_data(data=result[i]))

@@ -45,7 +45,7 @@ async def Sample_API():
     _bridge = Bridge(api_params=_params)
     ADS: ADSInstance = ADSInstance()
     # This would populate the ADS class property .AvailableInstances
-    ADS.get_instances()
+    await ADS.get_instances()
     # We can break out all our instances into their own attributes.
     arkinstance: AMPInstance | AMPMinecraftInstance = ADS.AvailableInstances[1]
     mcinstance: AMPInstance | AMPMinecraftInstance = ADS.AvailableInstances[2]
