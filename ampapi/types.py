@@ -376,7 +376,7 @@ class Instance():
     Description: str = ""
 
 
-@dataclass()
+@dataclass(repr=False)
 class Controller():
     """
     Represents an AMP Controller (aka Target manager) that manages the Instances it has access to.
@@ -466,6 +466,8 @@ class Triggers():
     Description: str = ""
     TriggerType: str = ""
     Emits: list[str] = field(default_factory=list[str])
+    LastExecuteError: bool = field(default=False)
+    LastErrorReason: str = field(default="")
 
 
 @dataclass()

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Union
 
-from dataclass_wizard import fromdict
-
 from .base import FORMAT_DATA, Base
 from .types import *
 
