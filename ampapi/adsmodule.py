@@ -15,6 +15,7 @@ class ADSModule(Base):
 
     """
     # ADSModule.AddDatastore:({'Parameters': [{'Name': 'newDatastore', 'TypeName': 'InstanceDatastore', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+
     async def add_datastore(self, new_datastore: InstanceDatastore, format_data: Union[bool, None] = None) -> ActionResult:
         """
         Add a new datastore.
@@ -483,7 +484,6 @@ class ADSModule(Base):
         # secret (str | None, optional): Must be a non-empty strong in order to get a callback on deployment state change. This secret will be passed back to you in the callback so you can verify the request. `Defaults to None.`
         # post_create: 0: Do nothing, 1: Start instance only, 2: Start instance and update application, 3: Full application startup, 16: Every time. `Default to 0.`
         # extra_provision_settings (dict[str, str] | None, optional): A dictionary of setting nodes and values to create the new instance with. Identical in function to the provisioning arguments in the template itself. `Defaults to None.`
-
         """
         Deploy a Instance template.
         **Requires ADS**
@@ -809,7 +809,7 @@ class ADSModule(Base):
         return result
 
     # ADSModule.DetatchTarget:({'Parameters': [{'Name': 'Id', 'TypeName': 'Guid', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
-    async def detatch_target(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def detach_target(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
         """
         De-tach an Instance from the ADS.
 
@@ -829,7 +829,7 @@ class ADSModule(Base):
             "id": instance_id
         }
         await self._connect()
-        result = await self._call_api(api='ADSModule/DetatchTarget', parameters=parameters, format_data=format_data, format=ActionResult)
+        result = await self._call_api(api='ADSModule/DetachTarget', parameters=parameters, format_data=format_data, format=ActionResult)
         return result
 
     # ADSModule.UpdateTargetInfo:({'Parameters': [{'Name': 'Id', 'TypeName': 'Guid', 'Description': '', 'Optional': False}, {'Name': 'FriendlyName', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Url', 'TypeName': 'Uri', 'Description': '', 'Optional': False}, {'Name': 'Description', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Tags', 'TypeName': 'List<String>', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})

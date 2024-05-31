@@ -13,6 +13,7 @@ class Core(Base):
     Contains the base functions for any `/API/Core/` AMP API endpoints.
 
     """
+
     async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False, format_data: Union[bool, None] = None) -> LoginResults:
         """
         AMP API login function. \n
@@ -47,7 +48,7 @@ class Core(Base):
         await self._call_api(api='Core/Logout')
         return
 
-    async def get_api_spec(self) -> dict:
+    async def get_api_spec(self) -> dict[Any, Any]:
         """
         Get's all the API specs for the ADS or Instance.
          - See `docs/api_spec.md`

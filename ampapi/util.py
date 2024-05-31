@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from io import TextIOWrapper
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
+from ampapi.types import UpdateInfo
+
+from .ads import ADSInstance
 from .core import Core
+from .instance import AMPInstance, AMPMinecraftInstance
 
 
 class APIUtil():
@@ -18,7 +23,7 @@ class APIUtil():
         Args:
             amp (Core): API_Core class object signed in.
 
-        See -> `amp/util/setting_nodes.txt` 
+        See -> `amp/util/setting_nodes.txt`
 
         """
         res = await amp.get_settings_spec()
@@ -45,7 +50,7 @@ class APIUtil():
         Args:
             amp (Core): API_Core class object signed in.
 
-        See -> `amp/util/permission_nodes.txt`  
+        See -> `amp/util/permission_nodes.txt`
         """
         res = await amp.get_permissions_spec()
         if isinstance(res, list):
@@ -79,30 +84,55 @@ class APIUtil():
                 self.node_scrape(text=index["Children"], file=file)
         file.close()
 
-    async def parse_get_api_spec(self, instance_type: str, data: dict) -> None | str | dict[str, Any] | list | bool | int | None:
+    @classmethod
+    async def parse_get_api_spec(cls, instance: Union[Core, ADSInstance, AMPInstance, AMPMinecraftInstance]) -> None:
         """
         Creates a `api_spec.txt` in the script directory with nodes from api `Core/GetAPISpec`
         #TODO - Improve formatting of the Markdown file.
         Args:
-            amp (Core): API_Core class object signed in.
+            instance(str): The API Class 
 
-        See -> `../docs/api_spec.md` 
+        See -> `../docs/api_spec.md`
         """
-        # res = await amp.get_api_spec()
-        dir = Path(__file__).parent.joinpath(f"../docs/{instance_type}_api_spec.md")
+        data: dict[Any, Any] = await instance.get_api_spec()
+        platform_info: UpdateInfo = await instance.get_update_info()
+        if not isinstance(data, dict):
+            return None
+
+        if isinstance(instance, Core):
+            instance_type: str = "Core"
+
+        if isinstance(instance, (ADSInstance, AMPInstance, AMPMinecraftInstance)):
+            instance_type = instance.Module
+
+        dir: Path = Path(__file__).parent.joinpath(f"../docs/{instance_type}_api_spec.md")
+        parents: list = []
         mode = "x"
         if dir.exists():
             mode = "w"
-        file = open(dir, mode)
+        file: TextIOWrapper = open(file=dir, mode=mode)
 
-        if not isinstance(data, dict):
-            return None
-        else:
-            for parent, parent_value in data.items():
-                if isinstance(parent_value, dict):
-                    for child, child_value in parent_value.items():
-                        file.write(f"{parent}.{child}:({child_value}) \n")
-                else:
-                    file.write(f"{parent}({parent_value}) \n")
+        file.write(f"INSTANCE TYPE: {instance_type}\n")
+        file.write(f"VERSION: {platform_info.Version}\n")
+        file.write(f"BUILD: {platform_info.Build}\n\n")
+        for parent, parent_value in data.items():
+            if parent not in parents:
+                parents.append(parent)
+                file.write("____________________________________________________\n")
+                file.write(f"{parent}:\n")
+            if isinstance(parent_value, dict):
+                for child, child_value in parent_value.items():
+                    file.write(f"\t{child}:\n")
+                    if isinstance(child_value, dict):
+                        for key, value in child_value.items():
+                            if key == "Parameters":
+                                file.write(f"\t\t{key}:\n")
+                                for entry in value:
+                                    file.write(f"\t\t\t{entry}\n")
+                            else:
+                                file.write(f"\t\t{key}: {value}\n")
+
+                    else:
+                        file.write(f"\t\t({child_value})\n")
 
         file.close()

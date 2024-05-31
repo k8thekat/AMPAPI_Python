@@ -1,3 +1,37 @@
+## Version - 0.0.42b - [2bf7996](https://github.com/k8thekat/AMPAPI_Python/commit/2bf7996)
+#### Changelog.md
+- Version info from `0.0.41b`
+
+#### __init__.py
+- Version bump `0.0.42b`
+
+#### README.md
+- Added missing `await` in Quick Example - Sample_API().
+
+#### ads.py
+- Changed some prints to `_logger.debug()`.
+- Type-hinted `ads_list` inside `get_instances()` method.
+- Added logic check to `get_instances()` when not formatting data to prevent error.
+
+#### base.py
+- Removed `type:ignore` from `__init__()`.
+- Added return value to `format_data` setter.
+- Added `_logger.debug()` for monitoring data formatting.
+- Fixed logic when formatting data causing return failure using the `ADSInstance` class.
+- Improved readability of format logic of `_call_api()`.
+
+#### bridge.py
+- Added logging.
+- Changed `apiparams` to `api_params`.
+- Added type-hinting to `__new__()`.
+- Added `_logger.debug()` to `__init__()`.
+
+#### minecraft.py
+- Removed unused imports.
+
+#### types.py
+- added `repr = False` to the `Controller()` dataclass.
+
 ## Version - 0.0.41b - [5b0aed8](https://github.com/k8thekat/AMPAPI_Python/commit/5b0aed8)
 #### __init__.py
 - Version bump `0.0.41b

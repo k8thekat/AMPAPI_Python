@@ -170,6 +170,10 @@ class AMP_Version():
     MinorRevision: int
     Build: Union[int, None] = None
 
+    def to_str(self) -> str:
+        "Returns a string representation of the AMP_Version dataclass as `Major.Minor.Revision.MinorRevision | Build`."
+        return f"{self.Major}.{self.Minor}.{self.Revision}.{self.MinorRevision} | {self.Build}"
+
 
 @dataclass()
 class UpdateInfo():
@@ -181,7 +185,7 @@ class UpdateInfo():
     UpdateAvailable: bool
     ReleaseNotesURL: str
     Build: str
-    Version: str  # type:ignore
+    Version: str
     ToolsVersion: None | str = None
     PatchOnly: None | bool = None
 

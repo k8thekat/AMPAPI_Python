@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Self, Union
+from dataclasses import fields
+from typing import Any, Self, Union
 
 from .adsmodule import ADSModule
 from .core import Core
@@ -18,6 +19,8 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
     """
 
     Module: str = "ADS"
+    _AvailableInstances: list[AMPInstance | AMPMinecraftInstance] = []
+    _Controller_exists: bool = False
 
     @property
     def AvailableInstances(self) -> list[AMPInstance | AMPMinecraftInstance]:
@@ -25,7 +28,7 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
 
     @AvailableInstances.setter
     def AvailableInstances(self, instances: list[Instance]) -> None:
-        self._AvailableInstances: list[AMPInstance] = []
+        self._AvailableInstances = []
         if isinstance(instances, list) and len(instances) > 0:
             for i in range(0, len(instances)):
                 if instances[i].Module == "ADS":
@@ -41,9 +44,16 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
         self._logger.debug(msg=f"DEBUG {type(self).__name__} __init__")
         super().__init__()
 
+    def __getattr__(self, name: str) -> AttributeError | Any:
+        if name in [field.name for field in fields(class_or_instance=Controller)] and self._Controller_exists == False:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}' | You must call get_instances() with 'format_data=True' to update this object.")
+        return self.__getattribute__(name)
+
     async def get_instances(self, format_data: Union[bool, None] = None) -> list[Controller | Self]:
         """
-        Returns a list of all Instances on the AMP Panel and updates our self object.
+        Returns a list of all Controller Instances on the AMP Panel.\n
+        `format_data == True` -- Will update our current object calling this method with the Instances belonging to it, else any Controller attributes will raise an AttributeError.
+
         `**ADSInstance Only**`
 
         Args:
@@ -53,10 +63,10 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, Fil
             list[Self] | str | bool | int | None: On success returns a list of Self dataclasses. 
 
         """
-
         ads_list: list[ADSInstance | Controller] = []
         result: list[Controller] = await super().get_instances(format_data=format_data)
         if isinstance(result, list) and isinstance(result[0], Controller):
+            self._Controller_exists = True
             self.parse_data(data=result[0])  # Need to update our self object.
             for i in range(1, len(result)):
                 ads_list.append(ADSInstance().parse_data(data=result[i]))

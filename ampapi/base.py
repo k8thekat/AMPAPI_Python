@@ -116,7 +116,7 @@ class Base():
         Returns:
             Self: Returns the class that called this function.
         """
-        for field in fields(data):
+        for field in fields(class_or_instance=data):
             # This is to deal with improperly cased InstanceId.
             if field.name == "InstanceId":
                 setattr(self, "InstanceID", getattr(data, field.name))

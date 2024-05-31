@@ -33,7 +33,7 @@ setup(
     },
     packages=packages,
     package_data={
-        "docs": ["docs/api_spec.md", "docs/permission_nodes.md", "docs/setting_nodes.md"],
+        "docs": ["docs/ADS_api_spec.md", "docs/Minecraft_api_spec.md", "docs/permission_nodes.md", "docs/setting_nodes.md"],
         "license": ["LICENSE"],
         "requirements": ["requirements.txt"],
         "readme": ["README.md"],
@@ -43,7 +43,7 @@ setup(
     install_requires=requirements,
     python_requires='>=3.9.0',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Operating System :: OS Independent',
