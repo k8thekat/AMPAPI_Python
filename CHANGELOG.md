@@ -1,3 +1,38 @@
+## Version - 0.1.0r - [ac16314](https://github.com/k8thekat/AMPAPI_Python/commit/ac16314)
+#### __init__.py
+- Version bump to `0.1.0r`
+- Changed `releaseLevel` to "release"
+- Version bump `0.1.0r`
+
+#### setup.py
+- Changed classifiers from "Alpha" to "Production/Stable"
+
+#### ads.py
+- Added `_AvailableInstances` as an attribute to better handle population of `AvailableInstances` attribute.
+- Added `_Controller_exists` as an attribute to catch attribute errors for the Controller dataclass that ADSInstance inherits from when accessed prior to class creation/population.
+
+#### adsmodule.py
+- Updated `detatch_target` to `detach_target` to align with the `v2.5.0.12` AMP Update.
+- Updated the API endpoint for `detach_target` to align with the `v2.5.0.12` AMP Update.
+
+#### base.py
+- Added parameter declaration to the `fields()` method.
+
+#### core.py
+- Formatting change on one line.
+- Updated return type for `get_api_spec()`
+
+#### types.py
+- Added `to_str()` method to the `AMP_Version()` dataclass to be used for future plans.
+- Removed an un-needed `# type:ignore`
+
+#### util.py
+- Formatting changes on multiple lines.
+- Re-wrote logic for `parse_get_api_spec()`
+	- Added the `@classmethod` decorator for usage prior to `APIUtil` class generation.
+	- Added Instance Type, Version and Build strings to the output document to better compare API changes between versions.
+	-- Improved formatting of data output from API parsing.
+
 ## Version - 0.0.42b - [2bf7996](https://github.com/k8thekat/AMPAPI_Python/commit/2bf7996)
 #### Changelog.md
 - Version info from `0.0.41b`

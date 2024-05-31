@@ -23,7 +23,7 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "0.1.0r"
+__version__ = "0.1.1"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
@@ -45,9 +45,9 @@ class VersionInfo(NamedTuple):
     Major: int
     Minor: int
     Revision: int
-    releaseLevel: Literal["alpha", "beta", "release"]
+    releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]
 
 
-version_info: VersionInfo = VersionInfo(Major=0, Minor=1, Revision=00, releaseLevel="release")
+version_info: VersionInfo = VersionInfo(Major=0, Minor=1, Revision=1, releaseLevel="release")
 
 del NamedTuple, Literal, VersionInfo
