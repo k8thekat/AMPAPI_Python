@@ -1,3 +1,11 @@
+## Version - 0.1.1 - [0cf953e](https://github.com/k8thekat/AMPAPI_Python/commit/0cf953e)
+#### __init__.py
+- Version bump `0.1.1`
+- Changed formatting of releaseLevel and `__version__` to match *PEP440*
+
+#### changelog.md
+- Version info from `0.0.42b` and `0.1.0r`
+
 ## Version - 0.1.0r - [ac16314](https://github.com/k8thekat/AMPAPI_Python/commit/ac16314)
 #### __init__.py
 - Version bump to `0.1.0r`
