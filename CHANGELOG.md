@@ -1,3 +1,16 @@
+## Version - 0.1.11 - [4b8c37a](https://github.com/k8thekat/AMPAPI_Python/commit/4b8c37a)
+#### requirements.txt
+- Changed all version checks to be equal to or greater than the package version.
+
+#### Changelog.md
+- Version info from `0.1.1`.
+
+#### __init__.py
+- Version bump `0.1.11`
+
+#### Overall
+- Added `ADS_api_spec.md` document.
+
 ## Version - 0.1.1 - [0cf953e](https://github.com/k8thekat/AMPAPI_Python/commit/0cf953e)
 #### __init__.py
 - Version bump `0.1.1`
