@@ -1,3 +1,54 @@
+## Version - 0.2.0 - [4b70f0d](https://github.com/k8thekat/AMPAPI_Python/commit/4b70f0d)
+#### Changelog.md
+- Version info from `0.1.11` added.
+#### __init__.py
+- Version bump to `0.2.0`
+
+#### Readme.md
+- Updated naming of methods in Quick Example.
+	- Added a Sample_Analytics_API() method.
+- Added a section called Basic Usage to help people understand how to setup the Bridge and API Params.
+
+#### __init__.py
+- Version bump `0.2.0` release.
+
+#### ads.py
+- Removed `LocalFileBackupPlugin` from ADSInstance class inheritance as the ADS no longer has backup functionality.
+- Removed un-used imports.
+
+#### analytics.py
+- New API class to support AMP `2.5.1.0` Update which introduces Analytics!
+- Added `get_analytics_summary()` method to retrieve the Instance Analytics Summary.
+
+#### core.py
+- Added `get_authentication_requirements()` method to retrieve a users Auth requirements.
+
+#### emailsender.py
+- Added `test_SMTP_settings()` method to validate SMTP settings for an Instance.
+
+#### filebackup.py
+- Added `refresh_backup_list()` method to refresh the list of backups an Instance has.
+
+#### instance.py
+- Added `AnalyticsPlugin()` API class to `AMPInstance` class inheritance for the new Analytics feature from `2.5.1.0`.
+
+#### base.py
+- Fixed typo in `parse_data()` docstring.
+
+#### types.py
+- Added dataclasses for Analytics.
+	- Added `Analytics_Filter()` to assist with filtering Analytics API call.
+	- Added `Analytics_Summary()` to handle the data from `get_analytics_summary()` method call.
+	- Added `Analytics_Country_data()`, `Analytics_Stats()` and `Analytics_Top_Players()`  to assist attributes of `Analytics_Summary()`.
+
+#### util.py
+- Added an `AMP_to_API_update()` method to wrap over `parse_get_api_spec()`. *No current usage at this time*
+- Changed `parse_get_api_spec()` to a staticmethod.
+- Fixed typo in version syntax.
+
+#### Changelog.md
+- Version info from `0.1.11`.
+
 ## Version - 0.1.11 - [4b8c37a](https://github.com/k8thekat/AMPAPI_Python/commit/4b8c37a)
 #### requirements.txt
 - Changed all version checks to be equal to or greater than the package version.
