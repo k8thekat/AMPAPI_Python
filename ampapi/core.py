@@ -1569,6 +1569,25 @@ class Core(Base):
         result = await self._call_api(api="Core/GetUserActionsSpec", format_data=format_data)
         return result
 
+    # GetAuthencationRequirements:Parameters:{'Name': 'username', 'TypeName': 'String', 'Description': '', 'Optional': False}ReturnTypeName: IEnumerable<AuthencationRequirement>IsComplexType: True
+    async def get_authentication_requirements(self, username: str, format_data: Union[bool, None] = None) -> list[Any]:
+        """
+        Get a list of Authentication Requirements for the AMP user.
+
+        Args:
+            username (str): AMP username.
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+
+        Returns:
+            list[Any]: Returns a list of Authentication Requirements.
+        """
+        await self._connect()
+        parameters: dict[str, str] = {
+            "username": username
+        }
+        result = await self._call_api(api="Core/GetAuthencationRequirements", parameters=parameters, format_data=format_data)
+        return result
+
     # Core.GetRemoteLoginToken:({'Parameters': [{'Name': 'Description', 'TypeName': 'String', 'Description': '', 'Optional': True}, {'Name': 'IsTemporary', 'TypeName': 'Boolean', 'Description': '', 'Optional': True}], 'ReturnTypeName': 'String', 'IsComplexType': False})
     async def get_remote_login_token(self, description: Union[str, None] = None, is_temporary: Union[bool, None] = None, format_data: Union[bool, None] = None) -> str:
         """

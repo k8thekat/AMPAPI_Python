@@ -1,6 +1,6 @@
 from typing import Union
 
-from .adsmodule import ADSModule
+from .analytics import AnalyticsPlugin
 from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
@@ -11,7 +11,7 @@ from .types import AppStatus, Instance, State_enum, Updates
 __all__ = ("AMPInstance", "AMPMinecraftInstance")
 
 
-class AMPInstance(Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlugin, Instance, AppStatus, Updates):
+class AMPInstance(Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlugin, AnalyticsPlugin, Instance, AppStatus, Updates):
     """
     AMPInstance represents an entire Instance from AMP that is not the main panel.\n
     This is similar to what you get when 'Managing' an instance from the Web GUI.
@@ -72,6 +72,8 @@ class AMPInstance(Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlu
         result: Updates = await super().get_updates(format_data=format_data)
         self.parse_data(data=result)
         return result
+    
+    
 
 
 class AMPMinecraftInstance(MinecraftModule, AMPInstance):

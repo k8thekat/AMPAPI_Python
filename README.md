@@ -27,7 +27,13 @@ pip install cubecoders-amp-api-wrapper
 # Windows
 pip install cubecoders-amp-api-wrapper
 ```
-
+### Basic Usage
+___
+1. First you need to fill out the APIParams class with the required fields (url, user and password).
+2. Pass the APIParams class into the Bridge class parameter api_params.
+    - You only need to make ONE bridge class; the rest of the API classes will get the same object and handle logging in for you.
+3. You can then use the Parent class ADSInstance() or the smaller class AMPInstance() or any of the API classes as a stand alone.
+    - See [Quick Example](./README.md#quick-example--) for a visual example.
 
 ### Quick Example -
 
@@ -38,15 +44,18 @@ _params = APIParams(url="http://192.168.13.130:8080",
                     user="amp_username",
                     password="amp_password")
 
+_bridge = Bridge(api_params=_params)
+
 async def Sample_API():
     """
-    Example API Function to call method Endpoints.
+    Example Method to call Instance Endpoints and create the ADS Instance class.
     """
-    _bridge = Bridge(api_params=_params)
+    
     ADS: ADSInstance = ADSInstance()
     # This would populate the ADS class property .AvailableInstances
     await ADS.get_instances()
     # We can break out all our instances into their own attributes.
+    # Your instances wont line up like these examples; but you can check the InstanceName and Module to figure out the order of your Instances.
     arkinstance: AMPInstance | AMPMinecraftInstance = ADS.AvailableInstances[1]
     mcinstance: AMPInstance | AMPMinecraftInstance = ADS.AvailableInstances[2]
 
@@ -72,6 +81,33 @@ async def Sample_API():
     # Want to kick a random person? Here ya go~
     players: list[Players] = await mcinstance.get_user_list()
     await mcinstance.mc_kick_user_by_id(id=players[0].id)
+
+
+async def Sample_Analytics_API():
+    """
+    Example Method to use Instance Analytics.
+    """
+    ADS: ADSInstance = ADSInstance()
+    await ADS.get_instances()
+    # The index value to get to an MC Instance will be different for you; this is just an example.
+    # You can check an Instances Type via the `.Module` attribute of any ADS/Instance class.
+    mcinstance: AMPInstance | AMPMinecraftInstance = ADS.AvailableInstances[2]
+    # Example analytics call without a filter.
+    Analytics: Analytics_Summary = await mcinstance.get_analytics_summary()
+    # Then with that class you can access lots of Information, such as Top Players, Stats and SessionTime.
+    Analytics.topPlayers # This is a list of this Instances Top Players.
+    Analytics.stats # This is a list of different fields such as Unique Users, New Users, etc..
+    # _____________________________________________
+    # Now you can also filter the results to look at a specific User or Country. Simply define the `Analytics_Filter` class and pass it into the method call.
+    country_filter: Analytics_Filter = Analytics_Filter(Country="US") # The Country parameter supports `ISO 3166-1 Alpha-2 format` only.
+    # These results will be filtered to only users within the US.
+    filtered_analytics: Analytics_Summary = await mcinstance.get_analytics_summary(filters=country_filter)
+
+    user_filter: Analytics_Filter = Analytics_Filter(Username="k8_thekat") # The IGN/Username of the user connected to the Server.
+    # These results will be filtered to only users with that match the parameter Username. (eg. k8_thekat).
+    filtered_analytics2: Analytics_Summary = await mcinstance.get_analytics_summary(filters=user_filter)
+
+    
 ```
 
 

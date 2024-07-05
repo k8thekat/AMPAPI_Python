@@ -14,6 +14,7 @@ class LocalFileBackupPlugin(Base):
 
     """
     # LocalFileBackupPlugin.TakeBackup:({'Parameters': [{'Name': 'Title', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Description', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Sticky', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
+
     async def take_backup(self, title: str, description: str, sticky: bool = False, format_data: Union[bool, None] = None) -> ActionResult:
         """
         Takes a backup of the AMP Server/Instance.
@@ -170,4 +171,16 @@ class LocalFileBackupPlugin(Base):
             "Sticky": sticky
         }
         await self._call_api(api='LocalFileBackupPlugin/SetBackupSticky', parameters=parameters)
+        return
+
+    # LocalFileBackupPlugin.RefreshBackupList:({'Parameters': [], 'ReturnTypeName': 'Void', 'IsComplexType': False})
+    async def refresh_backup_list(self) -> None:
+        """
+        Refresh the list of backups.
+
+        Returns:
+            None
+        """
+        await self._connect()
+        await self._call_api(api='LocalFileBackupPlugin/RefreshBackupList')
         return

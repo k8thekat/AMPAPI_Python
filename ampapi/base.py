@@ -107,11 +107,11 @@ class Base():
 
     def parse_data(self, data: Controller | Instance | AppStatus | Updates) -> Self:
         """
-        Takes in a Controller or Instance dataclass and iterates through it's attributes and 
+        Takes in a dataclass and iterates through it's attributes and 
         set's the values as attributes of the class that called this function.
 
         Args:
-            data (Controller | Instance): The Controller or Instance dataclass.
+            data (Controller | Instance | AppStatus | Updates): The dataclass to parse.
 
         Returns:
             Self: Returns the class that called this function.

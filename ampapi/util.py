@@ -7,6 +7,7 @@ from typing import Any, Union
 from ampapi.types import UpdateInfo
 
 from .ads import ADSInstance
+from .bridge import Bridge
 from .core import Core
 from .instance import AMPInstance, AMPMinecraftInstance
 
@@ -15,6 +16,9 @@ class APIUtil():
     """
     AMP API util functions to parse specific API calls for specific Data.
     """
+    @staticmethod
+    async def AMP_to_API_update(instance: ADSInstance | AMPInstance | AMPMinecraftInstance) -> None:
+        await APIUtil.parse_get_api_spec(instance=instance)
 
     async def get_node_spec(self, amp: Core) -> str | dict[str, Any] | list | bool | int | None:
         """
@@ -84,8 +88,8 @@ class APIUtil():
                 self.node_scrape(text=index["Children"], file=file)
         file.close()
 
-    @classmethod
-    async def parse_get_api_spec(cls, instance: Union[Core, ADSInstance, AMPInstance, AMPMinecraftInstance]) -> None:
+    @staticmethod
+    async def parse_get_api_spec(instance: Union[Core, ADSInstance, AMPInstance, AMPMinecraftInstance]) -> None:
         """
         Creates a `api_spec.txt` in the script directory with nodes from api `Core/GetAPISpec`
         #TODO - Improve formatting of the Markdown file.

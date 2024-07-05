@@ -1,6 +1,6 @@
-VERSION: 2.5.0.12
-BUILD: 20240530.3
 INSTANCE TYPE: ADS
+VERSION: 2.5.1.0
+BUILD: 20240703.1
 
 ____________________________________________________
 ADSModule:
@@ -502,56 +502,6 @@ ____________________________________________________
 EmailSenderPlugin:
 	TestSMTPSettings:
 		Parameters:
-		ReturnTypeName: ActionResult
-		IsComplexType: True
-____________________________________________________
-LocalFileBackupPlugin:
-	RefreshBackupList:
-		Parameters:
-		ReturnTypeName: Void
-		IsComplexType: False
-	UploadToS3:
-		Parameters:
-			{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}
-		ReturnTypeName: RunningTask
-		IsComplexType: True
-	DownloadFromS3:
-		Parameters:
-			{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}
-		ReturnTypeName: RunningTask
-		IsComplexType: True
-	DeleteFromS3:
-		Parameters:
-			{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}
-		ReturnTypeName: ActionResult
-		IsComplexType: True
-	GetBackups:
-		Parameters:
-		ReturnTypeName: IEnumerable<JObject>
-		IsComplexType: True
-	RestoreBackup:
-		Parameters:
-			{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}
-			{'Name': 'DeleteExistingData', 'TypeName': 'Boolean', 'Description': '', 'Optional': True}
-		ReturnTypeName: ActionResult
-		IsComplexType: True
-	DeleteLocalBackup:
-		Parameters:
-			{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}
-		ReturnTypeName: Void
-		IsComplexType: False
-	SetBackupSticky:
-		Parameters:
-			{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}
-			{'Name': 'Sticky', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}
-		ReturnTypeName: ActionResult
-		IsComplexType: True
-	TakeBackup:
-		Parameters:
-			{'Name': 'Title', 'TypeName': 'String', 'Description': '', 'Optional': False}
-			{'Name': 'Description', 'TypeName': 'String', 'Description': '', 'Optional': False}
-			{'Name': 'Sticky', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}
-			{'Name': 'WasCreatedAutomatically', 'TypeName': 'Boolean', 'Description': '', 'Optional': True}
 		ReturnTypeName: ActionResult
 		IsComplexType: True
 ____________________________________________________

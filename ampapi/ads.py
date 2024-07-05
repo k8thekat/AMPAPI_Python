@@ -4,7 +4,6 @@ from typing import Any, Self, Union
 from .adsmodule import ADSModule
 from .core import Core
 from .emailsender import EmailSenderPlugin
-from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .instance import AMPInstance, AMPMinecraftInstance
 from .types import Controller, Instance
@@ -12,7 +11,7 @@ from .types import Controller, Instance
 __all__ = ("ADSInstance",)
 
 
-class ADSInstance(ADSModule, Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlugin, Controller):
+class ADSInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Controller):
     """
     The ADS class is the top most level of Instances inside of AMP, may also be referred to as the "Controller".
 

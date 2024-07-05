@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Union
+from typing import Any, ClassVar, Union
 
 
 class State_enum(Enum):
@@ -1231,3 +1231,107 @@ class Backup():
     @Timestamp.setter
     def Timestamp(self, value: str) -> None:
         self._Timestamp = value
+
+
+@dataclass
+class Analytics_Filter():
+    """
+    A dataclass to handle filtering for `get_analytics_summary()`.
+
+    Args:
+        Username (str): The username to filter by.
+        UserId (str): Currently the same as Username.
+        FirstSession (bool): Whether or not to filter by first session only.
+        Country (str): The country to filter by. `Must be in ISO 3166-1 Alpha-2 format.`
+    """
+    META: Any | None = None
+    Username: str | None = None
+    UserId: str | None = None
+    FirstSession: bool | None = None
+    Country: str | None = None
+    _country_list: ClassVar[list[str]] = [
+        "AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR",
+        "AM", "AW", "AU", "AT", "AZ", "BS", "BH", "BD", "BB", "BY", "BE",
+        "BZ", "BJ", "BM", "BT", "BO", "BQ", "BA", "BW", "BV", "BR", "IO",
+        "BN", "BG", "BF", "BI", "CV", "KH", "CM", "CA", "KY", "CF", "TD",
+        "CL", "CN", "CX", "CC", "CO", "KM", "CG", "CD", "CK", "CR", "CI",
+        "HR", "CU", "CW", "CY", "CZ", "DK", "DJ", "DM", "DO", "EC", "EG",
+        "SV", "GQ", "ER", "EE", "ET", "FK", "FO", "FJ", "FI", "FR", "GF",
+        "PF", "TF", "GA", "GM", "GE", "DE", "GH", "GI", "GR", "GL", "GD",
+        "GP", "GU", "GT", "GG", "GN", "GW", "GY", "HT", "HM", "VA", "HN",
+        "HK", "HU", "IS", "IN", "ID", "IR", "IQ", "IE", "IM", "IL", "IT",
+        "JM", "JP", "JE", "JO", "KZ", "KE", "KI", "KP", "KR", "KW", "KG",
+        "LA", "LV", "LB", "LS", "LR", "LY", "LI", "LT", "LU", "MO", "MK",
+        "MG", "MW", "MY", "MV", "ML", "MT", "MH", "MQ", "MR", "MU", "YT",
+        "MX", "FM", "MD", "MC", "MN", "ME", "MS", "MA", "MZ", "MM", "NA",
+        "NR", "NP", "NL", "NC", "NZ", "NI", "NE", "NG", "NU", "NF", "MP",
+        "NO", "OM", "PK", "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN",
+        "PL", "PT", "PR", "QA", "RE", "RO", "RU", "RW", "BL", "SH", "KN",
+        "LC", "MF", "PM", "VC", "WS", "SM", "ST", "SA", "SN", "RS", "SC",
+        "SL", "SG", "SX", "SK", "SI", "SB", "SO", "ZA", "GS", "SS", "ES",
+        "LK", "SD", "SR", "SJ", "SZ", "SE", "CH", "SY", "TW", "TJ", "TZ",
+        "TH", "TL", "TG", "TK", "TO", "TT", "TN", "TR", "TM", "TC", "TV",
+        "UG", "UA", "AE", "GB", "US", "UM", "UY", "UZ", "VU", "VE", "VN",
+        "VG", "VI", "WF", "EH", "YE", "ZM", "ZW"]
+
+    def __post_init__(self) -> None:
+        if (self.Username is None and self.UserId is None and self.FirstSession is None and self.Country is None):
+            raise ValueError("At least one of Username, UserId, Country, FirstSession must be set.")
+
+        if self.Country is not None and self.Country not in self._country_list:
+            raise ValueError(f"Country must be in ISO 3166-1 Alpha-2 format. Received: {self.Country}")
+
+
+@dataclass
+class Analytics_Summary():
+    """
+    Represents the data from `get_analytics_summary()`.
+
+    """
+
+    busiestTime: dict[str, int | str] = field(default_factory=dict)
+    countryData: list[Analytics_Country_Data] = field(default_factory=list)
+    graphData: list[dict[str, int | str]] = field(default_factory=list)
+    isDemo: bool = field(default=False)
+    quietestTime: dict[str, int | str] = field(default_factory=dict)
+    stats: list[Analytics_Stats] = field(default_factory=list)
+    topPlayers: list[Analytics_Top_Players] = field(default_factory=list)
+
+
+@dataclass
+class Analytics_Country_Data():
+    """
+    Represents the data from `Analytics_Summary.countryData`.
+    """
+    Country: str
+    DisplaySessionTime: str
+    SessionCount: int
+    SessionTimePercent: float
+    TotalSessionTime: float
+    UniquePlayerCount: int
+    UniquePlayerPercent: float
+    SessionPercent: float = field(default_factory=float)
+
+
+@dataclass
+class Analytics_Stats():
+    """
+    Represents the data from `Analytics_Summary.stats`.
+    """
+    Current: int | str | float
+    Description: str
+    Difference: int | str | float
+    DisplayValue: int | str | float
+    Name: str
+    Previous: int | str | float
+
+
+@dataclass
+class Analytics_Top_Players():
+    """
+    Represents the data from `Analytics_Summary.topPlayers`.
+    """
+    DisplaySessionTime: str
+    Percent: float
+    TotalSessionTime: float
+    Username: str
