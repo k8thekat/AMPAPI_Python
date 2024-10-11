@@ -1,0 +1,19 @@
+name: test
+
+on:
+  push:
+    branches: [ developer ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.1
+            
+      - name: Setup Python
+        uses: actions/setup-python@v5.2.0
+        with:
+          python-version: '3.12'
+      - run: python ./workflows/scripts/build.py
+            
