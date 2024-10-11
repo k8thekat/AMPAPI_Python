@@ -15,6 +15,8 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Control
     """
     The ADS class is the top most level of Instances inside of AMP, may also be referred to as the "Controller".
 
+    This is a custom parent class that inherits all the API functionality a typical Controller instance has access to.
+
     """
 
     Module: str = "ADS"
@@ -23,6 +25,14 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Control
 
     @property
     def AvailableInstances(self) -> list[AMPInstance | AMPMinecraftInstance]:
+        """
+        A list of AMP Instances the ADS is aware of.
+        * Similar to what you see when you log into AMP web GUI and see the Instance list.
+
+        Returns:
+        ---
+            list[AMPInstance | AMPMinecraftInstance]: Returns a list containing AMPInstance or AMPMinecraftInstance classes.
+        """
         return self._AvailableInstances
 
     @AvailableInstances.setter
@@ -34,10 +44,10 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Control
                     continue
 
                 elif instances[i].Module == "Minecraft":
-                    self._AvailableInstances.append(AMPMinecraftInstance(data=instances[i]))
+                    self._AvailableInstances.append(AMPMinecraftInstance(data=instances[i], ADS=self))
 
                 else:
-                    self._AvailableInstances.append(AMPInstance(data=instances[i]))
+                    self._AvailableInstances.append(AMPInstance(data=instances[i], ADS=self))
 
     def __init__(self) -> None:
         self._logger.debug(msg=f"DEBUG {type(self).__name__} __init__")
@@ -56,9 +66,11 @@ class ADSInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Control
         `**ADSInstance Only**`
 
         Args:
+        ---
             format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
+        ---
             list[Self] | str | bool | int | None: On success returns a list of Self dataclasses. 
 
         """

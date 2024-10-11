@@ -1,6 +1,6 @@
 INSTANCE TYPE: Minecraft
-VERSION: 2.5.1.0
-BUILD: 20240703.1
+VERSION: 2.5.1.4
+BUILD: 20240731.1
 
 ____________________________________________________
 MinecraftModule:
@@ -311,6 +311,10 @@ Core:
 			{'Name': 'Count', 'TypeName': 'Int32', 'Description': '', 'Optional': False}
 		ReturnTypeName: IEnumerable<IAuditLogEntry>
 		IsComplexType: True
+	RunSecurityCheck:
+		Parameters:
+		ReturnTypeName: IEnumerable<JObject>
+		IsComplexType: True
 	GetSettingsSpec:
 		Parameters:
 		ReturnTypeName: Dictionary<String, IEnumerable<JObject>>
@@ -611,7 +615,7 @@ Core:
 		ReturnTypeName: ActionResult
 		IsComplexType: True
 	GetUpdates:
-		Description: Gets changes to the server status, in addition to any notifications or console output that have occurred since the last time GetUpdates() was called by the current session.
+		Description: Gets changes to the server status, in addition to any notifications or console output that have occured since the last time GetUpdates() was called by the current session.
 		Returns: 
 		Parameters:
 		ReturnTypeName: JObject
@@ -716,10 +720,10 @@ Core:
 		Parameters:
 		ReturnTypeName: Object
 		IsComplexType: False
-	GetAuthencationRequirements:
+	GetAuthenticationRequirements:
 		Parameters:
 			{'Name': 'username', 'TypeName': 'String', 'Description': '', 'Optional': False}
-		ReturnTypeName: IEnumerable<AuthencationRequirement>
+		ReturnTypeName: IEnumerable<AuthenticationRequirement>
 		IsComplexType: True
 	Login:
 		Parameters:

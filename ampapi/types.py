@@ -1,4 +1,3 @@
-# API class types
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -110,7 +109,7 @@ class ActionResult():
 @dataclass()
 class Login_UserInfo():
     """
-    Represents an AMP users information, tied to `LoginResults()` along with the endpoint `get_amp_users_summary()`
+    Represents an AMP users information, tied to `LoginResults()` along with the endpoint `Core.get_amp_users_summary()`
 
     """
 
@@ -129,6 +128,7 @@ class Login_UserInfo():
         Converts our LastLogin attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
         if isinstance(self._LastLogin, datetime):
@@ -209,7 +209,7 @@ class Metrics_Data():
 @dataclass()
 class Metric():
     """
-    The Metrics dataclass for Updates_Status().Metrics, houses all the Metrics information.
+    The Metrics dataclass for AppStatus().Metrics and Instance().Metrics, houses all the Metrics information.
 
     """
 
@@ -221,7 +221,7 @@ class Metric():
 @dataclass()
 class AppStatus():
     """
-    Tied to `get_status()`, represents the Instance stats.
+    Tied to `Core.get_status()`, represents the Instance or Application stats.
 
     """
 
@@ -233,7 +233,7 @@ class AppStatus():
 @dataclass()
 class InstanceStatus():
     """
-    Represents the data returned from `get_instance_status()`
+    Represents the data returned from `ADSModule.get_instance_status()`
 
     """
 
@@ -259,6 +259,7 @@ class Console_Entries():
         Converts our Timestamp attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
 
@@ -276,7 +277,7 @@ class Console_Entries():
 class Port():
     """
 
-    Current Port of the related AMP Instance. Tied to `Updates().Ports` and the API call `get_port_summaries()`
+    Current Port of the related AMP Instance. Tied to `Updates().Ports` and the API call `Core.get_port_summaries()`
 
     """
 
@@ -292,7 +293,7 @@ class Port():
 class Messages():
     """
     Represents a Message from the dataclass `Updates().Messages`\n
-    *Not sure what generates these inside AMP or where to find them.*
+    * Not sure what generates these inside AMP or where to find them.*
 
     """
 
@@ -329,7 +330,7 @@ class Task():
 @dataclass()
 class Updates():
     """
-    Represents the data from AMP API call `get_updates()` \n
+    Represents the data from AMP API call `Core.get_updates()` \n
 
     """
 
@@ -343,7 +344,7 @@ class Updates():
 @dataclass()
 class Instance():
     """
-    Represents the data from the AMP API call `getInstance()` or a list of these from `getInstances()`
+    Represents the data from the AMP API call `ADSModule.get_instance()` or a list of these from `ADSModule.get_instances()`
 
     """
 
@@ -410,6 +411,7 @@ class Controller():
         Converts our LastUpdated attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
 
@@ -477,7 +479,7 @@ class Triggers():
 @dataclass()
 class ScheduleData():
     """
-    Represents the Data returned from the AMP API call `get_schedule_data()`
+    Represents the Data returned from the AMP API call `Core.get_schedule_data()`
 
     """
 
@@ -491,7 +493,7 @@ class ScheduleData():
 @dataclass(init=False)
 class Players():
     """
-    Represents the Data returned from the AMP API call `getUserlist()`
+    Represents the Data returned from the AMP API call `Core.get_user_list()`
     The attributes are not 100% accurate. Used Minecraft Module as a test.
     `{'6eb7be5e-3d33-4b40-8aab-7889c243cc1a': 'Anth0kage'}`
 
@@ -509,7 +511,7 @@ class Players():
 @dataclass()
 class User():
     """
-    Represents the Data returned from the AMP API call `getAllAMPUserInfo()`
+    Represents the Data returned from the AMP API call `Core.get_all_amp_user_info()`
 
     """
 
@@ -533,6 +535,7 @@ class User():
         Converts our LastLogin attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
 
@@ -549,7 +552,7 @@ class User():
 @dataclass()
 class SettingSpec():
     """
-    Represents the data returns from the AMP API call `getConfig()` or `getConfigs()`
+    Represents the data returns from the AMP API call `Core.get_config()` or `Core.get_configs()`
 
     """
 
@@ -577,7 +580,7 @@ class SettingSpec():
 @dataclass()
 class Role():
     """
-    Represents the data returns from the AMP API call `getRole()`
+    Represents the data returns from the AMP API call `Core.get_role()`
 
     """
 
@@ -596,7 +599,7 @@ class Role():
 @dataclass()
 class FileChunk():
     """
-    Represents the data returns from AMP API call `getFileChunk()`
+    Represents the data returns from AMP API call `FileManagerPlugin.get_file_chunk()`
 
     """
 
@@ -607,7 +610,7 @@ class FileChunk():
 @dataclass()
 class Directory():
     """
-    Represents the data returns from AMP API call `getDirectoryListing()`
+    Represents the data returns from AMP API call `FileManagerPlugin.get_directory_listing()`
 
     """
 
@@ -628,6 +631,7 @@ class Directory():
         Converts our Created attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime | str: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
                 `Will return str on windowsOS if out of range(1970-2038)`
         """
@@ -651,6 +655,7 @@ class Directory():
         Converts our Modified attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime | str: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
                 `Will return str on windowsOS if out of range(1970-2038)`
         """
@@ -672,7 +677,7 @@ class Directory():
 @dataclass()
 class Session():
     """
-    Represents the data returns from the AMP API call `getActiveAMPSessions()`
+    Represents the data returns from the AMP API call `Core.get_active_amp_sessions()`
 
     """
     Source: str
@@ -688,6 +693,7 @@ class Session():
         Converts our StartTime attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
 
@@ -706,6 +712,7 @@ class Session():
         Converts our LastActivity attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
 
@@ -755,11 +762,12 @@ class BukkitPlugin():
 @dataclass
 class InstanceDatastore():
     """
-    Represents a InstanceDatastore to be used in `add_datastore()`
+    Represents a InstanceDatastore to be used in `ADSModule.add_datastore()`
 
     AMP must have read/write/execute access to the directory specified in the `Directory` parameter.
 
     Args:
+    ---
         Directory: The on-disk location where instances will be stored. Changing this will not affect existing instances, only newly created ones.
         InstanceLimit: The maximum number of instances that can be provisioned on this datastore. Defaults to 0 for unlimited.
         SoftLimitMB: Datastores that reach or exceed this limit in total size will not be considered as deployment targets. This is only a soft limit and does not prevent instances on this datastore from using more space.
@@ -810,7 +818,7 @@ class RunningTask():
 @dataclass
 class DeploymentTemplate():
     """
-    Used for `update_deployment_template()` API call.
+    Used for `ADSModule.update_deployment_template()` API call.
 
     """
 
@@ -818,7 +826,7 @@ class DeploymentTemplate():
     Name: str
     Description: str
     Module: str
-    TemplateInstance: Any  # Unsure what this field is at this time. #TODO - Need to figure this out.
+    TemplateInstance: Any  # TODO Unsure what this field is at this time.
     TemplateRole: str
     TemplateBaseApp: str
     CloneRoleIntoUser: bool
@@ -919,7 +927,7 @@ class GlibcInfo():
 @dataclass
 class CreateInstance():
     """
-    Used for `create_instance()` API call.
+    Used for `ADSModule.create_instance()` API call.
 
     """
 
@@ -943,7 +951,7 @@ class CreateInstance():
 @dataclass
 class InstanceInfo():
     """
-    Used for `update_instance_info()` API call.
+    Used for `ADSModule.update_instance_info()` API call.
 
     """
 
@@ -958,6 +966,7 @@ class InstanceInfo():
     ContainerImage: str
     MemoryPolicy: ContainerMemoryPolicy = field(default=ContainerMemoryPolicy.Reserve)
     StartOnBoot: bool = field(default=False)
+    WelcomeMessage: str | None = field(default=None)
 
 
 @dataclass
@@ -979,6 +988,7 @@ class AuditLogEntry():
         Converts our Timestamp attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
         if isinstance(self._Timestamp, datetime):
@@ -994,7 +1004,7 @@ class AuditLogEntry():
 @dataclass
 class Endpoints():
     """
-    Application Endpoints -> See `get_application_endpoints()`
+    Application Endpoints -> See `ADSModule.get_application_endpoints()`
 
     """
     DisplayName: str
@@ -1005,7 +1015,7 @@ class Endpoints():
 @dataclass
 class PortInfo():
     """
-    Represents the data from the AMP API call `get_instance_network_info()`
+    Represents the data from the AMP API call `ADSModule.get_instance_network_info()`
 
     """
 
@@ -1021,7 +1031,7 @@ class PortInfo():
 @dataclass
 class Provision():
     """
-    Represents the data from `get_provision_fitness()`
+    Represents the data from `ADSModule.get_provision_fitness()`
 
     """
 
@@ -1039,7 +1049,7 @@ class Provision():
 @dataclass
 class Module():
     """
-    Represents the data from the AMP API call `get_module_info()`
+    Represents the data from the AMP API call `Core.get_module_info()`
 
     """
 
@@ -1074,7 +1084,7 @@ class Module():
 @dataclass
 class TimedTrigger():
     """
-    Represents the data of `get_time_interval_trigger()`.
+    Represents the data of `Core.get_time_interval_trigger()`.
 
     """
 
@@ -1094,7 +1104,7 @@ class TimedTrigger():
 @dataclass(init=False)
 class Diagnostics():
     """
-    Represents the data of `get_diagnostics_info()`.
+    Represents the data of `Core.get_diagnostics_info()`.
 
     """
     Application_Name: str  # ': 'AMP',
@@ -1128,7 +1138,7 @@ class Diagnostics():
 @dataclass
 class OPWhitelist():
     """
-    Represents the results from `get_op_whitelist()`.
+    Represents the results from `MinecraftModule.get_op_whitelist()`.
 
     """
 
@@ -1139,7 +1149,7 @@ class OPWhitelist():
 @dataclass
 class OPList():
     """
-    Represents the results from `get_op_whitelist()`.
+    Represents the results from `MinecraftModule.get_op_whitelist()`.
 
     """
 
@@ -1151,7 +1161,7 @@ class OPList():
 @dataclass
 class MCUser():
     """
-    Represents the results from `mc_get_whitelist()`.
+    Represents the results from `MinecraftModule.mc_get_whitelist()`.
 
     """
 
@@ -1162,7 +1172,7 @@ class MCUser():
 @dataclass
 class Application():
     """
-    Represents the results from `get_supported_applications()`.
+    Represents the results from `MinecraftModule.get_supported_applications()`.
 
     """
 
@@ -1184,7 +1194,7 @@ class Application():
 @dataclass
 class ProvisionSettingInfo():
     """
-    Represents the data from `get_provision_arguments()`.
+    Represents the data from `ADSModule.get_provision_arguments()`.
 
     """
 
@@ -1199,7 +1209,7 @@ class ProvisionSettingInfo():
 @dataclass
 class Backup():
     """
-    Represents the results from `get_backups()`.
+    Represents the results from `ADSModule.get_backups()`.
 
     """
     CreatedAutomatically: bool  # ': False,
@@ -1221,6 +1231,7 @@ class Backup():
         Converts our Timestamp attribute into a Datetime Object.
 
         Returns:
+        ---
             datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
         """
         if isinstance(self._Timestamp, datetime):
@@ -1236,9 +1247,10 @@ class Backup():
 @dataclass
 class Analytics_Filter():
     """
-    A dataclass to handle filtering for `get_analytics_summary()`.
+    A dataclass to handle filtering for `AnalyticsPlugin.get_analytics_summary()`.
 
     Args:
+    ---
         Username (str): The username to filter by.
         UserId (str): Currently the same as Username.
         FirstSession (bool): Whether or not to filter by first session only.
@@ -1285,7 +1297,7 @@ class Analytics_Filter():
 @dataclass
 class Analytics_Summary():
     """
-    Represents the data from `get_analytics_summary()`.
+    Represents the data from `AnalyticsPlugin.get_analytics_summary()`.
 
     """
 

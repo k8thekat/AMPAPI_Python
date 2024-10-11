@@ -25,6 +25,7 @@ class APIUtil():
         Creates a `setting_nodes.txt` in the script directory with nodes from api `Core/GetSettingSpec`
 
         Args:
+        ---
             amp (Core): API_Core class object signed in.
 
         See -> `amp/util/setting_nodes.txt`
@@ -52,6 +53,7 @@ class APIUtil():
         Creates a `permission_nodes.txt` in the script directory with nodes from api `Core/GetPermissionsSpec`
 
         Args:
+        ---
             amp (Core): API_Core class object signed in.
 
         See -> `amp/util/permission_nodes.txt`
@@ -67,6 +69,7 @@ class APIUtil():
         Pulls the key "Nodes" from the list of dictionary results and dumps them to a txt file.
 
         Args:
+        ---
             text (list): The list of dictionary's
             file (_type_, optional): The file object to dump text to. Defaults to None. `**LEAVE NONE**`
         """
@@ -92,8 +95,9 @@ class APIUtil():
     async def parse_get_api_spec(instance: Union[Core, ADSInstance, AMPInstance, AMPMinecraftInstance]) -> None:
         """
         Creates a `api_spec.txt` in the script directory with nodes from api `Core/GetAPISpec`
-        #TODO - Improve formatting of the Markdown file.
+
         Args:
+        ---
             instance(str): The API Class 
 
         See -> `../docs/api_spec.md`

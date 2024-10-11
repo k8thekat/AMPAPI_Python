@@ -1,6 +1,6 @@
 import logging
 from dataclasses import fields
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 from .types import APIParams
 
@@ -26,9 +26,11 @@ class Bridge(APIParams):
         **`DO NOT CALL THIS METHOD OUTSIDE OF AN API CLASS (ADSModule, Core, etc..)`**
 
         Raises:
+        ---
             ValueError: If the Bridge class does not exist.
 
         Returns:
+        ---
             Bridge: A singleton class of Bridge
         """
         if cls._instance == None:

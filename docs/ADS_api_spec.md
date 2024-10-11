@@ -1,6 +1,6 @@
 INSTANCE TYPE: ADS
-VERSION: 2.5.1.0
-BUILD: 20240703.1
+VERSION: 2.5.1.4
+BUILD: 20240731.1
 
 ____________________________________________________
 ADSModule:
@@ -287,6 +287,7 @@ ADSModule:
 			{'Name': 'url', 'TypeName': 'String', 'Description': '', 'Optional': False}
 			{'Name': 'username', 'TypeName': 'String', 'Description': '', 'Optional': False}
 			{'Name': 'password', 'TypeName': 'String', 'Description': '', 'Optional': False}
+			{'Name': 'twoFactorToken', 'TypeName': 'String', 'Description': '', 'Optional': False}
 		ReturnTypeName: ActionResult
 		IsComplexType: True
 	RegisterTarget:
@@ -318,6 +319,7 @@ ADSModule:
 			{'Name': 'MemoryPolicy', 'TypeName': 'ContainerMemoryPolicy', 'Description': '', 'Optional': False, 'ParamEnumValues': {'NotSpecified': 0, 'Reserve': 100, 'Restrict': 200}}
 			{'Name': 'ContainerMaxCPU', 'TypeName': 'Single', 'Description': '', 'Optional': False}
 			{'Name': 'ContainerImage', 'TypeName': 'String', 'Description': '', 'Optional': False}
+			{'Name': 'WelcomeMessage', 'TypeName': 'String', 'Description': '', 'Optional': True}
 		ReturnTypeName: ActionResult
 		IsComplexType: True
 	SetInstanceSuspended:
@@ -513,6 +515,10 @@ Core:
 			{'Name': 'Before', 'TypeName': 'Nullable<DateTime>', 'Description': '', 'Optional': False}
 			{'Name': 'Count', 'TypeName': 'Int32', 'Description': '', 'Optional': False}
 		ReturnTypeName: IEnumerable<IAuditLogEntry>
+		IsComplexType: True
+	RunSecurityCheck:
+		Parameters:
+		ReturnTypeName: IEnumerable<JObject>
 		IsComplexType: True
 	GetSettingsSpec:
 		Parameters:
@@ -919,10 +925,10 @@ Core:
 		Parameters:
 		ReturnTypeName: Object
 		IsComplexType: False
-	GetAuthencationRequirements:
+	GetAuthenticationRequirements:
 		Parameters:
 			{'Name': 'username', 'TypeName': 'String', 'Description': '', 'Optional': False}
-		ReturnTypeName: IEnumerable<AuthencationRequirement>
+		ReturnTypeName: IEnumerable<AuthenticationRequirement>
 		IsComplexType: True
 	Login:
 		Parameters:
