@@ -44,6 +44,7 @@ files: dict[str, list[str]] = {}
 cur_data = output.decode("utf-8")
 cur_data = cur_data.strip().strip('"')
 cur_data = cur_data.split("\n")
+file_name = None
 for entry in cur_data:
     if len(entry) == 0 or len(entry) == 1:
         continue
@@ -62,6 +63,9 @@ for entry in cur_data:
     else:
         if entry.startswith("--"):
             entry = "\t-" + entry[2:]
+        if file_name is None:
+            file_name = "Overall"
+            files[file_name] = []
         files[file_name].append(entry)
 
 
