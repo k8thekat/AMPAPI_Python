@@ -1,3 +1,18 @@
+## Version - 1.0.0 - [922a08b](https://github.com/k8thekat/AMPAPI_Python/commit/922a08b)
+#### Changelog.md
+- Version info from `0.3.0` added.
+#### __init__.py
+- Version bump to `1.0.0`
+
+#### Overall
+- Implementation of Sphinx documentation.
+- Added `gitHub` actions to handle changelog building.
+- Switched to `pyproject.toml` and `ruff`.
+	- Changed docStrings to `numpy`.
+- Added LICENSES for MIT for borrowed libraries.
+- Restructured dataclass file layout and enums.
+- Auto-generator for Setting Nodes/Permission Node rst files.
+
 ## Version - 0.3.0 - [68556f7](https://github.com/k8thekat/AMPAPI_Python/commit/68556f7)
 #### Changelog.md
 - Version info from `0.2.0` added.
