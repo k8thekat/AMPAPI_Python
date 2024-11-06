@@ -1,9 +1,9 @@
-from __future__ import annotations
-
+from datetime import datetime
 from typing import Any, Union
 
 from .base import Base
-from .types import *
+from .dataclass import AnalyticsFilter, AnalyticsSummary
+from .enums import *
 
 __all__ = ("AnalyticsPlugin",)
 
@@ -12,37 +12,46 @@ class AnalyticsPlugin(Base):
     """
     Contains the base functions for any `/API/AnalyticsPlugin/` AMP API endpoints.
 
+    .. note::
+        If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
+
+
     """
-    # AnalyticsPlugin: GetAnalyticsSummary: Parameters: {'Name': 'PeriodDays', 'TypeName': 'Int32', 'Description': '', 'Optional': True} {'Name': 'StartDate', 'TypeName': 'Nullable<DateTime>', 'Description': '', 'Optional': True} {'Name': 'Filters', 'TypeName': 'Dictionary<String, String>', 'Description': '', 'Optional': True} ReturnTypeName: Object IsComplexType: False
 
-    async def get_analytics_summary(self, period_days: int = 30, start_date: datetime = datetime.now(), filters: Union[Analytics_Filter, None] = None, format_data: Union[bool, None] = None) -> Analytics_Summary:
-        """
-
+    async def get_analytics_summary(
+        self,
+        period_days: int = 30,
+        start_date: datetime = datetime.now(),
+        filters: Union[AnalyticsFilter, None] = None,
+        format_data: Union[bool, None] = None,
+    ) -> AnalyticsSummary:
+        """|coro|
         Retrieves the Analytics data for the Instance. \n
         See data such as how many people are playing, how long they've been playing, and where they are from.
 
+        Parameters
+        -----------
+        period_days: :class:`int`, optional
+            How far back in days to go, by default 30
+        start_date: :class:`datetime.datetime`, optional
+            The date to start from, by default :meth:`~datetime.datetime.now`
+        filters: Union[:class:`AnalyticsFilter`, None], optional
+            Filters results based upon the supplied dataclass values. See :class:`Analytics_Filter`, by default None
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Args:
-        ---
-            period_days (int, optional): How far back in days to go. Defaults to 30.
-            start_date (datetime, optional): From what date to go back from. Defaults to Current Date/Time. 
-            filters (Union[Analytics_Filter, None], optional): Filters results based upon the supplied dataclass values. Defaults to None.\n
-                See `types.py -> Analytics_Filter` for more information.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
-
-        Returns:
-        ---
-            Analytics_Summary: On success returns an Analytics_Summary dataclass.
-            * See `types.py -> Analytics_Summary`
+        Returns
+        --------
+        :class:`AnalyticsSummary`
+            On success returns an :class:`AnalyticsSummary` dataclass.
         """
-
         await self._connect()
         if isinstance(start_date, datetime):
             date: float = start_date.timestamp()
 
         if filters is not None:
-            if isinstance(filters, Analytics_Filter):
-                data: dict[Any, Any] = self.dataclass_to_dict(dataclass=filters)
+            if isinstance(filters, AnalyticsFilter):
+                data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=filters)
         else:
             data: dict[Any, Any] = {}
 
@@ -51,5 +60,10 @@ class AnalyticsPlugin(Base):
             "StartDate": date,
             "Filters": data,
         }
-        result: Any = await self._call_api(api="AnalyticsPlugin/GetAnalyticsSummary", parameters=parameters, format_data=format_data, format=Analytics_Summary)
+        result: Any = await self._call_api(
+            api="AnalyticsPlugin/GetAnalyticsSummary",
+            parameters=parameters,
+            format_data=format_data,
+            format_=AnalyticsSummary,
+        )
         return result

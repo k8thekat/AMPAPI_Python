@@ -1,6 +1,15 @@
-# AMPAPI_Python_wrapper
+# AMP API Python
 ___
 CubeCoders AMP API wrapper in Python. 
+
+
+<div align="left">
+    <a href="https://discord.gg/BtNyU8DFtt"><img src='https://img.shields.io/discord/705500489248145459?color=blue&label=Discord&logo=Discord%20Server&logoColor=green' alt='Discord Server'></a>
+</div>
+
+<!-- ![Number of GitHub stars](https://img.shields.io/github/stars/d60/twikit) -->
+![Version](https://img.shields.io/pypi/v/cubecoders-amp-api-wrapper?label=PyPI)
+
 
 ### Key Features
 ___
@@ -18,7 +27,7 @@ ___
 
 To install run the below command to install the required pip packages from [Requirements](./requirements.txt)
 
-### Pypi 
+### PyPi 
 -> https://pypi.org/project/cubecoders-amp-api-wrapper/
 ```bash
 # Linux/macOS
@@ -130,3 +139,24 @@ await arkinstance.get_updates(format_data=False)
 await arkinstance.get_role_data(format_data=True)
 
 ```
+
+
+### Building the project
+# git commit format
+```
+    # file_name.py
+    - Change 1
+    - Change 2
+```
+# AMP Version Bump
+- Run `await APIUtil.AMP_to_API_update(instance=instance_here)`
+
+# Update/Build Process
+- Be in `WSL Terminal`
+- Update `__init__.py` -> `__version__` property.
+- Update `VersionInfo` class versions to match `__version__` property.
+- Run `.\build.bash`
+    - Validates `setup.py`
+    - Updated `Changelog.md`
+    - Pushes the changed to PyPi (or testPyPi)
+# git merge --no-ff and tag the merge to main.

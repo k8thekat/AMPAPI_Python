@@ -1,10 +1,12 @@
-dist/*
-build/*
+**/dist
+**/build
 *.egg-info
-*/__pycache__
+**/__pycache__
 *.bash
 local.py
 .vscode/settings.json
 build.notes.md
 build.py
 todo
+docs/build*
+**.dump

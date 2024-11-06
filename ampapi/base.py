@@ -1,56 +1,103 @@
 from __future__ import annotations
 
+import copy
 import functools
 import json
 import logging
-import traceback
-from dataclasses import fields
-from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Literal, Union
+import re
+from dataclasses import fields, is_dataclass
+from datetime import datetime
+from pprint import pformat
+from typing import TYPE_CHECKING, Any, ClassVar, Union
 
 import aiohttp
 from aiohttp import ClientResponse
 from dataclass_wizard import fromdict
 from pyotp import TOTP
 
-from ampapi.types import APISession
-
 from .bridge import Bridge
-from .types import *
+from .dataclass import APISession, DeploymentTemplate, LoginResults
+from .enums import *
 
 if TYPE_CHECKING:
-    from typing import Self
+    from collections.abc import Callable, Coroutine, Iterable
+    from datetime import timedelta
+    from typing import Concatenate
 
-__all__: tuple[Literal['Base']] = ("Base",)
+    from _typeshed import DataclassInstance
+    from typing_extensions import ParamSpec, Self, TypeVar
+
+    from .dataclass import Controller, Instance, InstanceStatus, Updates
+
+    D = TypeVar("D", bound="Base")
+    T = ParamSpec("T")
+    F = TypeVar("F")
+    X = TypeVar("X", bound=DataclassInstance)
+
+__all__ = ("Base",)
 
 FORMAT_DATA: bool = True
 
 
-class Base():
+class Base:
     """
     Contains the base functions for all AMP API endpoints and handles the parsing of Bridge data.
 
-    """
-    _logger: logging.Logger = logging.getLogger()
-    InstanceID: str = "0"
-    Module: str = ""
-    _Running: bool
-    session_ttl: int = 240  # Seconds (Typically a session expires after 5 minutes of inactivity.)
-    url: str = ""
+    Attributes
+    -----------
+    api_url: :class:`str`
+        The URL to access the Web Panel. This comes from your :class:`APIParams`.
+    session_ttl: :class:`int`
+        How long before the session id expires in seconds, default is 240 seconds.
+    instance_id: :class:`str`
+        The Instance id is a string determined by AMP. \n
+        This attribute will be set automatically after making a :meth:`login` request, default is "O".
 
-    NO_DATA: str = "Failed to receive any data from post request."
-    ADS_NOT_SETUP: str = "The function failed as the ADS Instance was not properly initialized and set as an attribute."
-    ADS_ONLY: str = "This API call is only available on ADS instances."
-    UNAUTHORIZED_ACCESS: str = "The user does not have the required permissions to interact with this instance."
-    NO_BRIDGE: str = "Failed to setup connection. You need to initiate `<class Bridge>` first."
-    MINECRAFT_ONLY: str = "This API call is only available on Minecraft type instances."
-    FAILED_API: str = "The API call returned a malformed response."
-    INSTANCE_OFFLINE: str = "The requested instance is not available at this time."
+    .. warning::
+        Do not overwrite or alter the :attr:`instance_id`.
+
+
+    .. note::
+        A session expires after 240sec of inactivity per Cube Coders AMP. If for any reason you want to change that value; set the attribute :attr:`session_ttl`.\n
+
+
+    """
+
+    # Private Attributes
+    _logger: logging.Logger = logging.getLogger()
+    _bridge: Bridge
+
+    # Public Attributes
+    url: str = ""
+    instance_id: str = "0"
+    session_ttl: int = 240
+    module: str
+
+    # Error response strings.
+    _ads_only: str = "This API call is only available to <class:`ADSModule`> type classes."
+    _failed_api: str = "The API call returned a malformed response."
+    _minecraft_only: str = "This API call is only available on Minecraft type instances."
+    _no_bridge: str = "Failed to setup connection. You need to initiate `<class Bridge>` first."
+    _no_controller: str = "The function failed as the <class:`AMPControllerInstance`> was not properly initialized and set."
+    _no_data: str = "Failed to receive any data from post request."
+    _unauthorized_access: str = "The user does not have the required permissions to interact with this instance."
+    _instance_offline: str = "The requested instance is not available at this time."
+
+    # These are used to handle JSON keys that cannot be parsed properly via regex.
+    # See :func:`camel_to_snake_re`
+    json_key_mapping: ClassVar[dict[str, str]] = {
+        "ContainerCPUs": "container_cpus",
+        "InstalledRAMMB": "installed_ram_mb",
+        "FreeRAMMB": "free_ram_mb",
+        "AvailableIPs": "available_ips",
+        "SecurityandPrivacy": "security_and_privacy",
+    }
 
     def __init__(self) -> None:
-        bridge: Bridge = Bridge.get_bridge()
+        bridge: Bridge = Bridge._get_bridge()
         # Validate the bridge object is at the same memory address.
-        self._logger.debug(msg=f"bridge object -> {bridge}")
+        self._logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
+        self._logger.debug("bridge object -> %s", pformat(bridge))
 
         if isinstance(bridge, Bridge):
             self.parse_bridge(bridge=bridge)
@@ -58,13 +105,18 @@ class Base():
     @property
     def format_data(self) -> bool:
         """
-        Controls whether the data returned from the API endpoint is formatted or not. \n
-        `True` = formatted \n
-        `False` = unformatted
+        Controls whether the data returned from an API endpoint is formatted or not.\n
+        Default is ``True`` which comes from the global parameter ``FORMAT_DATA``.
 
-        Returns:
-        ---
-            bool: `True` or `False`, defaults to `True`.
+        .. note::
+            ``True`` = formatted \n
+            ``False`` = unformatted
+
+
+        Returns
+        --------
+        :class:`bool`
+            Returns True or False.
         """
         global FORMAT_DATA
         return FORMAT_DATA
@@ -75,240 +127,153 @@ class Base():
         FORMAT_DATA = value
 
     @staticmethod
-    def ADSonly(func):
+    def ads_only(
+        func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
+    ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
         """
-        Checks the `Base.Module` property and raises ConnectionError if the Instance is `Offline or Stopped`.
+        Checks the class attribute ``.module`` and is equal to ``ADS`` or if the type of Instance using the function is AMPADSInstance.
 
-        Raises:
-        ---
-            RuntimeError: This API call is only available on ADS instances.
-        """
-        @functools.wraps(wrapped=func)
-        async def wrapper_ADSonly(self: Self, *args, **kwargs) -> bool:
-            if self.Module == "ADS":
-                return await func(self, *args, **kwargs)
-            else:
-                raise RuntimeError(self.ADS_ONLY)
-        return wrapper_ADSonly
+        Parameters
+        ----------
+        func : Callable[Concatenate[D, T], Coroutine[None, None, F]]
+            The function the decorator is wrapping.
 
-    @staticmethod
-    def online(func):
-        """
-        Checks the `AMPInstance.Running` property and raises ConnectionError if the Instance is `Offline or Stopped`.
+        Returns
+        -------
+        Callable[Concatenate[D, T], Coroutine[None, None, F]]
+            The function the decorator is wrapping.
 
-        Raises:
-        ---
-            ConnectionError: The requested instance is not available at this time.
+        Raises
+        ------
+        RuntimeError
+            The API call is only allowed to be run on a type(:py:class:`AMPADSInstance`).
         """
 
         @functools.wraps(wrapped=func)
-        async def wrapper_online(self: Self, *args, **kwargs) -> bool:
-            if self._Running is True:
-                return await func(self, *args, **kwargs)
+        def wrapper_ads_only(self: D, *args: T.args, **kwargs: T.kwargs) -> Coroutine[None, None, F]:
+            from .adsmodule import ADSModule
+            from .instance import AMPADSInstance
+
+            if self.module == "ADS" or type(self) == AMPADSInstance or isinstance(self, ADSModule):
+                return func(self, *args, **kwargs)
             else:
-                raise ConnectionError(self.INSTANCE_OFFLINE)
-        return wrapper_online
+                raise RuntimeError(self._ads_only)
 
-    def parse_bridge(self, bridge: Bridge):
+        return wrapper_ads_only
+
+    async def _call_api(
+        self,
+        api: str,
+        parameters: Union[None, dict[str, Any]] = None,
+        format_data: Union[bool, None] = None,
+        format_: Union[type[X], type[DeploymentTemplate], None] = None,
+        sanitize_json: bool = True,
+        _use_from_dict: bool = True,
+        _auto_unpack: bool = True,
+        _no_data: bool = False,
+    ) -> Any:
+        """|coro|
+        Uses :class:`aiohttp.ClientSession` post request to access the AMP API endpoints. \n
+
+        .. note::
+            Will populate the ``SESSIONID`` key for :param:`parameters` if it is not provided. This is the default behavior.
+
+
+        Parameters
+        -----------
+        api: :class:`str`
+            The API endpoint to call, eg ``Core/GetModuleInfo``.
+        parameters: Union[None, dict[:class:`str`, Any]], optional
+            The parameters to pass to the API endpoint, by default None.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+        format_: :py:class:`DataclassInstance`, optional
+            The dataclass the JSON response will formatted to, by default None.
+        sanitize_json: :class:`bool`, optional
+            Replaces invalid characters in our JSON responses, by default True.
+        _use_from_dict: :class:`bool`, optional
+            Controls whether the data will use :meth:`fromdict` of dataclass wizard to unpack the data. Typical usage case is to handle nested :class:`DataclassInstance`, by default True.
+        _auto_unpack: :class:`bool`, optional
+            Controls whether the data will be unpacked automatically via ``(**data)``, by default True.
+        _no_data: :class:`bool`, optional
+            Informs the connection that the API does not have a JSON response, by default False.
+
+        Returns
+        --------
+        Any
+            Typical returns are of the same type that is passed in to ``format_``, either in an :class:`Iterable` or not depending on the data,
+            otherwise returns an unformatted JSON response if :attr:`format_data` or ``FORMAT_DATA`` is False.
+
+        Raises
+        ------
+        :exc:`ValueError`
+            When a JSON response :attr:`ClientSession.content_length` == 0 or :class:`aiohttp.ClientSession` raises an Exception.\n
+            When the API endpoint returns a malformed JSON response.
+        :exc:`ConnectionError`
+            When an JSON response status code is not 200.\n
+            When an JSON response has a dict key value of "Instance Unavailable.
+        :exc:`PermissionError`
+            When the JSON response has a dict key value of "Unauthorized Access" or permission related error.
         """
-        Takes the Bridge class object and pulls the APIparams data from it and set's the class attributes for API usage.
 
-        Args:
-        ---
-            bridge (Bridge): The Bridge class object to parse.
-
-        Raises:
-        ---
-            ValueError: If 2FA Token is not provided and `_use_2fa == True`.
-            ValueError: If 2FA Token is not enclosed in single(',') or double(",") quotes.
-        """
-        # We use this later on in _connect to update `_session_id`;
-        # so all connections will use the same session id (if possible)
-        self._bridge: Bridge = bridge
-        self.url = bridge.url
-        if bridge.use_2fa == True:
-            if bridge.token == "":
-                raise ValueError("You must provide a 2FA Token if you are using 2FA.")
-            elif bridge.token.startswith(("'", '"')) == False or bridge.token.endswith(("'", '"')) == False:
-                raise ValueError("2FA Token must be enclosed in quotes.")
-            # Removed starting and ending quotes
-            elif len(bridge.token) < 8:
-                raise ValueError("Your 2FA Token appears to be too short (6 characters). Please use the Code that generates the Timed Based Tokens. ")
-
-    def parse_data(self, data: Controller | Instance | AppStatus | Updates) -> Self:
-        """
-        Takes in a dataclass and iterates through it's attributes and 
-        set's the values as attributes of the class that called this function.
-
-        Args:
-        ---
-            data (Controller | Instance | AppStatus | Updates): The dataclass to parse.
-
-        Returns:
-        ---
-            Self: Returns the class that called this function.
-        """
-        for field in fields(class_or_instance=data):
-            # This is to deal with improperly cased InstanceId.
-            if field.name == "InstanceId":
-                setattr(self, "InstanceID", getattr(data, field.name))
-                continue
-            setattr(self, field.name, getattr(data, field.name))
-        return self
-
-    def camel_case_data(self, data: dict[str, str | bool | int | None]) -> dict[str, str | int | bool]:
-        """
-        Camel case the keys of a dictionary.
-
-        Args:
-        ---
-            data (dict[str, str  |  bool  |  None]): The dictionary to camel case.
-
-        Returns:
-        ---
-            dict[str, str | bool]: The camel cased dictionary.
-        """
-        new: dict[str, str | bool | int] = {}
-        for key, value in data.items():
-            if value is not None:
-                new[key.title()] = value
-        return new
-
-    def dataclass_to_dict(self, dataclass: Any) -> dict[Any, Any]:
-        """
-        Convert a dataclass to a dictionary.
-
-        Args:
-        ---
-            dataclass (Any): The dataclass to convert.
-
-        Returns:
-        ---
-            dict[Any, Any]: The converted dataclass as a dictionary.
-        """
-        parameters: dict[Any, Any] = {}
-        for field in fields(class_or_instance=dataclass):
-            value: Any = getattr(dataclass, field.name)
-            if value == None:
-                continue
-            parameters[field.name] = value
-        return parameters
-
-    def json_to_dataclass(self, json: Any, format: Any, _use_from_dict: bool, _auto_unpack: bool) -> Any | list[Any]:
-        """
-        Format the JSON response data to a dataclass.
-
-        Args:
-            json (Any): JSON data to format.
-            format (Any): Dataclass or similar to unpack the JSON data into.
-            _use_from_dict (bool): Use dataclass wizard `fromdict()` or not.
-            _auto_unpack (bool): Use **data or not to unpack the data.
-
-        Returns:
-            Any | list[Any]: A list of the format object or a single format object.
-
-        """
-        if isinstance(json, list):
-            if _use_from_dict is True:
-                return list(fromdict(format, data) for data in json)
-
-            elif _auto_unpack is True:
-                return list(format(**data)for data in json)
-
-            else:
-                return list(format(data)for data in json)
-        else:
-            if _use_from_dict is True:
-                return fromdict(format, json)
-
-            elif _auto_unpack is True:
-                return format(**json)
-
-            else:
-                return format(json)
-
-    async def _call_api(self, api: str, parameters: Union[None, dict[str, Any]] = None, format_data: Union[bool, None] = None, format: Any = None, _use_from_dict: bool = True, _auto_unpack: bool = True, _no_data: bool = False) -> Any:
-        """
-        Uses `aiohttp.ClientSession()` post request to access the AMP API endpoints. \n
-        Will automatically populate the `SESSIONID` parameter if it is not provided.
-
-        Args:
-        ---
-            api (str): The API endpoint to call. eg `Core/GetModuleInfo`
-            parameters (dict[str, str]): The parameters to pass to the API endpoint.
-            format_data (Union[bool, None]): Controls whether the data returned from the API endpoint is formatted or not. Defaults to `None`.
-            format (Any): The dataclass the Response json will return. Defaults to `None`.
-            _use_from_dict (bool): Controls whether the data will use `fromdict` of dataclass wizard to unpack the data. Typical usage case is nested Dataclasses. Defaults to `True`.
-            _auto_unpack (bool): Controls whether the data will be unpacked automatically. Defaults to `True`.
-            _no_data (bool): Informs the connection that the api does not have a JSON return. Defaults to `False`.
-
-        Raises:
-        ---
-            ValueError: When the API call returns no data or raises any exception.
-            ConnectionError: When the API call returns a status code other than 200.
-            PermissionError: When the API call returns a `Unauthorized Access` error or permission related error.
-
-        Returns:
-        ---
-            Any: Returns the JSON response, either formatted or unformatted depending on `format_data`.
-        """
         global FORMAT_DATA
 
         header: dict = {"Accept": "text/javascript"}
         post_req: ClientResponse | None
-        self._logger.debug(msg=f"_call_api -> {api} was called with {parameters}")
+        self._logger.debug("_call_api -> %s was called with %s", api, parameters)
 
         # This should save us some boiler plate code throughout our API calls.
         if parameters == None:
             parameters = {}
 
-        api_session: APISession = self._bridge._sessions.get(self.InstanceID, APISession(id="0", ttl=datetime.now()))
+        api_session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
         if isinstance(api_session, APISession):
             parameters["SESSIONID"] = api_session.id
 
         json_data: str = json.dumps(obj=parameters)
 
         _url: str = self.url + "/API/" + api
-        self._logger.debug(msg=f"DEBUG {self.InstanceID} | {api} | {_url} | {json_data}")
-        # print(f"DEBUG {self.InstanceID} | {api} | {_url} | {json_data}")
+        self._logger.debug("DEBUG %s | %s | %s | %s", self.instance_id, api, _url, pformat(json_data))
         async with aiohttp.ClientSession() as session:
             try:
                 post_req = await session.post(url=_url, headers=header, data=json_data)
             # TODO - Need to not catch all Excepts..
             # So I can handle each exception properly.
             except Exception as e:
-                self._logger.error(msg=f"DEBUG _call_api exception type: {type(e)}")
+                self._logger.error("DEBUG _call_api exception type: %s", type(e))
                 raise ValueError(e)
 
             if post_req.content_length == 0:
-                raise ValueError(self.NO_DATA)
+                raise ValueError(self._no_data)
 
             if post_req.status != 200:
-                raise ConnectionError(self.NO_DATA)
+                raise ConnectionError(self._no_data)
 
             post_req_json: Any = await post_req.json()
 
         if post_req_json == None and _no_data == False:
-            raise ConnectionError(self.NO_DATA)
+            raise ConnectionError(self._no_data)
 
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-        self._logger.debug(msg=f"DEBUG API CALL----> {api} | {type(post_req_json)} | {parameters}")
-        self._logger.debug(msg=f"DEBUG {post_req_json}")
+        self._logger.debug("DEBUG API CALL----> %s | %s | %s", api, type(post_req_json), parameters)
+        self._logger.debug("DEBUG %s", pformat(post_req_json))
+        if sanitize_json is True:
+            post_req_json = self.sanitize_json(post_req_json)
         if isinstance(post_req_json, dict):
-            if "Title" in post_req_json:
-                post_req_json = post_req_json["Title"]
-                if isinstance(post_req_json, str) and post_req_json == "Unauthorized Access":
-                    self._logger.error(msg=f"{api} failed because of {post_req_json}")
+            if "title" in post_req_json:
+                post_req_json = post_req_json["title"]
+                if isinstance(post_req_json, str) and (
+                    post_req_json == "Unauthorized Access" or post_req_json == "Instance Unavailable"
+                ):
+                    self._logger.error("%s failed because of %s", api, post_req_json)
                     api_session = APISession(id="0", ttl=datetime.now())
-                    self._bridge._sessions.update({self.InstanceID: api_session})
-                    raise PermissionError(self.UNAUTHORIZED_ACCESS)
-                if isinstance(post_req_json, str) and post_req_json == "Instance Unavailable":
-                    self._logger.error(msg=f"{api} failed because of {post_req_json}")
-                    api_session = APISession(id="0", ttl=datetime.now())
-                    self._bridge._sessions.update({self.InstanceID: api_session})
-                    raise ConnectionError(self.INSTANCE_OFFLINE)
+                    self._bridge._sessions.update({self.instance_id: api_session})
+                    if post_req_json == "Unauthorized Access":
+                        raise PermissionError(self._unauthorized_access)
+                    elif post_req_json == "Instance Unavailable":
+                        raise ConnectionError(self._instance_offline)
 
             elif api == "Core/Login":
                 return LoginResults(**post_req_json)
@@ -317,41 +282,53 @@ class Base():
                 post_req_json = post_req_json["result"]
 
                 if isinstance(post_req_json, bool) and post_req_json is False:
-                    self._logger.error(msg=f"{api} failed because of {post_req_json}")
-                    raise ConnectionError(self.FAILED_API)
+                    self._logger.error("%s failed because of %s", api, post_req_json)
+                    raise ValueError(self._failed_api)
 
-            elif isinstance(post_req_json, dict) and "Status" in post_req_json and post_req_json["Status"] == False:
-                self._logger.error(msg=f"{api} failed because of Status: {post_req_json}")
-                return ConnectionError(self.FAILED_API)
+            elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] == False:
+                self._logger.error("%s failed because of Status: %s", api, post_req_json)
+                return ValueError(self._failed_api)
 
-        self._logger.debug(msg=f"DEBUG _call_api | format_data = {format_data} | FORMAT_DATA = {FORMAT_DATA} | FORMAT-> {format}")
-        if (format is None or format_data is False) or (format_data is None and FORMAT_DATA is False):
+        self._logger.debug(
+            "DEBUG _call_api | format_data = %s | FORMAT_DATA = %s | FORMAT-> %s", format_data, FORMAT_DATA, format_
+        )
+        if (format_ is None or format_data is False) or (format_data is None and FORMAT_DATA is False):
             return post_req_json
 
-        elif (format_data is True) or (format_data is None and FORMAT_DATA is True):
-            return self.json_to_dataclass(json=post_req_json, format=format, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack)
+        elif isinstance(post_req_json, (dict, list)) and (
+            (format_data is True) or (format_data is None and FORMAT_DATA is True)
+        ):
+            return self.json_to_dataclass(
+                json=post_req_json, format_=format_, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack
+            )
 
     async def _connect(self) -> LoginResults | None:
         """
-        Handles your 2FA code and logging into AMP while also handling the session ID. \n
 
-        Raises:
-        ---
-            ValueError: If session ID is not a string or 2FA code is not a formatted properly.
-            TypeError: If the session is not an APISession object.
+        Logs into AMP via "API/Core/Login" endpoint using your :class:`Bridge` object.
 
-        Returns:
-        ---
-            bool | None: Returns False if an exception is thrown or the login attempt fails to provide a sessionID value. \n
-            Otherwise returns true and sets the class's sessionID value.
+        .. note::
+            - If Applicable handles your 2FA using :class:`TOTP` \n
+            - Stores the ``SESSIONID`` via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
+
+
+        Returns
+        --------
+        :class:`LoginResults` | None
+            The results from ``API/Core/Login`` as a dataclass.
+
+        Raises
+        -------
+        :exc:`ValueError`
+            If the 2 Factor Authentication code is not a formatted properly aka the :attr:`~Bridge.token` when making the :py:class:`Bridge` object.
         """
         code: Union[str, TOTP] = ""
 
         # get our InstanceID and use it to key for session_id
-        session: APISession = self._bridge._sessions.get(self.InstanceID, APISession(id="0", ttl=datetime.now()))
+        session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
         if isinstance(session, APISession):
             ttl: timedelta = datetime.now() - session.ttl
-            if ttl.seconds > 240:
+            if ttl.seconds > self.session_ttl:
                 sessionID = "0"
             else:
                 sessionID: str = session.id
@@ -363,48 +340,352 @@ class Base():
                     code = TOTP(self._bridge.token).now()
 
                 except AttributeError:
-                    raise ValueError("Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!")
+                    raise ValueError(
+                        "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
+                    )
             else:
                 try:
-
                     parameters: dict[str, Any] = {
-                        'username': self._bridge.user,
-                        'password': self._bridge.password,
-                        'token': code,
-                        'rememberMe': True}
+                        "username": self._bridge.user,
+                        "password": self._bridge.password,
+                        "token": code,
+                        "rememberMe": True,
+                    }
 
-                    result: Any = await self._call_api(api='Core/Login', parameters=parameters, format_data=True, format=LoginResults)
+                    result: Any = await self._call_api(
+                        api="Core/Login", parameters=parameters, format_data=True, format_=LoginResults
+                    )
                     if isinstance(result, LoginResults):
                         # This is our new sessions table to correlate InstanceID to a sessionID.
-                        api_session = APISession(id=result.sessionID, ttl=datetime.now())
-                        self._bridge._sessions.update({self.InstanceID: api_session})
+                        api_session = APISession(id=result.session_id, ttl=datetime.now())
+                        self._bridge._sessions.update({self.instance_id: api_session})
                         return result
 
                     else:
-                        self._logger.warning(msg="Failed response from Core/Login in _connect()")
+                        self._logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
                         return result
 
                 except Exception as e:
-                    self._logger.warning(msg=f'Core/Login Exception: {traceback.format_exc()}')
+                    self._logger.warning("Core/Login Exception:", exc_info=e)
         else:
             return
 
-    async def call_end_point(self, api: str, parameters: None | dict[str, Any] = None) -> Any:
-        """
-        Universal API method for calling any API endpoint. Some API endpoints require ADS and some may require an Instance ID. \n
+    async def call_end_point(self, api: str, parameters: None | dict[str, Any] = None) -> dict[str, Any]:
+        """|coro|
+        Universal API function for calling any API endpoint. Some API endpoints require the Instance module type to be ADS. \n
         ----------
-        * There is no validation of any sort outside of `Base._call_api()`.
-        * The Data returned will be unmodified. \n
+        See :ref:`.docs/ADS_api_spec.md` or :ref:`.docs/Minecraft_api_spec.md` for full API endpoints and parameter information.
 
-        Args:
-        ---
-            api (str): API endpoint to call. `eg "Core/GetModuleInfo"` (Assume this starts with www.yourAMPURL.com/API/)
-            parameters (None | dict[str, str]): Parameters to pass to the API endpoint. Session ID is already handled for you. Defaults to `None`
+        .. note::
+            Parameter key "SESSIONID" is handled for you.
 
-        Returns:
-        ---
-            Any: Returns the JSON response from the API call.
+
+        .. warning::
+            DO NOT include the full URL - *Exclude: www.yourAMPURL.com/API/*\n
+
+
+
+        Parameters
+        -----------
+        api: :class:`str`
+            The AMP API endpoint to call. eg "Core/GetModuleInfo"
+        parameters : None | dict[:class:`str`, Any], optional
+            The parameters to pass to the API endpoint, by default is None
+
+        Returns
+        --------
+        dict[:class:`str`, Any] :
+           The JSON response from the API endpoint.
+
         """
-
+        await self._connect()
         result: Any = await self._call_api(api=api, parameters=parameters)
         return result
+
+    @staticmethod
+    def camel_to_snake_re(data: str) -> str:
+        """
+        A simple regex pattern applied to a string to remove Camel Casing and apply snake_case.
+
+        .. note::
+            This will fail on entries with an underscore between to capital characters. |  *eg (Tool_Version = tool__version)*\n
+            Will also not format properly when handling strings that have a multiple uppercase followed by a lowercase. | *eg (ContainerCPUs = container_cp_us)*
+
+        Parameters
+        -----------
+        data: :class:`str`
+            The string to be converted.
+
+        Returns
+        -------
+        :class:`str`
+            The converted string from CamelCase to snake_case.
+        """
+
+        data = re.sub(pattern="(.)([A-Z][a-z]+)", repl=r"\1_\2", string=data)
+        return re.sub(pattern="([a-z0-9])([A-Z])", repl=r"\1_\2", string=data).lower()
+
+    @staticmethod
+    def camel_case_data(data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Calls the :meth:`title` on every dict key.
+
+        Parameters
+        -----------
+        data: dict[:class:`str`, Any]
+            The dictionary to camel case.
+
+        Returns
+        --------
+        dict[:class:`str`, Any]
+            The camel cased dict.
+        """
+
+        res: dict[str, str | bool | int] = {}
+        for key, value in data.items():
+            if value is not None:
+                res[key.title()] = value
+        return res
+
+    @staticmethod
+    def dataclass_to_dict(dataclass_: DataclassInstance) -> dict[str, Any]:
+        """
+        Convert a dataclass to a dictionary.
+
+        Parameters
+        -----------
+        dataclass_ : :class:`DataclassInstance`
+            The dataclass to convert.
+
+        Returns
+        --------
+        dict[:class:`str`, Any]
+            The converted dataclass as a dict.
+
+        Raises
+        -------
+        :exc:`TypeError`
+            When the object passed in is not of type(:class:`DataclassInstance`).
+        """
+
+        parameters: dict[Any, Any] = {}
+        if is_dataclass(dataclass_) is False:
+            raise TypeError(f"The object {dataclass_} is not of the same type as <dataclass>.")
+        for field in fields(class_or_instance=dataclass_):
+            value: Any = getattr(dataclass_, field.name)
+            if value == None:
+                continue
+            parameters[field.name] = value
+        return parameters
+
+    @staticmethod
+    def json_to_dataclass(
+        json: Iterable[Any],
+        format_: Union[type[X], type[DeploymentTemplate]],
+        _use_from_dict: bool,
+        _auto_unpack: bool,
+    ) -> X | list[DeploymentTemplate | X] | DeploymentTemplate | None:
+        """
+        Format the JSON response data to a dataclass.
+
+        .. note::
+            All JSON response data will be sanitized before it is turned into a dataclass. See :meth:`sanitize_json`.
+
+
+        Parameters
+        -----------
+        json: Any
+            JSON response data to format.
+        format: Union[:class:`DataclassInstance`, class:`DeploymentTemplate`]
+            Must be of type :class:`DataclassInstance` or similar to unpack the JSON response data.
+        _use_from_dict: :class:`bool`
+            Use :meth:`fromdict` from dataclass_wizard to unpack the JSON response data.
+            - Typically this is used to handle nested :class:`DataclassInstance`.
+        _auto_unpack: :class:`bool`
+            Use ``**data`` to unpack the JSON response data.
+
+        Returns
+        --------
+        X | list[:class:`DeploymentTemplate` | X] | :class:`DeploymentTemplate` | None
+            Either a list or single entry of :class:`DataclassInstance`.
+
+        """
+        if isinstance(json, list):
+            # _use_from_dict is to handle nested Dataclasses.
+            if _use_from_dict is True:
+                return [fromdict(format_, data) for data in json]
+
+            # Self explanatory; uses the `**` annotation to unpack our data.
+            elif _auto_unpack is True:
+                return [format_(**data) for data in json]
+
+            else:
+                return [format_(data) for data in json]  # type: ignore
+
+        if isinstance(json, dict):
+            # _use_from_dict is to handle nested Dataclasses.
+            if _use_from_dict is True:
+                return fromdict(format_, json)
+
+            elif _auto_unpack is True:
+                return format_(**json)
+
+            else:
+                return format_(json)  # type: ignore
+        return None
+
+    def parse_bridge(self, bridge: Bridge) -> None:
+        """
+        Takes the :class:`Bridge` object and set's the :attr:`Base.url` and sets :attr:`_bridge` to our Bridge object.
+
+        .. note::
+            Also validates the 2FA token.
+
+
+        Parameters
+        -----------
+        bridge: :class:`Bridge`
+            The :class:`Bridge` object to parse.
+
+        Raises
+        -------
+        :exc:`ValueError`
+            If 2FA Token is not provided and :attr:`_use_2fa` == True.\n
+            If 2FA Token is not enclosed in single(',') or double(",") quotes.
+        """
+        # We use this later on in _connect to update `_session_id`;
+        # so all connections will use the same session id (if possible)
+        self._bridge = bridge
+        self.url = bridge.url
+        if bridge.use_2fa == True:
+            if bridge.token == "":
+                raise ValueError("You must provide a 2FA Token if you are using 2FA.")
+            elif bridge.token.startswith(("'", '"')) == False or bridge.token.endswith(("'", '"')) == False:
+                raise ValueError("2FA Token must be enclosed in quotes.")
+            # Removed starting and ending quotes
+            elif len(bridge.token) < 8:
+                raise ValueError(
+                    "Your 2FA token appears to be too short (<8 characters). Please use the code that generates the timed based tokens."
+                )
+
+    def parse_data(self, data: Union[Controller, Instance, InstanceStatus, Updates]) -> Self:
+        """
+        Takes in a :class:`DataclassInstance` and iterates through it's :meth:`fields` and
+        set's the values as attributes of the :class:`DataclassInstance` that called this function.
+
+        Parameters
+        -----------
+        data: Union[:class:`Controller`, :class:`Instance`, :class:`AppStatus`, :class:`Updates`]
+            The :class:`DataclassInstance` to parse.
+
+        Returns
+        -------
+        Self
+            Returns the class that called this function.
+        """
+
+        for field in fields(class_or_instance=data):
+            setattr(self, field.name, getattr(data, field.name))
+        return self
+
+    # TODO - Re-factor the logic~
+    def sanitize_json(self, json: Any) -> Iterable[Any]:
+        """
+        Replaces spaces and underscores in the JSON response dict keys while also formatting keys to ``snake_case``.
+
+        Parameters
+        ----------
+        json: Any
+            The JSON response data to be sanitize.
+
+        Returns
+        -------
+        :class:`Iterable`[Any]
+            The JSON response data cleaned up.
+        """
+        if isinstance(json, list):
+            # print("JSON is a list")
+            _new_data = copy.copy(x=json)
+            for i in range(0, len(json), 1):
+                # If any of our entries are a dictionary; let's go through them.
+                if isinstance(json[i], dict):
+                    # print("List New Data", json[i])
+                    _new_data[i] = self.sanitize_json(json=json[i])
+                    # print("Sanitized New Data", _new_data[i])
+                    # _new_data[entry] = self.sanitize_json(json=entry)
+            return _new_data
+
+        if isinstance(json, dict):
+            # print("JSON is a dict")
+            _new_data = copy.copy(x=json)
+            for key, value in json.items():
+                # print("DICT Not cleaned up", key, value)
+                _new_data.pop(key)
+                # To handle keys with spaces and to remove underscores that exist already.
+                key: str = key.replace(" ", "")
+                key: str = key.replace("_", "")
+                if key in self.json_key_mapping:
+                    # print("KEY MAPPING OVERWRITE", key, self.json_key_mapping[key])
+                    key = self.json_key_mapping[key]
+                key = self.camel_to_snake_re(data=key)
+                if isinstance(value, (list, dict)):
+                    value = self.sanitize_json(json=value)
+                _new_data[key] = value
+            return _new_data
+        return json
+
+    @staticmethod
+    def sanitize_path(path: str) -> str:
+        """
+        The path is relative to the Instances home directory. eg "/myInstanceName/" \n
+        You do not need to include "." to specify the current directory as all path's start from root/home.
+
+        .. note::
+            Example `await Instance.copyFile("eula.txt", "test")` would move `./eula.txt` to `./test/eula.txt`
+
+
+        Parameters
+        -----------
+        path: str
+            The path to be sanitized.
+
+        Raises
+        -------
+        :exc:`ValueError`
+            If the path string contains a underscore.
+
+        Returns
+        --------
+        :class:`str`
+            Return the sanitized path string.
+        """
+        if "_" in path:
+            raise ValueError("You cannot use '_' in path strings.")
+
+        path = path.replace("//", "/")
+        path = path.replace("\\", "/")
+        path = path.replace("..", ".")
+
+        # Remove starting periods as they are un-needed when being passed into an API
+        if path.startswith("."):
+            path = path[1:]
+
+        return path
+
+    @staticmethod
+    def to_snake_case(data: str, /) -> str:
+        """
+        Quick function to return snake_case from camelCase.
+
+        Parameters
+        ----------
+        data: :class:`str`
+            The string to convert.
+        """
+        fmt: list[str] = []
+        for character in data:
+            if character.isupper():
+                fmt.append(f"_{character.lower()}")
+                continue
+            fmt.append(character)
+        return "".join(fmt)

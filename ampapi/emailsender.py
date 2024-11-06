@@ -1,7 +1,8 @@
-from __future__ import annotations
+from typing import Union
 
 from .base import Base
-from .types import *
+from .dataclass import ActionResult
+from .enums import *
 
 __all__ = ("EmailSenderPlugin",)
 
@@ -17,14 +18,15 @@ class EmailSenderPlugin(Base):
         """
         Test SMTP Settings.
 
-        Args:
-        ---
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        ----------
+        format_data : (Union[bool, None], optional)
+            Format the JSON response data.  (Uses `FORMAT_DATA` global constant if None), Defaults to None.
 
-        Returns:
-        ---
-            ActionResult: Results from the API call.
-            * See `types.py -> ActionResult`
+        Returns
+        -------
+        ActionResult :
+            Results from the API call. See -> :py:class:ActionResult
 
         """
         await self._connect()

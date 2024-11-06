@@ -1,67 +1,58 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Any, Union
 
 from .base import Base
-from .types import *
+from .dataclass import ActionResult, Backup, RunningTask
+from .enums import *
 
 __all__ = ("LocalFileBackupPlugin",)
 
 
 class LocalFileBackupPlugin(Base):
     """
-    Contains the functions for `/API/LocalFileBackupPlugin/` AMP API endpoints.
+    Contains all Endpoints for `/API/LocalFileBackupPlugin/`.
 
     """
 
-    # LocalFileBackupPlugin.TakeBackup:({'Parameters': [{'Name': 'Title', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Description', 'TypeName': 'String', 'Description': '', 'Optional': False}, {'Name': 'Sticky', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
-    async def take_backup(self, title: str, description: str, sticky: bool = False, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_from_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> ActionResult:
         """
-        Takes a backup of the AMP Server/Instance.
+        Delete a backup from S3.
 
         Args:
         ---
-            title (str): Title of the backup; aka `Name`
-            description (str): Brief description of why or what the backup is for.
-            sticky (bool, optional): Sticky backups won't be deleted to make room for automatic backups. Defaults to `False`.
+            backup_id (str): The backup ID to delete.
             format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
         ---
-            ActionResult: Results from the API call. 
+            ActionResult: On success returns a ActionResult dataclass.
             * See `types.py -> ActionResult`
         """
-
         await self._connect()
-        parameters: dict[str, Any] = {
-            "Title": title,
-            "Description": description,
-            "Sticky": sticky
-        }
-        result: Any = await self._call_api(api='LocalFileBackupPlugin/TakeBackup', parameters=parameters, format_data=format_data, format=ActionResult)
+        parameters: dict[str, str] = {"BackupId": backup_id}
+        result: Any = await self._call_api(
+            api="LocalFileBackupPlugin/DeleteFromS3", parameters=parameters, format_data=format_data, format_=ActionResult
+        )
         return result
 
-    # LocalFileBackupPlugin.UploadToS3:({'Parameters': [{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'RunningTask', 'IsComplexType': True})
-    async def upload_to_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask:
+    async def delete_local_backup(self, backup_id: str) -> None:
         """
-        Upload a backup to S3.
+        Delete a local backup.
 
         Args:
-            backup_id (str): The backup ID to upload.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        ---
+            backup_id (str): The backup ID to delete.
 
         Returns:
-            RunningTask: Returns a RunningTask dataclass.
-            * See `types.py -> RunningTask` 
+        ---
+            None
         """
         await self._connect()
-        parameters: dict[str, str] = {
-            "BackupId": backup_id
-        }
-        result: Any = await self._call_api(api='LocalFileBackupPlugin/UploadToS3', parameters=parameters, format_data=format_data, format=RunningTask)
-        return result
+        parameters: dict[str, str] = {"BackupId": backup_id}
+        await self._call_api(api="LocalFileBackupPlugin/DeleteLocalBackup", parameters=parameters)
+        return
 
-    # LocalFileBackupPlugin.DownloadFromS3:({'Parameters': [{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'RunningTask', 'IsComplexType': True})
     async def download_from_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask:
         """
         Download a backup from S3.
@@ -78,35 +69,12 @@ class LocalFileBackupPlugin(Base):
             * See `types.py -> RunningTask`
         """
         await self._connect()
-        parameters: dict[str, str] = {
-            "BackupId": backup_id
-        }
-        result: Any = await self._call_api(api='LocalFileBackupPlugin/DownloadFromS3', parameters=parameters, format_data=format_data, format=RunningTask)
+        parameters: dict[str, str] = {"BackupId": backup_id}
+        result: Any = await self._call_api(
+            api="LocalFileBackupPlugin/DownloadFromS3", parameters=parameters, format_data=format_data, format_=RunningTask
+        )
         return result
 
-    # LocalFileBackupPlugin.DeleteFromS3:({'Parameters': [{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
-    async def delete_from_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> ActionResult:
-        """
-        Delete a backup from S3.
-
-        Args:
-        ---
-            backup_id (str): The backup ID to delete.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
-
-        Returns:
-        ---
-            ActionResult: On success returns a ActionResult dataclass.
-            * See `types.py -> ActionResult`
-        """
-        await self._connect()
-        parameters: dict[str, str] = {
-            "BackupId": backup_id
-        }
-        result: Any = await self._call_api(api='LocalFileBackupPlugin/DeleteFromS3', parameters=parameters, format_data=format_data, format=ActionResult)
-        return result
-
-    # LocalFileBackupPlugin.GetBackups:({'Parameters': [], 'ReturnTypeName': 'IEnumerable<JObject>', 'IsComplexType': True})
     async def get_backups(self, format_data: Union[bool, None] = None) -> list[Backup]:
         """
         Get a list of Backups.
@@ -117,11 +85,26 @@ class LocalFileBackupPlugin(Base):
             * See `types.py -> Backup`
         """
         await self._connect()
-        result: Any = await self._call_api(api='LocalFileBackupPlugin/GetBackups', format_data=format_data, format=Backup, _use_from_dict=False)
+        result: Any = await self._call_api(
+            api="LocalFileBackupPlugin/GetBackups", format_data=format_data, format_=Backup, _use_from_dict=False
+        )
         return result
 
-    # LocalFileBackupPlugin.RestoreBackup:({'Parameters': [{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}, {'Name': 'DeleteExistingData', 'TypeName': 'Boolean', 'Description': '', 'Optional': True}], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
-    async def restore_backup(self, backup_id: str, delete_existing_data: bool = False, format_data: Union[bool, None] = None) -> ActionResult:
+    async def refresh_backup_list(self) -> None:
+        """
+        Refresh the list of backups.
+
+        Returns:
+        ---
+            None
+        """
+        await self._connect()
+        await self._call_api(api="LocalFileBackupPlugin/RefreshBackupList")
+        return
+
+    async def restore_backup(
+        self, backup_id: str, delete_existing_data: bool = False, format_data: Union[bool, None] = None
+    ) -> ActionResult:
         """
         Restore a backup.
 
@@ -137,34 +120,12 @@ class LocalFileBackupPlugin(Base):
             * See `types.py -> ActionResult`
         """
         await self._connect()
-        parameters: dict[str, Any] = {
-            "BackupId": backup_id,
-            "DeleteExistingData": delete_existing_data
-        }
-        result: Any = await self._call_api(api='LocalFileBackupPlugin/RestoreBackup', parameters=parameters, format_data=format_data, format=ActionResult)
+        parameters: dict[str, Any] = {"BackupId": backup_id, "DeleteExistingData": delete_existing_data}
+        result: Any = await self._call_api(
+            api="LocalFileBackupPlugin/RestoreBackup", parameters=parameters, format_data=format_data, format_=ActionResult
+        )
         return result
 
-    # LocalFileBackupPlugin.DeleteLocalBackup:({'Parameters': [{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def delete_local_backup(self, backup_id: str) -> None:
-        """
-        Delete a local backup.
-
-        Args:
-        ---
-            backup_id (str): The backup ID to delete.
-
-        Returns:
-        ---
-            None
-        """
-        await self._connect()
-        parameters: dict[str, str] = {
-            "BackupId": backup_id
-        }
-        await self._call_api(api='LocalFileBackupPlugin/DeleteLocalBackup', parameters=parameters)
-        return
-
-    # LocalFileBackupPlugin.SetBackupSticky:({'Parameters': [{'Name': 'BackupId', 'TypeName': 'Guid', 'Description': '', 'Optional': False}, {'Name': 'Sticky', 'TypeName': 'Boolean', 'Description': '', 'Optional': False}], 'ReturnTypeName': 'Void', 'IsComplexType': False})
     async def set_backup_sticky(self, backup_id: str, sticky: bool = False) -> None:
         """
         Set a backup as sticky.
@@ -179,22 +140,51 @@ class LocalFileBackupPlugin(Base):
             None
         """
         await self._connect()
-        parameters: dict[str, Any] = {
-            "BackupId": backup_id,
-            "Sticky": sticky
-        }
-        await self._call_api(api='LocalFileBackupPlugin/SetBackupSticky', parameters=parameters)
+        parameters: dict[str, Any] = {"BackupId": backup_id, "Sticky": sticky}
+        await self._call_api(api="LocalFileBackupPlugin/SetBackupSticky", parameters=parameters)
         return
 
-    # LocalFileBackupPlugin.RefreshBackupList:({'Parameters': [], 'ReturnTypeName': 'Void', 'IsComplexType': False})
-    async def refresh_backup_list(self) -> None:
+    async def take_backup(
+        self, title: str, description: str, sticky: bool = False, format_data: Union[bool, None] = None
+    ) -> ActionResult:
         """
-        Refresh the list of backups.
+        Takes a backup of the AMP Server/Instance.
+
+        Args:
+        ---
+            title (str): Title of the backup; aka `Name`
+            description (str): Brief description of why or what the backup is for.
+            sticky (bool, optional): Sticky backups won't be deleted to make room for automatic backups. Defaults to `False`.
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
 
         Returns:
         ---
-            None
+            ActionResult: Results from the API call.
+            * See `types.py -> ActionResult`
+        """
+
+        await self._connect()
+        parameters: dict[str, Any] = {"Title": title, "Description": description, "Sticky": sticky}
+        result: Any = await self._call_api(
+            api="LocalFileBackupPlugin/TakeBackup", parameters=parameters, format_data=format_data, format_=ActionResult
+        )
+        return result
+
+    async def upload_to_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask:
+        """
+        Upload a backup to S3.
+
+        Args:
+            backup_id (str): The backup ID to upload.
+            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+
+        Returns:
+            RunningTask: Returns a RunningTask dataclass.
+            * See `types.py -> RunningTask`
         """
         await self._connect()
-        await self._call_api(api='LocalFileBackupPlugin/RefreshBackupList')
-        return
+        parameters: dict[str, str] = {"BackupId": backup_id}
+        result: Any = await self._call_api(
+            api="LocalFileBackupPlugin/UploadToS3", parameters=parameters, format_data=format_data, format_=RunningTask
+        )
+        return result

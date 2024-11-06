@@ -1,3 +1,91 @@
+## Version - 0.3.0 - [68556f7](https://github.com/k8thekat/AMPAPI_Python/commit/68556f7)
+#### Changelog.md
+- Version info from `0.2.0` added.
+#### __init__.py
+- Version bump to `0.3.0`
+
+#### Overall
+- Fixed script patths
+- Updated to `2.5.1.4` | Build: `20240731.1`
+
+#### __init__.py
+- Version bump `0.3.0`.
+
+#### ads.py
+- Updated docstring to better communicate the point/usage of the `class ADSInstance()`.
+- Updated function docstring's to a better format.
+- Changed `AvailableInstances()` to a set.
+- Changed
+- Updated `property AvailableInstances()` docstring to give better information/understanding of what it returns.
+	- Improved logic to include the `ADSInstance()` class to our `AMPMinecraftInstance()` and `AMPInstance()` inits.
+- Added `AppState` property.
+
+#### adsmodule.py
+- Added `ADSonly` decorator to every function to validate the Module is correct before making the API call.
+- Updated function docstring's to a better format.
+- Changed logic handling for passed in dataclass's for multiple methods.
+- Added type hinting throughout.
+
+#### analytics.py
+- Implementation of `class AnalyticsPlugin()`.
+	- Added a `get_analytics_summary()` function which supports a `period_days`, `start_date` and `filters`.
+
+#### base.py
+- Updated function docstring's to a better format.
+- Added `ADSonly()` decorator to validate the Module is of `ADS`.
+- Added `online()` decorator to check if the Instance is `Running`.
+- Added a length check to the `token` parameter of the Bridge.
+- Added type hinting throughout.
+- Added debug prints to `_call_api()`
+- Added a `_no_data` parameter to `_call_api()` to support endpoints without data returns.
+
+#### bridge.py
+- Updated function docstring's to a better format.
+
+#### core.py
+- Updated function docstring's to a better format.
+- Made `start_instance()`, `stop_instance()`, `restart_instance()` and `kill_instance()` deprecated.
+	- Replaced with `start_application()`, `stop_application()`, `restart_application()` and `kill_application()`.
+- Added `run_security_check()` - UNK data return, waiting on info.
+- Made `update_amp_instance()`, `restart_amp()` and `upgrade_amp()` ADS only methods as that is their intention.
+
+#### emailsender.py
+- Updated function docstring's to a better format.
+
+#### filebackup.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### filemanager.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### instance.py
+- Added a `debug` print to the `__init__()`.
+- Fixed attribute access issues and added docstring's to commonly used properties for better clarification.
+- Added `start()`, `stop()`, `restart()` and `update()` functions to control the Instance from inside the Instance.
+- Added `online()` decorators to validate an instance is `Running`.
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### minecraft.py
+- Added a `MConly()` decorator to check the instance Module is `Minecraft`.
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### types.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### util.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### docs/
+- Updated ADS API Spec
+- Updated Minecraft API Spec
+- Version info from `0.2.0` added.
+
 ## Version - 0.2.0 - [4b70f0d](https://github.com/k8thekat/AMPAPI_Python/commit/4b70f0d)
 #### Changelog.md
 - Version info from `0.1.11` added.

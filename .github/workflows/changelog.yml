@@ -6,6 +6,8 @@ on:
 
 jobs:
   build:
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,5 +23,4 @@ jobs:
         uses: actions/setup-python@v5.2.0
         with:
           python-version: '3.12'
-      - run: python ~/work/AMPAPI_Python/AMPAPI_Python/.github/workflows/scripts/gen_changelog.py
-            
+      - run: python ~/work/AMPAPI_Python/AMPAPI_Python/.github/workflows/scripts/gen_changelog.py $$ 
