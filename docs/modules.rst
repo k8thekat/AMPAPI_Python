@@ -1,5 +1,12 @@
 .. currentmodule:: ampapi
 
+Base
+~~~~~
+
+.. autoclass:: Base
+   :members:
+
+
 Bridge
 ~~~~~~~
 
@@ -48,4 +55,11 @@ Analytics
 ~~~~~~~~~~
 
 .. autoclass:: AnalyticsPlugin
+   :members:
+
+
+API Utility
+~~~~~~~~~~~~
+
+.. autoclass:: APIUtil
    :members:

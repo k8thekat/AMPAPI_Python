@@ -2,18 +2,21 @@ from __future__ import annotations
 
 import json
 import logging
+import traceback
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union
 
+from .instance import AMPMinecraftInstance
+
 if TYPE_CHECKING:
     from io import TextIOWrapper
 
-    from .controller import AMPControllerInstance
+    from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
     from .core import Core
-    from .dataclass import SettingSpec, SettingsSpecParent, UpdateInfo
-    from .instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
+    from .dataclass import Methods, SettingSpec, SettingsSpecParent, Triggers, TriggerTasks, UpdateInfo
+    from .types_ import Consumes, ParameterMapping, PermissionNode
 
 
 class APIUtil:
@@ -31,48 +34,132 @@ class APIUtil:
     _parent_node_note: str = (
         '.. note::\n\tAll nodes in this section will be prefixed with "%s.", see examples :ref:`Permission Nodes`\n\n'
     )
-
     _wildcard_nodes: str = """.. note::\n\tAny node with a '*' at the end of it is a wild card and using that will make all permissions nodes in that section equal to the value set, treat it like parent inheritance.\n\n"""
 
+    _trigger_note: str = """.. note::\n\tAll of these triggers will have a unique ID field that is generated from :meth:`~Core.get_triggers` due to uniqueness.\n\n"""
+
+    _method_note: str = """.. note::\n\t Place holder text....\n\n"""
+
     @staticmethod
-    async def AMP_to_API_update(
-        instance: AMPControllerInstance | AMPInstance | AMPMinecraftInstance, sanitize_json: bool
-    ) -> None:
-        """
+    async def amp_api_update(instance: AMPControllerInstance, sanitize_json: bool) -> None:
+        """|coro|
+
         Gets the AMP Instance API Endpoints and writes them out to a file. Used for version changes.
+
+        .. note::
+            Having a ``Minecraft`` type Instance is beneficial for this call. Otherwise you will only get the ADS/Controller API spec sheet.
+
 
         Parameters
         ----------
-        instance : AMPControllerInstance | AMPInstance | AMPMinecraftInstance
-            Any type of AMP Instance to get the API endpoints for.
+        instance : AMPControllerInstance
+            Must be the Controller instance; as we are looking for the ADS and a Minecraft Instance.
         sanitize_json : bool
             Sanitize the JSON responses to meet PEP8 compliance.
         """
-        await APIUtil.parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
+        # We call get_instances() to force a current listing of instances to be populated.
+        await instance.get_instances()
+        for entry in instance.instances:
+            # Minecraft instances have their own unique API endpoints; so we need to get those.
+            if entry.module == "Minecraft" and isinstance(entry, AMPMinecraftInstance) and entry.running is True:
+                await APIUtil._parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
+                break
+        # We found our Minecraft Instance, now lets parse our Controller/ADS
+        await APIUtil._parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
 
     @staticmethod
-    def dump_to_file(data: Union[dict, list], path: Union[Path, None] = None, no_format: bool = True) -> None:
+    async def generate_settings_permission_rst(instance: AMPControllerInstance | AMPADSInstance) -> None:
+        """|coro|
+
+        This will generate the Sphinx ``.rst`` files we use for documentation. The files will be written to ``../docs/nodes/``
+
+        .. warning::
+            There may be a few errors due to the formatting of AMPs return information; so it is wrapped in ``try/excepts``
+
+        Parameters
+        -----------
+        instance: AMPControllerInstance | AMPADSInstance
+            Must be of these types as the API endpoint :meth:`get_settingspec` is not available to all.
         """
-        Dump's a list or dict to a file.
+        logger: Logger = logging.getLogger()
+        spec: SettingsSpecParent = await instance.get_setting_spec()
+        try:
+            APIUtil._settings_node_parse(data=spec, title="Setting Nodes", title_body="", path="../docs/nodes")
+        except Exception:
+            logger.error(
+                "Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc()
+            )
+        perms: list[PermissionNode] = await instance.get_permissions_spec()
+        try:
+            APIUtil._permission_node_parse(data=perms, title="Permission Nodes", title_body="", path="../docs/nodes")
+        except Exception:
+            logger.error(
+                "Ran into a <Exception> when attempting to generate the Permission Nodes.rst.\n %s", traceback.print_exc()
+            )
+
+    @staticmethod
+    async def _parse_get_api_spec_to_file(
+        instance: Union[Core, AMPADSInstance, AMPInstance, AMPMinecraftInstance], sanitize_json: bool
+    ) -> None:
+        """|coro|
+
+        Creates a Markdown file related to the type of :param:`instance` that is passed in to the function.
+        .. note::
+            See directory ``/docs/{Module_type}_api_spec.md``. where {Module_type} is the class ``.Module`` attribute.
 
         Parameters
         ----------
-        data : Union[dict, list]
-            The data to dump to a file.
-        path : Union[Path, None], optional
-            The Path to store the dump file, by default None
-            - If ``None`` will use the ``__file__.parent`` path.
+        instance : Union[Core, AMPControllerInstance, AMPInstance, AMPMinecraftInstance]
+            The class of either :py:class:`Core:, :py:class:'AMPInstance`, :py:class:`AMPControllerInstance` and or :py:class:`AMPMinecraftInstance`.
+        sanitize_json : bool
+            Sanitize the JSON responses to meet PEP8 compliance. Default is False.
         """
-        if path is None:
-            _cwd: Path = Path(__file__).parent.joinpath(f"{datetime.today().date()}.dump")
-        else:
-            _cwd = path.joinpath(f"{datetime.today().date()}.dump")
-        with Path.open(_cwd, "w+") as file:
-            res: str = json.dumps(data, indent=4, skipkeys=True, separators=(",", ": "), sort_keys=True)
-            file.write(res)
+        _logger: Logger = logging.getLogger()
+
+        data: dict[Any, Any] = await instance.get_api_spec(sanitize_json=sanitize_json)
+        platform_info: UpdateInfo = await instance.get_update_info()
+        instance_type = instance.module
+
+        _dir: Path = Path(__file__).parent.joinpath(f"../docs/{instance_type}_api_spec.md")
+        _logger.info(
+            "Instance Type: %s\nVersion: %s\nBuild: %s\nPath: %s",
+            instance_type,
+            platform_info.version,
+            platform_info.build,
+            _dir,
+        )
+        parents: list = []
+        mode = "x"
+        if _dir.exists():
+            mode = "w"
+        with Path.open(_dir, mode) as file:
+            file.write(f"INSTANCE TYPE: {instance_type}\n")
+            file.write(f"VERSION: {platform_info.version}\n")
+            file.write(f"BUILD: {platform_info.build}\n\n")
+            for parent, parent_value in sorted(data.items()):
+                if parent not in parents:
+                    parents.append(parent)
+                    file.write("____________________________________________________\n")
+                    file.write(f"{parent}:\n")
+                if isinstance(parent_value, dict):
+                    for child, child_value in sorted(parent_value.items()):
+                        file.write(f"\t{child}:\n")
+                        if isinstance(child_value, dict):
+                            for key, value in sorted(child_value.items()):
+                                if key == "Parameters":
+                                    file.write(f"\t\t{key}:\n")
+                                    for entry in value:
+                                        file.write(f"\t\t\t{entry}\n")
+                                else:
+                                    file.write(f"\t\t{key}: {value}\n")
+
+                        else:
+                            file.write(f"\t\t({child_value})\n")
+
+            file.close()
 
     @staticmethod
-    def permission_node_parse(
+    def _permission_node_parse(
         data: list[PermissionNode],
         title: str = "",
         title_body: str = "",
@@ -195,13 +282,13 @@ class APIUtil:
                         file.write(f"- {temp[-1]}.{node['name']}\n")
 
             if isinstance(entry["children"], list):
-                APIUtil.permission_node_parse(data=entry["children"], index=index + 1, file=file)
+                APIUtil._permission_node_parse(data=entry["children"], index=index + 1, file=file)
 
         if index == 0:
             file.close()
 
     @staticmethod
-    def settings_node_parse(
+    def _settings_node_parse(
         data: SettingsSpecParent,
         title: str = "",
         title_body: str = "",
@@ -232,9 +319,9 @@ class APIUtil:
             file.write(":raw-html:`<hr>`\n\n")
             file.write(title_body + "\n")
             file.write("\n" + APIUtil._wildcard_nodes)
-            # file.write(f"\n{example_note}\n")
+            file.write(f"\n{example_note}\n")
 
-        for key in vars(data):
+        for key in sorted(vars(data)):
             # Our second headers.
             header: str = "Settings " + key.title() + " Nodes"
             # file.write("\n:raw-html:`<hr>`\n")
@@ -244,7 +331,7 @@ class APIUtil:
 
             data_key: list[SettingSpec] = getattr(data, key)
             if isinstance(data_key, list):
-                for entry in data_key:
+                for entry in sorted(data_key):
                     file.write(f"\n**Name**: {entry.name}\n")
                     if entry.description != None and len(entry.description) > 0:
                         file.write(f"\t| Description: {entry.description}\n")
@@ -252,79 +339,156 @@ class APIUtil:
         file.close()
 
     @staticmethod
-    def repeat_to_length(string: str, repeat_char: str, length: int | None = None) -> str:
-        if length == None:
-            length = len(string) + 1
-        return repeat_char * length
-
-    @staticmethod
-    async def parse_get_api_spec_to_file(
-        instance: Union[Core, AMPADSInstance, AMPInstance, AMPMinecraftInstance], sanitize_json: bool
+    def _trigger_event_parse(
+        data: list[Triggers],
+        title: str = "",
+        title_body: str = "",
+        path: None | str = None,
     ) -> None:
         """
-        Creates a Markdown file related to the type of :param:`instance` that is passed in to the function.
-        - See directory ``/docs/{Module_type}_api_spec.md``. where {Module_type} is the class ``.Module`` attribute.
+        This assumes you have acquired the ScheduleData already and are passing in :attr:`~scheduleData.available_triggers`
+
+        .. note::
+            All of these triggers will have a unique ID field that is generated from :meth:`~Core.get_triggers` due to uniqueness.
+
 
         Parameters
-        ----------
-        instance : Union[Core, AMPControllerInstance, AMPInstance, AMPMinecraftInstance]
-            The class of either :py:class:`Core:, :py:class:'AMPInstance`, :py:class:`AMPControllerInstance` and or :py:class:`AMPMinecraftInstance`.
-        sanitize_json : bool
-            Sanitize the JSON responses to meet PEP8 compliance. Default is False.
-
-        See -> `../docs/api_spec.md`
+        -----------
+        data: list[:class:`Triggers`]
+            The list of dataclass Triggers.
+        title: :class:`str`, optional
+            The Title of the document header; this is also used to set the filename, by default "".
+        title_body: :class:`str`, optional
+            The body just under the document header, by default "".
+        path: :class:`None | str`, optional
+            The path to save the .rst file., by default None.
         """
-        _logger: Logger = logging.getLogger()
+        from docs.samples.trigger_event_usage import example_note
 
-        data: dict[Any, Any] = await instance.get_api_spec(sanitize_json=sanitize_json)
-        platform_info: UpdateInfo = await instance.get_update_info()
-        instance_type = instance.module
-
-        _dir: Path = Path(__file__).parent.joinpath(f"../docs/{instance_type}_api_spec.md")
-        _logger.info(
-            "Instance Type: %s\nVersion: %s\nBuild: %s\nPath: %s",
-            instance_type,
-            platform_info.version,
-            platform_info.build,
-            _dir,
+        file_name: str = title.lower().replace(" ", "_")
+        _dir: Path = (
+            Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
         )
-        parents: list = []
         mode = "x"
         if _dir.exists():
             mode = "w"
-        with Path.open(_dir, mode) as file:
-            file.write(f"INSTANCE TYPE: {instance_type}\n")
-            file.write(f"VERSION: {platform_info.version}\n")
-            file.write(f"BUILD: {platform_info.build}\n\n")
-            for parent, parent_value in data.items():
-                if parent not in parents:
-                    parents.append(parent)
-                    file.write("____________________________________________________\n")
-                    file.write(f"{parent}:\n")
-                if isinstance(parent_value, dict):
-                    for child, child_value in parent_value.items():
-                        file.write(f"\t{child}:\n")
-                        if isinstance(child_value, dict):
-                            for key, value in child_value.items():
-                                if key == "Parameters":
-                                    file.write(f"\t\t{key}:\n")
-                                    for entry in value:
-                                        file.write(f"\t\t\t{entry}\n")
-                                else:
-                                    file.write(f"\t\t{key}: {value}\n")
 
-                        else:
-                            file.write(f"\t\t({child_value})\n")
+        file = Path.open(_dir, mode)
 
-            file.close()
+        # First through iteration, we write our header and title.
+        file.write(".. role:: raw-html(raw)\n\t:format: html\n")
+        file.write(f"\n{title}\n")
+        file.write(f"{APIUtil.repeat_to_length(string=title, repeat_char='=')}\n")
+        file.write(":raw-html:`<hr>`\n\n")
+        file.write(title_body + "\n")
+
+        sub_header: str = "\nEvents Information\n"
+        file.write(sub_header)
+        file.write(f"{APIUtil.repeat_to_length(string=sub_header, repeat_char='#')}\n")
+        file.write(":raw-html:`<hr>`\n")
+        file.write("\n" + APIUtil._trigger_note)
+        file.write(f"\n{example_note}\n")
+        for trigger in sorted(data):
+            _temp: str = " | "
+            file.write("\n:raw-html:`<hr>`\n")
+            file.write(f"**Trigger Description**: {trigger.description}\n\n")
+            if len(trigger.emits) > 0:
+                file.write(f"- Emits: {_temp.join(trigger.emits)}\n")
+        file.close()
+
+    @staticmethod
+    def _method_event_parse(data: list[Methods], title: str = "", title_body: str = "", path: None | str = None) -> None:
+        from docs.samples.method_event_usage import example_note
+
+        file_name: str = title.lower().replace(" ", "_")
+        _dir: Path = (
+            Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
+        )
+        mode = "x"
+        if _dir.exists():
+            mode = "w"
+
+        file = Path.open(_dir, mode)
+
+        # First through iteration, we write our header and title.
+        file.write(".. role:: raw-html(raw)\n\t:format: html\n")
+        file.write(f"\n{title}\n")
+        file.write(f"{APIUtil.repeat_to_length(string=title, repeat_char='=')}\n")
+        file.write(":raw-html:`<hr>`\n")
+        file.write(title_body + "\n")
+
+        # make a sub heading with "Event Method Names:"
+        sub_header: str = "\nMethod Information\n"
+        file.write(sub_header)
+        file.write(f"{APIUtil.repeat_to_length(string=sub_header, repeat_char='#')}\n")
+        file.write(":raw-html:`<hr>`\n")
+        file.write("\n" + APIUtil._method_note)
+        file.write(f"\n{example_note}\n")
+
+        for method in sorted(data):
+            file.write(f"\n{method.name}\n")
+            file.write(f"{APIUtil.repeat_to_length(string=method.name, repeat_char='~')}\n")
+            file.write(":raw-html:`<hr>`\n")
+            file.write(f"- ``{method.id}``\n\n")
+            file.write(f"{method.description}\n\n")
+            file.write("Consumes these values:\n")
+            for entry in sorted(method.consumes):
+                # print(entry, type(entry.enum_values), entry.enum_values)
+                file.write(f"\t* {entry.name}: type({entry.value_type})\n")
+                if isinstance(entry.enum_values, dict):
+                    for key, value in sorted(entry.enum_values.items()):
+                        file.write(f"\t\t* {key} - {value}\n")
+        file.close()
+
+    @staticmethod
+    def dump_to_file(
+        data: Union[dict, list], file_name: str = "", path: Union[Path, None] = None, no_format: bool = True
+    ) -> None:
+        """
+        Dump's a list or dict to a file.
+
+        Parameters
+        ----------
+        data : Union[dict, list]
+            The data to dump to a file.
+        path : Union[Path, None], optional
+            The Path to store the dump file, by default None
+            - If ``None`` will use the ``../docs/dumps/`` path.
+        """
+        if file_name == "":
+            file_name = str(object=datetime.today().date())
+        if path is None:
+            _cwd: Path = Path("../docs/dumps/").joinpath(f"{file_name}.dump")
+        else:
+            _cwd = path.joinpath(f"{file_name}.dump")
+
+        with _cwd.open(mode="w+") as file:
+            res: str = json.dumps(data, indent=4, skipkeys=True, separators=(",", ": "), sort_keys=True)
+            file.write(res)
+
+    @staticmethod
+    def repeat_to_length(string: str, repeat_char: str, length: int = 0) -> str:
+        """
+        Will repeat the passed in ``repeat_char`` by the ``len(string)`` provided or by the ``length`` parameter.
+
+        .. note::
+            By default the ``repeat_char`` will be one longer than the provided string unless you specify the ``length`` parameter.
 
 
-from typing import TypedDict
+        Parameters
+        -----------
+        string: str
+            The string to match the :meth:`len` of.
+        repeat_char: str
+            The char to repeat to the length of the string or the ``length`` parameter.
+        length: int, optional
+            The length to repeat the char by, by default 0.
 
-
-class PermissionNode(TypedDict):
-    name: str
-    node: str
-    display_name: str
-    description: str | None
-    children: list[PermissionNode]
+        Returns
+        --------
+        :class:`str`
+            The modified ``repeat_char`` str by the ``length`` provided.
+        """
+        if length == 0:
+            length = len(string) + 1
+        return repeat_char * length

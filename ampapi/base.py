@@ -8,7 +8,7 @@ import re
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Union, overload
 
 import aiohttp
 from aiohttp import ClientResponse
@@ -43,6 +43,15 @@ class Base:
     """
     Contains the base functions for all AMP API endpoints and handles the parsing of Bridge data.
 
+
+    .. warning::
+        Do not overwrite or alter the :attr:`instance_id`.
+
+
+    .. note::
+        A session expires after 240sec of inactivity per Cube Coders AMP. If for any reason you want to change that value; set the attribute :attr:`session_ttl`.\n
+
+
     Attributes
     -----------
     api_url: :class:`str`
@@ -52,14 +61,6 @@ class Base:
     instance_id: :class:`str`
         The Instance id is a string determined by AMP. \n
         This attribute will be set automatically after making a :meth:`login` request, default is "O".
-
-    .. warning::
-        Do not overwrite or alter the :attr:`instance_id`.
-
-
-    .. note::
-        A session expires after 240sec of inactivity per Cube Coders AMP. If for any reason you want to change that value; set the attribute :attr:`session_ttl`.\n
-
 
     """
 
@@ -71,7 +72,7 @@ class Base:
     url: str = ""
     instance_id: str = "0"
     session_ttl: int = 240
-    module: str
+    module: str  # todo - make this var unchangeable via private attr in future release.
 
     # Error response strings.
     _ads_only: str = "This API call is only available to <class:`ADSModule`> type classes."
@@ -303,13 +304,12 @@ class Base:
             )
 
     async def _connect(self) -> LoginResults | None:
-        """
-
+        """|coro|
         Logs into AMP via "API/Core/Login" endpoint using your :class:`Bridge` object.
 
         .. note::
-            - If Applicable handles your 2FA using :class:`TOTP` \n
-            - Stores the ``SESSIONID`` via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
+            If Applicable handles your 2FA using :class:`TOTP` \n
+            Stores the ``SESSIONID`` via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
 
 
         Returns
@@ -372,9 +372,10 @@ class Base:
 
     async def call_end_point(self, api: str, parameters: None | dict[str, Any] = None) -> dict[str, Any]:
         """|coro|
+
         Universal API function for calling any API endpoint. Some API endpoints require the Instance module type to be ADS. \n
-        ----------
-        See :ref:`.docs/ADS_api_spec.md` or :ref:`.docs/Minecraft_api_spec.md` for full API endpoints and parameter information.
+        See `/api_spec_sheets/ADS_api_spec.md` or `/api_spec_sheets/Minecraft_api_spec.md` for full API endpoints and parameter information.
+
 
         .. note::
             Parameter key "SESSIONID" is handled for you.
@@ -410,6 +411,7 @@ class Base:
         .. note::
             This will fail on entries with an underscore between to capital characters. |  *eg (Tool_Version = tool__version)*\n
             Will also not format properly when handling strings that have a multiple uppercase followed by a lowercase. | *eg (ContainerCPUs = container_cp_us)*
+
 
         Parameters
         -----------
@@ -454,7 +456,7 @@ class Base:
 
         Parameters
         -----------
-        dataclass_ : :class:`DataclassInstance`
+        dataclass_: :class:`DataclassInstance`
             The dataclass to convert.
 
         Returns
@@ -536,7 +538,7 @@ class Base:
 
     def parse_bridge(self, bridge: Bridge) -> None:
         """
-        Takes the :class:`Bridge` object and set's the :attr:`Base.url` and sets :attr:`_bridge` to our Bridge object.
+        Takes the :class:`Bridge` object and set's the :attr:`~Base.url` and sets :attr:`_bridge` to our Bridge object.
 
         .. note::
             Also validates the 2FA token.
@@ -580,7 +582,7 @@ class Base:
 
         Returns
         -------
-        Self
+        :class:`Self`
             Returns the class that called this function.
         """
 
@@ -588,10 +590,21 @@ class Base:
             setattr(self, field.name, getattr(data, field.name))
         return self
 
-    # TODO - Re-factor the logic~
-    def sanitize_json(self, json: Any) -> Iterable[Any]:
-        """
+    @overload
+    @classmethod
+    def sanitize_json(cls, json: str) -> str: ...
+
+    @overload
+    @classmethod
+    def sanitize_json(cls, json: Iterable) -> Iterable[Any]: ...
+
+    @classmethod
+    def sanitize_json(cls, json: Iterable | str) -> Iterable[Any] | str:
+        """|classmethod|
+
         Replaces spaces and underscores in the JSON response dict keys while also formatting keys to ``snake_case``.
+
+        Also supports a single string and will replace any of these chars ``_ ' ( )`` with nothing.
 
         Parameters
         ----------
@@ -600,7 +613,7 @@ class Base:
 
         Returns
         -------
-        :class:`Iterable`[Any]
+        Iterable[Any]
             The JSON response data cleaned up.
         """
         if isinstance(json, list):
@@ -610,9 +623,9 @@ class Base:
                 # If any of our entries are a dictionary; let's go through them.
                 if isinstance(json[i], dict):
                     # print("List New Data", json[i])
-                    _new_data[i] = self.sanitize_json(json=json[i])
+                    _new_data[i] = cls.sanitize_json(json=json[i])
                     # print("Sanitized New Data", _new_data[i])
-                    # _new_data[entry] = self.sanitize_json(json=entry)
+                    # _new_data[entry] = cls.sanitize_json(json=entry)
             return _new_data
 
         if isinstance(json, dict):
@@ -624,14 +637,24 @@ class Base:
                 # To handle keys with spaces and to remove underscores that exist already.
                 key: str = key.replace(" ", "")
                 key: str = key.replace("_", "")
-                if key in self.json_key_mapping:
-                    # print("KEY MAPPING OVERWRITE", key, self.json_key_mapping[key])
-                    key = self.json_key_mapping[key]
-                key = self.camel_to_snake_re(data=key)
+                if key in cls.json_key_mapping:
+                    # print("KEY MAPPING OVERWRITE", key, cls.json_key_mapping[key])
+                    key = cls.json_key_mapping[key]
+                key = cls.camel_to_snake_re(data=key)
                 if isinstance(value, (list, dict)):
-                    value = self.sanitize_json(json=value)
+                    value = cls.sanitize_json(json=value)
                 _new_data[key] = value
             return _new_data
+
+        if isinstance(json, str):
+            # Typical use is to make attributes PEP8 compliant for a class.
+            _new_data = copy.copy(json)
+            _new_data = _new_data.replace(" ", "_")
+            _new_data = _new_data.replace("(", "").replace(")", "")
+            _new_data = _new_data.replace("'", "")
+            if _new_data.endswith("."):
+                _new_data = _new_data[:-1].lower()
+            return _new_data.lower()
         return json
 
     @staticmethod
@@ -681,6 +704,11 @@ class Base:
         ----------
         data: :class:`str`
             The string to convert.
+
+        Returns
+        --------
+        :class:`str`
+            The camelCase string.
         """
         fmt: list[str] = []
         for character in data:

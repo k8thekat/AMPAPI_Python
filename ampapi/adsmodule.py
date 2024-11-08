@@ -37,11 +37,6 @@ class ADSModule(Base):
         Every function in this class requires the Instance type be of either :class:`AMPADSInstance`, :class:`ADSModule` or the :attr:`~ADSModule.module` attribute to be "ADS".\n
         If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
 
-
-    Parameters
-    -----------
-    module: :class:`str`
-        The module type, default is "ADS".
     """
 
     module = "ADS"

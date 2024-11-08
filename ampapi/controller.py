@@ -106,7 +106,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
     ) -> Union[set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]], Iterable[Union[Controller, Instance]]]:
         """|coro|
 
-        Returns a list of converted :class:`Instances` to :class:`AMPInstance`, :class:`AMPMinecraftInstance` and :class:`AMPADSInstance`.\n
+        Returns a set of converted :class:`Instances` to :class:`AMPInstance`, :class:`AMPMinecraftInstance` and :class:`AMPADSInstance`.\n
 
         .. note::
             If ``format_data`` == ``False`` this will return the list of :class:`Controller` and or :class:`Instance` dataclasses instead.
@@ -151,7 +151,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
                 # If we have another Controller, we want to get it's available_instances and convert them into proper objects to be used.
                 if isinstance(i, Controller):
                     self._logger.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
-                    # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we just updated the attribute on ln:126.
+                    # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we just updated the attribute above.
                     self.instances.update(self.instance_conversion(instances=i.available_instances))
 
             return self.instances

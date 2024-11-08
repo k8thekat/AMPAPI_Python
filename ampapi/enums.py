@@ -199,6 +199,3 @@ class SettingsLogin(Enum):
 
     def auth_server_url(self) -> str:
         return "Core.Login.AuthServerURL"
-
-
-SettingsLogin.use_auth_server

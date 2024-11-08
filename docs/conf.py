@@ -62,7 +62,9 @@ intersphinx_mapping: dict[str, tuple] = {
 
 
 templates_path = ["_templates"]
-exclude_patterns = ["build", "samples", "nodes", "api_spec_sheets"]
+# this is useful when using `.. include::`; make sure to exclude the file/directory below.
+# eg. .. include:: ./events/*_events.rst needs to be excluded either via "events" or "*_events.rst"
+exclude_patterns = ["build", "samples", "nodes", "api_spec_sheets", "events"]
 
 autodoc_member_order: str = "bysource"
 
@@ -98,4 +100,5 @@ rst_prolog: str = """
 .. |maybecoro| replace:: This function *could be a* |coroutine_link|_.
 .. |coroutine_link| replace:: *coroutine*
 .. _coroutine_link: https://docs.python.org/3/library/asyncio-task.html#coroutine
+.. |classmethod| replace:: This function is a https://docs.python.org/3/library/functions.html#classmethod
 """
