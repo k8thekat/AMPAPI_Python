@@ -7,15 +7,14 @@ from pathlib import Path
 
 # Grab Version from __init__.py
 version = ""
-_cwd = Path().cwd().joinpath("../../../").resolve()
-with _cwd.joinpath("ampapi/__init__.py").open() as file:
+with Path("ampapi/__init__.py").open() as file:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', file.read(), re.MULTILINE).group(1)  # type:ignore
 
 if not version:
     raise RuntimeError("version is not set")
 
 # Grab Version from `CHANGELOG.md`
-with _cwd.joinpath("./CHANGELOG.md").open() as changelog:
+with Path("CHANGELOG.md").open() as changelog:
     changelog_data = changelog.read()
     split_data = changelog_data.split("\n")
     ver_data = split_data[0]  # Version - *.*.*** (commit hash)
@@ -82,9 +81,7 @@ for file_name, file_changes in files.items():
     data: str = data + "#### " + file_name + "\n" + "\n".join(file_changes) + "\n\n"
 
 data = data + changelog_data
-with _cwd.joinpath(
-    "./CHANGELOG.md",
-).open("w") as changelog:
+with Path("CHANGELOG.md").open("w") as changelog:
     changelog.write(data)
     changelog.close()
 
