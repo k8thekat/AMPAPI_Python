@@ -1,3 +1,21 @@
+## Version - 1.0.1 - [448e6ee](https://github.com/k8thekat/AMPAPI_Python/commit/448e6ee)
+#### Changelog.md
+- Version info from `1.0.0` added.
+#### __init__.py
+- Version bump to `1.0.1`
+
+#### Overall
+- Version bump v`1.0.1`
+- Finished numpy docstring conversion throughout codebase.
+	- implemented a different numpy-template for better Sphinx autodoc support and layout.
+- Began conversion of data returns from Dataclasses to something simpler like TypedDicts and class definitions.
+- Developed functions to generate .rst and API docs.
+- Changed parameters of multiple functions for similarity and ease of understanding.
+- updated docstring numpy format.
+- added .rst files for Trigger events.
+- added .rst files for Method events.
+- added `types_.py` to further define JSON response data.
+
 ## Version - 1.0.0 - [922a08b](https://github.com/k8thekat/AMPAPI_Python/commit/922a08b)
 #### Changelog.md
 - Version info from `0.3.0` added.
