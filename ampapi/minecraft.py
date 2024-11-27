@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Union
 
 from .base import Base
@@ -9,10 +8,12 @@ from .dataclass import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, 
 from .enums import *
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Callable, Coroutine
     from typing import Concatenate
 
     from typing_extensions import ParamSpec, TypeVar
+
+    from .types_ import BukkitCategories
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -32,11 +33,12 @@ class MinecraftModule(Base):
         func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
     ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
         """
-        Checks the `Base.Module` property and raises ConnectionError if the Instance is `Offline or Stopped`.
+        Checks the :attr:`~Base.module` property and raises ConnectionError if the Instance is ``Offline or Stopped``.
 
-        Raises:
-        ---
-            RuntimeError: This API call is only available on ADS instances.
+        Raises
+        -------
+        :exc:`RuntimeError`
+            This API call is only available on ADS instances.
         """
 
         @functools.wraps(wrapped=func)
@@ -53,9 +55,9 @@ class MinecraftModule(Base):
         """
         Accept the EULA summary.
 
-        Returns:
-        ---
-        bool:
+        Returns
+        -------
+        :class:`bool`
             On success returns a Bool.
         """
 
@@ -68,14 +70,15 @@ class MinecraftModule(Base):
         """
         Add an entry to the OP list.
 
-        Args:
-        ---
-            user_or_uuid (str): Minecraft UUID or Username.
+        Parameters
+        -----------
+        user_or_uuid: :class:`str`
+            The Minecraft UUID or Username.
 
-        Returns:
-        ---
-            ActionResult: On success returns an ActionResult dataclass.
-            * See `types.py -> ActionResult`
+        Returns
+        --------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
         """
 
         await self._connect()
@@ -91,14 +94,15 @@ class MinecraftModule(Base):
         """
         Add a user to the whitelist.
 
-        Args:
-        ---
-            user_or_uuid (str): Minecraft UUID or Username.
+        Parameters
+        -----------
+        user_or_uuid: :class:`str`
+            The Minecraft UUID or Username.
 
-        Returns:
-        ---
-            ActionResult: On success returns an ActionResult dataclass.
-            * See `types.py -> ActionResult`
+        Returns
+        --------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
         """
 
         await self._connect()
@@ -109,25 +113,18 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_buk_get_categories(self) -> list[dict[str, Any]]:
+    async def mc_buk_get_categories(self) -> list[BukkitCategories]:
         """
         Get Bukkit categories.
 
-        Returns:
-        ---
-            list[dict[str, Any]]: Returns a list of dictionaries containing plugin categories.\n
+        .. note::
+            CATEGORIES: 'Bungee - Spigot', 'Bungee - Proxy', 'Spigot', 'Transportation', 'Chat', 'Tools and Utilities', 'Misc', 'Libraries / APIs'
 
-        ### CATEGORIES:
-        {'id': 2, 'name': 'Bungee - Spigot'}
-        {'id': 3, 'name': 'Bungee - Proxy'}
-        {'id': 4, 'name': 'Spigot'}
-        {'id': 5, 'name': 'Transportation'}
-        {'id': 6, 'name': 'Chat'}
-        {'id': 7, 'name': 'Tools and Utilities'}
-        {'id': 8, 'name': 'Misc'}
-        {'id': 9, 'name': 'Libraries / APIs'}
-        {'id': 10, 'name': 'Transportation'}
-        {'id': 11, 'name': 'Chat'}
+
+        Returns
+        --------
+        list[:class:`BukkitCategories`]
+            On success returns a list of :class:`BukkitCategories` dataclasses.
         """
 
         await self._connect()
@@ -139,14 +136,15 @@ class MinecraftModule(Base):
         """
         Get Bukkit installed plugins.
 
-        Args:
-        ---
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Returns:
-        ---
-            list[BukkitPlugin]: On success returns a list of BukkitPlugin dataclasses.
-            * See `types.py -> BukkitPlugin`
+        Returns
+        --------
+        list[:class:`BukkitPlugin`]
+            On success returns a list of :class:`BukkitPlugin` dataclasses.
         """
 
         await self._connect()
@@ -160,15 +158,17 @@ class MinecraftModule(Base):
         """
         Get update for Bukkit plugin.
 
-        Args:
-        ---
-            plugin_id (int): The plugin ID.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        plugin_id: :class:`int`
+            The plugin ID. See :class:`BukkitPlugin` for the ID value.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Returns:
-        ---
-            RunningTask: On success returns a RunningTask dataclass.
-            * See `types.py -> RunningTask`
+        Returns
+        --------
+        :class:`RunningTask`
+            On success returns a :class:`RunningTask` dataclass.
         """
 
         await self._connect()
@@ -187,14 +187,17 @@ class MinecraftModule(Base):
         Get Bukkit plugin info.
 
 
-        Args:
-        ---
-            plugin_id (int): The plugin ID.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        plugin_id: :class:`int`
+            The plugin ID. See :class:`BukkitPlugin` for the ID value.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Returns:
-        ---
-            Any: UNK data returned by the API.
+        Returns
+        --------
+        Any
+            UNK data returned by the API.
         """
 
         await self._connect()
@@ -211,18 +214,22 @@ class MinecraftModule(Base):
         """
         Get Bukkit plugins from category.
 
-        Args:
-        ---
-            category_id (str): Plugin category ID. See -> `mc_buk_get_categories()`
-            page_number (int): Page Number. Default: 1
-            page_size (int): Page Size. Default: 10
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        category_id: :class:`str`
+            The plugin category ID. See -> :meth:`mc_buk_get_categories`
+        page_number: :class:`int`
+            The page number, default is 1.
+        page_size: :class:`int`
+            The number of entries per page, default is 10.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
 
-        Returns:
-        ---
-            list[BukkitPlugin]: On success returns a list of BukkitPlugin dataclasses.
-            * See `types.py -> BukkitPlugin`
+        Returns
+        --------
+        list[:class:`BukkitPlugin`]
+            On success returns a list of :class:`BukkitPlugin` dataclasses.
         """
 
         await self._connect()
@@ -241,14 +248,15 @@ class MinecraftModule(Base):
         """
         Get Bukkit popular plugins.
 
-        Args:
-        ---
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Returns:
-        ---
-            list[BukkitPlugin]: Returns a list of BukkitPlugin dataclasses.
-            * See `types.py -> BukkitPlugin`
+        Returns
+        --------
+        list[:class:`BukkitPlugin`]
+            On success returns a list of :class:`BukkitPlugin` dataclasses.
         """
 
         await self._connect()
@@ -262,18 +270,19 @@ class MinecraftModule(Base):
         """
         Remove Bukkit plugin.
 
-        Args:
-        ---
-            plugin_id (int): The plugin ID.
+        Parameters
+        -----------
+        plugin_id: :class:`int`
+            The plugin ID. See :class:`BukkitPlugin` for the ID value.
 
-        Returns:
-        ---
-            None: ""
+        Returns
+        -------
+        None
         """
 
         await self._connect()
         parameters: dict[str, int] = {"PluginId": plugin_id}
-        await self._call_api(api="MinecraftModule/BukGetRemovePlugin", parameters=parameters)
+        await self._call_api(api="MinecraftModule/BukGetRemovePlugin", parameters=parameters, _no_data=True)
         return
 
     @mc_only
@@ -283,17 +292,21 @@ class MinecraftModule(Base):
         """
         Search for Bukkit plugins.
 
-        Args:
-        ---
-            Query (str): Search string.
-            PageNumber (int): Page number. Defaults to 0.
-            PageSize (int): Page size. Defaults to 10.
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        query: :class:`str`
+            The search query.
+        page_number: :class:`int`
+            The page number, default is 1.
+        page_size: :class:`int`
+            The number of entries per page, default is 10.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Returns:
-        ---
-            list[BukkitPlugin]: On success returns a list of BukkitPlugin dataclasses.
-            * See `types.py -> BukkitPlugin`
+        Returns
+        --------
+        list[:class:`BukkitPlugin`]
+            On success returns a list of :class:`BukkitPlugin` dataclasses.
         """
 
         await self._connect()
@@ -304,51 +317,62 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_ban_user_by_id(self, id_: str) -> None:
+    async def mc_ban_user_by_id(self, user_id: str) -> None:
         """
         Ban the specified Minecraft UUID.
 
-        Args:
-        ---
-            id_ (str): Minecraft UUID.
+        .. note::
+            This requires the full UUID of the user with the ``-`` chars included.
 
-        Returns:
-        ---
-            None: ""
+
+        Parameters
+        -----------
+        user_id: :class:`str`
+            The Minecraft Users UUID.
+
+        Returns
+        --------
+        None
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"ID": id_}
-        await self._call_api(api="MinecraftModule/BanUserByID", parameters=parameters)
+        parameters: dict[str, str] = {"ID": user_id}
+        await self._call_api(api="MinecraftModule/BanUserByID", parameters=parameters, _no_data=True)
         return
 
     @mc_only
-    async def mc_clear_inventory_by_id(self, id_: str) -> None:
+    async def mc_clear_inventory_by_id(self, user_id: str) -> None:
         """
         Clear a players inventory.
 
-        Args:
-        ---
-            id_ (str): Minecraft UUID.
+        .. note::
+            This requires the full UUID of the user with the ``-`` chars included.
 
-        Returns:
-        ---
-            None
+
+        Parameters
+        -----------
+        user_id: :class:`str`
+            The Minecraft Users UUID.
+
+        Returns
+        --------
+        None
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"ID": id_}
-        await self._call_api(api="MinecraftModule/ClearInventoryByID", parameters=parameters)
+        parameters: dict[str, str] = {"ID": user_id}
+        await self._call_api(api="MinecraftModule/ClearInventoryByID", parameters=parameters, _no_data=True)
         return
 
     @mc_only
     async def mc_get_failure_reason(self) -> str:
         """
-        Get the failure reason.
+        Get the Server failure reason, if any.
 
-        Returns:
-        ---
-            str: On success returns a string representation of the failure reason.
+        Returns
+        --------
+        :class:`str`
+            On success returns a string representation of the failure reason.
         """
 
         await self._connect()
@@ -356,21 +380,27 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_get_head_by_uuid(self, id_: str) -> str:
+    async def mc_get_head_by_uuid(self, user_id: str) -> str:
         """
         Get a skin as a base64 string.
 
-        Args:
-        ---
-            id_ (str): Minecraft UUID.
+        .. note::
+            This requires the full UUID of the user with the ``-`` chars included.
 
-        Returns:
-        ---
-            str: base64 string. eg. (data:image/gif;base64, data)
+
+        Parameters
+        -----------
+        user_id: :class:`str`
+            The Minecraft Users UUID.
+
+        Returns
+        --------
+        :class:`str`
+            :class:`base64` string. eg. (data:image/gif;base64, data)
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"id": id_}
+        parameters: dict[str, str] = {"id": user_id}
         result: Any = await self._call_api(api="MinecraftModule/GetHeadByUUID", parameters=parameters)
         return result
 
@@ -379,14 +409,15 @@ class MinecraftModule(Base):
         """
         Get the OP whitelist.
 
-        Args:
-        ---
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
-        Returns:
-        ---
-            OPWhitelist: On success returns an OPWhitelist dataclass.
-            * See `types.py -> OPWhitelist`
+        Returns
+        --------
+        :class:`OPWhitelist`
+            On success returns a :class:`OPWhitelist` dataclass.
         """
 
         await self._connect()
@@ -400,13 +431,15 @@ class MinecraftModule(Base):
         """
         Get the whitelist.
 
-        Args:
-        ---
-            format_data (Union[bool, None], optional): Format the JSON response data. Defaults to None. (Uses `FORMAT_DATA` global constant if None)
+        Parameters
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
         Returns:
         ---
-            list[Whitelist]: Returns a list of strings containing Minecraft UUIDs.
+        list[:class:`MCUser`]
+            On success returns a list of :class:`MCUser` dataclasses.
         """
 
         await self._connect()
@@ -414,42 +447,51 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_kick_user_by_id(self, id_: str) -> None:
+    async def mc_kick_user_by_id(self, user_id: str) -> None:
         """
-        Kick the specified User ID.
+        Kick the specified Minecraft Users UUID.
 
-        Args:
-        ---
-            id_ (str): Minecraft UUID.
+        .. note::
+            This requires the full UUID of the user with the ``-`` chars included.
 
-        Returns:
-        ---
-            None
 
+        Parameters
+        -----------
+        user_id: :class:`str`
+            The Minecraft Users UUID.
+
+        Returns
+        --------
+        None
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"ID": id_}
-        await self._call_api(api="MinecraftModule/KickUserByID", parameters=parameters)
+        parameters: dict[str, str] = {"ID": user_id}
+        await self._call_api(api="MinecraftModule/KickUserByID", parameters=parameters, _no_data=True)
         return
 
     @mc_only
-    async def mc_kill_by_id(self, id_: str) -> None:
+    async def mc_kill_by_id(self, user_id: str) -> None:
         """
         Kill the Minecraft player.
 
-        Args:
-        ---
-            id_ (str): Minecraft UUID.
+        .. note::
+            This requires the full UUID of the user with the ``-`` chars included.
 
-        Returns:
-        ----
-            None
+
+        Parameters
+        -----------
+        user_id: :class:`str`
+            The Minecraft Users UUID.
+
+        Returns
+        --------
+        None
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"ID": id_}
-        await self._call_api(api="MinecraftModule/KillByID", parameters=parameters)
+        parameters: dict[str, str] = {"ID": user_id}
+        await self._call_api(api="MinecraftModule/KillByID", parameters=parameters, _no_data=True)
         return
 
     @mc_only
@@ -457,10 +499,15 @@ class MinecraftModule(Base):
         """
         Get the OP list.
 
-        Returns:
-        ---
-            list[OPList]: On success returns a list of OPList dataclasses.
-            * See `types.py -> OPList`
+        Parameters
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+
+        Returns
+        --------
+        list[:class:`OPList`]
+            On success returns a list of :class:`OPList` dataclasses.
         """
 
         await self._connect()
@@ -468,46 +515,65 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_remove_op_entry(self, user_or_uuid: str) -> None:
+    async def mc_remove_op_entry(self, user: str) -> None:
         """
         Remove an entry from the OP list.
 
-        Args:
-        ---
-            user_or_uuid (str): Minecraft UUID or Username.
+        .. note::
+            You can supply a Minecraft UUID (non-trimmed) or Username.
+
+
+        Parameters
+        -----------
+        user: :class:`str`
+            The Minecraft UUID or Username.
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"UserOrUUID": user_or_uuid}
-        await self._call_api(api="MinecraftModule/RemoveOPEntry", parameters=parameters)
+        parameters: dict[str, str] = {"UserOrUUID": user}
+        await self._call_api(api="MinecraftModule/RemoveOPEntry", parameters=parameters, _no_data=True)
         return
 
     @mc_only
-    async def mc_remove_whitelist_entry(self, user_or_uuid: str) -> None:
+    async def mc_remove_whitelist_entry(self, user: str) -> None:
         """
         Remove a user from the whitelist.
 
-        Args:
-        ---
-            user_or_uuid (str): Minecraft UUID or Username.
+        .. note::
+            You can supply a Minecraft UUID (non-trimmed) or Username.
+
+
+        Parameters
+        -----------
+        user: :class:`str`
+            The Minecraft UUID or Username.
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"UserOrUUID": user_or_uuid}
-        await self._call_api(api="MinecraftModule/RemoveWhitelistEntry", parameters=parameters)
+        parameters: dict[str, str] = {"UserOrUUID": user}
+        await self._call_api(api="MinecraftModule/RemoveWhitelistEntry", parameters=parameters, _no_data=True)
         return
 
     @mc_only
-    async def mc_smite_by_id(self, id_: str) -> None:
+    async def mc_smite_by_id(self, user_id: str) -> None:
         """
         Strike a player with lightning
 
-        Args:
-        ---
-            id_ (str): Minecraft UUID.
+        .. note::
+            This requires the full UUID of the user with the ``-`` chars included.
+
+
+        Parameters
+        -----------
+        user_id: :class:`str`
+            The Minecraft Users UUID.
+
+        Returns
+        --------
+        None
         """
 
         await self._connect()
-        parameters: dict[str, str] = {"ID": id_}
-        await self._call_api(api="MinecraftModule/SmiteByID", parameters=parameters)
+        parameters: dict[str, str] = {"ID": user_id}
+        await self._call_api(api="MinecraftModule/SmiteByID", parameters=parameters, _no_data=True)
         return

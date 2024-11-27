@@ -132,7 +132,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
         )
 
         if isinstance(result[0], Controller):
-            self._logger.debug(
+            self.logger.debug(
                 "Updating %s, with Controller dataclass: %s |\nObject:\n%s", __class__.__name__, id(result[0]), result[0]
             )
             # We make the first Controller dataclass our AMPControllerInstance and transfer all the information from the Controller to Self.
@@ -150,7 +150,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
             for i in result:
                 # If we have another Controller, we want to get it's available_instances and convert them into proper objects to be used.
                 if isinstance(i, Controller):
-                    self._logger.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
+                    self.logger.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
                     # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we just updated the attribute above.
                     self.instances.update(self.instance_conversion(instances=i.available_instances))
 

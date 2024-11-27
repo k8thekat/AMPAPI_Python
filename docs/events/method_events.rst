@@ -4,14 +4,11 @@
 Method Events
 ==============
 :raw-html:`<hr>`
-Testing......
+
 
 Method Information
 #####################
 :raw-html:`<hr>`
-
-.. note::
-	 Place holder text....
 
 
 
@@ -21,54 +18,98 @@ Method Information
 BanUser
 ~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.BanUser``
-
 Ban a user from the server
 
+- ``Event.MinecraftModule.BanUser``
+
 Consumes these values:
-	* User: type(SimpleUser)
 	* Reason: type(String)
+	* User: type(SimpleUser)
 
 BanUserIP
 ~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.BanUserIP``
-
 Ban a user from the server by their IP address
 
+- ``Event.MinecraftModule.BanUserIP``
+
 Consumes these values:
-	* User: type(SimpleUser)
 	* Reason: type(String)
+	* User: type(SimpleUser)
 
 CheckForUpdates
 ~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.CheckForUpdates``
+Check for available updates via SteamCMD
 
+- ``Event.steamcmdplugin.CheckForUpdates``
+
+
+CheckForUpdates - MinecraftModule
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
 Check for Minecraft server updates
 
+- ``Event.MinecraftModule.CheckForUpdates``
+
+
+CommandWithWarnings
+~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Run a command in one hour, with warnings (non-blocking)
+
+- ``Event.CommonCorePlugin.CommandWithWarnings``
+
 Consumes these values:
+	* Command: type(String)
+	* FiveMins: type(String)
+	* FiveSecs: type(String)
+	* OneHour: type(String)
+	* OneMin: type(String)
+	* ThirtyMins: type(String)
+	* ThirtySecs: type(String)
+
+DiscordMessage
+~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Post a message on Discord
+
+- ``Event.WebRequestPlugin.DiscordMessage``
+
+Consumes these values:
+	* Contents: type(String)
+	* DisplayUsername: type(String)
+	* WebhookURL: type(String)
+
+Fabulous
+~~~~~~~~~
+:raw-html:`<hr>`
+Make a player fabulous
+
+- ``Event.MinecraftModule.Fabulous``
+
+Consumes these values:
+	* User: type(SimpleUser)
 
 GiveXP
 ~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.GiveXP``
-
 Give XP to a player
 
+- ``Event.MinecraftModule.GiveXP``
+
 Consumes these values:
-	* User: type(SimpleUser)
 	* Quantity: type(Int32)
+	* User: type(SimpleUser)
 
 IfCondition
 ~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.CommonCorePlugin.IfCondition``
-
 If condition is met
 
+- ``Event.CommonCorePlugin.IfCondition``
+
 Consumes these values:
-	* ValueToCheck: type(String)
 	* Operation: type(IfOperators)
 		* 0 - Equals
 		* 1 - NotEquals
@@ -79,25 +120,26 @@ Consumes these values:
 		* 6 - GreaterThanOrEqual
 		* 7 - LessThanOrEqual
 		* 8 - RegexMatch
+	* ValueToCheck: type(String)
 	* ValueToCompare: type(String)
 
 KickUser
 ~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.KickUser``
-
 Kick a user from the server
 
+- ``Event.MinecraftModule.KickUser``
+
 Consumes these values:
-	* User: type(SimpleUser)
 	* Reason: type(String)
+	* User: type(SimpleUser)
 
 KillPlayer
 ~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.KillPlayer``
-
 Kill a player
+
+- ``Event.MinecraftModule.KillPlayer``
 
 Consumes these values:
 	* User: type(SimpleUser)
@@ -105,171 +147,153 @@ Consumes these values:
 MakeGETRequest
 ~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.WebRequestPlugin.MakeGETRequest``
-
 Make a GET request to a URI.
+
+- ``Event.WebRequestPlugin.MakeGETRequest``
 
 Consumes these values:
 	* URI: type(String)
-
-Fabulous
-~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.Fabulous``
-
-Make a player fabulous
-
-Consumes these values:
-	* User: type(SimpleUser)
 
 MakePOSTRequest
 ~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.WebRequestPlugin.MakePOSTRequest``
-
 Make a POST request to a URI.
 
+- ``Event.WebRequestPlugin.MakePOSTRequest``
+
 Consumes these values:
-	* URI: type(String)
-	* Payload: type(String)
 	* ContentType: type(String)
-
-DiscordMessage
-~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.WebRequestPlugin.DiscordMessage``
-
-Post a message on Discord
-
-Consumes these values:
-	* WebhookURL: type(String)
-	* Contents: type(String)
-	* DisplayUsername: type(String)
-
-SlackMessage
-~~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.WebRequestPlugin.SlackMessage``
-
-Post a message on Slack
-
-Consumes these values:
-	* WebhookURL: type(String)
-	* Contents: type(String)
+	* Payload: type(String)
+	* URI: type(String)
 
 PushMessage
 ~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.WebRequestPlugin.PushMessage``
-
 Push a message via PushBullet
 
+- ``Event.WebRequestPlugin.PushMessage``
+
 Consumes these values:
-	* title: type(String)
 	* body: type(String)
+	* title: type(String)
 
 PushMessageChannel
 ~~~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.WebRequestPlugin.PushMessageChannel``
-
 Push a message via PushBullet to a specific channel
 
+- ``Event.WebRequestPlugin.PushMessageChannel``
+
 Consumes these values:
+	* body: type(String)
 	* channel: type(String)
 	* title: type(String)
-	* body: type(String)
-
-Sleep
-~~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.Sleep``
-
-Put the server to sleep (Players can still connect)
-
-Consumes these values:
-
-RestartIfEmpty
-~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.CommonCorePlugin.RestartIfEmpty``
-
-Restart the application server, but only if it is empty
-
-Consumes these values:
 
 Restart
 ~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.Restart``
-
 Restart the Minecraft server
 
-Consumes these values:
+- ``Event.MinecraftModule.Restart``
+
+
+RestartIfEmpty
+~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Restart the application server, but only if it is empty
+
+- ``Event.CommonCorePlugin.RestartIfEmpty``
+
 
 RestoreBackup
 ~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.LocalFileBackupPlugin.RestoreBackup``
-
 Restore a backup
+
+- ``Event.LocalFileBackupPlugin.RestoreBackup``
 
 Consumes these values:
 	* BackupId: type(String)
 
-CommandWithWarnings
-~~~~~~~~~~~~~~~~~~~~
+SaveChanges
+~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.CommonCorePlugin.CommandWithWarnings``
+Write unsaved world data to disk (save-all)
 
-Run a command in one hour, with warnings (non-blocking)
+- ``Event.MinecraftModule.SaveChanges``
 
-Consumes these values:
-	* OneHour: type(String)
-	* ThirtyMins: type(String)
-	* FiveMins: type(String)
-	* OneMin: type(String)
-	* ThirtySecs: type(String)
-	* FiveSecs: type(String)
-	* Command: type(String)
 
 ScheduleEmptyUpdate
 ~~~~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.CommonCorePlugin.ScheduleEmptyUpdate``
-
 Schedule an update and restart once the last user leaves, or immediately if empty.
 
+- ``Event.CommonCorePlugin.ScheduleEmptyUpdate``
+
+
+SendConsole
+~~~~~~~~~~~~
+:raw-html:`<hr>`
+Send console input to the Minecraft server
+
+- ``Event.MinecraftModule.SendConsole``
+
 Consumes these values:
+	* Input: type(String)
+
+SendConsoleAdv
+~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Send advanced console input to the Minecraft server (Supports escaped characters)
+
+- ``Event.MinecraftModule.SendConsoleAdv``
+
+Consumes these values:
+	* Input: type(String)
 
 SendGlobalTitle
 ~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.SendGlobalTitle``
-
 Send a global title message
 
+- ``Event.MinecraftModule.SendGlobalTitle``
+
 Consumes these values:
-	* Title: type(String)
 	* Subtitle: type(String)
+	* Title: type(String)
 
-SendUserMessage
-~~~~~~~~~~~~~~~~
+SendMail
+~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.SendUserMessage``
+Send an email
 
-Send a message to a specific player
+- ``Event.EmailSenderPlugin.SendMail``
 
 Consumes these values:
-	* Player: type(SimpleUser)
 	* Message: type(String)
+	* Priority: type(MailPriority)
+		* 0 - Normal
+		* 1 - Low
+		* 2 - High
+	* Subject: type(String)
+	* To: type(String)
+
+SendMultipleConsole
+~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Send multiple lines of input to the Minecraft server
+
+- ``Event.MinecraftModule.SendMultipleConsole``
+
+Consumes these values:
+	* Input: type(String)
 
 SendServerMessage
 ~~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.SendServerMessage``
-
 Send a message to everyone on the server
+
+- ``Event.MinecraftModule.SendServerMessage``
 
 Consumes these values:
 	* Message: type(String)
@@ -277,177 +301,155 @@ Consumes these values:
 SendTitle
 ~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.SendTitle``
-
 Send a title message to a specific player
 
+- ``Event.MinecraftModule.SendTitle``
+
 Consumes these values:
-	* User: type(SimpleUser)
-	* Title: type(String)
 	* Subtitle: type(String)
+	* Title: type(String)
+	* User: type(SimpleUser)
+
+SendUserMessage
+~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Send a message to a specific player
+
+- ``Event.MinecraftModule.SendUserMessage``
+
+Consumes these values:
+	* Message: type(String)
+	* Player: type(SimpleUser)
 
 SendWakeOnLan
 ~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.CommonCorePlugin.SendWakeOnLan``
-
 Send a Wake-On-LAN packet
+
+- ``Event.CommonCorePlugin.SendWakeOnLan``
 
 Consumes these values:
 	* MACAddress: type(String)
 
-SendConsoleAdv
-~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.SendConsoleAdv``
-
-Send advanced console input to the Minecraft server (Supports escaped characters)
-
-Consumes these values:
-	* Input: type(String)
-
-SendMail
-~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.EmailSenderPlugin.SendMail``
-
-Send an email
-
-Consumes these values:
-	* To: type(String)
-	* Subject: type(String)
-	* Message: type(String)
-	* Priority: type(MailPriority)
-		* 0 - Normal
-		* 1 - Low
-		* 2 - High
-
-SendConsole
-~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.SendConsole``
-
-Send console input to the Minecraft server
-
-Consumes these values:
-	* Input: type(String)
-
-SendMultipleConsole
-~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.SendMultipleConsole``
-
-Send multiple lines of input to the Minecraft server
-
-Consumes these values:
-	* Input: type(String)
-
 SetGameTime
 ~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.SetGameTime``
-
 Set the game time to a given real-world time
+
+- ``Event.MinecraftModule.SetGameTime``
 
 Consumes these values:
 	* When: type(DateTime)
 
-Start
+SlackMessage
+~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Post a message on Slack
+
+- ``Event.WebRequestPlugin.SlackMessage``
+
+Consumes these values:
+	* Contents: type(String)
+	* WebhookURL: type(String)
+
+Sleep
 ~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.Start``
+Put the server to sleep (Players can still connect)
 
-Start the Minecraft Server
+- ``Event.MinecraftModule.Sleep``
 
-Consumes these values:
-
-StopIfEmpty
-~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.CommonCorePlugin.StopIfEmpty``
-
-Stop the application server, but only if it is empty
-
-Consumes these values:
-
-Stop
-~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.Stop``
-
-Stop the Minecraft Server
-
-Consumes these values:
 
 SmitePlayer
 ~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.SmitePlayer``
-
 Strike a player with lightning
+
+- ``Event.MinecraftModule.SmitePlayer``
 
 Consumes these values:
 	* User: type(SimpleUser)
 
+Start
+~~~~~~
+:raw-html:`<hr>`
+Start the Minecraft Server
+
+- ``Event.MinecraftModule.Start``
+
+
+Stop
+~~~~~
+:raw-html:`<hr>`
+Stop the Minecraft Server
+
+- ``Event.MinecraftModule.Stop``
+
+
+StopIfEmpty
+~~~~~~~~~~~~
+:raw-html:`<hr>`
+Stop the application server, but only if it is empty
+
+- ``Event.CommonCorePlugin.StopIfEmpty``
+
+
 TakeBackup
 ~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.LocalFileBackupPlugin.TakeBackup``
-
 Take a backup
 
-Consumes these values:
+- ``Event.LocalFileBackupPlugin.TakeBackup``
+
 
 TakeStickyBackup
 ~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.LocalFileBackupPlugin.TakeStickyBackup``
-
 Take a sticky backup
 
-Consumes these values:
+- ``Event.LocalFileBackupPlugin.TakeStickyBackup``
+
 
 TeleportToCoords
 ~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.TeleportToCoords``
-
 Teleport a player to a set of coordinates
+
+- ``Event.MinecraftModule.TeleportToCoords``
 
 Consumes these values:
 	* User: type(SimpleUser)
 	* X: type(Single)
 	* Y: type(Single)
-	* Z: type(Single)
 	* YAngle: type(Single)
+	* Z: type(Single)
 	* ZAngle: type(Single)
 
 TeleportToPlayer
 ~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.TeleportToPlayer``
-
 Teleport a player to another player
 
+- ``Event.MinecraftModule.TeleportToPlayer``
+
 Consumes these values:
-	* User: type(SimpleUser)
 	* Target: type(SimpleUser)
+	* User: type(SimpleUser)
 
 UpdateAndRestart
 ~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
-- ``Event.CommonCorePlugin.UpdateAndRestart``
-
 Update the application and restart it if it was previously running
 
-Consumes these values:
+- ``Event.CommonCorePlugin.UpdateAndRestart``
+
 
 Wait
 ~~~~~
 :raw-html:`<hr>`
-- ``Event.CommonCorePlugin.Wait``
-
 Wait
+
+- ``Event.CommonCorePlugin.Wait``
 
 Consumes these values:
 	* Seconds: type(Double)
@@ -455,18 +457,9 @@ Consumes these values:
 Weaken
 ~~~~~~~
 :raw-html:`<hr>`
-- ``Event.MinecraftModule.Weaken``
-
 Weaken a player
+
+- ``Event.MinecraftModule.Weaken``
 
 Consumes these values:
 	* User: type(SimpleUser)
-
-SaveChanges
-~~~~~~~~~~~~
-:raw-html:`<hr>`
-- ``Event.MinecraftModule.SaveChanges``
-
-Write unsaved world data to disk (save-all)
-
-Consumes these values:

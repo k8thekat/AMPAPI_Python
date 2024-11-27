@@ -9,25 +9,27 @@ __all__ = ("EmailSenderPlugin",)
 
 class EmailSenderPlugin(Base):
     """
-    Contains the base functions for any `/API/EmailSenderPlugin/` AMP API endpoints.
+    Contains the functions for any ``/API/EmailSenderPlugin/`` API endpoints.
 
     """
 
-    # EmailSenderPlugin.TestSMTPSettings:({'Parameters': [], 'ReturnTypeName': 'ActionResult', 'IsComplexType': True})
     async def test_SMTP_settings(self, format_data: Union[bool, None] = None) -> ActionResult:
-        """
+        """|coro|
+
         Test SMTP Settings.
 
+        .. note::
+            This is a development endpoint.
+
         Parameters
-        ----------
-        format_data : (Union[bool, None], optional)
-            Format the JSON response data.  (Uses `FORMAT_DATA` global constant if None), Defaults to None.
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
         Returns
-        -------
-        ActionResult :
-            Results from the API call. See -> :py:class:ActionResult
-
+        --------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
         """
         await self._connect()
         result = await self._call_api(api="EmailSenderPlugin/TestSMTPSettings", format_data=format_data)

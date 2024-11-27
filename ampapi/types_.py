@@ -1,22 +1,123 @@
 from __future__ import annotations
 
-from pprint import pformat
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from typing_extensions import NotRequired
 
 
-class PermissionNode(TypedDict):
+class ActionSpec(TypedDict):
+    """
+    ads_module: dict[:class:`str`, Any]
+
+    file_manager_plugin: dict[:class:`str`, Any]
+
+    email_sender_plugin: dict[:class:`str`, Any]
+
+    common_core_plugin: dict[:class:`str`, Any]
+
+    core: dict[:class:`str`, Any]
+
+    """
+
+    ads_module: dict[str, Any]
+    file_manager_plugin: dict[str, Any]
+    email_sender_plugin: dict[str, Any]
+    common_core_plugin: dict[str, Any]
+    core: dict[str, Any]
+
+
+class APISpec(TypedDict):
+    """
+    analytics_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+
+    common_core_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+
+    email_sender_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+
+    file_manager_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+
+    local_file_backup_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+
+    minecraft_module: dict[:class:`str`, :class:`APISPecEndpointData`]
+
+    """
+
+    analytics_plugin: dict[str, APISPecEndpointData]
+    common_core_plugin: dict[str, APISPecEndpointData]
+    email_sender_plugin: dict[str, APISPecEndpointData]
+    file_manager_plugin: dict[str, APISPecEndpointData]
+    local_file_backup_plugin: dict[str, APISPecEndpointData]
+    minecraft_module: dict[str, APISPecEndpointData]
+
+
+class APISPecEndpointData(TypedDict):
+    """
+    description: :class:`str`
+
+    is_complex_type: :class:`bool`
+
+    parameters: :class:`APISpecEndpointParameters`
+
+    return_type_name: :class:`str`
+
+    returns: :class:`str`
+
+    """
+
+    id: str
+    description: str
+    is_complex_type: bool
+    parameters: APISpecEndpointParameters
+    return_type_name: str
+    returns: str
+
+
+class APISpecEndpointParameters(TypedDict):
+    """
+    description: :class:`str`
+
+    name: :class:`str`
+
+    option: :class:`bool`
+
+    param_enum_values: :class:`str`
+
+    type_name: :class:`str`
+
+    """
+
+    id: str
+    description: str
     name: str
-    node: str
-    display_name: str
-    description: str | None
-    children: list[PermissionNode]
+    option: bool
+    param_enum_values: str
+    type_name: str
+
+
+class BukkitCategories(TypedDict):
+    """
+    id: :class:`int`
+
+    name: :class:`str`
+
+    """
+
+    id: int
+    name: str
 
 
 class Consumes(TypedDict, total=False):
     """
-    available_methods: consumes key
+    description: :class:`str`
+
+    input_type: :class:`str`
+
+    name: :class:`str`
+
+    value_type: :class:`str`
+
+    enum_values: NotRequired[:class:`str`]
+
     """
 
     description: str
@@ -26,18 +127,95 @@ class Consumes(TypedDict, total=False):
     enum_values: NotRequired[str]
 
 
+class MethodsData(TypedDict):
+    """
+    id: :class:`str`
+
+    name: :class:`str`
+
+    description: :class:`str`
+
+    consumes: list[:class:`Consumes`]
+
+    """
+
+    id: str
+    name: str
+    description: str
+    consumes: list[Consumes]
+
+
 class ParameterMapping(TypedDict, total=False):
+    """
+    user: NotRequired[:class:`str`]
+
+    reason: NotRequired[:class:`str`]
+
+    """
+
     user: NotRequired[str]
     reason: NotRequired[str]
 
 
+class PermissionNode(TypedDict):
+    """
+    name: :class:`str`
+
+    node: :class:`str`
+
+    display_name: :class:`str`
+
+    description: :class:`str`
+
+    children: list[:class:`PermissionNode`]
+
+    """
+
+    id: str
+    name: str
+    node: str
+    display_name: str
+    description: str | None
+    children: list[PermissionNode]
+
+
 class ScheduleDataData(TypedDict):
+    """
+    available_methods: list[:class:`MethodsData`]
+
+    available_triggers: list[:class:`TriggersData`]
+
+    populated_triggers: list[:class:`TriggersData`]
+
+    """
+
     available_methods: list[MethodsData]
     available_triggers: list[TriggersData]
-    populated_triggers: list
+    populated_triggers: list[TriggersData]
 
 
 class TriggersData(TypedDict):
+    """
+    id: :class:`str`
+
+    description: :class:`str`
+
+    emits: list[:class:`str`]
+
+    enabled_state: :class:`int`
+
+    tasks: list[:class:`TriggerTasksData`]
+
+    type: :class:`str`
+
+    trigger_type: :class:`str`
+
+    last_execute_error: NotRequired[:class:`bool`]
+
+    last_error_reason: NotRequired[:class:`str`]
+
+    """
+
     id: str
     description: str
     emits: list[str]
@@ -49,18 +227,23 @@ class TriggersData(TypedDict):
     last_error_reason: NotRequired[str]
 
 
-class MethodsData(TypedDict):
-    """
-    available_methods
-    """
-
-    id: str
-    name: str
-    description: str
-    consumes: list[Consumes]
-
-
 class TriggerTasksData(TypedDict):
+    """
+    id: :class:`str`
+
+    task_method_name: :class:`str`
+
+    parameter_mapping: :class:`ParameterMapping`
+
+    enabled_state: :class:`int`
+
+    locked: :class:`bool`
+
+    created_by: :class:`str`
+
+    order: :class:`int`
+    """
+
     id: str
     task_method_name: str
     parameter_mapping: ParameterMapping
@@ -70,39 +253,12 @@ class TriggerTasksData(TypedDict):
     order: int
 
 
-class TriggerID:
-    a_backup_finishes_archiving: str
-    a_backup_finishes_restoring: str
-    a_backup_has_failed: str
-    a_backup_has_started: str
-    a_player_achieves_an_advancement: str
-    a_player_commits_suicide: str
-    a_player_gets_an_achievement: str
-    a_player_is_killed_by_an_npc: str
-    a_player_is_killed_by_another_player: str
-    a_player_joins_the_server: str
-    a_player_joins_the_server_for_the_first_time: str
-    a_player_joins_the_server_while_it_was_empty: str
-    a_player_leaves_the_server: str
-    a_player_performs_an_action: str
-    a_player_sends_a_chat_message: str
-    a_player_tries_to_join_the_server_while_its_sleeping: str
-    a_player_who_has_previously_visited_rejoins_the_server: str
-    a_scheduled_backup_finishes_archiving: str
-    the_application_state_changes: str
-    the_last_player_leaves_the_server: str
-    the_minecraft_server_is_unable_to_keep_up: str
-    the_minecraft_server_repeatedly_fails_to_start: str
-    the_minecraft_server_stops_unexpectedly: str
-    the_minecraft_server_watchdog_forced_a_shutdown_server_unresponsive: str
-    the_server_enters_sleep_mode: str
-    the_server_wakes_up_from_sleep_mode_due_to_player_connect: str
+class MCUserData(TypedDict):
+    """
+    name: :class:`str`
 
-    def __init__(self, data: list[TriggersData]) -> None:
-        for entry in data:
-            setattr(self, entry["description"], entry["id"])
+    uuid: :class:`str`
+    """
 
-    def __repr__(self) -> str:
-        _temp: dict[str, str] = vars(self)
-        _temp.pop("_init")
-        return pformat(_temp)
+    name: str
+    uuid: str

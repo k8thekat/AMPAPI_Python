@@ -1,11 +1,41 @@
 from enum import Enum
 
 
+class AccessModeState(Enum):
+    """
+    Related to Node: ADSModule.Network.AccessMode
+    """
+
+    via_target = 0
+    direct_controller = 10
+    bypass_controller = 20
+
+
+class ADSModeState(Enum):
+    """
+    Related to Node: ADSModule.ADS.Mode
+    """
+
+    not_set = 0
+    controller = 10
+    hybrid = 20
+    target = 30
+    stand_alone = 100
+
+
+class AMPDownloadMirrorState(Enum):
+    """
+    Related to Node: ADSModule.ADS.DownloadMirror
+    """
+
+    us_central = "[Automatic]"
+    eu_west = ""
+    us_central_texas = "US Central - Texas"
+
+
 class AMPInstanceState(Enum):
     """
     Represents the state of an Instance and or Application inside an Instance.
-
-    Author: p0t4t0sandwich -> https://github.com/p0t4t0sandwich/ampapi-py/blob/main/ampapi/types.py
 
     """
 
@@ -29,6 +59,83 @@ class AMPInstanceState(Enum):
     suspended = 200
     maintenance = 250
     indeterminate = 999  # The state is unknown, or doesn't apply (for modules that don't start an external process)
+
+
+class AMPTheme(Enum):
+    """
+    Related to Node: Core.AMP.Theme
+    """
+
+    aura = "Aura"
+    black = "Black"
+    tenth_anniversary = "TenthAnniversary"
+    to_boldly_go = "ToBoldlyGo"
+    default = "default"
+
+
+class ApplicationUpdatesState(Enum):
+    """
+    Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
+    """
+
+    by_timestamp = 0
+    by_build_id = 1
+
+
+class AppStartupModeState(Enum):
+    """
+    Related to Node: Core.AMP.AppStartupMode
+    """
+
+    do_nothing = 0
+    update = 1
+    start = 2
+    update_and_start = 3
+    unk = 16
+    unk2 = 32
+
+
+class ContainerMemoryPolicyState(Enum):
+    not_specified = 0
+    reserve = 100
+    restrict = 200
+
+
+class DefaultIPBindingState(Enum):
+    """
+    Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding
+    """
+
+    ipv4_loopback = "127.0.0.1"
+    enp42s0 = "192.168.4.50"
+    any_ipv4_address = "0.0.0.0"
+    any_ipv6_address = "::"
+
+
+class LoggingLevelState(Enum):
+    """
+    Related to Node: Core.Monitoring.LogLevel
+    """
+
+    debug = 0
+    info = 10
+    chat = 11
+    notice = 20
+    warning = 30
+    error = 40
+    activity = 5
+    fatal = 50
+    event = 7
+    audit = 8
+
+
+class PortAssignmentState(Enum):
+    """
+    Related to Node: ADSModule.Network.PortAssignment
+    """
+
+    include_allowed_ports_only = 0
+    allow_all_except_excluded = 1
 
 
 class PostCreateActionsState(Enum):
@@ -59,124 +166,6 @@ class PostCreateState(Enum):
     start_always = 5
 
 
-class ContainerMemoryPolicyState(Enum):
-    not_specified = 0
-    reserve = 100
-    restrict = 200
-
-
-class AccessModeState(Enum):
-    """
-    Related to Node: ADSModule.Network.AccessMode
-    """
-
-    via_target = 0
-    direct_controller = 10
-    bypass_controller = 20
-
-
-class ApplicationUpdatesState(Enum):
-    """
-    Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
-    """
-
-    by_timestamp = 0
-    by_build_id = 1
-
-
-class LoggingLevelState(Enum):
-    """
-    Related to Node: Core.Monitoring.LogLevel
-    """
-
-    debug = 0
-    info = 10
-    chat = 11
-    notice = 20
-    warning = 30
-    error = 40
-    activity = 5
-    fatal = 50
-    event = 7
-    audit = 8
-
-
-class AMPTheme(Enum):
-    """
-    Related to Node: Core.AMP.Theme
-    """
-
-    aura = "Aura"
-    black = "Black"
-    tenth_anniversary = "TenthAnniversary"
-    to_boldly_go = "ToBoldlyGo"
-    default = "default"
-
-
-class AppStartupModeState(Enum):
-    """
-    Related to Node: Core.AMP.AppStartupMode
-    """
-
-    do_nothing = 0
-    update = 1
-    start = 2
-    update_and_start = 3
-    unk = 16
-    unk2 = 32
-
-
-class TwoFactoryModeState(Enum):
-    """
-    Related to Node: Core.Security.TwoFactorMode
-    """
-
-    optional = 0
-    required = 1
-
-
-class PortAssignmentState(Enum):
-    """
-    Related to Node: ADSModule.Network.PortAssignment
-    """
-
-    include_allowed_ports_only = 0
-    allow_all_except_excluded = 1
-
-
-class DefaultIPBindingState(Enum):
-    """
-    Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding
-    """
-
-    ipv4_loopback = "127.0.0.1"
-    enp42s0 = "192.168.4.50"
-    any_ipv4_address = "0.0.0.0"
-    any_ipv6_address = "::"
-
-
-class AMPDownloadMirrorState(Enum):
-    """
-    Related to Node: ADSModule.ADS.DownloadMirror
-    """
-
-    us_central = "[Automatic]"
-    eu_west = ""
-    us_central_texas = "US Central - Texas"
-
-
-class ADSModeState(Enum):
-    """
-    Related to Node: ADSModule.ADS.Mode
-    """
-
-    not_set = 0
-    controller = 10
-    hybrid = 20
-    target = 30
-    stand_alone = 100
-
-
 class ReleaseStreamState(Enum):
     """
     Related to Node: ADSModule.Defaults.DefaultReleaseStream
@@ -188,14 +177,10 @@ class ReleaseStreamState(Enum):
     development = 20
 
 
-class SettingsLogin(Enum):
-    @property
-    def use_auth_server(self) -> str:
-        """
-        use_auth_server _summary_
-        """
+class TwoFactoryModeState(Enum):
+    """
+    Related to Node: Core.Security.TwoFactorMode
+    """
 
-        return "Core.Login.UseAuthServer"
-
-    def auth_server_url(self) -> str:
-        return "Core.Login.AuthServerURL"
+    optional = 0
+    required = 1

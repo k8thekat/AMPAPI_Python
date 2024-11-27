@@ -1,5 +1,4 @@
 # Configuration file for the Sphinx documentation builder.
-#
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
@@ -25,8 +24,9 @@ release = version
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 sys.path.insert(0, pathlib.Path("..").as_posix())
-sys.path.append(pathlib.Path("extensions").as_posix())
-sys.path.append(pathlib.Path("nodes").as_posix())
+sys.path.append(pathlib.Path().as_posix())
+sys.path.append(pathlib.Path("./docs/extensions").as_posix())
+sys.path.append(pathlib.Path("./docs/nodes").as_posix())
 
 extensions = [
     "sphinx.ext.autodoc",  # Adds support for parsing autoDoc doc-strings.
@@ -37,7 +37,8 @@ extensions = [
     "sphinx.ext.todo",  # Supports .. todo:: // .. todolist::
     "sphinx.ext.intersphinx",  # Links to other Sphinx docs via .. ref::
     "sphinx.ext.autosectionlabel",  #
-    # "sphinx.ext.paramlinks",  # todo - Look into this more for parameter linking.
+    "enum_tools.autoenum",  # Should handle enums for Sphinx docs.
+    # "sphinx.ext.paramlinks",  # TODO - Look into this more for parameter linking.
     "prettyversion",  # Custom lib from dpy/Umbra
     "details",  # Custom lib from dpy/Umbra
     "exception_hierarchy",  # Custom lib from dpy/Umbra
@@ -64,7 +65,10 @@ intersphinx_mapping: dict[str, tuple] = {
 templates_path = ["_templates"]
 # this is useful when using `.. include::`; make sure to exclude the file/directory below.
 # eg. .. include:: ./events/*_events.rst needs to be excluded either via "events" or "*_events.rst"
-exclude_patterns = ["build", "samples", "nodes", "api_spec_sheets", "events"]
+exclude_patterns = [
+    "build",
+    "samples",
+]
 
 autodoc_member_order: str = "bysource"
 

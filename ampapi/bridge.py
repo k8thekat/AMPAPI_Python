@@ -47,7 +47,7 @@ class Bridge(APIParams):
         """
         Retrieves the singleton :class:`Bridge` object.\n
 
-        .. warn::
+        .. warning::
             **DO NOT CALL THIS FUNCTION OUTSIDE OF AN API CLASS (:class:`ADSModule`, :class:`Core`, etc..)**
 
 

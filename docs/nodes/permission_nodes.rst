@@ -5,45 +5,204 @@ Permission Nodes
 =================
 :raw-html:`<hr>`
 
-Filler test for the luls.. HI UMBRA~
+
 
 .. note::
 	Any node with a '*' at the end of it is a wild card and using that will make all permissions nodes in that section equal to the value set, treat it like parent inheritance.
 
 
 
-.. note::
-    To access lets say `Privacy.AllowAnalytics` of :ref:`Privacy Nodes` we would use "Settings.Core.Privacy.AllowAnalytics" as a string. See the Example below.
+***PLACEHOLDER TEXT**
 
 
-.. code-block:: python
-    :linenos:
-
-    # We are going to access Privacy.AllowAnalytics.
-    # ... assume we created our Bridge object and API Params to login.
-    import ampapi
-    node = "Settings.Core.Privacy.AllowAnalytics"
-    res = ADSModule.set_instance_config(instance_name="AMPInstance01", setting_node= node, value= True)
-    print(res) # This should be an ActionResult class which we can see the results via its `__repr__` definition.
-
+ADS Permission Nodes
+#####################
+:raw-html:`<hr>`
 
 .. note::
-    Here's another example.. lets say we want `InstanceManagement.StopInstances` of :ref:`InstanceManagement Nodes` we would use "ADS.InstanceManagement.StopInstances" as a string. See the Example below.
+	All nodes in this section will be prefixed with "ADS.", see examples :ref:`Permission Nodes`
 
 
+- ADS.*
 
-.. code-block:: python
-    :linenos:
+DatastoreManagement Nodes
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
 
-    # We are going to access InstanceManagement.StopInstances.
-    # ... assume we created our Bridge object and API Params to login.
-    import ampapi
-    node = "ADS.InstanceManagement.StopInstances"
-    res = ADSModule.set_instance_config(instance_name="AMPInstance01", setting_node= node, value= True)
-    print(res) # This should be an ActionResult class which we can see the results via its `__repr__` definition.
+- DatastoreManagement.*
+- DatastoreManagement.ManageDatastores
+
+InstanceManagement Nodes
+~~~~~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+- InstanceManagement.*
+- InstanceManagement.AttachRemoteADSInstance
+- InstanceManagement.CreateInstance
+- InstanceManagement.DeleteInstances
+- InstanceManagement.EditRemoteTargets
+- InstanceManagement.ManageSuspendedInstances
+- InstanceManagement.Reconfigure
+- InstanceManagement.RefreshConfiguration
+- InstanceManagement.RefreshRemoteConfigStores
+- InstanceManagement.RegisterToController
+- InstanceManagement.RemoveRemoteADSInstance
+- InstanceManagement.RestartInstances
+- InstanceManagement.StartInstances
+- InstanceManagement.StopInstances
+- InstanceManagement.SuspendInstances
+- InstanceManagement.UpgradeInstances
+
+TemplateManagement Nodes
+~~~~~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+- TemplateManagement.*
+- TemplateManagement.ManageTemplates
+
+Core Permission Nodes
+######################
+:raw-html:`<hr>`
+
+Description: Core functionality built into AMP itself
+
+.. note::
+	All nodes in this section will be prefixed with "Core.", see examples :ref:`Permission Nodes`
 
 
+- Core.*
 
+AppManagement Nodes
+~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+Description: Actions that allow the user to control the running application
+
+- AppManagement.*
+- AppManagement.ReadConsole
+- AppManagement.RestartApplication
+- AppManagement.SendConsoleInput
+- AppManagement.StartApplication
+- AppManagement.StopApplication
+- AppManagement.UpdateApplication
+
+AuditLog Nodes
+~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+- AuditLog.*
+- AuditLog.ViewAuditLog
+
+RoleManagement Nodes
+~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+- RoleManagement.*
+- RoleManagement.CreateCommonRoles
+- RoleManagement.CreateRole
+- RoleManagement.DeleteRoles
+- RoleManagement.EditRoleInfo
+- RoleManagement.EditRolePermissions
+- RoleManagement.ViewRoles
+
+Scheduler Nodes
+~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+Description: Permissions required to manage AMPs scheduler
+
+- Scheduler.*
+- Scheduler.CreateTask
+- Scheduler.CreateTrigger
+- Scheduler.DeleteTask
+- Scheduler.DeleteTrigger
+- Scheduler.EditOtherUsersTasks
+- Scheduler.EditTask
+- Scheduler.EditTrigger
+- Scheduler.ViewSchedule
+
+Special Nodes
+~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+- Special.*
+- Special.ActivateAMP
+- Special.BypassSettingValueLimits
+- Special.CancelOtherUsersTasks
+- Special.Diagnostics
+- Special.QueryLicenceInformation
+- Special.RestartAMP
+- Special.RunSecurityCheck
+- Special.UpdateAMPInstance
+- Special.UpgradeAMP
+- Special.UseDevMethods
+- Special.ViewOtherUsersTasks
+
+UserManagement Nodes
+~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+Description: Permissions that control the management of other AMP users, should be used with care so as not to allow users to increase their own permissions
+
+- UserManagement.*
+- UserManagement.AccessExternalPermissions
+- UserManagement.ChangeRoleMembership
+- UserManagement.CreateNewUser
+- UserManagement.DeleteUser
+- UserManagement.EndUserSessions
+- UserManagement.ResetUserPassword
+- UserManagement.UpdateOwnAccount
+- UserManagement.UpdateUserInfo
+- UserManagement.ViewActiveSessions
+- UserManagement.ViewOtherUsersSessions
+- UserManagement.ViewUserInfo
+
+FileManager Permission Nodes
+#############################
+:raw-html:`<hr>`
+
+.. note::
+	All nodes in this section will be prefixed with "FileManager.", see examples :ref:`Permission Nodes`
+
+
+- FileManager.*
+
+FileManager Nodes
+~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+- FileManager.*
+- FileManager.BrowseFiles
+- FileManager.ChangeBackupExclusions
+- FileManager.ChangeFileExtension
+- FileManager.ConnectViaSFTP
+- FileManager.CopyFiles
+- FileManager.CreateArchive
+- FileManager.CreateDirectory
+- FileManager.DownloadFiles
+- FileManager.DownloadFromURL
+- FileManager.EmptyTrash
+- FileManager.ExtractArchive
+- FileManager.ModifyAMPConfigFiles
+- FileManager.RenameDirectories
+- FileManager.RenameFiles
+- FileManager.TrashDirectories
+- FileManager.TrashFiles
+- FileManager.UploadFiles
+
+Instances Permission Nodes
+###########################
+:raw-html:`<hr>`
+
+.. note::
+	Replace ``instance-id`` with the something like the :py:class:`~Instance.instance_id` value.
+
+- Instances.*
+- Instances.`instance-id`.Manage
+- Instances.`instance-id`.Restart
+- Instances.`instance-id`.Start
+- Instances.`instance-id`.Stop
+- Instances.`instance-id`.Update
 
 Settings Permission Nodes
 ##########################
@@ -57,109 +216,6 @@ Description: Which Settings users in this role have permission to change the val
 
 - Settings.*
 
-Core Nodes
-~~~~~~~~~~~
-:raw-html:`<hr>`
-
-.. note::
-	All nodes in this section will be prefixed with "Core.", see examples :ref:`Permission Nodes`
-
-
-- Core.*
-
-Security Nodes
-^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Security.*
-- Security.EnablePassthruAuth
-- Security.RateLimitLogins
-- Security.AuthFailureTimeWindow
-- Security.AuthFailureAttemptsInWindow
-- Security.TwoFactorMode
-- Security.RequireSessionIPStickiness
-- Security.AllowUserPasswords
-- Security.IncludeExceptionDataInAPI
-
-Webserver Nodes
-^^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Webserver.*
-- Webserver.APIRateLimit
-- Webserver.AllowGETForAPIEndpoints
-- Webserver.UsingReverseProxy
-- Webserver.ReverseProxyHosts
-- Webserver.CORSOrigin
-- Webserver.DisableCompression
-
-Login Nodes
-^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Login.*
-- Login.UseAuthServer
-- Login.AuthServerURL
-
-Branding Nodes
-^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Branding.*
-- Branding.DisplayBranding
-- Branding.PageTitle
-- Branding.CompanyName
-- Branding.WelcomeMessage
-- Branding.BrandingMessage
-- Branding.ShortBrandingMessage
-- Branding.URL
-- Branding.SupportURL
-- Branding.SupportText
-- Branding.SubmitTicketURL
-- Branding.LogoURL
-- Branding.BackgroundURL
-- Branding.SplashFrameURL
-- Branding.ForgotPasswordURL
-
-AMP Nodes
-^^^^^^^^^^
-:raw-html:`<hr>`
-
-- AMP.*
-- AMP.ScheduleOffsetSeconds
-- AMP.AppStartupMode
-- AMP.FirstStart
-- AMP.MapAllPluginStores
-- AMP.Theme
-- AMP.ShowHelpOnStatus
-- AMP.SchedulerTimezoneId
-
-Monitoring Nodes
-^^^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Monitoring.*
-- Monitoring.UseMulticoreCPUCalc
-- Monitoring.IgnoreSMTCores
-- Monitoring.ConsoleScrollback
-- Monitoring.LogLevel
-- Monitoring.FullMetricsGathering
-- Monitoring.ReportPhysicalMemoryAsTotal
-- Monitoring.MetricsPollInterval
-- Monitoring.MetricsReportingInterval
-- Monitoring.ShowDevInfo
-
-Privacy Nodes
-^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Privacy.*
-- Privacy.PrivacySettingsSet
-- Privacy.SessionTimeout
-- Privacy.AutoReportFatalExceptions
-- Privacy.AllowAnalytics
-- Privacy.EnhancedLicenceReporting
-
 ADSModule Nodes
 ~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`
@@ -170,73 +226,198 @@ ADSModule Nodes
 
 - ADSModule.*
 
-Limits Nodes
-^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Limits.*
-- Limits.InstanceLimit
-- Limits.CreateLocalInstances
-
-Defaults Nodes
-^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Defaults.*
-- Defaults.NewInstanceKey
-- Defaults.DefaultAuthServerURL
-- Defaults.DefaultSettings
-- Defaults.DefaultMountBindings
-- Defaults.DefaultReleaseStream
-- Defaults.UseDocker
-- Defaults.PropagateAuthServer
-- Defaults.PropogateRepos
-- Defaults.UseOverlays
-- Defaults.MatchVersion
-- Defaults.DefaultPostCreate
-- Defaults.ExcludeFromFirewall
-
 ADS Nodes
 ^^^^^^^^^^
 :raw-html:`<hr>`
 
 - ADS.*
 - ADS.AutoReactivate
-- ADS.Mode
 - ADS.AutostartInstances
-- ADS.InstanceStartDelay
 - ADS.ConfigurationRepositories
-- ADS.ShowDeprecated
 - ADS.DownloadMirror
-
-Network Nodes
-^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Network.*
-- Network.DefaultIPBinding
-- Network.DefaultAppIPBinding
-- Network.DockerExternalIPBinding
-- Network.AppPortInclusions
-- Network.MetricsServerPort
-- Network.UseDockerHostNetwork
-- Network.UseTraefik
-- Network.TraefikNetworkName
-- Network.TraefikDomainWildcard
-- Network.AccessMode
-- Network.BaseURL
-- Network.InstanceHostname
+- ADS.InstanceStartDelay
+- ADS.Mode
+- ADS.ShowDeprecated
 
 Community Nodes
 ^^^^^^^^^^^^^^^^
 :raw-html:`<hr>`
 
 - Community.*
-- Community.EnableCommunityPages
 - Community.CommunityDisplayName
 - Community.CommunityURL
 - Community.DiscordURL
+- Community.EnableCommunityPages
 - Community.GeographicLocation
+
+Defaults Nodes
+^^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Defaults.*
+- Defaults.DefaultAuthServerURL
+- Defaults.DefaultMountBindings
+- Defaults.DefaultPostCreate
+- Defaults.DefaultReleaseStream
+- Defaults.DefaultSettings
+- Defaults.ExcludeFromFirewall
+- Defaults.MatchVersion
+- Defaults.NewInstanceKey
+- Defaults.PropagateAuthServer
+- Defaults.PropogateRepos
+- Defaults.UseDocker
+- Defaults.UseOverlays
+
+Limits Nodes
+^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Limits.*
+- Limits.CreateLocalInstances
+- Limits.InstanceLimit
+
+Network Nodes
+^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Network.*
+- Network.AccessMode
+- Network.AppPortInclusions
+- Network.BaseURL
+- Network.DefaultAppIPBinding
+- Network.DefaultIPBinding
+- Network.DockerExternalIPBinding
+- Network.InstanceHostname
+- Network.MetricsServerPort
+- Network.TraefikDomainWildcard
+- Network.TraefikNetworkName
+- Network.UseDockerHostNetwork
+- Network.UseTraefik
+
+Core Nodes
+~~~~~~~~~~~
+:raw-html:`<hr>`
+
+.. note::
+	All nodes in this section will be prefixed with "Core.", see examples :ref:`Permission Nodes`
+
+
+- Core.*
+
+AMP Nodes
+^^^^^^^^^^
+:raw-html:`<hr>`
+
+- AMP.*
+- AMP.AppStartupMode
+- AMP.FirstStart
+- AMP.MapAllPluginStores
+- AMP.ScheduleOffsetSeconds
+- AMP.SchedulerTimezoneId
+- AMP.ShowHelpOnStatus
+- AMP.Theme
+
+Branding Nodes
+^^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Branding.*
+- Branding.BackgroundURL
+- Branding.BrandingMessage
+- Branding.CompanyName
+- Branding.DisplayBranding
+- Branding.ForgotPasswordURL
+- Branding.LogoURL
+- Branding.PageTitle
+- Branding.ShortBrandingMessage
+- Branding.SplashFrameURL
+- Branding.SubmitTicketURL
+- Branding.SupportText
+- Branding.SupportURL
+- Branding.URL
+- Branding.WelcomeMessage
+
+Login Nodes
+^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Login.*
+- Login.AuthServerURL
+- Login.UseAuthServer
+
+Monitoring Nodes
+^^^^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Monitoring.*
+- Monitoring.ConsoleScrollback
+- Monitoring.FullMetricsGathering
+- Monitoring.IgnoreSMTCores
+- Monitoring.LogLevel
+- Monitoring.MetricsPollInterval
+- Monitoring.MetricsReportingInterval
+- Monitoring.ReportPhysicalMemoryAsTotal
+- Monitoring.ShowDevInfo
+- Monitoring.UseMulticoreCPUCalc
+
+Privacy Nodes
+^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Privacy.*
+- Privacy.AllowAnalytics
+- Privacy.AutoReportFatalExceptions
+- Privacy.EnhancedLicenceReporting
+- Privacy.PrivacySettingsSet
+- Privacy.SessionTimeout
+
+Security Nodes
+^^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Security.*
+- Security.AllowUserPasswords
+- Security.AuthFailureAttemptsInWindow
+- Security.AuthFailureTimeWindow
+- Security.EnablePassthruAuth
+- Security.IncludeExceptionDataInAPI
+- Security.RateLimitLogins
+- Security.RequireSessionIPStickiness
+- Security.TwoFactorMode
+
+Webserver Nodes
+^^^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- Webserver.*
+- Webserver.APIRateLimit
+- Webserver.AllowGETForAPIEndpoints
+- Webserver.CORSOrigin
+- Webserver.DisableCompression
+- Webserver.ReverseProxyHosts
+- Webserver.UsingReverseProxy
+
+EmailSenderPlugin Nodes
+~~~~~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+
+.. note::
+	All nodes in this section will be prefixed with "EmailSenderPlugin.", see examples :ref:`Permission Nodes`
+
+
+- EmailSenderPlugin.*
+
+SMTP Nodes
+^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- SMTP.*
+- SMTP.EmailFrom
+- SMTP.Host
+- SMTP.Password
+- SMTP.Port
+- SMTP.UseSSL
+- SMTP.Username
 
 FileManagerPlugin Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -247,20 +428,6 @@ FileManagerPlugin Nodes
 
 
 - FileManagerPlugin.*
-
-FMP Security Nodes
-^^^^^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Security.*
-- Security.RestrictUploadExtensions
-- Security.RestrictDownloadExtensions
-- Security.DownloadableExtensions
-- Security.UploadableExtensions
-- Security.AllowExtensionChange
-- Security.AllowArchiveOperations
-- Security.OnlyExtractUploadableExtensionsFromArchives
-- Security.HoneypotSFTPLogins
 
 FMP FileManager Nodes
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -278,27 +445,19 @@ FMP SFTP Nodes
 - SFTP.EnableCompression
 - SFTP.EnableWebsocketUploads
 
-EmailSenderPlugin Nodes
-~~~~~~~~~~~~~~~~~~~~~~~~
+FMP Security Nodes
+^^^^^^^^^^^^^^^^^^^
 :raw-html:`<hr>`
 
-.. note::
-	All nodes in this section will be prefixed with "EmailSenderPlugin.", see examples :ref:`Permission Nodes`
-
-
-- EmailSenderPlugin.*
-
-SMTP Nodes
-^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- SMTP.*
-- SMTP.UseSSL
-- SMTP.Host
-- SMTP.Port
-- SMTP.Username
-- SMTP.Password
-- SMTP.EmailFrom
+- Security.*
+- Security.AllowArchiveOperations
+- Security.AllowExtensionChange
+- Security.DownloadableExtensions
+- Security.HoneypotSFTPLogins
+- Security.OnlyExtractUploadableExtensionsFromArchives
+- Security.RestrictDownloadExtensions
+- Security.RestrictUploadExtensions
+- Security.UploadableExtensions
 
 WebRequestPlugin Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -327,211 +486,22 @@ steamcmdplugin Nodes
 
 - steamcmdplugin.*
 
+SteamUpdateSettings Nodes
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+:raw-html:`<hr>`
+
+- SteamUpdateSettings.*
+- SteamUpdateSettings.AutomaticRetryLimit
+- SteamUpdateSettings.AutomaticallyRetryOnFailure
+- SteamUpdateSettings.KeepSteamCMDScripts
+- SteamUpdateSettings.ShowDownloadSpeedInBits
+- SteamUpdateSettings.SteamCMDBetaPassword
+- SteamUpdateSettings.ThrottleDownloadSpeed
+- SteamUpdateSettings.UpdateCheckMethod
+
 SteamWorkshop Nodes
 ^^^^^^^^^^^^^^^^^^^^
 :raw-html:`<hr>`
 
 - SteamWorkshop.*
 - SteamWorkshop.WorkshopItemIDs
-
-SteamUpdateSettings Nodes
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- SteamUpdateSettings.*
-- SteamUpdateSettings.AutomaticallyRetryOnFailure
-- SteamUpdateSettings.AutomaticRetryLimit
-- SteamUpdateSettings.UpdateCheckMethod
-- SteamUpdateSettings.SteamCMDBetaPassword
-- SteamUpdateSettings.ThrottleDownloadSpeed
-- SteamUpdateSettings.KeepSteamCMDScripts
-- SteamUpdateSettings.ShowDownloadSpeedInBits
-
-ADS Permission Nodes
-#####################
-:raw-html:`<hr>`
-
-.. note::
-	All nodes in this section will be prefixed with "ADS.", see examples :ref:`Permission Nodes`
-
-
-- ADS.*
-
-DatastoreManagement Nodes
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- DatastoreManagement.*
-- DatastoreManagement.ManageDatastores
-
-TemplateManagement Nodes
-~~~~~~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- TemplateManagement.*
-- TemplateManagement.ManageTemplates
-
-InstanceManagement Nodes
-~~~~~~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- InstanceManagement.*
-- InstanceManagement.RegisterToController
-- InstanceManagement.CreateInstance
-- InstanceManagement.SuspendInstances
-- InstanceManagement.UpgradeInstances
-- InstanceManagement.StopInstances
-- InstanceManagement.DeleteInstances
-- InstanceManagement.StartInstances
-- InstanceManagement.AttachRemoteADSInstance
-- InstanceManagement.RemoveRemoteADSInstance
-- InstanceManagement.EditRemoteTargets
-- InstanceManagement.Reconfigure
-- InstanceManagement.RestartInstances
-- InstanceManagement.RefreshConfiguration
-- InstanceManagement.RefreshRemoteConfigStores
-- InstanceManagement.ManageSuspendedInstances
-
-FileManager Permission Nodes
-#############################
-:raw-html:`<hr>`
-
-.. note::
-	All nodes in this section will be prefixed with "FileManager.", see examples :ref:`Permission Nodes`
-
-
-- FileManager.*
-
-FileManager Nodes
-~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- FileManager.*
-- FileManager.CreateArchive
-- FileManager.ExtractArchive
-- FileManager.BrowseFiles
-- FileManager.DownloadFiles
-- FileManager.UploadFiles
-- FileManager.RenameFiles
-- FileManager.ChangeFileExtension
-- FileManager.CopyFiles
-- FileManager.TrashFiles
-- FileManager.TrashDirectories
-- FileManager.EmptyTrash
-- FileManager.CreateDirectory
-- FileManager.RenameDirectories
-- FileManager.ChangeBackupExclusions
-- FileManager.DownloadFromURL
-- FileManager.ModifyAMPConfigFiles
-- FileManager.ConnectViaSFTP
-
-Core Permission Nodes
-######################
-:raw-html:`<hr>`
-
-Description: Core functionality built into AMP itself
-
-.. note::
-	All nodes in this section will be prefixed with "Core.", see examples :ref:`Permission Nodes`
-
-
-- Core.*
-
-AuditLog Nodes
-~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- AuditLog.*
-- AuditLog.ViewAuditLog
-
-Special Nodes
-~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- Special.*
-- Special.CancelOtherUsersTasks
-- Special.ViewOtherUsersTasks
-- Special.UpdateAMPInstance
-- Special.UseDevMethods
-- Special.RestartAMP
-- Special.Diagnostics
-- Special.UpgradeAMP
-- Special.BypassSettingValueLimits
-- Special.QueryLicenceInformation
-- Special.ActivateAMP
-- Special.RunSecurityCheck
-
-RoleManagement Nodes
-~~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-- RoleManagement.*
-- RoleManagement.ViewRoles
-- RoleManagement.CreateRole
-- RoleManagement.DeleteRoles
-- RoleManagement.EditRoleInfo
-- RoleManagement.EditRolePermissions
-- RoleManagement.CreateCommonRoles
-
-Scheduler Nodes
-~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-Description: Permissions required to manage AMPs scheduler
-
-- Scheduler.*
-- Scheduler.ViewSchedule
-- Scheduler.CreateTrigger
-- Scheduler.EditTrigger
-- Scheduler.CreateTask
-- Scheduler.DeleteTask
-- Scheduler.DeleteTrigger
-- Scheduler.EditTask
-- Scheduler.EditOtherUsersTasks
-
-UserManagement Nodes
-~~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-Description: Permissions that control the management of other AMP users, should be used with care so as not to allow users to increase their own permissions
-
-- UserManagement.*
-- UserManagement.ChangeRoleMembership
-- UserManagement.UpdateUserInfo
-- UserManagement.UpdateOwnAccount
-- UserManagement.DeleteUser
-- UserManagement.ResetUserPassword
-- UserManagement.CreateNewUser
-- UserManagement.ViewActiveSessions
-- UserManagement.ViewOtherUsersSessions
-- UserManagement.EndUserSessions
-- UserManagement.ViewUserInfo
-- UserManagement.AccessExternalPermissions
-
-AppManagement Nodes
-~~~~~~~~~~~~~~~~~~~~
-:raw-html:`<hr>`
-
-Description: Actions that allow the user to control the running application
-
-- AppManagement.*
-- AppManagement.StartApplication
-- AppManagement.StopApplication
-- AppManagement.RestartApplication
-- AppManagement.UpdateApplication
-- AppManagement.SendConsoleInput
-- AppManagement.ReadConsole
-
-Instances Permission Nodes
-###########################
-:raw-html:`<hr>`
-
-.. note::
-	Replace ``instance-id`` with the something like the :py:class:`~Instance.instance_id` value.
-
-- Instances.*
-- Instances.`instance-id`.Start
-- Instances.`instance-id`.Stop
-- Instances.`instance-id`.Restart
-- Instances.`instance-id`.Update
-- Instances.`instance-id`.Manage

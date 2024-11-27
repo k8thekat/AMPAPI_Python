@@ -1,4 +1,5 @@
 from pprint import pprint
+from typing import Union
 
 from ampapi import *
 from ampapi.dataclass import AnalyticsFilter, AnalyticsSummary, APIParams, Players
@@ -40,7 +41,7 @@ async def Sample_API() -> None:
     arkinstance.format_data = True
 
     # You can take a backup really easily.
-    await arkinstance.take_backup(title="ARK1_backup", description="This is an ARK backup", sticky=True)
+    await arkinstance.take_backup(name="ARK1_backup", description="This is an ARK backup", sticky=True)
 
     # Then you can call instance type specific API endpoints.
     await mcinstance.mc_add_to_whitelist(user_or_uuid="k8_thekat")
@@ -83,7 +84,7 @@ async def Sample_API() -> None:
 
     # Want to kick a random person? Here ya go~
     players: list[Players] = await mcinstance.get_user_list()
-    await mcinstance.mc_kick_user_by_id(id_=players[0].id)
+    await mcinstance.mc_kick_user_by_id(user_id=players[0].uuid)
 
     # Analytics Introduction -
     # Simply call the below method.

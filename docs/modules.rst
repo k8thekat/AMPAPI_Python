@@ -1,65 +1,57 @@
 .. currentmodule:: ampapi
 
-Base
-~~~~~
-
-.. autoclass:: Base
-   :members:
-
 
 Bridge
 ~~~~~~~
+This is used to handle your login credentials and AMP Login Sessions.
 
 .. autoclass:: Bridge
    :members:
    :exclude-members: _get_bridge
 
 
-AMP Controller Instance
-~~~~~~~~~~~~~~~~~~~~~~~~
+Base
+~~~~~~~~~~~~
+All Modules/Plugins inherit from this class.
 
-.. autoclass:: AMPControllerInstance
-   :members:
-
-
-AMP Instance
-~~~~~~~~~~~~~
-
-.. autoclass:: AMPInstance
-   :members:
-   :exclude-members: has_controller
-
-
-AMP ADS Instance
-~~~~~~~~~~~~~~~~~
-
-.. autoclass:: AMPADSInstance
-   :members:
-
-
-AMP Minecraft Instance
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: AMPMinecraftInstance
+.. autoclass:: Base
    :members:
 
 
 ADS Module
 ~~~~~~~~~~~
-
 .. autoclass:: ADSModule
    :members:
+   :show-inheritance:
 
-
-Analytics
-~~~~~~~~~~
-
+Analytics Module
+~~~~~~~~~~~~~~~~~
 .. autoclass:: AnalyticsPlugin
    :members:
+   :show-inheritance:
 
-
-API Utility
+Core Module
 ~~~~~~~~~~~~
-
-.. autoclass:: APIUtil
+.. autoclass:: Core
    :members:
+   :show-inheritance:
+
+Email Sender Module
+~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: EmailSenderPlugin
+   :members:
+   :show-inheritance:
+
+File Manager Module
+~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: FileManagerPlugin
+   :members:
+   :show-inheritance:
+
+Local File Backup Module
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: LocalFileBackupPlugin
+   :members:
+   :show-inheritance:
+
+

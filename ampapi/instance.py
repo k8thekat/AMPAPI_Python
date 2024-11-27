@@ -31,7 +31,7 @@ class AMPInstance(
     Core, EmailSenderPlugin, LocalFileBackupPlugin, FileManagerPlugin, AnalyticsPlugin, Instance, InstanceStatus, Updates
 ):
     """
-    AMPInstance represents an entire Instance from AMP that is not AMP Controller.\n
+    :class:`AMPInstance` represents an entire Instance from AMP that is not AMP Controller, AMP Target/ADS or Minecraft.\n
     This is similar to what you get when selecting 'Manage' an instance from the Web GUI.
 
     .. note::
@@ -59,7 +59,7 @@ class AMPInstance(
     _controller: Union[AMPControllerInstance, None]
 
     def __init__(self, data: Union[Instance, None], controller: Union[AMPControllerInstance, None] = None) -> None:
-        self._logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
+        self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
         super().__init__()
 
         if isinstance(data, Instance):

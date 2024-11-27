@@ -6,7 +6,6 @@ from .dataclass import (
     Application,
     Controller,
     CreateInstance,
-    DeploymentTemplate,
     Endpoints,
     Instance,
     InstanceDatastore,
@@ -20,6 +19,7 @@ from .dataclass import (
     RunningTask,
     Template,
 )
+from .modules import DeploymentTemplate
 
 __all__ = ("ADSModule",)
 
@@ -36,6 +36,7 @@ class ADSModule(Base):
     .. note::
         Every function in this class requires the Instance type be of either :class:`AMPADSInstance`, :class:`ADSModule` or the :attr:`~ADSModule.module` attribute to be "ADS".\n
         If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
+
 
     """
 
@@ -513,7 +514,7 @@ class ADSModule(Base):
         Extracts everything from an archive.
 
         .. note::
-            The parameter ``source_archive`` will be sanitized. See :meth:`~ADSModule.sanitized_path`
+            The parameter ``source_archive`` will be sanitized. See :meth:`~Base.sanitized_path`
 
 
         Parameters

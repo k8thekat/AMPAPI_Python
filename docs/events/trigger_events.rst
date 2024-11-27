@@ -5,19 +5,31 @@ Trigger Events
 ===============
 :raw-html:`<hr>`
 
-Testing....
+
 
 Events Information
 #####################
 :raw-html:`<hr>`
 
+
+
+All of these triggers can be accessed via :attr:`~Core.triggers` which when accessing the respective Trigger name in snake case will return the proper Trigger ID.
+
+.. warning::
+    Each Instance will have unique TriggerIDs, you will get errors/unexpected results if you use another Instances Trigger IDs for the same Trigger.
+
+
 .. note::
-	All of these triggers will have a unique ID field that is generated from :meth:`~Core.get_triggers` due to uniqueness.
+    You will need to call :meth:`Core.get_triggers` first to populate the attributes of the :class:`TriggerID` class.
 
 
 
-***PLACE HOLDER TEXT***
 
+
+:raw-html:`<hr>`
+**Trigger Description**: A backup finishes archiving.
+
+- Emits: Reason | Id | Filename | WasCreatedAutomatically
 
 :raw-html:`<hr>`
 **Trigger Description**: A backup finishes restoring.
@@ -80,6 +92,11 @@ Events Information
 - Emits: User | UserID
 
 :raw-html:`<hr>`
+**Trigger Description**: A player performs an action
+
+- Emits: User | UserID | Action
+
+:raw-html:`<hr>`
 **Trigger Description**: A player sends a chat message
 
 - Emits: User | UserID | Message
@@ -99,14 +116,22 @@ Events Information
 - Emits: Reason | Id | Filename | WasCreatedAutomatically
 
 :raw-html:`<hr>`
-**Trigger Description**: The application state changes
+**Trigger Description**: An update is NOT available via SteamCMD
 
-- Emits: PreviousState | NextState
 
 :raw-html:`<hr>`
-**Trigger Description**: The last player leaves the server
+**Trigger Description**: An update is available via SteamCMD
 
-- Emits: User | UserID
+
+:raw-html:`<hr>`
+**Trigger Description**: The Minecraft Server stops unexpectedly
+
+- Emits: Time
+
+:raw-html:`<hr>`
+**Trigger Description**: The Minecraft Server watchdog forced a shutdown (server unresponsive)
+
+- Emits: Time
 
 :raw-html:`<hr>`
 **Trigger Description**: The Minecraft server is unable to keep up
@@ -119,9 +144,14 @@ Events Information
 - Emits: Time
 
 :raw-html:`<hr>`
-**Trigger Description**: The Minecraft Server watchdog forced a shutdown (server unresponsive)
+**Trigger Description**: The application state changes
 
-- Emits: Time
+- Emits: PreviousState | NextState
+
+:raw-html:`<hr>`
+**Trigger Description**: The last player leaves the server
+
+- Emits: User | UserID
 
 :raw-html:`<hr>`
 **Trigger Description**: The server enters sleep mode

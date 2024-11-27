@@ -16,8 +16,9 @@ from dataclass_wizard import fromdict
 from pyotp import TOTP
 
 from .bridge import Bridge
-from .dataclass import APISession, DeploymentTemplate, LoginResults
+from .dataclass import APISession, Diagnostics, LoginResults, VersionInfo
 from .enums import *
+from .modules import DeploymentTemplate
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Iterable
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self, TypeVar
 
     from .dataclass import Controller, Instance, InstanceStatus, Updates
+    from .modules import APIResponseDataTableAlias
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -65,14 +67,14 @@ class Base:
     """
 
     # Private Attributes
-    _logger: logging.Logger = logging.getLogger()
+    logger: logging.Logger = logging.getLogger()
     _bridge: Bridge
 
     # Public Attributes
     url: str = ""
     instance_id: str = "0"
     session_ttl: int = 240
-    module: str  # todo - make this var unchangeable via private attr in future release.
+    module: str  # TODO - make this var unchangeable via private attr in future release.
 
     # Error response strings.
     _ads_only: str = "This API call is only available to <class:`ADSModule`> type classes."
@@ -82,7 +84,8 @@ class Base:
     _no_controller: str = "The function failed as the <class:`AMPControllerInstance`> was not properly initialized and set."
     _no_data: str = "Failed to receive any data from post request."
     _unauthorized_access: str = "The user does not have the required permissions to interact with this instance."
-    _instance_offline: str = "The requested instance is not available at this time."
+    _instance_offline: str = "The requested Instance is not available at this time. | URL: %s"
+    _version_unavailable: str = "The API call %s is no longer available at this version of AMP %s"
 
     # These are used to handle JSON keys that cannot be parsed properly via regex.
     # See :func:`camel_to_snake_re`
@@ -97,8 +100,8 @@ class Base:
     def __init__(self) -> None:
         bridge: Bridge = Bridge._get_bridge()
         # Validate the bridge object is at the same memory address.
-        self._logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
-        self._logger.debug("bridge object -> %s", pformat(bridge))
+        self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
+        self.logger.debug("bridge object -> %s", pformat(bridge))
 
         if isinstance(bridge, Bridge):
             self.parse_bridge(bridge=bridge)
@@ -167,7 +170,7 @@ class Base:
         api: str,
         parameters: Union[None, dict[str, Any]] = None,
         format_data: Union[bool, None] = None,
-        format_: Union[type[X], type[DeploymentTemplate], None] = None,
+        format_: Union[type[X], type[APIResponseDataTableAlias], None] = None,
         sanitize_json: bool = True,
         _use_from_dict: bool = True,
         _auto_unpack: bool = True,
@@ -221,7 +224,7 @@ class Base:
 
         header: dict = {"Accept": "text/javascript"}
         post_req: ClientResponse | None
-        self._logger.debug("_call_api -> %s was called with %s", api, parameters)
+        self.logger.debug("_call_api -> %s was called with %s", api, parameters)
 
         # This should save us some boiler plate code throughout our API calls.
         if parameters == None:
@@ -234,14 +237,14 @@ class Base:
         json_data: str = json.dumps(obj=parameters)
 
         _url: str = self.url + "/API/" + api
-        self._logger.debug("DEBUG %s | %s | %s | %s", self.instance_id, api, _url, pformat(json_data))
+        self.logger.debug("DEBUG %s | %s | %s | %s", self.instance_id, api, _url, pformat(json_data))
         async with aiohttp.ClientSession() as session:
             try:
                 post_req = await session.post(url=_url, headers=header, data=json_data)
             # TODO - Need to not catch all Excepts..
             # So I can handle each exception properly.
             except Exception as e:
-                self._logger.error("DEBUG _call_api exception type: %s", type(e))
+                self.logger.error("DEBUG _call_api exception type: %s", type(e))
                 raise ValueError(e)
 
             if post_req.content_length == 0:
@@ -258,8 +261,8 @@ class Base:
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-        self._logger.debug("DEBUG API CALL----> %s | %s | %s", api, type(post_req_json), parameters)
-        self._logger.debug("DEBUG %s", pformat(post_req_json))
+        self.logger.debug("DEBUG API CALL----> %s | %s | %s", api, type(post_req_json), parameters)
+        self.logger.debug("DEBUG %s", pformat(post_req_json))
         if sanitize_json is True:
             post_req_json = self.sanitize_json(post_req_json)
         if isinstance(post_req_json, dict):
@@ -268,13 +271,13 @@ class Base:
                 if isinstance(post_req_json, str) and (
                     post_req_json == "Unauthorized Access" or post_req_json == "Instance Unavailable"
                 ):
-                    self._logger.error("%s failed because of %s", api, post_req_json)
+                    self.logger.error("%s failed because of %s", api, post_req_json)
                     api_session = APISession(id="0", ttl=datetime.now())
                     self._bridge._sessions.update({self.instance_id: api_session})
                     if post_req_json == "Unauthorized Access":
                         raise PermissionError(self._unauthorized_access)
                     elif post_req_json == "Instance Unavailable":
-                        raise ConnectionError(self._instance_offline)
+                        raise ConnectionError(self._instance_offline, self.url)
 
             elif api == "Core/Login":
                 return LoginResults(**post_req_json)
@@ -283,14 +286,14 @@ class Base:
                 post_req_json = post_req_json["result"]
 
                 if isinstance(post_req_json, bool) and post_req_json is False:
-                    self._logger.error("%s failed because of %s", api, post_req_json)
+                    self.logger.error("%s failed because of %s", api, post_req_json)
                     raise ValueError(self._failed_api)
 
             elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] == False:
-                self._logger.error("%s failed because of Status: %s", api, post_req_json)
+                self.logger.error("%s failed because of Status: %s", api, post_req_json)
                 return ValueError(self._failed_api)
 
-        self._logger.debug(
+        self.logger.debug(
             "DEBUG _call_api | format_data = %s | FORMAT_DATA = %s | FORMAT-> %s", format_data, FORMAT_DATA, format_
         )
         if (format_ is None or format_data is False) or (format_data is None and FORMAT_DATA is False):
@@ -362,11 +365,11 @@ class Base:
                         return result
 
                     else:
-                        self._logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
+                        self.logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
                         return result
 
                 except Exception as e:
-                    self._logger.warning("Core/Login Exception:", exc_info=e)
+                    self.logger.warning("Core/Login Exception:", exc_info=e)
         else:
             return
 
@@ -483,10 +486,10 @@ class Base:
     @staticmethod
     def json_to_dataclass(
         json: Iterable[Any],
-        format_: Union[type[X], type[DeploymentTemplate]],
+        format_: Union[type[X], type[APIResponseDataTableAlias]],
         _use_from_dict: bool,
         _auto_unpack: bool,
-    ) -> X | list[DeploymentTemplate | X] | DeploymentTemplate | None:
+    ) -> X | list[APIResponseDataTableAlias | X] | APIResponseDataTableAlias | None:
         """
         Format the JSON response data to a dataclass.
 
@@ -693,6 +696,10 @@ class Base:
         if path.startswith("."):
             path = path[1:]
 
+        # Remove starting slashes, all paths start relative to Instance root.
+        if path.startswith("/"):
+            path = path[1:]
+
         return path
 
     @staticmethod
@@ -717,3 +724,35 @@ class Base:
                 continue
             fmt.append(character)
         return "".join(fmt)
+
+    async def version_validation(self, version: VersionInfo) -> None:
+        """
+        Compares the Version of the application/Instance against the version that is passed in.
+
+
+        Parameters
+        -----------
+        version: :class:`VersionInfo`
+            The version to compare against the application.
+        Raises
+        -------
+        :exc:`RuntimeError`
+            The application version no longer supports this API call..
+        """
+
+        result: Any = await self._call_api(
+            api="Core/GetDiagnosticsInfo",
+            format_data=True,
+            format_=Diagnostics,
+            _use_from_dict=False,
+            _auto_unpack=True,
+        )
+
+        if isinstance(result, Diagnostics) and isinstance(result.application_version, VersionInfo):
+            _version: VersionInfo = result.application_version
+            if result.application_version < version:
+                raise RuntimeError(self._version_unavailable, "`Core/GetWebserverMetrics`", _version)
+        else:
+            self.logger.warning(
+                "Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`"
+            )

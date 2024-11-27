@@ -44,12 +44,28 @@ Basic Usage
 
 .. toctree::
     :maxdepth: 3
-    :caption: Class Modules:
+    :caption: API Classes:
 
     modules
 
+.. toctree:: 
+    :maxdepth: 3
+    :caption: AMP Instance Classes:
+
+    instances
+
+
+.. toctree:: 
+    :maxdepth: 3
+    :caption: Types:
+
+    types
+
+
 .. toctree::
-    :maxdepth: 1
+    :name: Documentation
     :caption: Docs:
-    
-    docs
+    :glob:
+
+    events/*
+    nodes/* 
