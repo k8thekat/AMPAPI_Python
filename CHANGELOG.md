@@ -1,3 +1,13 @@
+## Version - 1.0.2 - [08eaab4](https://github.com/k8thekat/AMPAPI_Python/commit/08eaab4)
+#### Changelog.md
+- Version info from `1.0.1` added.
+#### __init__.py
+- Version bump to `1.0.2`
+
+#### Overall
+- Changed the Pypi project name from `cubecoders_amp_api_wrapper` to `cc-ampapi`. Thanks @fret
+- Added rdt.yaml.
+
 ## Version - 1.0.1 - [448e6ee](https://github.com/k8thekat/AMPAPI_Python/commit/448e6ee)
 #### Changelog.md
 - Version info from `1.0.0` added.
