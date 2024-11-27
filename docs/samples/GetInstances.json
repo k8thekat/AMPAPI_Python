@@ -1,0 +1,1223 @@
+[{
+        "Id": 9,
+        "InstanceId": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+        "FriendlyName": "AMP01",
+        "Description": "",
+        "Disabled": false,
+        "IsRemote": true,
+        "Platform": {
+            "CPUInfo": {
+                "Sockets": 1,
+                "Cores": 2,
+                "Threads": 4,
+                "Vendor": "GenuineIntel",
+                "ModelName": "Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz",
+                "TotalCores": 2,
+                "TotalThreads": 4
+            },
+            "InstalledRAMMB": 9216,
+            "OS": 2,
+            "PlatformName": "Debian GNU/Linux 12",
+            "SystemType": 1,
+            "Virtualization": 12,
+            "DockerNetworkIsHostMode": false
+        },
+        "Datastores": [
+            {
+                "Id": 1,
+                "FriendlyName": "Default Datastore"
+            }
+        ],
+        "CreatesInContainers": true,
+        "State": 20,
+        "StateReason": "",
+        "CanCreate": true,
+        "LastUpdated": "/Date(1722527400266)/",
+        "AvailableInstances": [
+            {
+                "InstanceID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "TargetID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "InstanceName": "ADS01",
+                "FriendlyName": "ADS",
+                "Module": "ADS",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "0.0.0.0",
+                "Port": 8080,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": -1,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 0,
+                "Suspended": false,
+                "IsContainerInstance": false,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {},
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Game Server Address",
+                        "Endpoint": "0.0.0.0:12820",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2223",
+                        "Uri": "sftp://0.0.0.0:2223"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2223",
+                    "Core.AMP.RequireActivation": "True",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2223,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":1,\"Port\":12820,\"Name\":\"Metrics Server Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                }
+            },
+            {
+                "InstanceID": "882ac103-69bb-4f00-b511-5323ba262afa",
+                "TargetID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "InstanceName": "Proxy01",
+                "FriendlyName": "Primary Proxy",
+                "Description": "",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8081,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "SpecificDockerImage": "",
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 589,
+                        "MaxValue": 768,
+                        "Percent": 76,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 999,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25565",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2224",
+                        "Uri": "sftp://0.0.0.0:2224"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2224",
+                    "MinecraftModule.Minecraft.PortNumber": "25565",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2224,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":25565,\"Name\":\"Game Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            },
+            {
+                "InstanceID": "d8cde47c-f63d-4105-95db-ca46e2461aa5",
+                "TargetID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "InstanceName": "Proxy02",
+                "FriendlyName": "Fallback Proxy",
+                "Description": "",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 4,
+                    "MajorRevision": 0,
+                    "MinorRevision": 4
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8082,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 0,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "SpecificDockerImage": "",
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 1024,
+                        "Percent": 0,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 10,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25566",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2225",
+                        "Uri": "sftp://0.0.0.0:2225"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2225",
+                    "MinecraftModule.Minecraft.PortNumber": "25566",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2225,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":25566,\"Name\":\"Game Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            },
+            {
+                "InstanceID": "23830c8a-2780-4a48-bf3e-9cfbdedce6e7",
+                "TargetID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "InstanceName": "Geyser01",
+                "FriendlyName": "Geyser",
+                "Description": "",
+                "Module": "GenericModule",
+                "ModuleDisplayName": "Geyser",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8083,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 1024,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 200,
+                "ContainerCPUs": 0.0,
+                "SpecificDockerImage": "",
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 609,
+                        "MaxValue": 1024,
+                        "Percent": 59,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Application Address",
+                        "Endpoint": "0.0.0.0:19132",
+                        "Uri": "steam://connect/0.0.0.0:19132"
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:19132",
+                        "Uri": "steam://connect/0.0.0.0:19132"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "GenericModule.Meta.DisplayName": "Geyser",
+                    "GenericModule.Meta.Description": "Geyser Minecraft Proxy",
+                    "GenericModule.Meta.OS": "Windows, Linux",
+                    "GenericModule.Meta.iAarchSupport": "Native",
+                    "GenericModule.Meta.Arch": "All",
+                    "GenericModule.Meta.Author": "Greelan",
+                    "GenericModule.Meta.URL": "https://geysermc.org/",
+                    "GenericModule.Meta.DisplayImageSource": "url:https://geysermc.org/img/geyser.png",
+                    "GenericModule.Meta.EndpointURIFormat": "steam://connect/{0}",
+                    "GenericModule.Meta.ConfigManifest": "geyserconfig.json",
+                    "GenericModule.Meta.MetaConfigManifest": "",
+                    "GenericModule.Meta.ConfigRoot": "geyser.kvp",
+                    "GenericModule.Meta.MinAMPVersion": "2.4.3.2",
+                    "GenericModule.Meta.SpecificDockerImage": "",
+                    "GenericModule.Meta.DockerRequired": "False",
+                    "GenericModule.Meta.ContainerPolicy": "Supported",
+                    "GenericModule.Meta.ContainerPolicyReason": "",
+                    "GenericModule.Meta.Prerequsites": "[]",
+                    "GenericModule.Meta.ConfigReleaseState": "NotSpecified",
+                    "GenericModule.Meta.NoCommercialUsage": "False",
+                    "GenericModule.Meta.AppConfigId": "54b81b0a-ad03-4cc2-afa1-703c73f15456",
+                    "GenericModule.App.ApplicationIPBinding": "0.0.0.0",
+                    "GenericModule.App.Ports": "[{\"Protocol\":1,\"Port\":19132,\"Offset\":0,\"Range\":1,\"Ref\":\"ServerPort\",\"Name\":\"Server Port\",\"Description\":\"Port for server traffic\",\"IsDelayedOpen\":false,\"Hidden\":false,\"ChildPorts\":null,\"Required\":false}]",
+                    "GenericModule.App.PrimaryApplicationPortRef": "ServerPort",
+                    "GenericModule.Meta.OriginalSource": "CubeCoders-AMPTemplates",
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2226",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2226,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":1,\"Port\":19132,\"Name\":\"Server Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                },
+                "DisplayImageSource": "url:https://geysermc.org/img/geyser.png"
+            },
+            {
+                "InstanceID": "b6305b42-d080-4342-b98d-a44fd286a21f",
+                "TargetID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "InstanceName": "Hub01",
+                "FriendlyName": "Hub",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8084,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 2385,
+                        "MaxValue": 2048,
+                        "Percent": 0,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 999,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    },
+                    "TPS": {
+                        "RawValue": 20,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "TPS",
+                        "Color": "#9B5B23",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25567",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2227",
+                        "Uri": "sftp://0.0.0.0:2227"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2227",
+                    "MinecraftModule.Minecraft.PortNumber": "25567"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            },
+            {
+                "InstanceID": "fa24b4ab-1f06-4b03-9a51-222f7015544b",
+                "TargetID": "b4da967e-6329-41e9-b3e0-bcb7b18eba9d",
+                "InstanceName": "Limbo01",
+                "FriendlyName": "Limbo",
+                "Description": "",
+                "Module": "GenericModule",
+                "ModuleDisplayName": "Java App Runner",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8085,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 1024,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 200,
+                "ContainerCPUs": 0.0,
+                "SpecificDockerImage": "cubecoders/ampbase:java",
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 89,
+                        "MaxValue": 1024,
+                        "Percent": 8,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Application Address",
+                        "Endpoint": "0.0.0.0:25568",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:25568",
+                        "Uri": ""
+                    }
+                ],
+                "DeploymentArgs": {
+                    "GenericModule.Meta.DisplayName": "Java App Runner",
+                    "GenericModule.Meta.Description": "Java App Runner",
+                    "GenericModule.Meta.OS": "Windows, Linux",
+                    "GenericModule.Meta.AarchSupport": "Native",
+                    "GenericModule.Meta.Arch": "All",
+                    "GenericModule.Meta.Author": "Greelan",
+                    "GenericModule.Meta.URL": "",
+                    "GenericModule.Meta.DisplayImageSource": "url:https://1000logos.net/wp-content/uploads/2020/09/Java-Emblem.jpg",
+                    "GenericModule.Meta.EndpointURIFormat": "",
+                    "GenericModule.Meta.ConfigManifest": "java-app-runnerconfig.json",
+                    "GenericModule.Meta.MetaConfigManifest": "java-app-runnermetaconfig.json",
+                    "GenericModule.Meta.ConfigRoot": "java-app-runner.kvp",
+                    "GenericModule.Meta.MinAMPVersion": "2.5.0.8",
+                    "GenericModule.Meta.SpecificDockerImage": "cubecoders/ampbase:java",
+                    "GenericModule.Meta.DockerRequired": "False",
+                    "GenericModule.Meta.DockerBaseReadOnly": "False",
+                    "GenericModule.Meta.ContainerPolicy": "Supported",
+                    "GenericModule.Meta.ContainerPolicyReason": "",
+                    "GenericModule.Meta.ExtraSetupStepsURI": "",
+                    "GenericModule.Meta.Prerequsites": "[]",
+                    "GenericModule.Meta.ExtraContainerPackages": "[]",
+                    "GenericModule.Meta.ConfigReleaseState": "NotSpecified",
+                    "GenericModule.Meta.NoCommercialUsage": "False",
+                    "GenericModule.Meta.ConfigVersion": "0.9",
+                    "GenericModule.Meta.ReleaseNotes": "",
+                    "GenericModule.Meta.BreakingReleaseNotes": "",
+                    "GenericModule.Meta.AppConfigId": "521c9ad3-f8cd-40b2-9026-9122f9490405",
+                    "GenericModule.App.ApplicationIPBinding": "0.0.0.0",
+                    "GenericModule.App.Ports": "[{\"Protocol\":2,\"Port\":25568,\"Offset\":0,\"Range\":1,\"Ref\":\"ServerPort\",\"Name\":\"Main Port\",\"Description\":\"Main port for incoming traffic\",\"IsDelayedOpen\":false,\"Hidden\":false,\"ChildPorts\":null,\"Required\":false}]",
+                    "GenericModule.App.PrimaryApplicationPortRef": "ServerPort",
+                    "GenericModule.Meta.OriginalSource": "Greelan-AMPTemplates-dev",
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2228",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":2,\"Port\":27020,\"Name\":\"Application Admin Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":27015,\"Name\":\"Application Port 1\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":27016,\"Name\":\"Application Port 2\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":27017,\"Name\":\"Application Port 3\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":25568,\"Name\":\"Main Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                },
+                "DisplayImageSource": "url:https://1000logos.net/wp-content/uploads/2020/09/Java-Emblem.jpg"
+            },
+            {
+                "InstanceID": "95f5bc49-e476-4eff-ae1a-ea42ad706a2c",
+                "TargetID": "41ed3ff3-37e2-41bc-a342-341fa3936bfa",
+                "InstanceName": "Test201",
+                "FriendlyName": "Test2",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8086,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": false,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 547,
+                        "MaxValue": 1024,
+                        "Percent": 53,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25569",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2229",
+                        "Uri": "sftp://0.0.0.0:2229"
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2229",
+                        "Uri": "sftp://0.0.0.0:2229"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2229",
+                    "MinecraftModule.Minecraft.PortNumber": "25569"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            }
+        ],
+        "AvailableIPs": [
+            "0.0.0.0",
+            "127.0.0.1",
+            "::1",
+            "172.16.1.173",
+            "172.17.0.1"
+        ],
+        "Tags": [],
+        "TagsList": "[]",
+        "URL": "http://172.16.1.173:8080"
+    },
+    {
+        
+        "Id": 10, 
+        "InstanceId": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+        "FriendlyName": "AMP02",
+        "Description": "",
+        "Disabled": false,
+        "IsRemote": true,
+        "Platform": {
+            "CPUInfo": {
+                "Sockets": 1,
+                "Cores": 4,
+                "Threads": 4,
+                "Vendor": "GenuineIntel",
+                "ModelName": "Intel(R) Core(TM) i5-4570 CPU @ 3.20GHz",
+                "TotalCores": 4,
+                "TotalThreads": 4
+            },
+            "InstalledRAMMB": 10240,
+            "OS": 2,
+            "PlatformName": "Debian GNU/Linux 12",
+            "SystemType": 1,
+            "Virtualization": 12,
+            "DockerNetworkIsHostMode": false
+        },
+        "Datastores": [
+            {
+                "Id": 1,
+                "FriendlyName": "Default Datastore"
+            }
+        ],
+        "CreatesInContainers": true,
+        "State": 20,
+        "StateReason": "",
+        "CanCreate": true,
+        "LastUpdated": "/Date(1722527400269)/",
+        "AvailableInstances": [
+            {
+                "InstanceID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "TargetID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "InstanceName": "ADS01",
+                "FriendlyName": "ADS",
+                "Module": "ADS",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "0.0.0.0",
+                "Port": 8080,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": -1,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 0,
+                "Suspended": false,
+                "IsContainerInstance": false,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {},
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Game Server Address",
+                        "Endpoint": "0.0.0.0:12820",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2223",
+                        "Uri": "sftp://0.0.0.0:2223"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2223",
+                    "Core.AMP.RequireActivation": "True",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2223,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":1,\"Port\":12820,\"Name\":\"Metrics Server Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                }
+            },
+            {
+                "InstanceID": "d89e7d65-692f-4ee8-8c2d-c2effcc77211",
+                "TargetID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "InstanceName": "ErinMemorialServer01",
+                "FriendlyName": "ErinMemorialServer",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8081,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 1967,
+                        "MaxValue": 5120,
+                        "Percent": 38,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 32,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    },
+                    "TPS": {
+                        "RawValue": 20,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "TPS",
+                        "Color": "#9B5B23",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25565",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2224",
+                        "Uri": "sftp://0.0.0.0:2224"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2224",
+                    "MinecraftModule.Minecraft.PortNumber": "25565"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            },
+            {
+                "InstanceID": "55e14afd-892a-4efa-b191-47d83db4e3b4",
+                "TargetID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "InstanceName": "VRisingSyd01",
+                "FriendlyName": "VRisingSyd",
+                "Module": "GenericModule",
+                "ModuleDisplayName": "V Rising",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8082,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 0,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "SpecificDockerImage": "cubecoders/ampbase:wine8",
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 20799,
+                        "Percent": 0,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 40,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Application Address",
+                        "Endpoint": "0.0.0.0:9876",
+                        "Uri": "steam://connect/0.0.0.0:9877"
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:9876",
+                        "Uri": "steam://connect/0.0.0.0:9877"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "GenericModule.Meta.DisplayName": "V Rising",
+                    "GenericModule.Meta.Description": "V Rising Dedicated Server with BepInEx Option",
+                    "GenericModule.Meta.OS": "Windows, Linux",
+                    "GenericModule.Meta.Arch": "x86_64",
+                    "GenericModule.Meta.Author": "Greelan, IceOfWraith",
+                    "GenericModule.Meta.URL": "https://store.steampowered.com/app/1604030/V_Rising/",
+                    "GenericModule.Meta.DisplayImageSource": "steam:1604030",
+                    "GenericModule.Meta.EndpointURIFormat": "steam://connect/{ip}:{GenericModule.App.Ports.$ApplicationPort2}",
+                    "GenericModule.Meta.ConfigManifest": "v-risingconfig.json",
+                    "GenericModule.Meta.MetaConfigManifest": "v-risingmetaconfig.json",
+                    "GenericModule.Meta.ConfigRoot": "v-rising.kvp",
+                    "GenericModule.Meta.MinAMPVersion": "2.5.0.4",
+                    "GenericModule.Meta.SpecificDockerImage": "cubecoders/ampbase:wine8",
+                    "GenericModule.Meta.DockerRequired": "False",
+                    "GenericModule.Meta.ContainerPolicy": "SupportedOnWindows, RecommendedOnLinux",
+                    "GenericModule.Meta.ContainerPolicyReason": "The server requires Wine (Wine 9 stable build, and cabextract, for mods) and Xvfb to install and run on Linux. Using a container avoids the need to install these dependencies on the host.",
+                    "GenericModule.Meta.Prerequsites": "[]",
+                    "GenericModule.Meta.ExtraContainerPackages": "[]",
+                    "GenericModule.Meta.ConfigReleaseState": "NotSpecified",
+                    "GenericModule.Meta.AppConfigId": "0ff28908-3b0b-4cd4-b9bd-0d468d676032",
+                    "GenericModule.App.ApplicationIPBinding": "0.0.0.0",
+                    "GenericModule.App.Ports": "[{\"Protocol\":1,\"Port\":9876,\"Offset\":0,\"Range\":1,\"Ref\":\"ApplicationPort1\",\"Name\":\"Game Port\",\"Description\":\"Server Game Port\",\"IsDelayedOpen\":false,\"Hidden\":false,\"ChildPorts\":null,\"Required\":false},{\"Protocol\":1,\"Port\":9877,\"Offset\":0,\"Range\":1,\"Ref\":\"ApplicationPort2\",\"Name\":\"Steam Query Port\",\"Description\":\"Steam Query Port\",\"IsDelayedOpen\":false,\"Hidden\":false,\"ChildPorts\":null,\"Required\":false},{\"Protocol\":0,\"Port\":25575,\"Offset\":0,\"Range\":1,\"Ref\":\"RemoteAdminPort\",\"Name\":\"RCON Port\",\"Description\":\"RCON Connection Port\",\"IsDelayedOpen\":false,\"Hidden\":false,\"ChildPorts\":null,\"Required\":false}]",
+                    "GenericModule.App.PrimaryApplicationPortRef": "ApplicationPort1",
+                    "GenericModule.Meta.OriginalSource": "CubeCoders-AMPTemplates",
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2225",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2225,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":1,\"Port\":9876,\"Name\":\"Game Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":1,\"Port\":9877,\"Name\":\"Steam Query Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":0,\"Port\":25575,\"Name\":\"RCON Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                },
+                "DisplayImageSource": "steam:1604030"
+            },
+            {
+                "InstanceID": "a886ff71-2116-40f9-9064-14ce630a15e9",
+                "TargetID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "InstanceName": "FTBInfinityEvolved01",
+                "FriendlyName": "FTBInfinityEvolved",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8083,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": false,
+                "AppState": 0,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 8192,
+                        "Percent": 0,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25680",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2226",
+                        "Uri": "sftp://0.0.0.0:2226"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2226",
+                    "MinecraftModule.Minecraft.PortNumber": "25680",
+                    "Core.Monitoring.MonitorPorts": "[{\"Protocol\":0,\"Port\":2226,\"Name\":\"SFTP Port\",\"IsDelayedOpen\":false,\"Required\":false},{\"Protocol\":2,\"Port\":25680,\"Name\":\"Game Port\",\"IsDelayedOpen\":false,\"Required\":false}]"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            },
+            {
+                "InstanceID": "4d85417e-b5cf-4bf9-a479-4c6dc2912638",
+                "TargetID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "InstanceName": "Skyrim01",
+                "FriendlyName": "Skyrim",
+                "Module": "GenericModule",
+                "ModuleDisplayName": "Skyrim Together Reborn",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8084,
+                "Daemon": false,
+                "DaemonAutostart": true,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 0,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "SpecificDockerImage": "cubecoders/ampbase:wine",
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 20799,
+                        "Percent": 0,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 8,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Application Address",
+                        "Endpoint": "0.0.0.0:15000",
+                        "Uri": "steam://connect/0.0.0.0:15000"
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:15000",
+                        "Uri": "steam://connect/0.0.0.0:15000"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "GenericModule.Meta.DisplayName": "Skyrim Together Reborn",
+                    "GenericModule.Meta.Description": "Skyrim Together Reborn Server",
+                    "GenericModule.Meta.OS": "Windows, Linux",
+                    "GenericModule.Meta.AarchSupport": "Unknown",
+                    "GenericModule.Meta.Arch": "x86_64",
+                    "GenericModule.Meta.Author": "RFrost619, Greelan",
+                    "GenericModule.Meta.URL": "https://skyrim-together.com/",
+                    "GenericModule.Meta.DisplayImageSource": "steam:489830",
+                    "GenericModule.Meta.EndpointURIFormat": "steam://connect/{0}",
+                    "GenericModule.Meta.ConfigManifest": "skyrim-together-rebornconfig.json",
+                    "GenericModule.Meta.MetaConfigManifest": "skyrim-together-rebornmetaconfig.json",
+                    "GenericModule.Meta.ConfigRoot": "skyrim-together-reborn.kvp",
+                    "GenericModule.Meta.MinAMPVersion": "2.5.0.6",
+                    "GenericModule.Meta.SpecificDockerImage": "cubecoders/ampbase:wine",
+                    "GenericModule.Meta.DockerRequired": "False",
+                    "GenericModule.Meta.DockerBaseReadOnly": "False",
+                    "GenericModule.Meta.ContainerPolicy": "SupportedOnWindows, RecommendedOnLinux",
+                    "GenericModule.Meta.ContainerPolicyReason": "The server requires Wine to run on Linux. Using a container avoids the need to install this dependency on the host.",
+                    "GenericModule.Meta.ExtraSetupStepsURI": "",
+                    "GenericModule.Meta.Prerequsites": "[]",
+                    "GenericModule.Meta.ExtraContainerPackages": "[]",
+                    "GenericModule.Meta.ConfigReleaseState": "NotSpecified",
+                    "GenericModule.Meta.NoCommercialUsage": "False",
+                    "GenericModule.Meta.ConfigVersion": "0.0.0.0",
+                    "GenericModule.Meta.ReleaseNotes": "",
+                    "GenericModule.Meta.BreakingReleaseNotes": "",
+                    "GenericModule.Meta.OriginalSource": "CubeCoders-AMPTemplates",
+                    "GenericModule.Meta.AppConfigId": "d467f2ce-fc4f-41c5-8b5c-0fe031beea9b",
+                    "GenericModule.App.ApplicationIPBinding": "0.0.0.0",
+                    "GenericModule.App.Ports": "[{\"Protocol\":1,\"Port\":15000,\"Offset\":0,\"Range\":1,\"Ref\":\"GamePort\",\"Name\":\"Game Port\",\"Description\":\"Port used for main game traffic\",\"IsDelayedOpen\":false,\"Hidden\":false,\"ChildPorts\":null,\"Required\":false}]",
+                    "GenericModule.App.PrimaryApplicationPortRef": "GamePort",
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2227"
+                },
+                "DisplayImageSource": "steam:489830"
+            },
+            {
+                "InstanceID": "df2899e7-d9d5-46c2-8139-b2e338fbcf7e",
+                "TargetID": "9afe8d2a-e833-4fad-9f82-4597536b8290",
+                "InstanceName": "FallOfTheWorld01",
+                "FriendlyName": "FallOfTheWorld",
+                "Module": "Minecraft",
+                "AMPVersion": {
+                    "Major": 2,
+                    "Minor": 5,
+                    "Build": 1,
+                    "Revision": 2,
+                    "MajorRevision": 0,
+                    "MinorRevision": 2
+                },
+                "IsHTTPS": false,
+                "IP": "127.0.0.1",
+                "Port": 8085,
+                "Daemon": false,
+                "DaemonAutostart": false,
+                "ExcludeFromFirewall": false,
+                "Running": true,
+                "AppState": 20,
+                "Tags": [],
+                "DiskUsageMB": 0,
+                "ReleaseStream": 10,
+                "ManagementMode": 10,
+                "Suspended": false,
+                "IsContainerInstance": true,
+                "ContainerMemoryMB": 0,
+                "ContainerSwapMB": 0,
+                "ContainerMemoryPolicy": 0,
+                "ContainerCPUs": 0.0,
+                "Metrics": {
+                    "CPU Usage": {
+                        "RawValue": 0,
+                        "MaxValue": 100,
+                        "Percent": 0,
+                        "Units": "%",
+                        "Color": "#239B2D",
+                        "Color2": "#239B2D",
+                        "Color3": "#FFF"
+                    },
+                    "Memory Usage": {
+                        "RawValue": 6935,
+                        "MaxValue": 8196,
+                        "Percent": 84,
+                        "Units": "MB",
+                        "Color": "#246BA0",
+                        "Color3": "#FFF"
+                    },
+                    "Active Users": {
+                        "RawValue": 0,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "",
+                        "Color": "#7B249E",
+                        "Color3": "#FFF"
+                    },
+                    "TPS": {
+                        "RawValue": 20,
+                        "MaxValue": 20,
+                        "Percent": 0,
+                        "Units": "TPS",
+                        "Color": "#9B5B23",
+                        "Color3": "#FFF"
+                    }
+                },
+                "ApplicationEndpoints": [
+                    {
+                        "DisplayName": "Minecraft Server Address",
+                        "Endpoint": "0.0.0.0:25566",
+                        "Uri": ""
+                    },
+                    {
+                        "DisplayName": "SFTP Server",
+                        "Endpoint": "0.0.0.0:2228",
+                        "Uri": "sftp://0.0.0.0:2228"
+                    }
+                ],
+                "DeploymentArgs": {
+                    "FileManagerPlugin.SFTP.SFTPIPBinding": "0.0.0.0",
+                    "MinecraftModule.Minecraft.ServerIPBinding": "0.0.0.0",
+                    "FileManagerPlugin.SFTP.SFTPPortNumber": "2228",
+                    "MinecraftModule.Minecraft.PortNumber": "25566"
+                },
+                "DisplayImageSource": "internal:MinecraftJava"
+            }
+        ],
+        "AvailableIPs": [
+            "0.0.0.0",
+            "127.0.0.1",
+            "::1",
+            "172.16.1.174",
+            "172.17.0.1"
+        ],
+        "Tags": [],
+        "TagsList": "[]",
+        "URL": "http://172.16.1.174:8080"
+    }
+]

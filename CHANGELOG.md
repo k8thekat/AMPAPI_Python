@@ -1,3 +1,284 @@
+## Version - 1.0.3 - [b06f874](https://github.com/k8thekat/AMPAPI_Python/commit/b06f874)
+#### Changelog.md
+- Version info from `1.0.2` added.
+#### __init__.py
+- Version bump to `1.0.3`
+
+#### readme.md
+- Updated content regarding contributing and git commit formatting.
+
+## Version - 1.0.2 - [08eaab4](https://github.com/k8thekat/AMPAPI_Python/commit/08eaab4)
+#### Changelog.md
+- Version info from `1.0.1` added.
+#### __init__.py
+- Version bump to `1.0.2`
+
+#### Overall
+- Changed the Pypi project name from `cubecoders_amp_api_wrapper` to `cc-ampapi`. Thanks @fret
+- Added rdt.yaml.
+
+## Version - 1.0.1 - [448e6ee](https://github.com/k8thekat/AMPAPI_Python/commit/448e6ee)
+#### Changelog.md
+- Version info from `1.0.0` added.
+#### __init__.py
+- Version bump to `1.0.1`
+
+#### Overall
+- Version bump v`1.0.1`
+- Finished numpy docstring conversion throughout codebase.
+	- implemented a different numpy-template for better Sphinx autodoc support and layout.
+- Began conversion of data returns from Dataclasses to something simpler like TypedDicts and class definitions.
+- Developed functions to generate .rst and API docs.
+- Changed parameters of multiple functions for similarity and ease of understanding.
+- updated docstring numpy format.
+- added .rst files for Trigger events.
+- added .rst files for Method events.
+- added `types_.py` to further define JSON response data.
+
+## Version - 1.0.0 - [922a08b](https://github.com/k8thekat/AMPAPI_Python/commit/922a08b)
+#### Changelog.md
+- Version info from `0.3.0` added.
+#### __init__.py
+- Version bump to `1.0.0`
+
+#### Overall
+- Implementation of Sphinx documentation.
+- Added `gitHub` actions to handle changelog building.
+- Switched to `pyproject.toml` and `ruff`.
+	- Changed docStrings to `numpy`.
+- Added LICENSES for MIT for borrowed libraries.
+- Restructured dataclass file layout and enums.
+- Auto-generator for Setting Nodes/Permission Node rst files.
+
+## Version - 0.3.0 - [68556f7](https://github.com/k8thekat/AMPAPI_Python/commit/68556f7)
+#### Changelog.md
+- Version info from `0.2.0` added.
+#### __init__.py
+- Version bump to `0.3.0`
+
+#### Overall
+- Fixed script patths
+- Updated to `2.5.1.4` | Build: `20240731.1`
+
+#### __init__.py
+- Version bump `0.3.0`.
+
+#### ads.py
+- Updated docstring to better communicate the point/usage of the `class ADSInstance()`.
+- Updated function docstring's to a better format.
+- Changed `AvailableInstances()` to a set.
+- Changed
+- Updated `property AvailableInstances()` docstring to give better information/understanding of what it returns.
+	- Improved logic to include the `ADSInstance()` class to our `AMPMinecraftInstance()` and `AMPInstance()` inits.
+- Added `AppState` property.
+
+#### adsmodule.py
+- Added `ADSonly` decorator to every function to validate the Module is correct before making the API call.
+- Updated function docstring's to a better format.
+- Changed logic handling for passed in dataclass's for multiple methods.
+- Added type hinting throughout.
+
+#### analytics.py
+- Implementation of `class AnalyticsPlugin()`.
+	- Added a `get_analytics_summary()` function which supports a `period_days`, `start_date` and `filters`.
+
+#### base.py
+- Updated function docstring's to a better format.
+- Added `ADSonly()` decorator to validate the Module is of `ADS`.
+- Added `online()` decorator to check if the Instance is `Running`.
+- Added a length check to the `token` parameter of the Bridge.
+- Added type hinting throughout.
+- Added debug prints to `_call_api()`
+- Added a `_no_data` parameter to `_call_api()` to support endpoints without data returns.
+
+#### bridge.py
+- Updated function docstring's to a better format.
+
+#### core.py
+- Updated function docstring's to a better format.
+- Made `start_instance()`, `stop_instance()`, `restart_instance()` and `kill_instance()` deprecated.
+	- Replaced with `start_application()`, `stop_application()`, `restart_application()` and `kill_application()`.
+- Added `run_security_check()` - UNK data return, waiting on info.
+- Made `update_amp_instance()`, `restart_amp()` and `upgrade_amp()` ADS only methods as that is their intention.
+
+#### emailsender.py
+- Updated function docstring's to a better format.
+
+#### filebackup.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### filemanager.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### instance.py
+- Added a `debug` print to the `__init__()`.
+- Fixed attribute access issues and added docstring's to commonly used properties for better clarification.
+- Added `start()`, `stop()`, `restart()` and `update()` functions to control the Instance from inside the Instance.
+- Added `online()` decorators to validate an instance is `Running`.
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### minecraft.py
+- Added a `MConly()` decorator to check the instance Module is `Minecraft`.
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### types.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### util.py
+- Updated function docstring's to a better format.
+- Added type hinting throughout.
+
+#### docs/
+- Updated ADS API Spec
+- Updated Minecraft API Spec
+- Version info from `0.2.0` added.
+
+## Version - 0.2.0 - [4b70f0d](https://github.com/k8thekat/AMPAPI_Python/commit/4b70f0d)
+#### Changelog.md
+- Version info from `0.1.11` added.
+#### __init__.py
+- Version bump to `0.2.0`
+
+#### Readme.md
+- Updated naming of methods in Quick Example.
+	- Added a Sample_Analytics_API() method.
+- Added a section called Basic Usage to help people understand how to setup the Bridge and API Params.
+
+#### __init__.py
+- Version bump `0.2.0` release.
+
+#### ads.py
+- Removed `LocalFileBackupPlugin` from ADSInstance class inheritance as the ADS no longer has backup functionality.
+- Removed un-used imports.
+
+#### analytics.py
+- New API class to support AMP `2.5.1.0` Update which introduces Analytics!
+- Added `get_analytics_summary()` method to retrieve the Instance Analytics Summary.
+
+#### core.py
+- Added `get_authentication_requirements()` method to retrieve a users Auth requirements.
+
+#### emailsender.py
+- Added `test_SMTP_settings()` method to validate SMTP settings for an Instance.
+
+#### filebackup.py
+- Added `refresh_backup_list()` method to refresh the list of backups an Instance has.
+
+#### instance.py
+- Added `AnalyticsPlugin()` API class to `AMPInstance` class inheritance for the new Analytics feature from `2.5.1.0`.
+
+#### base.py
+- Fixed typo in `parse_data()` docstring.
+
+#### types.py
+- Added dataclasses for Analytics.
+	- Added `Analytics_Filter()` to assist with filtering Analytics API call.
+	- Added `Analytics_Summary()` to handle the data from `get_analytics_summary()` method call.
+	- Added `Analytics_Country_data()`, `Analytics_Stats()` and `Analytics_Top_Players()`  to assist attributes of `Analytics_Summary()`.
+
+#### util.py
+- Added an `AMP_to_API_update()` method to wrap over `parse_get_api_spec()`. *No current usage at this time*
+- Changed `parse_get_api_spec()` to a staticmethod.
+- Fixed typo in version syntax.
+
+#### Changelog.md
+- Version info from `0.1.11`.
+
+## Version - 0.1.11 - [4b8c37a](https://github.com/k8thekat/AMPAPI_Python/commit/4b8c37a)
+#### requirements.txt
+- Changed all version checks to be equal to or greater than the package version.
+
+#### Changelog.md
+- Version info from `0.1.1`.
+
+#### __init__.py
+- Version bump `0.1.11`
+
+#### Overall
+- Added `ADS_api_spec.md` document.
+
+## Version - 0.1.1 - [0cf953e](https://github.com/k8thekat/AMPAPI_Python/commit/0cf953e)
+#### __init__.py
+- Version bump `0.1.1`
+- Changed formatting of releaseLevel and `__version__` to match *PEP440*
+
+#### changelog.md
+- Version info from `0.0.42b` and `0.1.0r`
+
+## Version - 0.1.0r - [ac16314](https://github.com/k8thekat/AMPAPI_Python/commit/ac16314)
+#### __init__.py
+- Version bump to `0.1.0r`
+- Changed `releaseLevel` to "release"
+- Version bump `0.1.0r`
+
+#### setup.py
+- Changed classifiers from "Alpha" to "Production/Stable"
+
+#### ads.py
+- Added `_AvailableInstances` as an attribute to better handle population of `AvailableInstances` attribute.
+- Added `_Controller_exists` as an attribute to catch attribute errors for the Controller dataclass that ADSInstance inherits from when accessed prior to class creation/population.
+
+#### adsmodule.py
+- Updated `detatch_target` to `detach_target` to align with the `v2.5.0.12` AMP Update.
+- Updated the API endpoint for `detach_target` to align with the `v2.5.0.12` AMP Update.
+
+#### base.py
+- Added parameter declaration to the `fields()` method.
+
+#### core.py
+- Formatting change on one line.
+- Updated return type for `get_api_spec()`
+
+#### types.py
+- Added `to_str()` method to the `AMP_Version()` dataclass to be used for future plans.
+- Removed an un-needed `# type:ignore`
+
+#### util.py
+- Formatting changes on multiple lines.
+- Re-wrote logic for `parse_get_api_spec()`
+	- Added the `@classmethod` decorator for usage prior to `APIUtil` class generation.
+	- Added Instance Type, Version and Build strings to the output document to better compare API changes between versions.
+	-- Improved formatting of data output from API parsing.
+
+## Version - 0.0.42b - [2bf7996](https://github.com/k8thekat/AMPAPI_Python/commit/2bf7996)
+#### Changelog.md
+- Version info from `0.0.41b`
+
+#### __init__.py
+- Version bump `0.0.42b`
+
+#### README.md
+- Added missing `await` in Quick Example - Sample_API().
+
+#### ads.py
+- Changed some prints to `_logger.debug()`.
+- Type-hinted `ads_list` inside `get_instances()` method.
+- Added logic check to `get_instances()` when not formatting data to prevent error.
+
+#### base.py
+- Removed `type:ignore` from `__init__()`.
+- Added return value to `format_data` setter.
+- Added `_logger.debug()` for monitoring data formatting.
+- Fixed logic when formatting data causing return failure using the `ADSInstance` class.
+- Improved readability of format logic of `_call_api()`.
+
+#### bridge.py
+- Added logging.
+- Changed `apiparams` to `api_params`.
+- Added type-hinting to `__new__()`.
+- Added `_logger.debug()` to `__init__()`.
+
+#### minecraft.py
+- Removed unused imports.
+
+#### types.py
+- added `repr = False` to the `Controller()` dataclass.
+
 ## Version - 0.0.41b - [5b0aed8](https://github.com/k8thekat/AMPAPI_Python/commit/5b0aed8)
 #### __init__.py
 - Version bump `0.0.41b
