@@ -23,7 +23,7 @@ ___
 ### Installing
 ___
 
-*Python 3.9 or higher is required*
+*Python 3.10 or higher is required*
 
 To install run the below command to install the required pip packages from [Requirements](./requirements.txt)
 
@@ -41,7 +41,7 @@ ___
 1. First you need to fill out the APIParams class with the required fields (url, user and password).
 2. Pass the APIParams class into the Bridge class parameter api_params.
     - You only need to make ONE bridge class; the rest of the API classes will get the same object and handle logging in for you.
-3. You can then use the Parent class ADSInstance() or the smaller class AMPInstance() or any of the API classes as a stand alone.
+3. You can then use the Parent class `ADSInstance()` or the smaller class `AMPInstance()` or any of the API classes as a stand alone.
     - See [Quick Example](./README.md#quick-example--) for a visual example.
 
 ### Quick Example -
@@ -141,22 +141,21 @@ await arkinstance.get_role_data(format_data=True)
 ```
 
 
-### Building the project
-# git commit format
+### Contributing to the project
+
+# Git Commit message format
+
 ```
-    # file_name.py
+    # file_name.py 
     - Change 1
     - Change 2
-```
-# AMP Version Bump
-- Run `await APIUtil.AMP_to_API_update(instance=instance_here)`
+    -- Change 2 sub-change 1
 
-# Update/Build Process
-- Be in `WSL Terminal`
-- Update `__init__.py` -> `__version__` property.
-- Update `VersionInfo` class versions to match `__version__` property.
-- Run `.\build.bash`
-    - Validates `setup.py`
-    - Updated `Changelog.md`
-    - Pushes the changed to PyPi (or testPyPi)
-# git merge --no-ff and tag the merge to main.
+    $ This commit message will be omitted because of `$`
+    - Everything below it will be ignored too as long as it has a `-`
+```
+
+# AMP Version Bump
+If the AMP version has changed, please generate new API spec sheets and upload them with any function changes.
+- Run `await APIUtil.amp_api_update(instance=instance_here)`
+
