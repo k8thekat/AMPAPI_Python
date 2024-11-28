@@ -32,13 +32,11 @@ extensions = [
     "sphinx.ext.autodoc",  # Adds support for parsing autoDoc doc-strings.
     "sphinx.ext.viewcode",  # Adds the [source] link to functions and classes.
     "sphinx.ext.extlinks",
-    "sphinxcontrib_trio",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",  # Supports .. todo:: // .. todolist::
     "sphinx.ext.intersphinx",  # Links to other Sphinx docs via .. ref::
     "sphinx.ext.autosectionlabel",  #
     "enum_tools.autoenum",  # Should handle enums for Sphinx docs.
-    # "sphinx.ext.paramlinks",  # TODO - Look into this more for parameter linking.
     "prettyversion",  # Custom lib from dpy/Umbra
     "details",  # Custom lib from dpy/Umbra
     "exception_hierarchy",  # Custom lib from dpy/Umbra

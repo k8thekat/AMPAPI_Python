@@ -9,7 +9,7 @@ authors = [
     { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
 ]
 description = "A Python wrapper for the AMP API by CubeCoders"
-readme = { file = "README", content-type = "text/markdown" }
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10.0"
 license = { file = "LICENSE" }
 classifiers = [
