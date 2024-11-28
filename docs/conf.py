@@ -48,7 +48,7 @@ resource_links: dict[str, str] = {
     "github": _GITHUB,
     "issues": f"{_GITHUB}/issues",
     "discussions": f"{_GITHUB}/discussions",
-    "examples": f"{_GITHUB}/tree/main/examples",
+    "examples": f"{_GITHUB}/tree/main/docs/samples",
 }
 
 # Links used for cross-referencing other documentation
