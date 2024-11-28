@@ -37,9 +37,9 @@ extensions = [
     "sphinx.ext.intersphinx",  # Links to other Sphinx docs via .. ref::
     "sphinx.ext.autosectionlabel",  #
     "enum_tools.autoenum",  # Should handle enums for Sphinx docs.
-    "prettyversion",  # Custom lib from dpy/Umbra
-    "details",  # Custom lib from dpy/Umbra
-    "exception_hierarchy",  # Custom lib from dpy/Umbra
+    # "prettyversion",  # Custom lib from dpy/Umbra
+    # "details",  # Custom lib from dpy/Umbra
+    # "exception_hierarchy",  # Custom lib from dpy/Umbra
 ]
 
 _GITHUB: str = "https://github.com/k8thekat/AMPAPI_Python"
