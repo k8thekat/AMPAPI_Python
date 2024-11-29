@@ -21,6 +21,7 @@
 ## Version - 1.0.4 - [778c229](https://github.com/k8thekat/AMPAPI_Python/commit/778c229)
 #### Changelog.md
 - Version info from `1.0.3` added.
+
 #### __init__.py
 - Version bump to `1.0.4`
 
@@ -30,6 +31,7 @@
 ## Version - 1.0.3 - [b06f874](https://github.com/k8thekat/AMPAPI_Python/commit/b06f874)
 #### Changelog.md
 - Version info from `1.0.2` added.
+
 #### __init__.py
 - Version bump to `1.0.3`
 
