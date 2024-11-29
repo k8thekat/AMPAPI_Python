@@ -28,13 +28,13 @@ ___
 To install run the below command to install the required pip packages from [Requirements](./requirements.txt)
 
 ### PyPi 
--> https://pypi.org/project/cubecoders-amp-api-wrapper/
+-> Visit the package on [Pypi](https://pypi.org/project/cc-ampapi/)
 ```bash
 # Linux/macOS
-pip install cubecoders-amp-api-wrapper
+pip install cc-ampapi
 
 # Windows
-pip install cubecoders-amp-api-wrapper
+pip install cc-ampapi
 ```
 ### Basic Usage
 ___
