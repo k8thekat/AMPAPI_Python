@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-ampapi" # cc-ampapi
-version = "1.0.6"
+dynamic = ["version"]
 authors = [
     { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
 ]
@@ -34,6 +34,7 @@ Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
+version = { attr = "ampapi.__version__" }
 
 [tool.setuptools]
 packages = ["ampapi"]

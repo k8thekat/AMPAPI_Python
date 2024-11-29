@@ -25,7 +25,7 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
