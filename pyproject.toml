@@ -8,6 +8,7 @@ version = "1.0.6"
 authors = [
     { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
 ]
+readme = { file = "README.txt", content-type = "text/markdown" }
 description = "A Python wrapper for the AMP API by CubeCoders"
 requires-python = ">=3.10.0"
 license = { file = "LICENSE" }
@@ -26,11 +27,7 @@ classifiers = [
     "Topic :: Utilities",
     "Typing :: Typed",
 ]
-
-[project.readme]
-file = "README.md"
-content-type = "text/markdown"
-
+keywords = ["cubecoders", "cube coders", "amp", "api"]
 [project.urls]
 GitHub = "https://github.com/k8thekat/AMPAPI_Python"
 Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
