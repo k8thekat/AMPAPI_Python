@@ -7,12 +7,6 @@
 
 #### Overall
 - config changes for pyproject.toml to support dynamic versions.
-Developer"
-Bringing developer to main."
-Bringing over Fixes."
-Version 0.0.40b"
-Developer branch merge"
-Beta Release
 
 ## Version - 1.0.6 - [069d040](https://github.com/k8thekat/AMPAPI_Python/commit/069d040)
 #### Changelog.md
