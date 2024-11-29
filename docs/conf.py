@@ -25,8 +25,8 @@ release = version
 
 sys.path.insert(0, pathlib.Path("..").as_posix())
 sys.path.append(pathlib.Path().as_posix())
-sys.path.append(pathlib.Path("./docs/extensions").as_posix())
-sys.path.append(pathlib.Path("./docs/nodes").as_posix())
+sys.path.append(pathlib.Path("docs/extensions").as_posix())
+sys.path.append(pathlib.Path("docs/nodes").as_posix())
 
 extensions = [
     "sphinx.ext.autodoc",  # Adds support for parsing autoDoc doc-strings.
@@ -90,6 +90,7 @@ napoleon_custom_sections = None  # Default is None
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+# When changing the theme; we need to include the theme package in docs/requirements
 
 html_theme = "furo"
 html_static_path = ["_static"]
