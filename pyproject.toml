@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-ampapi" # cc-ampapi
-dynamic = ["version"]
+version = "1.0.6"
 authors = [
     { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
 ]
+readme = { file = "README.txt", content-type = "text/markdown" }
 description = "A Python wrapper for the AMP API by CubeCoders"
 requires-python = ">=3.10.0"
 license = { file = "LICENSE" }
@@ -26,11 +27,7 @@ classifiers = [
     "Topic :: Utilities",
     "Typing :: Typed",
 ]
-
-[project.readme]
-file = "README.md"
-content-type = "text/markdown"
-
+keywords = ["cubecoders", "cube coders", "amp", "api"]
 [project.urls]
 GitHub = "https://github.com/k8thekat/AMPAPI_Python"
 Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
@@ -46,6 +43,8 @@ include-package-data = true
 target-version = "py310"
 line-length = 125
 exclude = ["docs/extensions/*.py"]
+
+[tool.ruff.lint]
 select = [
     "A",
     "C4",
@@ -78,14 +77,14 @@ ignore = [
     "ANN401",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 split-on-trailing-comma = false
 combine-as-imports = true
 
-[tool.ruff.flake8-annotations]
+[tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true
 
-[tool.ruff.flake8-pytest-style]
+[tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
 parametrize-names-type = "tuple"

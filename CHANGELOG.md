@@ -1,11 +1,19 @@
-## Version - 1.0.5 - [fb2aad7](https://github.com/k8thekat/AMPAPI_Python/commit/fb2aad7)
+## Version - 1.0.6 - [069d040](https://github.com/k8thekat/AMPAPI_Python/commit/069d040)
 #### Changelog.md
 - Version info from `1.0.4` added.
 
 #### __init__.py
-- Version bump to `1.0.5`
+- Version bump to `1.0.6`
 
-#### Overall
+#### conf.py
+- Changed conf.py path's to relative.
+
+#### core.py
+- Removed un-used imports.
+- Removed `events` property as I did not want to support them as MC support is changing via the API.
+
+#### modules.py
+- Updated docstring for `TriggerID`.
 - Update/fixed pyproject.toml definitions.
 - Fixed comparison logic on multiple files.
 - Removed un-used imports.
@@ -13,6 +21,7 @@
 ## Version - 1.0.4 - [778c229](https://github.com/k8thekat/AMPAPI_Python/commit/778c229)
 #### Changelog.md
 - Version info from `1.0.3` added.
+
 #### __init__.py
 - Version bump to `1.0.4`
 
@@ -22,6 +31,7 @@
 ## Version - 1.0.3 - [b06f874](https://github.com/k8thekat/AMPAPI_Python/commit/b06f874)
 #### Changelog.md
 - Version info from `1.0.2` added.
+
 #### __init__.py
 - Version bump to `1.0.3`
 
