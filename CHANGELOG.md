@@ -1,3 +1,13 @@
+## Version - 1.0.7 - [8bb2fdc](https://github.com/k8thekat/AMPAPI_Python/commit/8bb2fdc)
+#### Changelog.md
+- Version info from `1.0.6` added.
+
+#### __init__.py
+- Version bump to `1.0.7`
+
+#### Overall
+- config changes for pyproject.toml to support dynamic versions.
+
 ## Version - 1.0.6 - [069d040](https://github.com/k8thekat/AMPAPI_Python/commit/069d040)
 #### Changelog.md
 - Version info from `1.0.4` added.
