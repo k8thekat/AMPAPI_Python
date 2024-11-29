@@ -28,8 +28,6 @@ from .dataclass import (
     User,
     VersionInfo,
 )
-
-# from .enums import *
 from .modules import TriggerID, UserApplicationData
 from .types_ import ActionSpec, APISpec, PermissionNode, ScheduleDataData, TriggersData
 
@@ -46,16 +44,9 @@ class Core(Base):
 
     Attributes
     -----------
-    events: EventID
-        You can access all the event IDs an instance has via this attribute. See :class:`EventID` for more information.
     triggers: :class:`TriggerID`
         You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information.
     """
-
-    # TODO - Need to finish developing this attribute.
-    @property
-    def events(self) -> None:
-        print()
 
     @property
     def triggers(self) -> TriggerID:

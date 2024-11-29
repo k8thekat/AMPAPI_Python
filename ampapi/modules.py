@@ -108,6 +108,12 @@ class DeploymentTemplate:
 
 
 class TriggerID:
+    """
+    Used for a multitude of functions all related to Triggers and their IDs.
+
+    Simply access the respective attribute and the unique GUID for that :class:`AMPInstance` Trigger ID will be returned.
+    """
+
     a_backup_finishes_archiving: str
     a_backup_finishes_restoring: str
     a_backup_has_failed: str

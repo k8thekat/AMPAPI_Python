@@ -25,8 +25,8 @@ release = version
 
 sys.path.insert(0, pathlib.Path("..").as_posix())
 sys.path.append(pathlib.Path().as_posix())
-sys.path.append(pathlib.Path("docs/extensions").as_posix())
-sys.path.append(pathlib.Path("docs/nodes").as_posix())
+sys.path.append(pathlib.Path("./docs/extensions").as_posix())
+sys.path.append(pathlib.Path("./docs/nodes").as_posix())
 
 extensions = [
     "sphinx.ext.autodoc",  # Adds support for parsing autoDoc doc-strings.
