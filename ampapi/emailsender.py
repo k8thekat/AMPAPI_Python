@@ -2,7 +2,6 @@ from typing import Union
 
 from .base import Base
 from .dataclass import ActionResult
-from .enums import *
 
 __all__ = ("EmailSenderPlugin",)
 

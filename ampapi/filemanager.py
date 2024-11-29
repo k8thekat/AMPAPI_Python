@@ -2,7 +2,6 @@ from typing import Any, Union
 
 from .base import Base
 from .dataclass import ActionResult, Directory, FileChunk
-from .enums import *
 
 __all__ = ("FileManagerPlugin",)
 
@@ -268,7 +267,7 @@ class FileManagerPlugin(Base):
         await self._connect()
         parameters: dict[str, str] = {"ArchivePath": self.sanitize_path(file_path)}
 
-        if destination_path != None:
+        if destination_path is not None:
             parameters["DestinationPath"] = destination_path
 
         result: Any = await self._call_api(
@@ -366,7 +365,7 @@ class FileManagerPlugin(Base):
 
         await self._connect()
         parameters: dict[str, Any] = {"Filename": self.sanitize_path(file_path), "Offset": offset}
-        if chunk_size != None:
+        if chunk_size is not None:
             parameters["ChunkSize"] = chunk_size
 
         result: Any = await self._call_api(

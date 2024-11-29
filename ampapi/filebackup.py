@@ -4,7 +4,6 @@ from typing import Any, Union
 
 from .base import Base
 from .dataclass import ActionResult, Backup, RunningTask
-from .enums import *
 
 __all__ = ("LocalFileBackupPlugin",)
 

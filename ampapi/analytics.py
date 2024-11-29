@@ -3,7 +3,8 @@ from typing import Any, Union
 
 from .base import Base
 from .dataclass import AnalyticsFilter, AnalyticsSummary
-from .enums import *
+
+# from .enums import *
 
 __all__ = ("AnalyticsPlugin",)
 
