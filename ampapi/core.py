@@ -28,7 +28,8 @@ from .dataclass import (
     User,
     VersionInfo,
 )
-from .enums import *
+
+# from .enums import *
 from .modules import TriggerID, UserApplicationData
 from .types_ import ActionSpec, APISpec, PermissionNode, ScheduleDataData, TriggersData
 
@@ -1111,7 +1112,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if format_data == False:
+        if format_data is False:
             return result
 
         elif isinstance(result, list):

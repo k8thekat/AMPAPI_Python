@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from collections import defaultdict
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
@@ -20,18 +19,11 @@ if TYPE_CHECKING:
     from io import TextIOWrapper
 
     from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
-    from .core import Core
-    from .dataclass import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers, TriggerTasks
+    from .dataclass import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
     from .types_ import (
         APISpec,
-        APISPecEndpointData,
-        APISpecEndpointParameters,
-        Consumes,
-        MethodsData,
-        ParameterMapping,
         PermissionNode,
         ScheduleDataData,
-        TriggersData,
     )
 
 
@@ -203,7 +195,7 @@ def _permission_node_parse(
     if _dir.exists():
         mode = "w"
 
-    if file == None:
+    if file is None:
         file = Path.open(_dir, mode)
 
     if index == 0:
@@ -333,7 +325,7 @@ def _settings_node_parse(
     if _dir.exists():
         mode = "w"
 
-    if file == None:
+    if file is None:
         file = Path.open(_dir, mode)
 
     if index == 0:
@@ -358,7 +350,7 @@ def _settings_node_parse(
         if isinstance(data_key, list):
             for entry in sorted(data_key):
                 file.write(f"\n**Name**: {entry.name}\n")
-                if entry.description != None and len(entry.description) > 0:
+                if entry.description is not None and len(entry.description) > 0:
                     file.write(f"\t| Description: {str_sanitizer_sphinx(string=entry.description, special_chars=('*',))}\n")
                 file.write(f"\t| Node: `{entry.node}`\n")
     file.close()

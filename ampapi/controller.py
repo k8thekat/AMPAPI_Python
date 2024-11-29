@@ -29,7 +29,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
         self.module: str = "ADS"
 
     def __getattr__(self, name: str) -> Union[AttributeError, Any]:
-        if name in [field.name for field in fields(class_or_instance=Controller)] and self._controller_exists == False:
+        if name in [field.name for field in fields(class_or_instance=Controller)] and self._controller_exists is False:
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}' | You must call <AMPControllerInstance>.get_instances() with 'format_data=True' to update this object."
             )

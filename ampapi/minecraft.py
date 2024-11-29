@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 from .base import Base
 from .dataclass import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
-from .enums import *
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine

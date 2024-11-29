@@ -17,8 +17,6 @@ from pyotp import TOTP
 
 from .bridge import Bridge
 from .dataclass import APISession, Diagnostics, LoginResults, VersionInfo
-from .enums import *
-from .modules import DeploymentTemplate
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Iterable
@@ -158,7 +156,7 @@ class Base:
             from .adsmodule import ADSModule
             from .instance import AMPADSInstance
 
-            if self.module == "ADS" or type(self) == AMPADSInstance or isinstance(self, ADSModule):
+            if self.module == "ADS" or type(self) is AMPADSInstance or isinstance(self, ADSModule):
                 return func(self, *args, **kwargs)
             else:
                 raise RuntimeError(self._ads_only)
@@ -227,7 +225,7 @@ class Base:
         self.logger.debug("_call_api -> %s was called with %s", api, parameters)
 
         # This should save us some boiler plate code throughout our API calls.
-        if parameters == None:
+        if parameters is None:
             parameters = {}
 
         api_session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
@@ -255,7 +253,7 @@ class Base:
 
             post_req_json: Any = await post_req.json()
 
-        if post_req_json == None and _no_data == False:
+        if post_req_json is None and _no_data is False:
             raise ConnectionError(self._no_data)
 
         # They removed "result" from all replies thus breaking most if not all future code.
@@ -289,7 +287,7 @@ class Base:
                     self.logger.error("%s failed because of %s", api, post_req_json)
                     raise ValueError(self._failed_api)
 
-            elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] == False:
+            elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] is False:
                 self.logger.error("%s failed because of Status: %s", api, post_req_json)
                 return ValueError(self._failed_api)
 
@@ -337,7 +335,7 @@ class Base:
                 sessionID: str = session.id
 
         if sessionID == "0":
-            if self._bridge.use_2fa == True:
+            if self._bridge.use_2fa is True:
                 try:
                     # Handles time based 2Factory Auth Key/Code
                     code = TOTP(self._bridge.token).now()
@@ -478,7 +476,7 @@ class Base:
             raise TypeError(f"The object {dataclass_} is not of the same type as <dataclass>.")
         for field in fields(class_or_instance=dataclass_):
             value: Any = getattr(dataclass_, field.name)
-            if value == None:
+            if value is None:
                 continue
             parameters[field.name] = value
         return parameters
@@ -562,10 +560,10 @@ class Base:
         # so all connections will use the same session id (if possible)
         self._bridge = bridge
         self.url = bridge.url
-        if bridge.use_2fa == True:
+        if bridge.use_2fa is True:
             if bridge.token == "":
                 raise ValueError("You must provide a 2FA Token if you are using 2FA.")
-            elif bridge.token.startswith(("'", '"')) == False or bridge.token.endswith(("'", '"')) == False:
+            elif bridge.token.startswith(("'", '"')) is False or bridge.token.endswith(("'", '"')) is False:
                 raise ValueError("2FA Token must be enclosed in quotes.")
             # Removed starting and ending quotes
             elif len(bridge.token) < 8:

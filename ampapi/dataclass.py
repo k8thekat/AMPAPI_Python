@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec, Self, TypeVar
 
-    from .types_ import Consumes, MCUserData, ParameterMapping, PermissionNode
+    from .types_ import MCUserData
 
     D = TypeVar("D", bound="Instance")
     T = ParamSpec("T")

@@ -1,3 +1,4 @@
+# ruff: noqa
 """
 Copyright (C) 2021-2022 Katelynn Cadwallader.
 
@@ -24,12 +25,16 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "1.0.3"
+__version__ = "1.0.5"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
 
-from . import dataclass as dataclass, enums as enums, modules as modules, types_ as types, util as util
+from . import dataclass as dataclass
+from . import enums as enums
+from . import modules as modules
+from . import types_ as types
+from . import util as util
 from .adsmodule import *
 from .analytics import *
 from .base import *
@@ -47,9 +52,9 @@ class VersionInfo(NamedTuple):
     Major: int
     Minor: int
     Revision: int
-    releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]  # noqa
+    releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]
 
 
-version_info: VersionInfo = VersionInfo(Major=1, Minor=0, Revision=3, releaseLevel="release")  # noqa
+version_info: VersionInfo = VersionInfo(Major=1, Minor=0, Revision=5, releaseLevel="release")
 
 del NamedTuple, Literal, VersionInfo

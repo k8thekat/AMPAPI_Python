@@ -7,7 +7,6 @@ from .analytics import AnalyticsPlugin
 from .core import Core
 from .dataclass import ActionResult, Instance, InstanceStatus, Updates
 from .emailsender import EmailSenderPlugin
-from .enums import *
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .minecraft import MinecraftModule

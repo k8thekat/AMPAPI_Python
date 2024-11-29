@@ -12,7 +12,6 @@ Permission Nodes
 
 
 
-***PLACEHOLDER TEXT**
 
 
 ADS Permission Nodes

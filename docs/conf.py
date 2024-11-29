@@ -25,23 +25,21 @@ release = version
 
 sys.path.insert(0, pathlib.Path("..").as_posix())
 sys.path.append(pathlib.Path().as_posix())
-sys.path.append(pathlib.Path("./docs/extensions").as_posix())
-sys.path.append(pathlib.Path("./docs/nodes").as_posix())
+sys.path.append(pathlib.Path("docs/extensions").as_posix())
+sys.path.append(pathlib.Path("docs/nodes").as_posix())
 
 extensions = [
     "sphinx.ext.autodoc",  # Adds support for parsing autoDoc doc-strings.
     "sphinx.ext.viewcode",  # Adds the [source] link to functions and classes.
     "sphinx.ext.extlinks",
-    "sphinxcontrib_trio",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",  # Supports .. todo:: // .. todolist::
     "sphinx.ext.intersphinx",  # Links to other Sphinx docs via .. ref::
     "sphinx.ext.autosectionlabel",  #
     "enum_tools.autoenum",  # Should handle enums for Sphinx docs.
-    # "sphinx.ext.paramlinks",  # TODO - Look into this more for parameter linking.
-    "prettyversion",  # Custom lib from dpy/Umbra
-    "details",  # Custom lib from dpy/Umbra
-    "exception_hierarchy",  # Custom lib from dpy/Umbra
+    # "prettyversion",  # Custom lib from dpy/Umbra
+    # "details",  # Custom lib from dpy/Umbra
+    # "exception_hierarchy",  # Custom lib from dpy/Umbra
 ]
 
 _GITHUB: str = "https://github.com/k8thekat/AMPAPI_Python"
@@ -50,7 +48,7 @@ resource_links: dict[str, str] = {
     "github": _GITHUB,
     "issues": f"{_GITHUB}/issues",
     "discussions": f"{_GITHUB}/discussions",
-    "examples": f"{_GITHUB}/tree/main/examples",
+    "examples": f"{_GITHUB}/tree/main/docs/samples",
 }
 
 # Links used for cross-referencing other documentation
@@ -92,6 +90,7 @@ napoleon_custom_sections = None  # Default is None
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+# When changing the theme; we need to include the theme package in docs/requirements
 
 html_theme = "furo"
 html_static_path = ["_static"]

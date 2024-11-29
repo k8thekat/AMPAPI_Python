@@ -12,7 +12,6 @@ Method Information
 
 
 
-***PLACEHOLDER TEXT**
 
 
 BanUser

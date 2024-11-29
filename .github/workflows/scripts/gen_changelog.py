@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 # Grab Version from __init__.py
@@ -74,7 +73,7 @@ for entry in cur_data:
 user = "k8thekat"
 project = "AMPAPI_Python"
 set_version = f"## Version - {version} - [{new_commit[:7]}](https://github.com/{user}/{project}/commit/{new_commit})\n"
-add_changelog: str = f"#### Changelog.md\n- Version info from `{cl_ver}` added.\n"
+add_changelog: str = f"#### Changelog.md\n- Version info from `{cl_ver}` added.\n\n"
 add_init: str = f"#### __init__.py\n- Version bump to `{version}`\n\n"
 data = set_version + add_changelog + add_init
 for file_name, file_changes in files.items():
