@@ -50,62 +50,6 @@ Settings Branding Nodes
 :raw-html:`<hr>`
 
 
-**Name**: Background image URL
-	| Description: If left blank, the default AMP background will show
-	| Node: `Core.Branding.BackgroundURL`
-
-**Name**: Brand Logo URL
-	| Description: Address for a logo to show throughout - 3:1 or 2:1 Aspect Ratio. If left blank, default AMP logo will show
-	| Node: `Core.Branding.LogoURL`
-
-**Name**: Brand Name
-	| Description: Name of your company/organization
-	| Node: `Core.Branding.CompanyName`
-
-**Name**: Brand Support Text
-	| Description: How to present the support URL, for example 'Open Ticket' or 'Get Help'
-	| Node: `Core.Branding.SupportText`
-
-**Name**: Brand Support URL
-	| Description: The URL that users should be directed to for general support
-	| Node: `Core.Branding.SupportURL`
-
-**Name**: Brand URL
-	| Description: Typically the home page for your business or organization
-	| Node: `Core.Branding.URL`
-
-**Name**: Branding Message
-	| Description: Used in various places where branding is included to reference your organization
-	| Node: `Core.Branding.BrandingMessage`
-
-**Name**: Custom Page Title
-	| Description: Alternate name to show in the browserse title bar
-	| Node: `Core.Branding.PageTitle`
-
-**Name**: Display Branding
-	| Description: Whether or not branding is displayed globally
-	| Node: `Core.Branding.DisplayBranding`
-
-**Name**: Forgot password URL
-	| Description: What URL the user should be taken to if they click the 'Forgot Login' prompt on the login screen
-	| Node: `Core.Branding.ForgotPasswordURL`
-
-**Name**: Short Brand Message
-	| Description: Mostly used for world seeds/names
-	| Node: `Core.Branding.ShortBrandingMessage`
-
-**Name**: Splash screen frame URL
-	| Description: A URL for a page to be shown in a frame on the Login screen
-	| Node: `Core.Branding.SplashFrameURL`
-
-**Name**: Submit Ticket URL
-	| Description: If a separate ticketing system is in place, the URL users should be directed to.
-	| Node: `Core.Branding.SubmitTicketURL`
-
-**Name**: Welcome Message
-	| Description: Message that should be shown to users on the login screen
-	| Node: `Core.Branding.WelcomeMessage`
-
 Settings External_Services Nodes
 #################################
 :raw-html:`<hr>`
@@ -251,10 +195,6 @@ Settings Instance_Deployment Nodes
 	| Description: Which IP AMP should report for instances created within Docker when no specific IP is specified
 	| Node: `ADSModule.Network.DockerExternalIPBinding`
 
-**Name**: Download Mirror
-	| Description: Which source to use to download AMP data. Using a mirror close to you may result in faster speeds.
-	| Node: `ADSModule.ADS.DownloadMirror`
-
 **Name**: Enable Community Pages
 	| Description: Whether or not to enable the community pages feature. This allows users to share their instances with others.
 	| Node: `ADSModule.Community.EnableCommunityPages`
@@ -283,10 +223,6 @@ Settings Instance_Deployment Nodes
 	| Description: The licence key to use for newly created instances
 	| Node: `ADSModule.Defaults.NewInstanceKey`
 
-**Name**: Match ADS Version
-	| Description: Newly created instances match the same version as this ADS instance when created.
-	| Node: `ADSModule.Defaults.MatchVersion`
-
 **Name**: Metrics Server Port
 	| Description: The port used by ADS to receive metrics data from instances
 	| Node: `ADSModule.Network.MetricsServerPort`
@@ -294,10 +230,6 @@ Settings Instance_Deployment Nodes
 **Name**: Mode
 	| Description: Mode
 	| Node: `ADSModule.ADS.Mode`
-
-**Name**: Overlay Path
-	| Description: The directory ADS will search for instance overlays. It will search for both overlay-common.zip and overlay-{MODULE}.zip where MODULE is the module being deployed such as minecraft, ark, srcds. E.g. overlay-srcds.zip
-	| Node: `ADSModule.Defaults.OverlayPath`
 
 **Name**: Propagate auth server to targets
 	| Description: If enabled, the Default Auth Server URL will be copied to all targets when they are added to ADS
@@ -330,10 +262,6 @@ Settings Instance_Deployment Nodes
 **Name**: Use Host Networking for new Containers
 	| Description: Binds docker containers directly to the host network adapter by default. Changing this option requires additional configuration changes for new AMP instances to function correctly.
 	| Node: `ADSModule.Network.UseDockerHostNetwork`
-
-**Name**: Use Overlays
-	| Description: Whether or not to apply overlays to newly created instances on this target
-	| Node: `ADSModule.Defaults.UseOverlays`
 
 Settings Login Nodes
 #####################
@@ -406,8 +334,12 @@ Settings Security_And_Privacy Nodes
 	| Node: `Core.Security.RateLimitLogins`
 
 **Name**: Require Session IP Stickiness
-	| Description: When enabled, web sessions are tied to the IP address that initiated them. This improves security, but can cause problems with fast changing/dynamic routing IPs (often found on cheaper ISPs or Campuses)
+	| Description: When enabled, web sessions are tied to the IP address that initiated them. This improves security, but can cause problems with fast changing/dynamic routing IPs (such as when using Cloudflare and other cloud proxy services)
 	| Node: `Core.Security.RequireSessionIPStickiness`
+
+**Name**: Require Token IP Stickiness
+	| Description: When enabled, 'Remember Me' tokens are tied to the IP address that initiated them. This improves security, but can cause problems with fast changing/dynamic routing IPs (such as when using Cloudflare and other cloud proxy services)
+	| Node: `Core.Security.RequireTokenIPStickiness`
 
 **Name**: Restrict Archive Extractions
 	| Description: Only allow extensions in the approved 'upload' list to be extracted from archives
@@ -572,7 +504,7 @@ Settings Updates Nodes
 	| Node: `steamcmdplugin.SteamUpdateSettings.ShowDownloadSpeedInBits`
 
 **Name**: Steam workshop items
-	| Description: Item IDs for steam workshop items that should be downloaded/updated when the main application is updated
+	| Description: Item IDs for steam workshop items that should be downloaded/updated when the main application is updated. One per line. Do not use punctuation to separate them.
 	| Node: `steamcmdplugin.SteamWorkshop.WorkshopItemIDs`
 
 **Name**: Throttle Downloads
@@ -582,3 +514,7 @@ Settings Updates Nodes
 **Name**: Update check method
 	| Description: Which method AMP should use to check for application updates, by either comparing the build timestamps, or by comparing the build ID from the application manifest.
 	| Node: `steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod`
+
+**Name**: Validate SteamCMD Downloads
+	| Description: If enabled, SteamCMD will validate the game files. Disabling can decrease update times and is required for some modded game servers. Requires an instance restart.
+	| Node: `steamcmdplugin.SteamUpdateSettings.SteamCMDValidateDownloads`
