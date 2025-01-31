@@ -1456,8 +1456,8 @@ class Core(Base):
 
         Returns
         --------
-        :class:`UserAPplicationData`
-            On success returns a :class:`UserAPplicationData` class.
+        :class:`UserApplicationData`
+            On success returns a :class:`UserApplicationData` class.
         """
 
         await self._connect()
@@ -1467,8 +1467,8 @@ class Core(Base):
         )
         return result
 
-    async def get_user_list(self, format_data: Union[bool, None] = None) -> list[Players]:
-        """|coro|
+    async def get_user_list(self, format_data: Union[bool, None] = None) -> Players:
+        """|coro|Players
 
         Returns the list of the connected users to the Application.
 
@@ -1479,8 +1479,8 @@ class Core(Base):
 
         Returns
         --------
-        list[:class:`Players`]
-            On success returns a list of :class:`Player` dataclasses.
+        :class:`Players`
+            On success returns a :class:`Players` dataclasses.
         """
 
         await self._connect()

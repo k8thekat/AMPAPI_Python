@@ -28,14 +28,15 @@ ___
 To install run the below command to install the required pip packages from [Requirements](./requirements.txt)
 
 ### PyPi 
+___
 -> Visit the package on [Pypi](https://pypi.org/project/cc-ampapi/)
+
 ```bash
-# Linux/macOS
+# Linux/macOS/Windows
 pip install cc-ampapi
 
-# Windows
-pip install cc-ampapi
 ```
+
 ### Basic Usage
 ___
 1. First you need to fill out the APIParams class with the required fields (url, user and password).

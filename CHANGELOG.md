@@ -1,3 +1,43 @@
+## Version - 1.1.0 - [2c8094f](https://github.com/k8thekat/AMPAPI_Python/commit/2c8094f)
+#### Changelog.md
+- Version info from `1.0.7` added.
+
+#### __init__.py
+- Version bump to `1.1.0`
+
+#### __init__.py
+- Version bump to `1.1.0`
+- Version bump to `1.1.0`
+
+#### nodes
+- Updated documentation for permission and setting nodes.
+- Removed merge messages.
+
+#### pyproject.toml
+- Changed the readme property's file extension and content-type.
+- Removed comment.
+
+#### build.yml
+- Removed comment.
+
+#### core.py
+- Fixed issue mentioned in #13
+	- All connected players are represented in a `Players` dataclass. You can access the list via the `sorted` attribute.
+- Fixed typo on LN1459.
+
+#### dataclass.py
+- New `Players` Dataclass and a `Player` NamedTuple to house the data.
+	- `Players.get_player(name_or_uuid: str)` now exists to allow for searching of players by name or uuid.
+
+#### index.rst
+- Fixed incorrect information throughout.
+
+#### types.rst
+- Added API Modules.
+
+#### README.md
+- Fixed incorrect information throughout.
+
 ## Version - 1.0.7 - [8bb2fdc](https://github.com/k8thekat/AMPAPI_Python/commit/8bb2fdc)
 #### Changelog.md
 - Version info from `1.0.6` added.

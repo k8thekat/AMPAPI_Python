@@ -202,6 +202,11 @@ Instances Permission Nodes
 - Instances.`instance-id`.Start
 - Instances.`instance-id`.Stop
 - Instances.`instance-id`.Update
+- Instances.`instance-id`.Manage
+- Instances.`instance-id`.Restart
+- Instances.`instance-id`.Start
+- Instances.`instance-id`.Stop
+- Instances.`instance-id`.Update
 
 Settings Permission Nodes
 ##########################
@@ -233,7 +238,6 @@ ADS Nodes
 - ADS.AutoReactivate
 - ADS.AutostartInstances
 - ADS.ConfigurationRepositories
-- ADS.DownloadMirror
 - ADS.InstanceStartDelay
 - ADS.Mode
 - ADS.ShowDeprecated
@@ -260,12 +264,10 @@ Defaults Nodes
 - Defaults.DefaultReleaseStream
 - Defaults.DefaultSettings
 - Defaults.ExcludeFromFirewall
-- Defaults.MatchVersion
 - Defaults.NewInstanceKey
 - Defaults.PropagateAuthServer
 - Defaults.PropogateRepos
 - Defaults.UseDocker
-- Defaults.UseOverlays
 
 Limits Nodes
 ^^^^^^^^^^^^^
@@ -316,26 +318,6 @@ AMP Nodes
 - AMP.ShowHelpOnStatus
 - AMP.Theme
 
-Branding Nodes
-^^^^^^^^^^^^^^^
-:raw-html:`<hr>`
-
-- Branding.*
-- Branding.BackgroundURL
-- Branding.BrandingMessage
-- Branding.CompanyName
-- Branding.DisplayBranding
-- Branding.ForgotPasswordURL
-- Branding.LogoURL
-- Branding.PageTitle
-- Branding.ShortBrandingMessage
-- Branding.SplashFrameURL
-- Branding.SubmitTicketURL
-- Branding.SupportText
-- Branding.SupportURL
-- Branding.URL
-- Branding.WelcomeMessage
-
 Login Nodes
 ^^^^^^^^^^^^
 :raw-html:`<hr>`
@@ -382,6 +364,7 @@ Security Nodes
 - Security.IncludeExceptionDataInAPI
 - Security.RateLimitLogins
 - Security.RequireSessionIPStickiness
+- Security.RequireTokenIPStickiness
 - Security.TwoFactorMode
 
 Webserver Nodes
@@ -495,6 +478,7 @@ SteamUpdateSettings Nodes
 - SteamUpdateSettings.KeepSteamCMDScripts
 - SteamUpdateSettings.ShowDownloadSpeedInBits
 - SteamUpdateSettings.SteamCMDBetaPassword
+- SteamUpdateSettings.SteamCMDValidateDownloads
 - SteamUpdateSettings.ThrottleDownloadSpeed
 - SteamUpdateSettings.UpdateCheckMethod
 
