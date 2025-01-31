@@ -99,3 +99,21 @@ Dataclasses
 
 .. automodule:: ampapi.dataclass
     :members:
+
+
+.. currentmodule:: ampapi.modules
+
+Data Modules
+~~~~~~~~~~~~~
+
+.. autoclass:: DeploymentTemplate
+    :members:
+    
+.. autoclass:: UserApplicationData
+    :members:
+
+.. autoclass:: TriggerID
+    :members:
+
+
+.. 

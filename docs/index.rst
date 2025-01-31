@@ -1,6 +1,6 @@
 AMP API Python
 ==============
-.. _PyPi: https://pypi.org/project/cubecoders-amp-api-wrapper/
+.. _PyPi: https://pypi.org/project/cc-ampapi/
 
 The project can be found on `PyPi`_.
 
@@ -11,13 +11,13 @@ Key Features
 - Pythonic API wrapper using `async` and `await`.
 - Data is in dataclasses for easier management and interaction.
     - Optional parameter per function or global to disable formatting of data.
-- Parent classes `AMPADSInstance`, `AMPInstance`, `AMPMinecraftInstance` to group endpoints together and make handling of multiple Instances easier.
+- Parent classes `ADSInstance` and `AMPInstance` to group endpoints together and make handling of multiple Instances easier.
     - This will also limit Instance specific API endpoints (eg. Minecraft) to that Instance type only.
-    - Built in functions to start, stop, restart and update AMPInstances that are NOT an ADS/Controller.
 
 
 Installing
 ==========
+
 .. note::
     *Python 3.10 or higher is required*
 
@@ -28,7 +28,7 @@ To install run the below command in a Terminal.
     :linenos:
 
     # Linux/macOS/Windows
-    pip install cubecoders-amp-api-wrapper
+    pip install cc-ampapi
 
 
 
@@ -41,6 +41,7 @@ Basic Usage
     - See `Quick Example`_ for a visual example.
 
 .. _Quick Example: ../samples/sample.py
+
 
 .. toctree::
     :maxdepth: 3

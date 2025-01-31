@@ -5,8 +5,9 @@ import logging
 from dataclasses import dataclass, field, fields
 from datetime import datetime
 from logging import Logger
+from operator import attrgetter
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Union
 
 from dataclass_wizard.errors import MissingFields
 from typing_extensions import Self
@@ -1794,10 +1795,9 @@ class PlatformInfo:
     installed_glibc_version: str = field(default="")  # "AMPVersionInfo"
 
 
-@dataclass(init=False)
-class Players:
+class Player(NamedTuple):
     """
-    Represents the JSON response data from :meth:`~Core.get_user_list`.
+    Represents a single player connected to a server.
 
     Attributes
     -----------
@@ -1805,16 +1805,61 @@ class Players:
         The UUID of the player.
     name: :class:`str`
         The name of the player.
-
     """
 
     uuid: str = ""
     name: str = ""
 
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and self.name == other.name
+
+    def __lt__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and self.name < other.name
+
+
+@dataclass(init=False)
+class Players:
+    """
+    Represents the JSON response data from :meth:`~Core.get_user_list`.
+
+
+    .. note::
+        The print out of this dataclass can be long depending on the number of players connected due to separation by newline.
+
+
+    Attributes
+    -----------
+    sorted: list[:class:`Player`]
+        A sorted list of :class:`Player` objects by name.
+
+    """
+
+    # {'781a2971-c14b-42c2-8742-d1e2b029d00a': 'k8_thekat', '50686fad-4027-4bdb-a4a5-2533f8a1e51f': 'WolfDevilAngel'}
+    sorted: list[Player]
+
     def __init__(self, data: dict[str, str]) -> None:
         for uuid, name in data.items():
-            setattr(self, "id", uuid)
-            setattr(self, "name", name)
+            self.sorted.append(Player(uuid=uuid, name=name))
+        self.sorted.sort(key=attrgetter("name"))
+
+    def __repr__(self) -> str:
+        return "\n".join([p.name for p in self.sorted])
+
+    def get_player(self, name_or_uuid: str) -> list[Player]:
+        """
+        Search for a player by their name or UUID.
+
+        Parameters
+        -----------
+        name_or_uuid: :class:`str`
+            The players name or UUID.
+
+        Returns
+        --------
+        :class:`list[Player]`
+            A list of :class:`Player` objects matching the search string.
+        """
+        return [p for p in self.sorted if name_or_uuid in (p.name, p.uuid)]
 
 
 @dataclass
