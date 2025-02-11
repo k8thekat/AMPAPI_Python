@@ -1838,6 +1838,7 @@ class Players:
     sorted: list[Player]
 
     def __init__(self, data: dict[str, str]) -> None:
+        self.sorted = []
         for uuid, name in data.items():
             self.sorted.append(Player(uuid=uuid, name=name))
         self.sorted.sort(key=attrgetter("name"))
