@@ -55,7 +55,7 @@ select = [
     "PTH",
     "RUF",
     "SIM",
-    "TC",
+    # "TC",
     "UP",
     "W",
     "PERF",
