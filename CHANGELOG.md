@@ -1,3 +1,16 @@
+## Version - 1.1.2 - [212fecc](https://github.com/k8thekat/AMPAPI_Python/commit/212fecc)
+#### Changelog.md
+- Version info from `1.1.1` added.
+
+#### __init__.py
+- Version bump to `1.1.2`
+
+#### pyproject.toml
+- Removed unsed lint rule.
+
+#### samples.py
+- Fixed example of using Players from a Minecraft server updated to reflect changes due to #16 .
+
 ## Version - 1.1.1 - [bac0a57](https://github.com/k8thekat/AMPAPI_Python/commit/bac0a57)
 #### Changelog.md
 - Version info from `1.1.0` added.
