@@ -1,3 +1,17 @@
+## Version - 1.1.1 - [bac0a57](https://github.com/k8thekat/AMPAPI_Python/commit/bac0a57)
+#### Changelog.md
+- Version info from `1.1.0` added.
+
+#### __init__.py
+- Version bump to `1.1.1`
+
+#### Overall
+Initialise self.sorted"
+Issue fixes and documentation update."
+Developer"
+Removed merg notes from changelog"
+Developer
+
 ## Version - 1.1.0 - [2c8094f](https://github.com/k8thekat/AMPAPI_Python/commit/2c8094f)
 #### Changelog.md
 - Version info from `1.0.7` added.
