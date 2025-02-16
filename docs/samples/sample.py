@@ -83,8 +83,8 @@ async def Sample_API() -> None:
     mcinstance.status.metrics
 
     # Want to kick a random person? Here ya go~
-    players: list[Players] = await mcinstance.get_user_list()
-    await mcinstance.mc_kick_user_by_id(user_id=players[0].uuid)
+    players: Players = await mcinstance.get_user_list()
+    await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
 
     # Analytics Introduction -
     # Simply call the below method.
