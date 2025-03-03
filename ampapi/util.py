@@ -20,11 +20,7 @@ if TYPE_CHECKING:
 
     from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
     from .dataclass import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
-    from .types_ import (
-        APISpec,
-        PermissionNode,
-        ScheduleDataData,
-    )
+    from .types_ import APISpec, PermissionNode, ScheduleDataData
 
 
 # static strings for documentation
@@ -151,6 +147,7 @@ async def _parse_get_api_spec_to_file(
         file.write(f"INSTANCE TYPE: {instance_type}\n")
         file.write(f"APP VERSION: {diag_info.application_version}\n")
         file.write(f"BUILD: {diag_info.build_date}\n\n")
+
         for parent, parent_value in sorted(data.items()):
             if parent not in parents:
                 parents.append(parent)
@@ -235,10 +232,13 @@ def _permission_node_parse(
                 for children in entry["children"]:
                     # We cheaply ignore them since they always have a "-" in them.
                     if "-" in children["name"]:
-                        new_child: PermissionNode = children["children"][0]
-                        for node in sorted(new_child["children"], key=lambda x: x["name"]):
-                            # Handles formatting our nodes
-                            file.write(f"- Instances.`instance-id`.{node['name']}\n")
+                        new_child: list[PermissionNode] | PermissionNode = children.get("children", [])
+                        if len(new_child) > 0:
+                            new_child = new_child[0]
+                            for node in sorted(new_child["children"], key=lambda x: x["name"]):
+                                # Handles formatting our nodes
+                                file.write(f"- Instances.`instance-id`.{node['name']}\n")
+
                 continue
             else:
                 # Our notes about the prefix characters.
