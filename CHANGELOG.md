@@ -1,3 +1,21 @@
+## Version - 1.2.0 - [7be6620](https://github.com/k8thekat/AMPAPI_Python/commit/7be6620)
+#### Changelog.md
+- Version info from `1.1.2` added.
+
+#### __init__.py
+- Version bump to `1.2.0`
+
+#### Overall
+- Updated for v`2.6.0.12`
+- Updated API Spec Sheets and RST files.
+
+#### Core.py
+- New fucntion `get_oidc_login_url()` to work with AMPs OIDC support.
+
+#### Util.py
+- Sorted Imports.
+- Fixed logic inside `_permission_node_parse()` which could make it fail if no children attributes existed for the Permission Node.
+
 ## Version - 1.1.2 - [212fecc](https://github.com/k8thekat/AMPAPI_Python/commit/212fecc)
 #### Changelog.md
 - Version info from `1.1.1` added.
