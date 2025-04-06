@@ -344,30 +344,29 @@ class Base:
                     raise ValueError(
                         "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
                     )
-            else:
-                try:
-                    parameters: dict[str, Any] = {
-                        "username": self._bridge.user,
-                        "password": self._bridge.password,
-                        "token": code,
-                        "rememberMe": True,
-                    }
+            try:
+                parameters: dict[str, Any] = {
+                    "username": self._bridge.user,
+                    "password": self._bridge.password,
+                    "token": code,
+                    "rememberMe": True,
+                }
 
-                    result: Any = await self._call_api(
-                        api="Core/Login", parameters=parameters, format_data=True, format_=LoginResults
-                    )
-                    if isinstance(result, LoginResults):
-                        # This is our new sessions table to correlate InstanceID to a sessionID.
-                        api_session = APISession(id=result.session_id, ttl=datetime.now())
-                        self._bridge._sessions.update({self.instance_id: api_session})
-                        return result
+                result: Any = await self._call_api(
+                    api="Core/Login", parameters=parameters, format_data=True, format_=LoginResults
+                )
+                if isinstance(result, LoginResults):
+                    # This is our new sessions table to correlate InstanceID to a sessionID.
+                    api_session = APISession(id=result.session_id, ttl=datetime.now())
+                    self._bridge._sessions.update({self.instance_id: api_session})
+                    return result
 
-                    else:
-                        self.logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
-                        return result
+                else:
+                    self.logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
+                    return result
 
-                except Exception as e:
-                    self.logger.warning("Core/Login Exception:", exc_info=e)
+            except Exception as e:
+                self.logger.warning("Core/Login Exception:", exc_info=e)
         else:
             return
 
@@ -563,8 +562,8 @@ class Base:
         if bridge.use_2fa is True:
             if bridge.token == "":
                 raise ValueError("You must provide a 2FA Token if you are using 2FA.")
-            elif bridge.token.startswith(("'", '"')) is False or bridge.token.endswith(("'", '"')) is False:
-                raise ValueError("2FA Token must be enclosed in quotes.")
+            # elif bridge.token.startswith(("'", '"')) is False or bridge.token.endswith(("'", '"')) is False:
+            #     raise ValueError("2FA Token must be enclosed in quotes.")
             # Removed starting and ending quotes
             elif len(bridge.token) < 8:
                 raise ValueError(

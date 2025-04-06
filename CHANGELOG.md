@@ -1,3 +1,13 @@
+## Version - 1.3.0 - [24d971b](https://github.com/k8thekat/AMPAPI_Python/commit/24d971b)
+#### Changelog.md
+- Version info from `1.2.1` added.
+
+#### __init__.py
+- Version bump to `1.3.0`
+
+#### base.py
+- Fixed logic error in `_connect()` method not handling 2FA codes properly.
+
 ## Version - 1.2.1 - [1b814ff](https://github.com/k8thekat/AMPAPI_Python/commit/1b814ff)
 #### Changelog.md
 - Version info from `1.2.0` added.
