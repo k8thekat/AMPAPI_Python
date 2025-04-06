@@ -432,6 +432,7 @@ FMP Security Nodes
 - Security.DownloadableExtensions
 - Security.HoneypotSFTPLogins
 - Security.OnlyExtractUploadableExtensionsFromArchives
+- Security.PublicKeyOnly
 - Security.RestrictDownloadExtensions
 - Security.RestrictUploadExtensions
 - Security.UploadableExtensions

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Union
 from .base import Base
 from .dataclass import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
 
-
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
     from typing import Concatenate
@@ -52,7 +51,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_accept_eula(self) -> bool:
-        """
+        """|coro|
+
         Accept the EULA summary.
 
         Returns
@@ -67,7 +67,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_add_op_entry(self, user_or_uuid: str, format_data: Union[bool, None] = None) -> ActionResult:
-        """
+        """|coro|
+
         Add an entry to the OP list.
 
         Parameters
@@ -91,7 +92,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_add_to_whitelist(self, user_or_uuid: str, format_data: Union[bool, None] = None) -> ActionResult:
-        """
+        """|coro|
+
         Add a user to the whitelist.
 
         Parameters
@@ -114,7 +116,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_buk_get_categories(self) -> list[BukkitCategories]:
-        """
+        """|coro|
+
         Get Bukkit categories.
 
         .. note::
@@ -133,7 +136,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_buk_get_installed_plugins(self, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
-        """
+        """|coro|
+
         Get Bukkit installed plugins.
 
         Parameters
@@ -155,7 +159,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_buk_get_install_update_plugin(self, plugin_id: int, format_data: Union[bool, None] = None) -> RunningTask:
-        """
+        """|coro|
+
         Get update for Bukkit plugin.
 
         Parameters
@@ -183,7 +188,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_buk_get_plugin_info(self, plugin_id: int, format_data: Union[bool, None] = None) -> Any:
-        """
+        """|coro|
+
         Get Bukkit plugin info.
 
 
@@ -211,7 +217,8 @@ class MinecraftModule(Base):
     async def mc_buk_get_plugins_for_category(
         self, category_id: str, page_number: int = 1, page_size: int = 10, format_data: Union[bool, None] = None
     ) -> list[BukkitPlugin]:
-        """
+        """|coro|
+
         Get Bukkit plugins from category.
 
         Parameters
@@ -245,7 +252,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_buk_get_popular_plugins(self, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
-        """
+        """|coro|
+
         Get Bukkit popular plugins.
 
         Parameters
@@ -267,7 +275,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_buk_get_remove_plugin(self, plugin_id: int) -> None:
-        """
+        """|coro|
+
         Remove Bukkit plugin.
 
         Parameters
@@ -289,7 +298,8 @@ class MinecraftModule(Base):
     async def mc_buk_get_search(
         self, query: str, page_number: int = 0, page_size: int = 10, format_data: Union[bool, None] = None
     ) -> list[BukkitPlugin]:
-        """
+        """|coro|
+
         Search for Bukkit plugins.
 
         Parameters
@@ -318,7 +328,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_ban_user_by_id(self, user_id: str) -> None:
-        """
+        """|coro|
+
         Ban the specified Minecraft UUID.
 
         .. note::
@@ -342,7 +353,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_clear_inventory_by_id(self, user_id: str) -> None:
-        """
+        """|coro|
+
         Clear a players inventory.
 
         .. note::
@@ -366,7 +378,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_get_failure_reason(self) -> str:
-        """
+        """|coro|
+
         Get the Server failure reason, if any.
 
         Returns
@@ -381,7 +394,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_get_head_by_uuid(self, user_id: str) -> str:
-        """
+        """|coro|
+
         Get a skin as a base64 string.
 
         .. note::
@@ -406,7 +420,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_get_op_whitelist(self, format_data: Union[bool, None] = None) -> OPWhitelist:
-        """
+        """|coro|
+
         Get the OP whitelist.
 
         Parameters
@@ -428,7 +443,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_get_whitelist(self, format_data: Union[bool, None] = None) -> list[MCUser]:
-        """
+        """|coro|
+
         Get the whitelist.
 
         Parameters
@@ -436,8 +452,9 @@ class MinecraftModule(Base):
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
-        Returns:
-        ---
+
+        Returns
+        --------
         list[:class:`MCUser`]
             On success returns a list of :class:`MCUser` dataclasses.
         """
@@ -448,7 +465,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_kick_user_by_id(self, user_id: str) -> None:
-        """
+        """|coro|
+
         Kick the specified Minecraft Users UUID.
 
         .. note::
@@ -472,7 +490,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_kill_by_id(self, user_id: str) -> None:
-        """
+        """|coro|
+
         Kill the Minecraft player.
 
         .. note::
@@ -496,7 +515,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_load_op_list(self, format_data: Union[bool, None] = None) -> list[OPList]:
-        """
+        """|coro|
+
         Get the OP list.
 
         Parameters
@@ -516,7 +536,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_remove_op_entry(self, user: str) -> None:
-        """
+        """|coro|
+
         Remove an entry from the OP list.
 
         .. note::
@@ -536,7 +557,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_remove_whitelist_entry(self, user: str) -> None:
-        """
+        """|coro|
+
         Remove a user from the whitelist.
 
         .. note::
@@ -556,7 +578,8 @@ class MinecraftModule(Base):
 
     @mc_only
     async def mc_smite_by_id(self, user_id: str) -> None:
-        """
+        """|coro|
+
         Strike a player with lightning
 
         .. note::

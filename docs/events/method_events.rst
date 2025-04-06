@@ -401,6 +401,16 @@ Take a backup
 - ``Event.LocalFileBackupPlugin.TakeBackup``
 
 
+TakeBackupWhileDown
+~~~~~~~~~~~~~~~~~~~~
+:raw-html:`<hr>`
+Shut the server down, take a backup, and start it up again.
+
+- ``Event.LocalFileBackupPlugin.TakeBackupWhileDown``
+
+Consumes these values:
+	* RestartEvenIfNotRunning: type(Boolean)
+
 TakeStickyBackup
 ~~~~~~~~~~~~~~~~~
 :raw-html:`<hr>`

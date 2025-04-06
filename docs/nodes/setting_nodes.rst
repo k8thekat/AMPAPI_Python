@@ -329,6 +329,10 @@ Settings Security_And_Privacy Nodes
 	| Description: How many minutes the sliding window should be to check for authentication failures.
 	| Node: `Core.Security.AuthFailureTimeWindow`
 
+**Name**: Public Key SFTP logins only
+	| Description: Disables password-based authentication for SFTP and requires that users have added an RSA public key to their profile.
+	| Node: `FileManagerPlugin.Security.PublicKeyOnly`
+
 **Name**: Rate-limit Logins
 	| Description: If enabled - login attempts will be rate limited after too many failures. If you're using external tools such as reverse proxies to handle rate limiting you may wish to disable this from within AMP
 	| Node: `Core.Security.RateLimitLogins`

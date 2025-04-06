@@ -1480,7 +1480,7 @@ class Core(Base):
         return result
 
     async def get_user_list(self, format_data: Union[bool, None] = None) -> Players:
-        """|coro|Players
+        """|coro|
 
         Returns the list of the connected users to the Application.
 

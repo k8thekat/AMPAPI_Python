@@ -1377,8 +1377,7 @@ class Instance:
     def __repr__(self) -> str:
         res: str = f"Type: {type(self)} | ID: {id(self)}\n"
         res += f"Name: {self.instance_name}\nInstance ID: {self.instance_id}\n"
-        res += f"Application State: {self.app_state.name}\nInstance Running: {self.running}\nModule: {self.module}\nPort: {self.port}"
-        res += "\n"
+        res += f"Application State: {self.app_state.name}\nInstance Running: {self.running}\nModule: {self.module}\nPort: {self.port}\n"
         return res
 
     @staticmethod

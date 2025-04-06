@@ -40,7 +40,7 @@ Basic Usage
 3. You can then use the Parent :py:class:`~ampapi.instance.AMPADSInstance` or the smaller class :py:class:`~ampapi.instance.AMPInstance` or any of the API classes as a stand alone.
     - See `Quick Example`_ for a visual example.
 
-.. _Quick Example: ../samples/sample.py
+.. _Quick Example: https://github.com/k8thekat/AMPAPI_Python/blob/main/docs/samples/sample.py
 
 
 .. toctree::
