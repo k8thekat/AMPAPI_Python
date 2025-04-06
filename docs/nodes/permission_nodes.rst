@@ -202,11 +202,6 @@ Instances Permission Nodes
 - Instances.`instance-id`.Start
 - Instances.`instance-id`.Stop
 - Instances.`instance-id`.Update
-- Instances.`instance-id`.Manage
-- Instances.`instance-id`.Restart
-- Instances.`instance-id`.Start
-- Instances.`instance-id`.Stop
-- Instances.`instance-id`.Update
 
 Settings Permission Nodes
 ##########################
@@ -437,6 +432,7 @@ FMP Security Nodes
 - Security.DownloadableExtensions
 - Security.HoneypotSFTPLogins
 - Security.OnlyExtractUploadableExtensionsFromArchives
+- Security.PublicKeyOnly
 - Security.RestrictDownloadExtensions
 - Security.RestrictUploadExtensions
 - Security.UploadableExtensions

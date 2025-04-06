@@ -1067,6 +1067,18 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetNewGuid", format_data=format_data)
         return result
 
+    async def get_oidc_login_url(self) -> None:
+        """
+        Interacts with OIDC credentials.
+
+        Returns
+        --------
+        None
+        """
+        await self._connect()
+        await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
+        return
+
     async def get_permissions_spec(self) -> list[PermissionNode]:
         """|coro|
 
@@ -1450,7 +1462,7 @@ class Core(Base):
         Parameters
         -----------
         user_id: :class:`str`
-            The Application User id. See :meth:`get_user_list`
+            The Application User id. See :meth:`get_user_list`.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
@@ -1468,7 +1480,7 @@ class Core(Base):
         return result
 
     async def get_user_list(self, format_data: Union[bool, None] = None) -> Players:
-        """|coro|Players
+        """|coro|
 
         Returns the list of the connected users to the Application.
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-ampapi"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 authors = [
     { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
 ]

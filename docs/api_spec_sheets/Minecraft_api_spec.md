@@ -1,6 +1,6 @@
 INSTANCE TYPE: Minecraft
-APP VERSION: 2.6.0.4 | None
-BUILD: 06/11/2024 22:37
+APP VERSION: 2.6.0.12 | None
+BUILD: 24/02/2025 17:12
 
 ____________________________________________________
 analytics_plugin:
@@ -247,6 +247,12 @@ core:
 		is_complex_type: False
 		parameters: []
 		return_type_name: Guid
+		returns: None
+	get_oidc_login_url:
+		description: None
+		is_complex_type: False
+		parameters: []
+		return_type_name: String
 		returns: None
 	get_permissions_spec:
 		description: None

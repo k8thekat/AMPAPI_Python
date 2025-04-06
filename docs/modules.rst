@@ -54,4 +54,8 @@ Local File Backup Module
    :members:
    :show-inheritance:
 
-
+Minecraft Module
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: MinecraftModule
+   :members:
+   :show-inheritance:

@@ -1,3 +1,50 @@
+## Version - 1.2.1 - [1b814ff](https://github.com/k8thekat/AMPAPI_Python/commit/1b814ff)
+#### Changelog.md
+- Version info from `1.2.0` added.
+
+#### __init__.py
+- Version bump to `1.2.1`
+
+#### Overall
+- Updated `docs/events` and `/docs/nodes` rst files.
+- Fixed missing dynamic entry for dependencies.
+
+#### core.py
+- Fixed typo in docstring for `get_user_list()`.
+
+#### dataclass.py
+- Changed formatting of `__repr__` for the `Instance` class.
+
+#### minecraft.py
+- Formatted imports and updated docstrings as this file was ommitted from the docs.
+
+#### index.rst
+- Fixed link for `Quick Example`.
+
+#### instances.rst
+- Changed wording to not be as confusing/redundant.
+
+#### modules.rst
+- Added the missing *Minecraft Module*.
+
+## Version - 1.2.0 - [7be6620](https://github.com/k8thekat/AMPAPI_Python/commit/7be6620)
+#### Changelog.md
+- Version info from `1.1.2` added.
+
+#### __init__.py
+- Version bump to `1.2.0`
+
+#### Overall
+- Updated for v`2.6.0.12`
+- Updated API Spec Sheets and RST files.
+
+#### Core.py
+- New fucntion `get_oidc_login_url()` to work with AMPs OIDC support.
+
+#### Util.py
+- Sorted Imports.
+- Fixed logic inside `_permission_node_parse()` which could make it fail if no children attributes existed for the Permission Node.
+
 ## Version - 1.1.2 - [212fecc](https://github.com/k8thekat/AMPAPI_Python/commit/212fecc)
 #### Changelog.md
 - Version info from `1.1.1` added.
