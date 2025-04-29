@@ -1,3 +1,14 @@
+## Version - 1.3.1 - [cad740f](https://github.com/k8thekat/AMPAPI_Python/commit/cad740f)
+#### Changelog.md
+- Version info from `1.3.0` added.
+
+#### __init__.py
+- Version bump to `1.3.1`
+
+#### Overall
+- Updated Readme with better examples of importing the package.
+- Fixed Example URL being broken and now re-directs to github Sample.
+
 ## Version - 1.3.0 - [24d971b](https://github.com/k8thekat/AMPAPI_Python/commit/24d971b)
 #### Changelog.md
 - Version info from `1.2.1` added.
