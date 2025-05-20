@@ -1,3 +1,16 @@
+## Version - 1.3.2 - [ac4118a](https://github.com/k8thekat/AMPAPI_Python/commit/ac4118a)
+#### Changelog.md
+- Version info from `1.3.1` added.
+
+#### __init__.py
+- Version bump to `1.3.2`
+
+#### controller.py
+- Updated type definitions for `get_instances()` via overloads.
+
+#### Readme.md
+- Formatting change to Contributing to the Project section.
+
 ## Version - 1.3.1 - [cad740f](https://github.com/k8thekat/AMPAPI_Python/commit/cad740f)
 #### Changelog.md
 - Version info from `1.3.0` added.
