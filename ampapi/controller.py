@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from dataclasses import fields
-from typing import Any, Union
+from typing import Any, Union, overload
 
 from .adsmodule import ADSModule
 from .core import Core
@@ -101,8 +101,18 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
                     conv_instances.add(AMPInstance(data=entry, controller=self))
         return conv_instances
 
+    @overload
     async def get_instances(
         self, include_self: bool = True, format_data: Union[bool, None] = None
+    ) -> set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]]: ...
+
+    @overload
+    async def get_instances(
+        self, include_self: bool = True, format_data: Union[bool, None] = False
+    ) -> Iterable[Union[Controller, Instance]]: ...
+
+    async def get_instances(
+        self, include_self: bool = True, format_data: Union[bool, None] = True
     ) -> Union[set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]], Iterable[Union[Controller, Instance]]]:
         """|coro|
 
