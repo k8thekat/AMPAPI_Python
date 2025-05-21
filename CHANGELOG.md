@@ -1,3 +1,15 @@
+## Version - 2.0.0 - [c765d8f](https://github.com/k8thekat/AMPAPI_Python/commit/c765d8f)
+#### Changelog.md
+- Version info from `1.3.2` added.
+
+#### __init__.py
+- Version bump to `2.0.0`
+
+#### base.py
+- Updated formatting of `debug` logger statements in `_call_api()`.
+- Fixed logic error when handling api response not returning the data correctly.(This may break older versions of AMP)
+- Updated logic inside `json_to_dataclass` as it was returning None on certain edge cases when it should just return the data.
+
 ## Version - 1.3.2 - [ac4118a](https://github.com/k8thekat/AMPAPI_Python/commit/ac4118a)
 #### Changelog.md
 - Version info from `1.3.1` added.
