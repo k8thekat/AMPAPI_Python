@@ -235,7 +235,9 @@ class Base:
         json_data: str = json.dumps(obj=parameters)
 
         _url: str = self.url + "/API/" + api
-        self.logger.debug("DEBUG %s | %s | %s | %s", self.instance_id, api, _url, pformat(json_data))
+        self.logger.debug(
+            "DEBUG %s | API CALL: %s | API URL: %s | DATA: %s", self.instance_id, api, _url, pformat(json_data)
+        )
         async with aiohttp.ClientSession() as session:
             try:
                 post_req = await session.post(url=_url, headers=header, data=json_data)
@@ -259,10 +261,14 @@ class Base:
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-        self.logger.debug("DEBUG API CALL----> %s | %s | %s", api, type(post_req_json), parameters)
-        self.logger.debug("DEBUG %s", pformat(post_req_json))
+        self.logger.debug(
+            "DEBUG API CALL----> %s | REQ JSON TYPE: %s | PARAMETERS: %s", api, type(post_req_json), parameters
+        )
+        self.logger.debug("DEBUG RESPONSE: %s", pformat(post_req_json))
         if sanitize_json is True:
             post_req_json = self.sanitize_json(post_req_json)
+            self.logger.debug("DEBUG RESPONSE SANITIZED: %s", pformat(post_req_json))
+
         if isinstance(post_req_json, dict):
             if "title" in post_req_json:
                 post_req_json = post_req_json["title"]
@@ -280,19 +286,26 @@ class Base:
             elif api == "Core/Login":
                 return LoginResults(**post_req_json)
 
-            elif "result" in post_req_json:
-                post_req_json = post_req_json["result"]
+            # ? Suggestion
+            # This is breaking newer code as it's grabbing the inner key versus older version of AMP having two `result` keys.
+            # We may need to re-add this fuctionality in a different manner going forward.
+            # elif "result" in post_req_json:
+            #     post_req_json = post_req_json["result"]
 
-                if isinstance(post_req_json, bool) and post_req_json is False:
-                    self.logger.error("%s failed because of %s", api, post_req_json)
-                    raise ValueError(self._failed_api)
+            #     if isinstance(post_req_json, bool) and post_req_json is False:
+            #         self.logger.error("%s failed because of %s", api, post_req_json)
+            #         raise ValueError(self._failed_api)
 
             elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] is False:
                 self.logger.error("%s failed because of Status: %s", api, post_req_json)
                 return ValueError(self._failed_api)
 
         self.logger.debug(
-            "DEBUG _call_api | format_data = %s | FORMAT_DATA = %s | FORMAT-> %s", format_data, FORMAT_DATA, format_
+            "DEBUG: FORMAT DATA | local Format Data: %s | global Format Data: %s | format_: %s | POST REQ TYPE: %s",
+            format_data,
+            FORMAT_DATA,
+            format_,
+            type(post_req_json),
         )
         if (format_ is None or format_data is False) or (format_data is None and FORMAT_DATA is False):
             return post_req_json
@@ -303,6 +316,8 @@ class Base:
             return self.json_to_dataclass(
                 json=post_req_json, format_=format_, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack
             )
+        else:
+            return post_req_json
 
     async def _connect(self) -> LoginResults | None:
         """|coro|
@@ -486,7 +501,7 @@ class Base:
         format_: Union[type[X], type[APIResponseDataTableAlias]],
         _use_from_dict: bool,
         _auto_unpack: bool,
-    ) -> X | list[APIResponseDataTableAlias | X] | APIResponseDataTableAlias | None:
+    ) -> X | list[APIResponseDataTableAlias | X] | APIResponseDataTableAlias | Iterable[Any]:
         """
         Format the JSON response data to a dataclass.
 
@@ -524,7 +539,7 @@ class Base:
             else:
                 return [format_(data) for data in json]  # type: ignore
 
-        if isinstance(json, dict):
+        elif isinstance(json, dict):
             # _use_from_dict is to handle nested Dataclasses.
             if _use_from_dict is True:
                 return fromdict(format_, json)
@@ -534,7 +549,8 @@ class Base:
 
             else:
                 return format_(json)  # type: ignore
-        return None
+        else:
+            return json
 
     def parse_bridge(self, bridge: Bridge) -> None:
         """
