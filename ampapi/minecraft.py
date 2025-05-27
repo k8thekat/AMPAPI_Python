@@ -4,7 +4,7 @@ import functools
 from typing import TYPE_CHECKING, Any, Union
 
 from .base import Base
-from .dataclass import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
+from .modules import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine

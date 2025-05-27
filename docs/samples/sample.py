@@ -1,10 +1,18 @@
 from pprint import pprint
 from typing import Union
 
-from ampapi import *
-from ampapi.dataclass import AnalyticsFilter, AnalyticsSummary, APIParams, Players
-from ampapi.enums import *
-from ampapi.instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
+from ampapi import (
+    AMPADSInstance,
+    AMPControllerInstance,
+    AMPInstance,
+    AMPInstanceState,
+    AMPMinecraftInstance,
+    AnalyticsFilter,
+    AnalyticsSummary,
+    APIParams,
+    Bridge,
+    Players,
+)
 
 _params = APIParams(url="http://192.168.13.130:8080", user="bot_username", password="bot_password")
 

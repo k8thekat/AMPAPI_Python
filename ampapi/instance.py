@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, Union
 
 from .analytics import AnalyticsPlugin
 from .core import Core
-from .dataclass import ActionResult, Instance, InstanceStatus, Updates
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .minecraft import MinecraftModule
+from .modules import ActionResult, Instance, InstanceStatus, Updates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -50,6 +50,64 @@ class AMPInstance(
 
     Attributes
     -----------
+    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints: list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    app_state: :class:`AMPInstanceState`
+        The state of the application.
+    container_cpus: :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb: :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy: :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon: :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart: :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args: dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description: :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb: :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source: :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall: :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name: :class:`str`
+        The friendly name of the Instance.
+    ip: :class:`str`
+        The IP address of the Instance.
+    instance_id: :class:`str`
+        The Instance GUID.
+    instance_name: :class:`str`
+        The Instance name.
+    is_container_instance: :class:`bool`
+        If the Instance is a container instance.
+    is_https: :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode: :class:`int`
+        The management mode of the Instance.
+    metrics: Union[:class:`Metric`, None]
+        The metrics of the Instance, default is None.
+    module: :class:`str`
+        The module of the Instance.
+    module_display_name: :class:`str`
+        The display name of the module, default is "".
+    port: :class:`str`
+        The port of the Instance.
+    release_stream: :class:`int`
+        The release stream of the Instance.
+    running: :class:`bool`
+        If the Instance is running.
+    suspended: :class:`bool`
+        If the Instance is suspended.
+    tags: Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id: :class:`str`
+        The target ID of the Instance.
     url: :class:`str`
         The API url.
     """
@@ -338,8 +396,66 @@ class AMPMinecraftInstance(MinecraftModule, AMPInstance):
 
     Attributes
     -----------
+    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints: list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    app_state: :class:`AMPInstanceState`
+        The state of the application.
+    container_cpus: :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb: :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy: :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon: :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart: :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args: dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description: :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb: :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source: :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall: :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name: :class:`str`
+        The friendly name of the Instance.
+    ip: :class:`str`
+        The IP address of the Instance.
+    instance_id: :class:`str`
+        The Instance GUID.
+    instance_name: :class:`str`
+        The Instance name.
+    is_container_instance: :class:`bool`
+        If the Instance is a container instance.
+    is_https: :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode: :class:`int`
+        The management mode of the Instance.
+    metrics: Union[:class:`Metric`, None]
+        The metrics of the Instance, default is None.
     module: :class:`str`
-        The API module type, default is "Minecraft".
+        The module of the Instance, default is "Minecraft".
+    module_display_name: :class:`str`
+        The display name of the module, default is "".
+    port: :class:`str`
+        The port of the Instance.
+    release_stream: :class:`int`
+        The release stream of the Instance.
+    running: :class:`bool`
+        If the Instance is running.
+    suspended: :class:`bool`
+        If the Instance is suspended.
+    tags: Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id: :class:`str`
+        The target ID of the Instance.
+    url: :class:`str`
+        The API url.
     """
 
     module: str = "Minecraft"
@@ -355,8 +471,66 @@ class AMPADSInstance(AMPInstance):
 
     Attributes
     -----------
+    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints: list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    app_state: :class:`AMPInstanceState`
+        The state of the application.
+    container_cpus: :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb: :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy: :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon: :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart: :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args: dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description: :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb: :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source: :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall: :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name: :class:`str`
+        The friendly name of the Instance.
+    ip: :class:`str`
+        The IP address of the Instance.
+    instance_id: :class:`str`
+        The Instance GUID.
+    instance_name: :class:`str`
+        The Instance name.
+    is_container_instance: :class:`bool`
+        If the Instance is a container instance.
+    is_https: :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode: :class:`int`
+        The management mode of the Instance.
+    metrics: Union[:class:`Metric`, None]
+        The metrics of the Instance, default is None.
     module: :class:`str`
-        The API module type, default is "ADS".
+        The module of the Instance, default is "ADS".
+    module_display_name: :class:`str`
+        The display name of the module, default is "".
+    port: :class:`str`
+        The port of the Instance.
+    release_stream: :class:`int`
+        The release stream of the Instance.
+    running: :class:`bool`
+        If the Instance is running.
+    suspended: :class:`bool`
+        If the Instance is suspended.
+    tags: Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id: :class:`str`
+        The target ID of the Instance.
+    url: :class:`str`
+        The API url.
     """
 
     module: str = "ADS"

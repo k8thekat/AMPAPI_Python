@@ -1,4 +1,4 @@
-.. currentmodule:: ampapi.enums
+.. currentmodule:: ampapi.enums_
 
 Enums
 ~~~~~~
@@ -48,7 +48,7 @@ Enums
 .. autoenum:: TwoFactoryModeState
     :members:
 
-.. currentmodule:: ampapi.types
+.. currentmodule:: ampapi.types_
 
 Types
 ~~~~~~
@@ -94,26 +94,8 @@ These are all :class:`TypedDicts`
     :members:
 
 
-Dataclasses
-~~~~~~~~~~~~
-
-.. automodule:: ampapi.dataclass
-    :members:
-
-
-.. currentmodule:: ampapi.modules
-
 Data Modules
 ~~~~~~~~~~~~~
 
-.. autoclass:: DeploymentTemplate
+.. automodule:: ampapi.modules
     :members:
-    
-.. autoclass:: UserApplicationData
-    :members:
-
-.. autoclass:: TriggerID
-    :members:
-
-
-.. 

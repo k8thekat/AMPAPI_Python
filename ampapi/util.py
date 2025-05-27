@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Union
 
 from dataclass_wizard import fromdict
 
-from .dataclass import ScheduleData
 from .instance import AMPMinecraftInstance
+from .modules import ScheduleData
 from .types_ import ScheduleDataData
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from io import TextIOWrapper
 
     from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
-    from .dataclass import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
+    from .modules import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
     from .types_ import APISpec, PermissionNode, ScheduleDataData
 
 

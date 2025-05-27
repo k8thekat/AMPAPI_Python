@@ -6,9 +6,10 @@ from pyotp import TOTP
 from typing_extensions import deprecated
 
 from .base import Base
-from .dataclass import (
+from .modules import (
     ActionResult,
     AuditLogEntry,
+    BuildInfo,
     Diagnostics,
     InstanceStatus,
     LoginResults,
@@ -23,12 +24,12 @@ from .dataclass import (
     SettingSpec,
     SettingsSpecParent,
     TimedTrigger,
+    TriggerID,
     UpdateInfo,
     Updates,
     User,
-    VersionInfo,
+    UserApplicationData,
 )
-from .modules import TriggerID, UserApplicationData
 from .types_ import ActionSpec, APISpec, PermissionNode, ScheduleDataData, TriggersData
 
 __all__: tuple[Literal["Core"]] = ("Core",)
@@ -1277,7 +1278,10 @@ class Core(Base):
 
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetSettingsSpec", format_data=format_data, format_=SettingsSpecParent, sanitize_json=True
+            api="Core/GetSettingsSpec",
+            format_data=format_data,
+            format_=SettingsSpecParent,  # type:ignore
+            sanitize_json=True,
         )
         return result
 
@@ -1588,7 +1592,7 @@ class Core(Base):
 
         await self._connect()
         try:
-            await self.version_validation(version=VersionInfo(2, 6, 0, 0))
+            await self.version_validation(version=BuildInfo(2, 6, 0, 0))
         except RuntimeError as e:
             return e
 

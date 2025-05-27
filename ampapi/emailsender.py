@@ -1,7 +1,7 @@
 from typing import Union
 
 from .base import Base
-from .dataclass import ActionResult
+from .modules import ActionResult
 
 __all__ = ("EmailSenderPlugin",)
 

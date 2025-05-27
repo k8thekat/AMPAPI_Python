@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Union
 
 from .base import Base
-from .dataclass import ActionResult, Backup, RunningTask
+from .modules import ActionResult, Backup, RunningTask
 
 __all__ = ("LocalFileBackupPlugin",)
 

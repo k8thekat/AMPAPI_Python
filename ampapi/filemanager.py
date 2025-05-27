@@ -1,7 +1,7 @@
 from typing import Any, Union
 
 from .base import Base
-from .dataclass import ActionResult, Directory, FileChunk
+from .modules import ActionResult, Directory, FileChunk
 
 __all__ = ("FileManagerPlugin",)
 

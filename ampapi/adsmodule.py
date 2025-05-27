@@ -1,11 +1,12 @@
 from typing import Any, Union
 
 from .base import Base
-from .dataclass import (
+from .modules import (
     ActionResult,
     Application,
     Controller,
     CreateInstance,
+    DeploymentTemplate,
     Endpoints,
     Instance,
     InstanceDatastore,
@@ -19,7 +20,6 @@ from .dataclass import (
     RunningTask,
     Template,
 )
-from .modules import DeploymentTemplate
 
 __all__ = ("ADSModule",)
 

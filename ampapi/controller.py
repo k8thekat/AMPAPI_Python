@@ -4,10 +4,10 @@ from typing import Any, Union, overload
 
 from .adsmodule import ADSModule
 from .core import Core
-from .dataclass import Controller, Instance
 from .emailsender import EmailSenderPlugin
 from .filemanager import FileManagerPlugin
 from .instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
+from .modules import Controller, Instance
 
 __all__ = ("AMPControllerInstance",)
 
@@ -20,6 +20,58 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
         All API Endpoints an AMP Controller Instance would have access to this class object does too.
 
 
+    .. note::
+        See :meth:`ADSModule.get_instances(include_self = True)` making the first instance "typically" the Controller Instance. aka ``ADS01``.
+
+
+    .. note::
+        Similar to what you see when you log into AMP web GUI and see the Instances list.
+        This attribute is cached and will require calling :meth:`~ADSModule.get_instances` to access the API converted class objects.
+        * See the :attr:`AMPControllerInstance.instances` attribute.
+
+
+    Attributes
+    -----------
+    id: :class:`int`
+        UNK
+    disabled: :class:`bool`
+        If the Controller is Disabled or not.
+    is_remote: :class:`bool`
+        If the Controller is remote or not.
+    platform: :class:`PlatformInfo`
+        Platform information related to the Instance.
+    datastores: list[dict[:class:`str`, Union[:class:`str`, :class:`int`]]]
+        The Datastores that the Controller has access to.
+    creates_in_containers: :class:`bool`
+        The Controller will create the Instances in containers.
+    can_create: :class:`bool`
+        If the Controller can create Instances or not.
+    available_instances: list[:class:`Instance`]
+        A list of AMP Instances the Controller/ADS has permissions to see.
+    available_ips : list[:class:`str`]
+        The list of available IPs the Controller/Instance has.
+    tags: list[:class:`str`]
+        The tags related to the Controller/Instance.
+    url: :class:`str`
+        The URL for the Controller/Instance.
+    last_updated: Union[:class:`str`, :class:`datetime`]
+        The last_updated comes in as  ISO format and :meth:`Controller`__post_init__` converts it into a datetime object.
+    instance_id: :class:`str`
+        The Controller/Instance ID tied to the Instance, default is "0".
+    state: :py:class:`AMPInstanceState`
+        The state the Controller/Instance is in. See enum :py:class:`AMPInstanceState`, default is ``AMPInstanceState.UNDEFINED``.
+    fitness: Union[Fitness, None]
+        UNK.
+    friendly_name: :class:`str`
+        The Controller/Instance friendly name, default is "None".
+    state_reason: :class:`str`
+        UNK, default is "".
+    description: :class:`str`
+        Controller/Instance description, default is "".
+    tags_list : Union[list[:class:`str`]]
+        The list of tags related to the Controller/Instance if any, default is None.
+    triggers: :class:`TriggerID`
+        You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information.
     """
 
     _controller_exists: bool = False

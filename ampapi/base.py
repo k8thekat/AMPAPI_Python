@@ -16,7 +16,7 @@ from dataclass_wizard import fromdict
 from pyotp import TOTP
 
 from .bridge import Bridge
-from .dataclass import APISession, Diagnostics, LoginResults, VersionInfo
+from .modules import APISession, BuildInfo, Diagnostics, LoginResults
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Iterable
@@ -26,8 +26,7 @@ if TYPE_CHECKING:
     from _typeshed import DataclassInstance
     from typing_extensions import ParamSpec, Self, TypeVar
 
-    from .dataclass import Controller, Instance, InstanceStatus, Updates
-    from .modules import APIResponseDataTableAlias
+    from .modules import APIResponseDataTableAlias, Controller, Instance, InstanceStatus, Updates
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -236,7 +235,7 @@ class Base:
 
         _url: str = self.url + "/API/" + api
         self.logger.debug(
-            "DEBUG %s | API CALL: %s | API URL: %s | DATA: %s", self.instance_id, api, _url, pformat(json_data)
+            "SESSION GET %s | API CALL: %s | API URL: %s | DATA: %s", self.instance_id, api, _url, pformat(json_data)
         )
         async with aiohttp.ClientSession() as session:
             try:
@@ -261,9 +260,7 @@ class Base:
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-        self.logger.debug(
-            "DEBUG API CALL----> %s | REQ JSON TYPE: %s | PARAMETERS: %s", api, type(post_req_json), parameters
-        )
+        self.logger.debug("RESPONSE JSON %s | REQ JSON TYPE: %s | PARAMETERS: %s", api, type(post_req_json), parameters)
         self.logger.debug("DEBUG RESPONSE: %s", pformat(post_req_json))
         if sanitize_json is True:
             post_req_json = self.sanitize_json(post_req_json)
@@ -738,7 +735,7 @@ class Base:
             fmt.append(character)
         return "".join(fmt)
 
-    async def version_validation(self, version: VersionInfo) -> None:
+    async def version_validation(self, version: BuildInfo) -> None:
         """
         Compares the Version of the application/Instance against the version that is passed in.
 
@@ -761,8 +758,8 @@ class Base:
             _auto_unpack=True,
         )
 
-        if isinstance(result, Diagnostics) and isinstance(result.application_version, VersionInfo):
-            _version: VersionInfo = result.application_version
+        if isinstance(result, Diagnostics) and isinstance(result.application_version, BuildInfo):
+            _version: BuildInfo = result.application_version
             if result.application_version < version:
                 raise RuntimeError(self._version_unavailable, "`Core/GetWebserverMetrics`", _version)
         else:
