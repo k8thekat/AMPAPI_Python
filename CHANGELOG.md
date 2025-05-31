@@ -1,3 +1,43 @@
+## Version - 4.0.0 - [426bad9](https://github.com/k8thekat/AMPAPI_Python/commit/426bad9)
+#### Changelog.md
+- Version info from `2.0.0` added.
+
+#### __init__.py
+- Version bump to `4.0.0`
+
+#### adsmodule.py
+- Partial refactor of parameter key values as AMP refactors the API parameters to match PascalCase..lol
+- `attach_ads()` has new parameters and was merged with `attach_ads_with_pairing_code` to simplfy code.
+- `set_instance_network_info` has new parameters, "must_stop" and "application_ip".
+- Added new functions!
+	- `cancel_pairing`
+	- `create_instance_from_spec`
+	- `get_target_pairing_code`
+	- `register_target_with_code`
+
+#### core.py
+- Updated `get_oidc_login_url` with new parameters as the API was updated.
+- New function, `oidc_login` and `update_public_key`.
+
+#### filebackup.py
+- Updated `take_backup` with new parameters, "local" and "s3".
+
+#### minecraft.py
+- New function `mc_reject_eula`.
+
+#### modules.py'
+- Added a new function to `CreateInstance` to convert the class into a useable datastructure for the API.
+
+#### utils.py
+- Updated `amp_api_update` function to get the most current version of any Instance as long as it matches the ADS version.
+
+#### Overall
+- Updated docs.
+- Relocated classes from `dataclass.py` file into `modules.py`.
+- Added attributes to docstring of `AMPControllerInstance` and any other classes that inherit from `Instance` dataclass.
+- Updated docs to reflect changes.
+- Updated `sample.py` to reflect changes.
+
 ## Version - 2.0.0 - [c765d8f](https://github.com/k8thekat/AMPAPI_Python/commit/c765d8f)
 #### Changelog.md
 - Version info from `1.3.2` added.
