@@ -1068,13 +1068,20 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetNewGuid", format_data=format_data)
         return result
 
-    async def get_oidc_login_url(self) -> None:
-        """
+    async def get_oidc_login_url(self, state: str | None = None, redirect_uri: str | None = None) -> None:
+        """|coro|
+
         Interacts with OIDC credentials.
 
-        Returns
-        --------
-        None
+
+        __Endpoint__: "Core/GetOIDCLoginURL"
+
+        Parameters
+        -----------
+        state: :class:`str | None`, optional
+            UNK, by default None.
+        redirect_uri: :class:`str | None`, optional
+            UNK, by default None.
         """
         await self._connect()
         await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
@@ -1711,6 +1718,31 @@ class Core(Base):
         await self._call_api(api="Core/Resume", _no_data=True)
         return
 
+    async def oidc_login(self, code: str, redirect_uri: str, instance_id: str) -> dict:
+        """|coro|
+
+        Related to OIDC credentials. Return type is UNKNOWN as of v`3.0.0`.
+
+        Parameters
+        -----------
+        code: :class:`str`
+            UNK.
+        redirect_uri: :class:`str`
+            UNK.
+        instance_id: :class:`str`
+            The Instance ID, see :attr:`~Instance.instance_id`
+
+        Returns
+        --------
+        :class:`Any`
+            UNK.
+        """
+
+        parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
+        await self._connect()
+        result = await self._call_api(api="Core/OIDCLogin", parameters=parameters, format_data=False)
+        return result
+
     async def refresh_setting_value_list(self, node: str, format_data: Union[bool, None] = None) -> ActionResult:
         """|coro|
 
@@ -2224,6 +2256,27 @@ class Core(Base):
 
         await self._connect()
         result: Any = await self._call_api(api="Core/UpdateApplication", format_data=format_data, format_=ActionResult)
+        return result
+
+    async def update_public_key(self, pub_key: str, format_data: Union[bool, None] = None) -> ActionResult:
+        """
+        Update a public key.
+
+        Parameters
+        -----------
+        pub_key: :class:`str`
+            The public key.
+
+        Returns
+        --------
+        :class:`ActionResult`
+             On success returns a :class:`ActionResult` dataclass.
+        """
+        await self._connect()
+        parameters = {"PubKey": str}
+        result: Any = await self._call_api(
+            api="Core/UpdatePublicKey", parameters=parameters, format_=ActionResult, format_data=format_data
+        )
         return result
 
     async def update_user_info(

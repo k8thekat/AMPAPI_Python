@@ -903,6 +903,7 @@ class CreateInstance:
     start_on_boot: bool = field(default=False)
     display_image_source: str = field(default="")
     target_datastore: int = field(default=0)
+    group: str | None = field(default=None)
 
     # TODO - Implement attribute checking.
     # def __post_init__(self):
@@ -910,6 +911,27 @@ class CreateInstance:
     # if any other attributes are NOT set we should error out or ...
     # possibly default all values to None and check for NONE; raise an error so someone doesn't miss a setting?
     # Having default values could be an issue if they forget to set something with auto_configure is False.
+    def to_dict(self) -> dict:
+        data = {
+            "TargetADSInstance": self.target_ads_instance,
+            "NewInstanceId": self.new_instance_id,
+            "Module": self.module,
+            "InstanceName": self.instance_name,
+            "FriendlyName": self.friendly_name,
+            "IPBinding": self.ip_binding,
+            "PortNumber": self.port_number,
+            "AdminUsername": self.admin_username,
+            "AdminPassword": self.admin_password,
+            "ProvisionSettings": self.provision_settings,
+            "AutoConfigure": self.auto_configure,
+            "PostCreate": self.post_create.value,
+            "StartOnBoot": self.start_on_boot,
+            "DisplayImageSource": self.display_image_source,
+            "TargetDatastore": self.target_datastore,
+        }
+        if self.group is not None:
+            data["Group"] = self.group
+        return data
 
 
 @dataclass
@@ -1127,6 +1149,7 @@ class Diagnostics:
     cpu_layout: str
     cpu_model: str
     codename: str
+    hardware_platform: Any
     installed_ram: int
     instance_id: str
     last_arguments: str

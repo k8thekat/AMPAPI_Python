@@ -55,7 +55,7 @@ Settings External_Services Nodes
 :raw-html:`<hr>`
 
 
-**Name**: Email 'From' address
+**Name**: Email 'From' Address
 	| Description: The address used for outgoing emails.
 	| Node: `EmailSenderPlugin.SMTP.EmailFrom`
 
@@ -83,6 +83,10 @@ Settings File_Manager Nodes
 :raw-html:`<hr>`
 
 
+**Name**: Enable Direct File Transfers
+	| Description: Bypasses the API for file transfers. A restart of AMP is required for this setting change to take effect.
+	| Node: `FileManagerPlugin.FileManager.FastFileTransfers`
+
 **Name**: Enable SFTP
 	| Description: Whether or not SFTP is enabled
 	| Node: `FileManagerPlugin.SFTP.SFTPEnabled`
@@ -94,10 +98,6 @@ Settings File_Manager Nodes
 **Name**: Enable Websocket Uploads (Experimental)
 	| Description: Use websockets to perform file transfers. Faster, but may cause issues with certain reverse proxy setups.
 	| Node: `FileManagerPlugin.SFTP.EnableWebsocketUploads`
-
-**Name**: Enable direct file transfers
-	| Description: Bypasses the API for file transfers. A restart of AMP is required for this setting change to take effect.
-	| Node: `FileManagerPlugin.FileManager.FastFileTransfers`
 
 **Name**: File Manager Base Path
 	| Node: `FileManagerPlugin.FileManager.BasePath`
@@ -119,7 +119,7 @@ Settings Instance_Deployment Nodes
 	| Description: List of ports that can be used by AMP and application servers. Specify port ranges by separating the upper and lower bounds using a colon (e.g. 25565:25665). These ports must not be used by other services outside of AMP.
 	| Node: `ADSModule.Network.AppPortInclusions`
 
-**Name**: Automatically reactivate instances
+**Name**: Automatically Reactivate Instances
 	| Description: If an instance fails to start due to a licence failure, ADS will attempt to automatically reactivate it.
 	| Node: `ADSModule.ADS.AutoReactivate`
 
@@ -139,17 +139,17 @@ Settings Instance_Deployment Nodes
 	| Description: Apply Traefik labels to docker instances. (Experimental!)
 	| Node: `ADSModule.Network.UseTraefik`
 
-**Name**: Create in Docker Containers
-	| Description: Creates all new instances inside Docker containers transparently. 
-	| Node: `ADSModule.Defaults.UseDocker`
-
-**Name**: Create local instances
+**Name**: Create Local Instances
 	| Description: If disabled, this ADS instance will only pass provision requests to other ADS instances and never create instances locally.
 	| Node: `ADSModule.Limits.CreateLocalInstances`
 
-**Name**: Create shared instances
+**Name**: Create Shared Instances
 	| Description: Created instances use shared AMP core data rather than individual copies.
 	| Node: `ADSModule.Defaults.CreateAsShared`
+
+**Name**: Create in Docker Containers
+	| Description: Creates all new instances inside Docker containers transparently. 
+	| Node: `ADSModule.Defaults.UseDocker`
 
 **Name**: Default AMP IP Binding
 	| Description: Which IP address new AMP instances should use by default.
@@ -158,6 +158,10 @@ Settings Instance_Deployment Nodes
 **Name**: Default Application IP Binding
 	| Description: Which IP address applications deployed by AMP should use by default.
 	| Node: `ADSModule.Network.DefaultAppIPBinding`
+
+**Name**: Default Auth Server
+	| Description: The URL of the authentication server to be used by new instances
+	| Node: `ADSModule.Defaults.DefaultAuthServerURL`
 
 **Name**: Default Community Discord
 	| Description: A link to a Discord invite to join a community discord server if not specified for a given instance
@@ -175,21 +179,17 @@ Settings Instance_Deployment Nodes
 	| Description: Default container mount bindings to be applied to all new instances when using containers. Use templates {{InstanceName}} or {{InstanceId}} to insert the instance name or ID into the path. It is recommended that the host and container path are the same where possible. The 'amp' user must have full read/write access to these paths on the host system.
 	| Node: `ADSModule.Defaults.DefaultMountBindings`
 
-**Name**: Default Settings
-	| Description: Default settings to be applied to all new instances. You can find the Node for any given setting by turning on the [Show development information](setting:Core.Monitoring.ShowDevInfo) setting.
-	| Node: `ADSModule.Defaults.DefaultSettings`
-
-**Name**: Default auth server
-	| Description: The URL of the authentication server to be used by new instances
-	| Node: `ADSModule.Defaults.DefaultAuthServerURL`
-
-**Name**: Default post-create action
+**Name**: Default Post-create Action
 	| Description: What should the application do by default in newly created instances.
 	| Node: `ADSModule.Defaults.DefaultPostCreate`
 
-**Name**: Default release stream
+**Name**: Default Release Stream
 	| Description: Which release stream to use by default when creating or updating instances
 	| Node: `ADSModule.Defaults.DefaultReleaseStream`
+
+**Name**: Default Settings
+	| Description: Default settings to be applied to all new instances. You can find the Node for any given setting by turning on the [Show development information](setting:Core.Monitoring.ShowDevInfo) setting.
+	| Node: `ADSModule.Defaults.DefaultSettings`
 
 **Name**: Docker External IP
 	| Description: Which IP AMP should report for instances created within Docker when no specific IP is specified
@@ -199,13 +199,17 @@ Settings Instance_Deployment Nodes
 	| Description: Whether or not to enable the community pages feature. This allows users to share their instances with others.
 	| Node: `ADSModule.Community.EnableCommunityPages`
 
-**Name**: Exclude new instances from firewall
+**Name**: Exclude New Instances From Firewall
 	| Description: If enabled, new instances will not have their required ports added to the system firewall by default.
 	| Node: `ADSModule.Defaults.ExcludeFromFirewall`
 
 **Name**: Geographic Location
 	| Description: The geographic location of this ADS instance. Only used for display purposes
 	| Node: `ADSModule.Community.GeographicLocation`
+
+**Name**: IP Address Pool
+	| Description: List of IP addresses that AMP should be aware of when provisioning instances.
+	| Node: `ADSModule.Network.IPAddressList`
 
 **Name**: Ignore Version Compatibility
 	| Description: When enabled, ADS will not verify that the instance and ADS are the same version. This will frequently cause compatibility issues.
@@ -231,11 +235,11 @@ Settings Instance_Deployment Nodes
 	| Description: Mode
 	| Node: `ADSModule.ADS.Mode`
 
-**Name**: Propagate auth server to targets
+**Name**: Propagate Auth Server to Targets
 	| Description: If enabled, the Default Auth Server URL will be copied to all targets when they are added to ADS
 	| Node: `ADSModule.Defaults.PropagateAuthServer`
 
-**Name**: Propagate repositories
+**Name**: Propagate Repositories
 	| Description: If enabled, the list of app repositories will be copied to all targets
 	| Node: `ADSModule.Defaults.PropogateRepos`
 
@@ -247,19 +251,19 @@ Settings Instance_Deployment Nodes
 	| Description: The maximum number of instances that may exist within this ADS target
 	| Node: `ADSModule.Limits.InstanceLimit`
 
-**Name**: Show deprecated applications
+**Name**: Show Deprecated Applications
 	| Description: If enabled, it will be possible to create new instances with legacy or deprecated configurations.
 	| Node: `ADSModule.ADS.ShowDeprecated`
 
-**Name**: Traefik domain name
+**Name**: Traefik Domain Name
 	| Description: The wildcard domain to be used to access Traefik managed instances. Must take the format of .domain.tld
 	| Node: `ADSModule.Network.TraefikDomainWildcard`
 
-**Name**: Traefik network name
+**Name**: Traefik Network Name
 	| Description: The docker network to be used for Traefik managed instances.
 	| Node: `ADSModule.Network.TraefikNetworkName`
 
-**Name**: Use Host Networking for new Containers
+**Name**: Use Host Networking for New Containers
 	| Description: Binds docker containers directly to the host network adapter by default. Changing this option requires additional configuration changes for new AMP instances to function correctly.
 	| Node: `ADSModule.Network.UseDockerHostNetwork`
 
@@ -285,23 +289,23 @@ Settings Security_And_Privacy Nodes
 **Name**: 
 	| Node: `Core.Privacy.PrivacySettingsSet`
 
+**Name**: Allow Archive Operations
+	| Description: Allow folders to be archived, and archives to be extracted
+	| Node: `FileManagerPlugin.Security.AllowArchiveOperations`
+
 **Name**: Allow Browser Analytics
 	| Description: Allows analytics to be included in the AMP frontend. Analytics are hosted by CubeCoders and no data is sent to third parties. [Privacy Policy](https://cubecoders.com/PrivacyPolicy)
 	| Node: `Core.Privacy.AllowAnalytics`
 
-**Name**: Allow archive operations
-	| Description: Allow folders to be archived, and archives to be extracted
-	| Node: `FileManagerPlugin.Security.AllowArchiveOperations`
-
-**Name**: Allow extension changes
+**Name**: Allow Extension Changes
 	| Description: Allowing extension changes could let a user upload a file as one type, and change it later
 	| Node: `FileManagerPlugin.Security.AllowExtensionChange`
 
-**Name**: Allow user-defined passwords
+**Name**: Allow User-defined Passwords
 	| Description: For password fields, allow the use of user-defined passwords rather than being limited to randomly generated ones only. Passwords will be subject to strength requirements and should not be shared amongst other services.
 	| Node: `Core.Security.AllowUserPasswords`
 
-**Name**: Auto-report errors
+**Name**: Auto-report Errors
 	| Description: Automatically sends anonymous error report to CubeCoders if AMP encounters an error from which it can't recover.
 	| Node: `Core.Privacy.AutoReportFatalExceptions`
 
@@ -317,19 +321,19 @@ Settings Security_And_Privacy Nodes
 	| Description: Automatically bans IP addresses from SFTP logins if they try to login as [common usernames](https://discourse.cubecoders.com/t/honeypot-usernames/2296?utm_source=ampsettings&utm_content=honeypot). Make sure you're not using any of these names as an AMP username to login.
 	| Node: `FileManagerPlugin.Security.HoneypotSFTPLogins`
 
-**Name**: Include exception data in API calls
+**Name**: Include Exception Data in API Calls
 	| Description: If enabled, AMP will include exception data in API responses. This is useful for debugging but may expose sensitive information.
 	| Node: `Core.Security.IncludeExceptionDataInAPI`
 
-**Name**: Login rate-limit attempts
+**Name**: Login Rate-limit Attempts
 	| Description: If more than this number attempts occurs within the rate-limit time window, the IP address will be unable to make further login requests
 	| Node: `Core.Security.AuthFailureAttemptsInWindow`
 
-**Name**: Login rate-limit time window
+**Name**: Login Rate-limit Time Window
 	| Description: How many minutes the sliding window should be to check for authentication failures.
 	| Node: `Core.Security.AuthFailureTimeWindow`
 
-**Name**: Public Key SFTP logins only
+**Name**: Public Key SFTP Logins Only
 	| Description: Disables password-based authentication for SFTP and requires that users have added an RSA public key to their profile.
 	| Node: `FileManagerPlugin.Security.PublicKeyOnly`
 
@@ -349,11 +353,11 @@ Settings Security_And_Privacy Nodes
 	| Description: Only allow extensions in the approved 'upload' list to be extracted from archives
 	| Node: `FileManagerPlugin.Security.OnlyExtractUploadableExtensionsFromArchives`
 
-**Name**: Restrict downloadable extensions
+**Name**: Restrict Downloadable Extensions
 	| Description: Whether or not the types of files that can be downloaded should be restricted
 	| Node: `FileManagerPlugin.Security.RestrictDownloadExtensions`
 
-**Name**: Restrict uploadable extensions
+**Name**: Restrict Uploadable Extensions
 	| Description: Whether or not the types of files that can be uploaded should be restricted
 	| Node: `FileManagerPlugin.Security.RestrictUploadExtensions`
 
@@ -381,11 +385,11 @@ Settings System_Settings Nodes
 	| Description: Affects all users - change AMPs visual appearance with different themes.
 	| Node: `Core.AMP.Theme`
 
-**Name**: API rate limit
+**Name**: API Rate Limit
 	| Description: The number of requests per second to allow the webserver to respond to (AMP must be restarted for changes to this setting to apply)
 	| Node: `Core.Webserver.APIRateLimit`
 
-**Name**: Allow GET method for API
+**Name**: Allow GET Method for API
 	| Description: Allows the GET method to be used for API requests. Useful for debugging and development but should not be used in production (AMP must be restarted for changes to this setting to apply)
 	| Node: `Core.Webserver.AllowGETForAPIEndpoints`
 
@@ -414,7 +418,7 @@ Settings System_Settings Nodes
 **Name**: First Start
 	| Node: `Core.AMP.FirstStart`
 
-**Name**: Full process metrics
+**Name**: Full Process Metrics
 	| Description: Gathers extended information for running AMP processes
 	| Node: `Core.Monitoring.FullMetricsGathering`
 
@@ -429,15 +433,15 @@ Settings System_Settings Nodes
 	| Description: What level of logging should be used by AMP. The selected log level and all higher levels will be logged.
 	| Node: `Core.Monitoring.LogLevel`
 
-**Name**: Metrics polling interval
+**Name**: Metrics Polling Interval
 	| Description: How frequently AMP should push metrics data to connected sessions
 	| Node: `Core.Monitoring.MetricsPollInterval`
 
-**Name**: Metrics reporting interval
+**Name**: Metrics Reporting Interval
 	| Description: How frequently AMP should report metrics data to the controller
 	| Node: `Core.Monitoring.MetricsReportingInterval`
 
-**Name**: Multicore CPU usage calculation
+**Name**: Multicore CPU Usage Calculation
 	| Description: If enabled, AMP takes into account the number of CPU cores when calculating total CPU usage, otherwise it calculates assuming one core. A restart is required after changing this setting for it to take effect.
 	| Node: `Core.Monitoring.UseMulticoreCPUCalc`
 
@@ -455,11 +459,11 @@ Settings System_Settings Nodes
 	| Description: Which time zone to use for the scheduler. Does not affect other AMP components
 	| Node: `Core.AMP.SchedulerTimezoneId`
 
-**Name**: Show development information
+**Name**: Show Development Information
 	| Description: When enabled, the node names for settings will be visible under each setting. Useful for configuration templates. Applies to all users.
 	| Node: `Core.Monitoring.ShowDevInfo`
 
-**Name**: Show support on status
+**Name**: Show Support on Status
 	| Description: Affects all users - whether or not the Status tab should show the 'Help' button
 	| Node: `Core.AMP.ShowHelpOnStatus`
 
@@ -474,7 +478,7 @@ Settings System_Settings Nodes
 	| Description: Map selected IP addresses to their associated MAC addresses when saving configuration files. Handles dynamic/varying IP address situations.
 	| Node: `Core.AMP.StoreIPAddressesAsMACAddresses`
 
-**Name**: User Friendly process metrics
+**Name**: User Friendly Process Metrics
 	| Description: Reports memory usage only as physical RAM usage, ignoring swap usage. Doesn't apply when full process metrics is enabled.
 	| Node: `Core.Monitoring.ReportPhysicalMemoryAsTotal`
 

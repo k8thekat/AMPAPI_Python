@@ -535,6 +535,19 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
+    async def mc_reject_eula(self) -> None:
+        """|coro|
+
+        Reject the EULA agreement.
+
+        Returns
+        --------
+        None
+        """
+        await self._connect()
+        await self._call_api(api="MinecraftModule/RejectEULA", _no_data=True)
+
+    @mc_only
     async def mc_remove_op_entry(self, user: str) -> None:
         """|coro|
 

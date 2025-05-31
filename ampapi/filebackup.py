@@ -166,7 +166,13 @@ class LocalFileBackupPlugin(Base):
         return
 
     async def take_backup(
-        self, name: str, description: str, sticky: bool = False, format_data: Union[bool, None] = None
+        self,
+        name: str,
+        description: str,
+        sticky: bool = False,
+        local: bool | None = None,
+        s3: bool | None = None,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult:
         """|coro|
 
@@ -180,6 +186,10 @@ class LocalFileBackupPlugin(Base):
             Brief description of why or what the backup is for.
         sticky: :class:`bool`, optional
             Sticky backups won't be deleted to make room for automatic backups, defaults to ``False``.
+        local: :class:`bool`, optional
+            If the backup should be local or not.
+        s3: :class:`bool`, optional
+            If the backup should be on S3 or not.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
@@ -191,6 +201,11 @@ class LocalFileBackupPlugin(Base):
 
         await self._connect()
         parameters: dict[str, Any] = {"Title": name, "Description": description, "Sticky": sticky}
+        if local is not None:
+            parameters["Local"] = local
+        if s3 is not None:
+            parameters["S3"] = s3
+
         result: Any = await self._call_api(
             api="LocalFileBackupPlugin/TakeBackup", parameters=parameters, format_data=format_data, format_=ActionResult
         )

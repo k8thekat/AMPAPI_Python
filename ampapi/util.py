@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Union
 from dataclass_wizard import fromdict
 
 from .instance import AMPMinecraftInstance
-from .modules import ScheduleData
+from .modules import BuildInfo, Diagnostics, ScheduleData
 from .types_ import ScheduleDataData
 
 if TYPE_CHECKING:
@@ -430,13 +430,21 @@ async def amp_api_update(instance: AMPControllerInstance, sanitize_json: bool) -
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance.
     """
+    _logger: Logger = logging.getLogger()
     # We call get_instances() to force a current listing of instances to be populated.
     await instance.get_instances()
+    ADS_diag: Diagnostics = await instance.get_diagnostics_info()
+    # cur_version: None | AMPMinecraftInstance = None
     for entry in instance.instances:
         # Minecraft instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, AMPMinecraftInstance) and entry.running is True:
-            await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
-            break
+            instance_diag: Diagnostics = await entry.get_diagnostics_info()
+            if instance_diag.application_version == ADS_diag.application_version:
+                _logger.info(
+                    "Found %s matching the current ADS version `%s` .", entry.instance_name, ADS_diag.application_version
+                )
+                await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
+                break
     # We found our Minecraft Instance, now lets parse our Controller/ADS
     await _parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
 
