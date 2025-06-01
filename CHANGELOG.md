@@ -1,3 +1,18 @@
+## Version - 4.1.0 - [a93505e](https://github.com/k8thekat/AMPAPI_Python/commit/a93505e)
+#### Changelog.md
+- Version info from `4.0.0` added.
+
+#### __init__.py
+- Version bump to `4.1.0`
+
+#### Overall
+- Hotfix for import errors and docs.
+- Implemented `ActionResultError` class to handle any Exceptions inside of `_call_api` which all endpoints use.
+
+#### controller.py
+- Created overloads for `instance_conversion` function and added logic to handle a single `Instance` class.
+- Created a function `get_instance` to get a single Instance via "Instance ID" and convert the Instance to it's respective class.
+
 ## Version - 4.0.0 - [426bad9](https://github.com/k8thekat/AMPAPI_Python/commit/426bad9)
 #### Changelog.md
 - Version info from `2.0.0` added.
