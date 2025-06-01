@@ -16,7 +16,7 @@ from dataclass_wizard import fromdict
 from pyotp import TOTP
 
 from .bridge import Bridge
-from .modules import APISession, BuildInfo, Diagnostics, LoginResults
+from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Iterable
@@ -26,15 +26,7 @@ if TYPE_CHECKING:
     from _typeshed import DataclassInstance
     from typing_extensions import ParamSpec, Self, TypeVar
 
-    from .modules import (
-        ActionResult,
-        ActionResultError,
-        APIResponseDataTableAlias,
-        Controller,
-        Instance,
-        InstanceStatus,
-        Updates,
-    )
+    from .modules import APIResponseDataTableAlias, Controller, Instance, InstanceStatus, Updates
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
