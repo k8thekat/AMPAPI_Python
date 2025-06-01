@@ -65,6 +65,7 @@ __all__ = (
     "APIParams",
     "APIResponseDataTableAlias",
     "ActionResult",
+    "ActionResultError",
     "AnalyticsCountryData",
     "AnalyticsFilter",
     "AnalyticsStats",
@@ -185,6 +186,37 @@ class ActionResult:
     status: bool
     reason: Union[str, None] = field(default=None)
     result: Union[str, None] = field(default=None)
+
+    def __repr__(self) -> str:
+        return pformat(vars(self))
+
+
+class ActionResultError:
+    """
+    Represents the :meth:`_call_api` response if an error happens during runtime.
+
+    Attributes
+    -----------
+    status: :class:`bool`
+        If the API call was successful, typically this is False.
+    reason: :class:`str`
+        The reason for the failure in a generic manner.
+    result: Union[str, :class:`Exception`]
+        The Exception or result of the Error that occured and what it means.
+    result_type: Any
+        Typically a string representation of the :attr:`result` to know what the Exception was.
+    """
+
+    status: bool
+    reason: str
+    result: str | Exception
+    result_type: Any
+
+    def __init__(self, status: bool, reason: str, result: Exception | str) -> None:
+        self.status = status
+        self.reason = reason
+        self.result = result
+        self.result_type = type(result)
 
     def __repr__(self) -> str:
         return pformat(vars(self))

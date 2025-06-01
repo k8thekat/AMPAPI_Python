@@ -7,9 +7,12 @@ from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filemanager import FileManagerPlugin
 from .instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
-from .modules import Controller, Instance
+from .modules import ActionResultError, Controller, Instance
 
 __all__ = ("AMPControllerInstance",)
+
+
+InstanceTypeAliases = Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]
 
 
 class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Controller):
@@ -115,13 +118,17 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
         data: Any
             A list of :class:`Instance`.
         """
-        self._instances: set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]] = self.instance_conversion(
-            instances=self.available_instances
-        )
+        self._instances: set[InstanceTypeAliases] = self.instance_conversion(instances=self.available_instances)
+
+    @overload
+    def instance_conversion(self, instances: Instance) -> InstanceTypeAliases: ...
+
+    @overload
+    def instance_conversion(self, instances: Iterable[Instance]) -> set[InstanceTypeAliases]: ...
 
     def instance_conversion(
-        self, instances: Iterable[Instance]
-    ) -> set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]]:
+        self, instances: Iterable[Instance] | Instance
+    ) -> set[InstanceTypeAliases] | InstanceTypeAliases:
         """
         Takes a set of :class:`Instance` dataclasses and turns them into :class:`AMPInstance`, :class:`AMPMinecraftInstance` and or :class:`AMPADSInstance` respectively to facilitate API function accessibility.
 
@@ -131,17 +138,17 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
         Parameters
         -----------
-        instances: Iterable[:class:`Instance`]
-            An Iterable of :class:`Instance` dataclasses.
+        instances: Iterable[:class:`Instance`] | :class:`Instance`
+            An Iterable of :class:`Instance` dataclasses or a single object.
 
         Returns
         --------
-        set[Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`, :class:`AMPADSInstance`]]
-            The set of converted :class:`Instance` objects.
+        set[Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`, :class:`AMPADSInstance`]] | Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`, :class:`AMPADSInstance`]
+            The set of converted :class:`Instance` objects or a single converted object.
         """
-        instances = sorted(instances)
         conv_instances: set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]] = set()
         if isinstance(instances, list) and len(instances) > 0:
+            instances = sorted(instances)
             for entry in instances:
                 if entry.module == "ADS":
                     conv_instances.add(AMPADSInstance(data=entry, controller=self))
@@ -151,12 +158,44 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
                 else:
                     conv_instances.add(AMPInstance(data=entry, controller=self))
+
+        elif isinstance(instances, Instance):
+            if instances.module == "ADS":
+                return AMPADSInstance(data=instances, controller=self)
+
+            elif instances.module == "Minecraft":
+                return AMPMinecraftInstance(data=instances, controller=self)
+
+            else:
+                return AMPInstance(data=instances, controller=self)
         return conv_instances
+
+    async def get_instance(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> InstanceTypeAliases | ActionResultError | dict:
+        """
+        Retrieve a single Instance by ID and convert the Instance
+
+        Parameters
+        -----------
+        instance_id: :class:`str`
+            The Instance ID to retrieve.
+
+        Returns
+        --------
+        :class:`InstanceTypeAliases`
+            On success returns a :class:`InstanceTypeAliases` dataclass.
+        """
+        result: Instance | ActionResultError = await super().get_instance(instance_id=instance_id, format_data=format_data)
+        if isinstance(result, (dict, ActionResultError)):
+            return result
+        else:
+            return self.instance_conversion(instances=result)
 
     @overload
     async def get_instances(
         self, include_self: bool = True, format_data: Union[bool, None] = None
-    ) -> set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]]: ...
+    ) -> set[InstanceTypeAliases]: ...
 
     @overload
     async def get_instances(
@@ -165,7 +204,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
     async def get_instances(
         self, include_self: bool = True, format_data: Union[bool, None] = True
-    ) -> Union[set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]], Iterable[Union[Controller, Instance]]]:
+    ) -> Union[set[InstanceTypeAliases], Iterable[Union[Controller, Instance]], ActionResultError]:
         """|coro|
 
         Returns a set of converted :class:`Instances` to :class:`AMPInstance`, :class:`AMPMinecraftInstance` and :class:`AMPADSInstance`.\n
@@ -189,9 +228,11 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
             On success returns a set of :class:`AMPInstance`, :class:`AMPMinecraftInstance` and or :class:`AMPADSInstance` dataclasses. \n
 
         """
-        result: list[Union[Controller, Instance]] = await super().get_instances(
+        result: list[Union[Controller, Instance]] | ActionResultError = await super().get_instances(
             include_self=include_self, format_data=format_data
         )
+        if isinstance(result, ActionResultError):
+            return result
 
         if isinstance(result[0], Controller):
             self.logger.debug(
@@ -214,7 +255,11 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
                 if isinstance(i, Controller):
                     self.logger.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
                     # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we just updated the attribute above.
-                    self.instances.update(self.instance_conversion(instances=i.available_instances))
+                    res: set[InstanceTypeAliases] = self.instance_conversion(instances=i.available_instances)
+                    if isinstance(res, InstanceTypeAliases):
+                        self.instances.add(res)
+                    elif isinstance(res, set):
+                        self.instances.update(res)
 
             return self.instances
 

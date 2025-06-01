@@ -54,6 +54,6 @@ class VersionInfo(NamedTuple):
     releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]
 
 
-version_info: VersionInfo = VersionInfo(Major=4, Minor=0, Revision=0, releaseLevel="development")
+version_info: VersionInfo = VersionInfo(Major=4, Minor=1, Revision=0, releaseLevel="development")
 
 del NamedTuple, Literal, VersionInfo

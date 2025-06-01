@@ -26,7 +26,15 @@ if TYPE_CHECKING:
     from _typeshed import DataclassInstance
     from typing_extensions import ParamSpec, Self, TypeVar
 
-    from .modules import APIResponseDataTableAlias, Controller, Instance, InstanceStatus, Updates
+    from .modules import (
+        ActionResult,
+        ActionResultError,
+        APIResponseDataTableAlias,
+        Controller,
+        Instance,
+        InstanceStatus,
+        Updates,
+    )
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -36,6 +44,9 @@ if TYPE_CHECKING:
 __all__ = ("Base",)
 
 FORMAT_DATA: bool = True
+
+
+APIReturnTypeAlias = Union[LoginResults, ActionResultError, ActionResult]
 
 
 class Base:
@@ -180,6 +191,10 @@ class Base:
             Will populate the ``SESSIONID`` key for :param:`parameters` if it is not provided. This is the default behavior.
 
 
+        .. warning::
+            Will return an :class:`ActionResultError` class if any errors happen when attempting to call the API.
+
+
         Parameters
         -----------
         api: :class:`str`
@@ -204,18 +219,18 @@ class Base:
         Any
             Typical returns are of the same type that is passed in to ``format_``, either in an :class:`Iterable` or not depending on the data,
             otherwise returns an unformatted JSON response if :attr:`format_data` or ``FORMAT_DATA`` is False.
-
-        Raises
-        ------
-        :exc:`ValueError`
-            When a JSON response :attr:`ClientSession.content_length` == 0 or :class:`aiohttp.ClientSession` raises an Exception.\n
-            When the API endpoint returns a malformed JSON response.
-        :exc:`ConnectionError`
-            When an JSON response status code is not 200.\n
-            When an JSON response has a dict key value of "Instance Unavailable.
-        :exc:`PermissionError`
-            When the JSON response has a dict key value of "Unauthorized Access" or permission related error.
         """
+        # Old Docstring Content
+        # Raises
+        # ------
+        # :exc:`ValueError`
+        #     When a JSON response :attr:`ClientSession.content_length` == 0 or :class:`aiohttp.ClientSession` raises an Exception.\n
+        #     When the API endpoint returns a malformed JSON response.
+        # :exc:`ConnectionError`
+        #     When an JSON response status code is not 200.\n
+        #     When an JSON response has a dict key value of "Instance Unavailable.
+        # :exc:`PermissionError`
+        #     When the JSON response has a dict key value of "Unauthorized Access" or permission related error.
 
         global FORMAT_DATA
 
@@ -244,18 +259,26 @@ class Base:
             # So I can handle each exception properly.
             except Exception as e:
                 self.logger.error("DEBUG _call_api exception type: %s", type(e))
-                raise ValueError(e)
+                return ActionResultError(status=False, reason="UNK", result=ValueError(e))
+                # raise ValueError(e)
 
             if post_req.content_length == 0:
-                raise ValueError(self._no_data)
+                return ActionResultError(status=False, reason="Content Length is 0", result=ValueError(self._no_data))
+                # raise ValueError(self._no_data)
 
             if post_req.status != 200:
-                raise ConnectionError(self._no_data)
+                return ActionResultError(
+                    status=False, reason="Status Code not equal to 200", result=ConnectionError(self._no_data)
+                )
+                # raise ConnectionError(self._no_data)
 
             post_req_json: Any = await post_req.json()
 
         if post_req_json is None and _no_data is False:
-            raise ConnectionError(self._no_data)
+            return ActionResultError(
+                status=False, reason="JSON is None and Data is None", result=ConnectionError(self._no_data)
+            )
+            # raise ConnectionError(self._no_data)
 
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
@@ -276,9 +299,17 @@ class Base:
                     api_session = APISession(id="0", ttl=datetime.now())
                     self._bridge._sessions.update({self.instance_id: api_session})
                     if post_req_json == "Unauthorized Access":
-                        raise PermissionError(self._unauthorized_access)
+                        return ActionResultError(
+                            status=False, reason="Unauthorized Access", result=PermissionError(self._unauthorized_access)
+                        )
+                        # raise PermissionError(self._unauthorized_access)
                     elif post_req_json == "Instance Unavailable":
-                        raise ConnectionError(self._instance_offline, self.url)
+                        return ActionResultError(
+                            status=False,
+                            reason="Instance Unavailable",
+                            result=ConnectionError(self._instance_offline, self.url),
+                        )
+                        # raise ConnectionError(self._instance_offline, self.url)
 
             elif api == "Core/Login":
                 return LoginResults(**post_req_json)
@@ -295,7 +326,8 @@ class Base:
 
             elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] is False:
                 self.logger.error("%s failed because of Status: %s", api, post_req_json)
-                return ValueError(self._failed_api)
+                return ActionResultError(status=False, reason="Status is False", result=ValueError(self._failed_api))
+                # return ValueError(self._failed_api)
 
         self.logger.debug(
             "DEBUG: FORMAT DATA | local Format Data: %s | global Format Data: %s | format_: %s | POST REQ TYPE: %s",
@@ -672,7 +704,8 @@ class Base:
 
     @staticmethod
     def sanitize_path(path: str) -> str:
-        """
+        """|classmethod|
+
         The path is relative to the Instances home directory. eg "/myInstanceName/" \n
         You do not need to include "." to specify the current directory as all path's start from root/home.
 

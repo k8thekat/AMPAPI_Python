@@ -4,7 +4,7 @@ import functools
 from typing import TYPE_CHECKING, Any, Union
 
 from .base import Base
-from .modules import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
+from .modules import ActionResult, ActionResultError, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -66,7 +66,9 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_add_op_entry(self, user_or_uuid: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def mc_add_op_entry(
+        self, user_or_uuid: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Add an entry to the OP list.
@@ -91,7 +93,9 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_add_to_whitelist(self, user_or_uuid: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def mc_add_to_whitelist(
+        self, user_or_uuid: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Add a user to the whitelist.
@@ -115,7 +119,7 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_buk_get_categories(self) -> list[BukkitCategories]:
+    async def mc_buk_get_categories(self) -> list[BukkitCategories] | ActionResultError:
         """|coro|
 
         Get Bukkit categories.
@@ -135,7 +139,9 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_buk_get_installed_plugins(self, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
+    async def mc_buk_get_installed_plugins(
+        self, format_data: Union[bool, None] = None
+    ) -> list[BukkitPlugin] | ActionResultError:
         """|coro|
 
         Get Bukkit installed plugins.
@@ -158,7 +164,9 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_buk_get_install_update_plugin(self, plugin_id: int, format_data: Union[bool, None] = None) -> RunningTask:
+    async def mc_buk_get_install_update_plugin(
+        self, plugin_id: int, format_data: Union[bool, None] = None
+    ) -> RunningTask | ActionResultError:
         """|coro|
 
         Get update for Bukkit plugin.
@@ -187,7 +195,7 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_buk_get_plugin_info(self, plugin_id: int, format_data: Union[bool, None] = None) -> Any:
+    async def mc_buk_get_plugin_info(self, plugin_id: int, format_data: Union[bool, None] = None) -> Any | ActionResultError:
         """|coro|
 
         Get Bukkit plugin info.
@@ -216,7 +224,7 @@ class MinecraftModule(Base):
     @mc_only
     async def mc_buk_get_plugins_for_category(
         self, category_id: str, page_number: int = 1, page_size: int = 10, format_data: Union[bool, None] = None
-    ) -> list[BukkitPlugin]:
+    ) -> list[BukkitPlugin] | ActionResultError:
         """|coro|
 
         Get Bukkit plugins from category.
@@ -251,7 +259,9 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_buk_get_popular_plugins(self, format_data: Union[bool, None] = None) -> list[BukkitPlugin]:
+    async def mc_buk_get_popular_plugins(
+        self, format_data: Union[bool, None] = None
+    ) -> list[BukkitPlugin] | ActionResultError:
         """|coro|
 
         Get Bukkit popular plugins.
@@ -297,7 +307,7 @@ class MinecraftModule(Base):
     @mc_only
     async def mc_buk_get_search(
         self, query: str, page_number: int = 0, page_size: int = 10, format_data: Union[bool, None] = None
-    ) -> list[BukkitPlugin]:
+    ) -> list[BukkitPlugin] | ActionResultError:
         """|coro|
 
         Search for Bukkit plugins.
@@ -377,7 +387,7 @@ class MinecraftModule(Base):
         return
 
     @mc_only
-    async def mc_get_failure_reason(self) -> str:
+    async def mc_get_failure_reason(self) -> str | ActionResultError:
         """|coro|
 
         Get the Server failure reason, if any.
@@ -393,7 +403,7 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_get_head_by_uuid(self, user_id: str) -> str:
+    async def mc_get_head_by_uuid(self, user_id: str) -> str | ActionResultError:
         """|coro|
 
         Get a skin as a base64 string.
@@ -419,7 +429,7 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_get_op_whitelist(self, format_data: Union[bool, None] = None) -> OPWhitelist:
+    async def mc_get_op_whitelist(self, format_data: Union[bool, None] = None) -> OPWhitelist | ActionResultError:
         """|coro|
 
         Get the OP whitelist.
@@ -442,7 +452,7 @@ class MinecraftModule(Base):
         return result
 
     @mc_only
-    async def mc_get_whitelist(self, format_data: Union[bool, None] = None) -> list[MCUser]:
+    async def mc_get_whitelist(self, format_data: Union[bool, None] = None) -> list[MCUser] | ActionResultError:
         """|coro|
 
         Get the whitelist.
@@ -514,7 +524,7 @@ class MinecraftModule(Base):
         return
 
     @mc_only
-    async def mc_load_op_list(self, format_data: Union[bool, None] = None) -> list[OPList]:
+    async def mc_load_op_list(self, format_data: Union[bool, None] = None) -> list[OPList] | ActionResultError:
         """|coro|
 
         Get the OP list.

@@ -1,7 +1,7 @@
 from typing import Any, Union
 
 from .base import Base
-from .modules import ActionResult, Directory, FileChunk
+from .modules import ActionResult, ActionResultError, Directory, FileChunk
 
 __all__ = ("FileManagerPlugin",)
 
@@ -46,7 +46,9 @@ class FileManagerPlugin(Base):
         await self._call_api(api="FileManagerPlugin/AppendFileChunk", parameters=parameters)
         return
 
-    async def calculate_file_md5_sum(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def calculate_file_md5_sum(
+        self, file_path: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Calculate the MD5 sum of a file.
@@ -72,7 +74,7 @@ class FileManagerPlugin(Base):
 
     async def change_exclusion(
         self, file_path: str, as_directory: bool, exclude: bool, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Change a file or directory to be excluded from backups.
@@ -104,7 +106,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def copy_file(self, file_path: str, destination_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def copy_file(
+        self, file_path: str, destination_path: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Moves a file from the origin directory to the target_directory.
@@ -135,7 +139,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def create_archive(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def create_archive(
+        self, file_path: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Create an archive file.
@@ -159,7 +165,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def create_directory(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def create_directory(
+        self, file_path: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Creates a new directory. The parent directory must already exist.
@@ -186,7 +194,7 @@ class FileManagerPlugin(Base):
 
     async def download_file_from_url(
         self, source: str, file_path: str, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Download a file from a URL.
@@ -213,7 +221,7 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def empty_trash(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def empty_trash(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Empties a trash bin for the AMP Server/Instance.
@@ -244,7 +252,7 @@ class FileManagerPlugin(Base):
 
     async def extract_archive(
         self, file_path: str, destination_path: Union[str, None] = None, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Extract an archive file.
@@ -275,7 +283,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def get_directory_listing(self, file_path: str = "", format_data: Union[bool, None] = None) -> list[Directory]:
+    async def get_directory_listing(
+        self, file_path: str = "", format_data: Union[bool, None] = None
+    ) -> list[Directory] | ActionResultError:
         """|coro|
 
         Returns a dictionary of the path's properties and the files contained in the directory and their properties.
@@ -310,7 +320,7 @@ class FileManagerPlugin(Base):
 
     async def get_file_chunk(
         self, file_path: str, index: int, length: int, format_data: Union[bool, None] = None
-    ) -> FileChunk:
+    ) -> FileChunk | ActionResultError:
         """|coro|
 
         Returns a specific section of Base64 data from the file.
@@ -341,7 +351,7 @@ class FileManagerPlugin(Base):
 
     async def read_file_chunk(
         self, file_path: str, offset: int, chunk_size: Union[int, None] = None, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Read a chunk of data from a file.
@@ -374,7 +384,9 @@ class FileManagerPlugin(Base):
         return result
 
     # TODO - Test functionality or get clarification on use/action.
-    async def release_file_upload_lock(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def release_file_upload_lock(
+        self, file_path: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Releases a File Upload Lock.
@@ -401,7 +413,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def rename_directory(self, file_path: str, name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def rename_directory(
+        self, file_path: str, name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Rename a directory.
@@ -431,7 +445,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def rename_file(self, file_path: str, file_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def rename_file(
+        self, file_path: str, file_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Changes the name of a file.
@@ -458,7 +474,9 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def trash_directory(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def trash_directory(
+        self, file_path: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Moves a directory to the trash, directories must be trashed before they can be ``emptied``.
@@ -487,7 +505,7 @@ class FileManagerPlugin(Base):
         )
         return result
 
-    async def trash_file(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def trash_file(self, file_path: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Moves a file to the trash, files must be trashed before they can be ``emptied``.
@@ -518,7 +536,7 @@ class FileManagerPlugin(Base):
 
     async def write_file_chunk(
         self, file_path: str, data: str, offset: int, append: bool = False, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Write data to a file with an offset.

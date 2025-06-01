@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Union
 
 from .base import Base
-from .modules import AnalyticsFilter, AnalyticsSummary
+from .modules import ActionResultError, AnalyticsFilter, AnalyticsSummary
 
 # from .enums import *
 
@@ -25,7 +25,7 @@ class AnalyticsPlugin(Base):
         start_date: datetime = datetime.now(),
         filters: Union[AnalyticsFilter, None] = None,
         format_data: Union[bool, None] = None,
-    ) -> AnalyticsSummary:
+    ) -> AnalyticsSummary | ActionResultError:
         """|coro|
         Retrieves the Analytics data for the Instance. \n
         See data such as how many people are playing, how long they've been playing, and where they are from.

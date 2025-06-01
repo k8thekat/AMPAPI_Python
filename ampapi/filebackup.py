@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Union
 
 from .base import Base
-from .modules import ActionResult, Backup, RunningTask
+from .modules import ActionResult, ActionResultError, Backup, RunningTask
 
 __all__ = ("LocalFileBackupPlugin",)
 
@@ -14,7 +14,9 @@ class LocalFileBackupPlugin(Base):
 
     """
 
-    async def delete_from_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_from_s3(
+        self, backup_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete a backup from S3.
@@ -57,7 +59,9 @@ class LocalFileBackupPlugin(Base):
         await self._call_api(api="LocalFileBackupPlugin/DeleteLocalBackup", parameters=parameters, _no_data=True)
         return
 
-    async def download_from_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask:
+    async def download_from_s3(
+        self, backup_id: str, format_data: Union[bool, None] = None
+    ) -> RunningTask | ActionResultError:
         """|coro|
 
         Download a backup from S3.
@@ -82,7 +86,7 @@ class LocalFileBackupPlugin(Base):
         )
         return result
 
-    async def get_backups(self, format_data: Union[bool, None] = None) -> list[Backup]:
+    async def get_backups(self, format_data: Union[bool, None] = None) -> list[Backup] | ActionResultError:
         """|coro|
 
         Get a list of Backups.
@@ -118,7 +122,7 @@ class LocalFileBackupPlugin(Base):
 
     async def restore_backup(
         self, backup_id: str, delete_existing_data: bool = False, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Restore a backup.
@@ -173,7 +177,7 @@ class LocalFileBackupPlugin(Base):
         local: bool | None = None,
         s3: bool | None = None,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Takes a backup of the AMP Server.
@@ -211,7 +215,7 @@ class LocalFileBackupPlugin(Base):
         )
         return result
 
-    async def upload_to_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask:
+    async def upload_to_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask | ActionResultError:
         """|coro|
 
         Upload a backup to S3.

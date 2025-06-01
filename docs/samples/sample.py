@@ -1,7 +1,9 @@
+import logging
 from pprint import pprint
 from typing import Union
 
 from ampapi import (
+    ActionResultError,
     AMPADSInstance,
     AMPControllerInstance,
     AMPInstance,
@@ -21,6 +23,7 @@ async def Sample_API() -> None:
     """
     Example API Function to call Endpoints.
     """
+    logger = logging.getLogger()
     _bridge = Bridge(api_params=_params)
     ADS: AMPControllerInstance = AMPControllerInstance()
     # By default all API calls will be formatted into Dataclasses if possible.
@@ -91,13 +94,19 @@ async def Sample_API() -> None:
     mcinstance.status.metrics
 
     # Want to kick a random person? Here ya go~
-    players: Players = await mcinstance.get_user_list()
+    players: Players | ActionResultError = await mcinstance.get_user_list()
+    if isinstance(players, ActionResultError):
+        logger.error("Failed to retrieve Players")
+        return
     await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
 
     # Analytics Introduction -
     # Simply call the below method.
     # By default it will use current day and time and go back 30 days into the past from now.
-    stats: AnalyticsSummary = await mcinstance.get_analytics_summary()
+    stats: AnalyticsSummary | ActionResultError = await mcinstance.get_analytics_summary()
+    if isinstance(stats, ActionResultError):
+        logger.error("Failed to retrieve Stats")
+        return
     pprint(stats)
 
     # Let's say you ONLY want US players.

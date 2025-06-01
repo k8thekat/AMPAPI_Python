@@ -1,7 +1,7 @@
 from typing import Union
 
 from .base import Base
-from .modules import ActionResult
+from .modules import ActionResult, ActionResultError
 
 __all__ = ("EmailSenderPlugin",)
 
@@ -12,7 +12,7 @@ class EmailSenderPlugin(Base):
 
     """
 
-    async def test_SMTP_settings(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def test_SMTP_settings(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Test SMTP Settings.

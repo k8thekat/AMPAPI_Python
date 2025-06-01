@@ -9,7 +9,7 @@ from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .minecraft import MinecraftModule
-from .modules import ActionResult, Instance, InstanceStatus, Updates
+from .modules import ActionResult, ActionResultError, Instance, InstanceStatus, Updates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -170,7 +170,7 @@ class AMPInstance(
         return wrapper_has_controller
 
     @Instance.online
-    async def get_application_status(self, format_data: Union[bool, None] = None) -> InstanceStatus:
+    async def get_application_status(self, format_data: Union[bool, None] = None) -> InstanceStatus | ActionResultError:
         """|coro|
 
         Gets the AMP Instance Application Status information and updates the class properties(State, Uptime and Metrics)
@@ -194,12 +194,14 @@ class AMPInstance(
         :class:`AppStatus`
             On success returns a :class:`AppStatus` dataclass.
         """
-        result: InstanceStatus = await super().get_status(format_data=format_data)
+        result: InstanceStatus | ActionResultError = await super().get_status(format_data=format_data)
+        if isinstance(result, ActionResultError):
+            return result
         self.parse_data(data=result)
         return result
 
     @has_controller
-    async def get_instance_status(self) -> Union[AMPInstance, AMPMinecraftInstance]:
+    async def get_instance_status(self) -> Union[AMPInstance, AMPMinecraftInstance] | ActionResultError:
         """|coro|
 
         Requests the recent changes to the Instance, updates our ``self`` object and returns the updated object.
@@ -224,12 +226,19 @@ class AMPInstance(
         Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`]
             Returns an updated ``self`` object.
         """
-        result: Instance = await self._controller.get_instance(instance_id=self.instance_id)  # type: ignore -- See the @has_controller decorator.
+        result: Instance | ActionResultError = await self._controller.get_instance(instance_id=self.instance_id)  # type: ignore -- See the @has_controller decorator.
+        if isinstance(result, ActionResultError):
+            self.logger.warning(
+                "Failed to retrieved updated Instance information. | Instance ID: %s | Result: %s",
+                self.instance_id,
+                result,
+            )
+            return result
         self.parse_data(data=result)
         return self
 
     @Instance.online
-    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates:
+    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates | ActionResultError:
         """|coro|
 
         Requests the recent Console entries of the Instance, will acquire all updates from previous API call of :meth:`get_updates`
@@ -257,12 +266,19 @@ class AMPInstance(
             On success returns a :class:`Updates` dataclass.
         """
 
-        result: Updates = await super().get_updates(format_data=format_data)
+        result: Updates | ActionResultError = await super().get_updates(format_data=format_data)
+        if isinstance(result, ActionResultError):
+            self.logger.warning(
+                "Failed to retrieved updated Instance information. | Instance ID: %s | Result: %s",
+                self.instance_id,
+                result,
+            )
+            return result
         self.parse_data(data=result)
         return result
 
     @has_controller
-    async def start_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def start_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Start the Instance.
@@ -296,7 +312,7 @@ class AMPInstance(
 
     @Instance.online
     @has_controller
-    async def stop_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def stop_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Stops the Instance.
@@ -332,7 +348,7 @@ class AMPInstance(
 
     @Instance.online
     @has_controller
-    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Restart the Instance.
@@ -367,7 +383,7 @@ class AMPInstance(
         return await self._controller.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @has_controller
-    async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
         Update the AMP Instance.
 
