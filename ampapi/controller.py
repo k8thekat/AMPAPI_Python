@@ -170,6 +170,19 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
                 return AMPInstance(data=instances, controller=self)
         return conv_instances
 
+    @overload
+    async def get_instance(
+        self, instance_id: str, format_data: Union[bool, None] = True
+    ) -> InstanceTypeAliases | ActionResultError: ...
+
+    @overload
+    async def get_instance(
+        self, instance_id: str, format_data: Union[bool, None] = False
+    ) -> InstanceTypeAliases | ActionResultError: ...
+
+    @overload
+    async def get_instance(self, instance_id: str, format_data: Union[bool, None] = False) -> ActionResultError | dict: ...
+
     async def get_instance(
         self, instance_id: str, format_data: Union[bool, None] = None
     ) -> InstanceTypeAliases | ActionResultError | dict:
