@@ -1,3 +1,13 @@
+## Version - 4.1.1 - [c12da9f](https://github.com/k8thekat/AMPAPI_Python/commit/c12da9f)
+#### Changelog.md
+- Version info from `4.1.0` added.
+
+#### __init__.py
+- Version bump to `4.1.1`
+
+#### controller.py
+- Return type handling for `get_instance` via overloads added.
+
 ## Version - 4.1.0 - [a93505e](https://github.com/k8thekat/AMPAPI_Python/commit/a93505e)
 #### Changelog.md
 - Version info from `4.0.0` added.
