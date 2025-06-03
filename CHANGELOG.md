@@ -1,3 +1,13 @@
+## Version - 4.1.2 - [dc08462](https://github.com/k8thekat/AMPAPI_Python/commit/dc08462)
+#### Changelog.md
+- Version info from `4.1.1` added.
+
+#### __init__.py
+- Version bump to `4.1.2`
+
+#### Overall
+- Added a `_no_data` check to `_call_api` function to return None early.
+
 ## Version - 4.1.1 - [c12da9f](https://github.com/k8thekat/AMPAPI_Python/commit/c12da9f)
 #### Changelog.md
 - Version info from `4.1.0` added.
