@@ -2177,7 +2177,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/Start", format_data=format_data, format_=ActionResult)
         return result
 
-    async def stop_application(self) -> None:
+    async def stop_application(self) -> None | ActionResultError:
         """|coro|
 
         Stops the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -2188,8 +2188,8 @@ class Core(Base):
         """
 
         await self._connect()
-        await self._call_api(api="Core/Stop", _no_data=True)
-        return
+        result: Any = await self._call_api(api="Core/Stop", _no_data=True)
+        return result
 
     async def suspend_instance(self) -> None:
         """|coro|

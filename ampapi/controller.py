@@ -9,7 +9,7 @@ from .filemanager import FileManagerPlugin
 from .instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
 from .modules import ActionResultError, Controller, Instance
 
-__all__ = ("AMPControllerInstance",)
+__all__ = ("AMPControllerInstance", "InstanceTypeAliases")
 
 
 InstanceTypeAliases = Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]

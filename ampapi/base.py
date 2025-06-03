@@ -271,6 +271,8 @@ class Base:
                 status=False, reason="JSON is None and Data is None", result=ConnectionError(self._no_data)
             )
             # raise ConnectionError(self._no_data)
+        elif _no_data is True:
+            return None
 
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
