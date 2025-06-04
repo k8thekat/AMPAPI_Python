@@ -1,3 +1,25 @@
+## Version - 4.2.0 - [7afa8d7](https://github.com/k8thekat/AMPAPI_Python/commit/7afa8d7)
+#### Changelog.md
+- Version info from `4.1.2` added.
+
+#### __init__.py
+- Version bump to `4.2.0`
+
+#### adsmodule.py
+- Docstring change.
+
+#### base.py
+- Fixed parameter type for `parse_data` as it was refrencing the wrong data module.
+
+#### core.py
+- Fixed function `get_status`, the data module it was returning was incorrect and failing. Changed from `InstanceStatus` to just `Status`.
+	- Updated docstring to match.
+
+#### instance.py
+- Fixed function `get_application_status` in tangent to `Core.get_status` as both were incorrect.
+	- Updated docstring to match.
+	- Added a warning in regards to using this function on an Controller/Target Instance.
+
 ## Version - 4.1.2 - [dc08462](https://github.com/k8thekat/AMPAPI_Python/commit/dc08462)
 #### Changelog.md
 - Version info from `4.1.1` added.
