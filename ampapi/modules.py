@@ -1531,7 +1531,7 @@ class Instance:
     target_id: str
     amp_version: Union[str, dict, BuildInfo, None] = field(default=None)
     container_cpus: float = field(default=0.0)
-    tags: Union[None, list] = field(default=None)
+    tags: Union[list, None] = field(default=None)
     module_display_name: str = ""
     metrics: Union[Metric, None] = field(default=None)
     display_image_source: str = ""
@@ -1765,18 +1765,18 @@ class Metric:
 
     Attributes
     -----------
-    active_users: Union[None, :class:`MetricsData`]
+    active_users: Union[:class:`MetricsData`, None]
         The active users data.
-    cpu_usage: Union[None, :class:`MetricsData`]
+    cpu_usage: Union[:class:`MetricsData`, None]
         The cpu usage data.
-    memory_usage: Union[None, :class:`MetricsData`]
+    memory_usage: Union[:class:`MetricsData`, None]
         The memory usage data.
 
     """
 
-    active_users: Union[None, MetricsData] = field(default=None)
-    cpu_usage: Union[None, MetricsData] = field(default=None)
-    memory_usage: Union[None, MetricsData] = field(default=None)
+    active_users: Union[MetricsData, None] = field(default=None)
+    cpu_usage: Union[MetricsData, None] = field(default=None)
+    memory_usage: Union[MetricsData, None] = field(default=None)
 
 
 @dataclass
@@ -1807,9 +1807,9 @@ class MetricsData:
     max_value: int
     percent: int
     units: str
-    color: Union[None, str] = None
-    color2: Union[None, str] = None
-    color3: Union[None, str] = None
+    color: Union[str, None] = field(default=None)
+    color2: Union[str, None] = field(default=None)
+    color3: Union[str, None] = field(default=None)
 
 
 @dataclass
@@ -2436,7 +2436,7 @@ class SettingSpec:
     attributes: Union[SettingsSpecAttribute, None] = field(default=None)
     current_value: Union[list, str, bool, int, dict, SettingSpecTableAliases] = ""
     description: str = ""
-    enum_values: Union[None, dict[str, Any]] = field(default=None)
+    enum_values: Union[dict[str, Any], None] = field(default=None)
     enum_values_are_deferred: bool = field(default=False)
     input_type: Union[str, None] = field(default=None)
     is_provision_spec: bool = field(default=False)
@@ -2875,8 +2875,8 @@ class UpdateInfo:
     release_notes_url: str
     build: str
     version: str
-    tools_version: Union[None, str] = None
-    patch_only: Union[None, bool] = None
+    tools_version: Union[str, None] = None
+    patch_only: Union[bool, None] = None
 
 
 @dataclass
