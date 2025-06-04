@@ -1,3 +1,13 @@
+## Version - 4.3.0 - [d2e2634](https://github.com/k8thekat/AMPAPI_Python/commit/d2e2634)
+#### Changelog.md
+- Version info from `4.2.0` added.
+
+#### __init__.py
+- Version bump to `4.3.0`
+
+#### Overall
+- Fixed Type annotations on multiple modules which was breaking data building.
+
 ## Version - 4.2.0 - [7afa8d7](https://github.com/k8thekat/AMPAPI_Python/commit/7afa8d7)
 #### Changelog.md
 - Version info from `4.1.2` added.
