@@ -9,7 +9,7 @@ from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .minecraft import MinecraftModule
-from .modules import ActionResult, ActionResultError, Instance, InstanceStatus, Updates
+from .modules import ActionResult, ActionResultError, Instance, InstanceStatus, Status, Updates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -170,10 +170,10 @@ class AMPInstance(
         return wrapper_has_controller
 
     @Instance.online
-    async def get_application_status(self, format_data: Union[bool, None] = None) -> InstanceStatus | ActionResultError:
+    async def get_application_status(self, format_data: Union[bool, None] = None) -> Status | ActionResultError:
         """|coro|
 
-        Gets the AMP Instance Application Status information and updates the class properties(State, Uptime and Metrics)
+        Similar to :meth:`Core.get_status` but with the added benefit of updating our ``self`` object reference.
 
         .. note::
             The Instance MUST be running (:attr:`~Instance.running = True`) or you will get a :class:`ConnectionError`
@@ -194,7 +194,7 @@ class AMPInstance(
         :class:`AppStatus`
             On success returns a :class:`AppStatus` dataclass.
         """
-        result: InstanceStatus | ActionResultError = await super().get_status(format_data=format_data)
+        result: Status | ActionResultError = await super().get_status(format_data=format_data)
         if isinstance(result, ActionResultError):
             return result
         self.parse_data(data=result)
@@ -214,6 +214,9 @@ class AMPInstance(
             This only applies if you are manually creating these classes.\n
             - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
 
+        .. warning::
+            This will fail if you attempt to call it on the Target or Controller type Instance, returning an :class:`ActionResultError`
+
 
 
         Raises
@@ -226,6 +229,7 @@ class AMPInstance(
         Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`]
             Returns an updated ``self`` object.
         """
+
         result: Instance | ActionResultError = await self._controller.get_instance(instance_id=self.instance_id)  # type: ignore -- See the @has_controller decorator.
         if isinstance(result, ActionResultError):
             self.logger.warning(

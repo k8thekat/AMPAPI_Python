@@ -16,7 +16,7 @@ from dataclass_wizard import fromdict
 from pyotp import TOTP
 
 from .bridge import Bridge
-from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults
+from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults, Status
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Iterable
@@ -609,14 +609,14 @@ class Base:
                     "Your 2FA token appears to be too short (<8 characters). Please use the code that generates the timed based tokens."
                 )
 
-    def parse_data(self, data: Union[Controller, Instance, InstanceStatus, Updates]) -> Self:
+    def parse_data(self, data: Union[Controller, Instance, Status, Updates]) -> Self:
         """
         Takes in a :class:`DataclassInstance` and iterates through it's :meth:`fields` and
         set's the values as attributes of the :class:`DataclassInstance` that called this function.
 
         Parameters
         -----------
-        data: Union[:class:`Controller`, :class:`Instance`, :class:`AppStatus`, :class:`Updates`]
+        data: Union[:class:`Controller`, :class:`Instance`, :class:`Status`, :class:`Updates`]
             The :class:`DataclassInstance` to parse.
 
         Returns

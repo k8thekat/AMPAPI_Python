@@ -918,7 +918,7 @@ class ADSModule(Base):
     async def get_instance_statuses(self, format_data: Union[bool, None] = None) -> list[InstanceStatus] | ActionResultError:
         """|coro|
 
-        Returns a dictionary of the Instance Status. \n
+        Returns a dictionary of the AMP Instance status. \n
 
         Parameters
         -----------

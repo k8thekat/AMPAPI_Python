@@ -24,6 +24,7 @@ from .modules import (
     Session,
     SettingSpec,
     SettingsSpecParent,
+    Status,
     TimedTrigger,
     TriggerID,
     UpdateInfo,
@@ -1336,10 +1337,10 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetSettingValues", parameters=parameters)
         return result
 
-    async def get_status(self, format_data: Union[bool, None] = None) -> InstanceStatus | ActionResultError:
+    async def get_status(self, format_data: Union[bool, None] = None) -> Status | ActionResultError:
         """|coro|
 
-        Gets the AMP Instance/Application Status information.
+        Gets the AMP Instance application status information. Such as active users, cpu usage, memory usage, state and uptime.
 
         Parameters
         -----------
@@ -1348,12 +1349,12 @@ class Core(Base):
 
         Returns
         --------
-        :class:`InstanceStatus`
-            On success returns a :class:`InstanceStatus` dataclass.
+        :class:`Status`
+            On success returns a :class:`Status` dataclass.
         """
 
         await self._connect()
-        result: Any = await self._call_api(api="Core/GetStatus", format_data=format_data, format_=InstanceStatus)
+        result: Any = await self._call_api(api="Core/GetStatus", format_data=format_data, format_=Status)
         return result
 
     async def get_tasks(self, format_data: Union[bool, None] = None) -> list[RunningTask] | ActionResultError:
