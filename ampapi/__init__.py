@@ -25,13 +25,13 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "4.3.0"
+__version__ = "4.4.0"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
 
 
-from . import util as util
+from .util import *
 from .adsmodule import *
 from .analytics import *
 from .base import *
@@ -54,6 +54,6 @@ class VersionInfo(NamedTuple):
     releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]
 
 
-version_info: VersionInfo = VersionInfo(Major=4, Minor=3, Revision=0, releaseLevel="development")
+version_info: VersionInfo = VersionInfo(Major=4, Minor=4, Revision=0, releaseLevel="development")
 
 del NamedTuple, Literal, VersionInfo

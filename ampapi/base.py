@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import functools
 import json
@@ -8,7 +9,7 @@ import re
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Union, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, ParamSpec, Union, overload
 
 import aiohttp
 from aiohttp import ClientResponse
@@ -63,7 +64,8 @@ class Base:
     instance_id: :class:`str`
         The Instance id is a string determined by AMP. \n
         This attribute will be set automatically after making a :meth:`login` request, default is "O".
-
+    session: :class:`aiohttp.ClientSession`
+        A static Session to use, otherwise the class will generate it's own as needed.
     """
 
     # Private Attributes
@@ -97,14 +99,26 @@ class Base:
         "SecurityandPrivacy": "security_and_privacy",
     }
 
-    def __init__(self) -> None:
+    def __init__(self, session: Optional[aiohttp.ClientSession] = None) -> None:
         bridge: Bridge = Bridge._get_bridge()
         # Validate the bridge object is at the same memory address.
         self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
         self.logger.debug("bridge object -> %s", pformat(bridge))
+        self.session = session
 
         if isinstance(bridge, Bridge):
             self.parse_bridge(bridge=bridge)
+
+    def __del__(self) -> None:
+        try:
+            asyncio.run(self.__adel__())
+            self.logger.debug("Closed `aiohttp.ClientSession`| Session: %s", self.session)
+        except RuntimeError:
+            self.logger.error("Failed to close our `aiohttp.ClientSession`")
+
+    async def __adel__(self) -> None:
+        if self.session is not None:
+            await self.session.close()
 
     @property
     def format_data(self) -> bool:
@@ -244,27 +258,30 @@ class Base:
         self.logger.debug(
             "SESSION GET %s | API CALL: %s | API URL: %s | DATA: %s", self.instance_id, api, _url, pformat(json_data)
         )
-        async with aiohttp.ClientSession() as session:
-            try:
-                post_req = await session.post(url=_url, headers=header, data=json_data)
-            # TODO - Need to not catch all Excepts..
-            # So I can handle each exception properly.
-            except Exception as e:
-                self.logger.error("DEBUG _call_api exception type: %s", type(e))
-                return ActionResultError(status=False, reason="UNK", result=ValueError(e))
-                # raise ValueError(e)
+        if self.session is None:
+            print("GENERATING A NEW SESSION")
+            self.session = aiohttp.ClientSession()
 
-            if post_req.content_length == 0:
-                return ActionResultError(status=False, reason="Content Length is 0", result=ValueError(self._no_data))
-                # raise ValueError(self._no_data)
+        try:
+            post_req = await self.session.post(url=_url, headers=header, data=json_data)
+        # TODO - Need to not catch all Excepts..
+        # So I can handle each exception properly.
+        except Exception as e:
+            self.logger.error("DEBUG _call_api exception type: %s", type(e))
+            return ActionResultError(status=False, reason="UNK", result=ValueError(e))
+            # raise ValueError(e)
 
-            if post_req.status != 200:
-                return ActionResultError(
-                    status=False, reason="Status Code not equal to 200", result=ConnectionError(self._no_data)
-                )
-                # raise ConnectionError(self._no_data)
+        if post_req.content_length == 0:
+            return ActionResultError(status=False, reason="Content Length is 0", result=ValueError(self._no_data))
+            # raise ValueError(self._no_data)
 
-            post_req_json: Any = await post_req.json()
+        if post_req.status != 200:
+            return ActionResultError(
+                status=False, reason="Status Code not equal to 200", result=ConnectionError(self._no_data)
+            )
+            # raise ConnectionError(self._no_data)
+
+        post_req_json: Any = await post_req.json()
 
         if post_req_json is None and _no_data is False:
             return ActionResultError(

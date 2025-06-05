@@ -1,6 +1,9 @@
+import asyncio
 from collections.abc import Iterable
 from dataclasses import fields
-from typing import Any, Union, overload
+from typing import Any, Optional, Union, overload
+
+import aiohttp
 
 from .adsmodule import ADSModule
 from .core import Core
@@ -10,7 +13,6 @@ from .instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
 from .modules import ActionResultError, Controller, Instance
 
 __all__ = ("AMPControllerInstance", "InstanceTypeAliases")
-
 
 InstanceTypeAliases = Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]
 
@@ -79,8 +81,8 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
     _controller_exists: bool = False
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, session: Optional[aiohttp.ClientSession] = None) -> None:
+        super().__init__(session=session)
         self.module: str = "ADS"
 
     def __getattr__(self, name: str) -> Union[AttributeError, Any]:
@@ -89,6 +91,17 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
                 f"'{type(self).__name__}' object has no attribute '{name}' | You must call <AMPControllerInstance>.get_instances() with 'format_data=True' to update this object."
             )
         return self.__getattribute__(name)
+
+    def __del__(self) -> None:
+        try:
+            asyncio.run(self.__adel__())
+            self.logger.debug("Closed `aiohttp.ClientSession`| Session: %s", self.session)
+        except RuntimeError:
+            self.logger.error("Failed to close our `aiohttp.ClientSession`")
+
+    async def __adel__(self) -> None:
+        if self.session is not None:
+            await self.session.close()
 
     @property
     def instances(self) -> set[Union[AMPADSInstance, AMPInstance, AMPMinecraftInstance]]:
@@ -151,23 +164,23 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
             instances = sorted(instances)
             for entry in instances:
                 if entry.module == "ADS":
-                    conv_instances.add(AMPADSInstance(data=entry, controller=self))
+                    conv_instances.add(AMPADSInstance(data=entry, controller=self, session=self.session))
 
                 elif entry.module == "Minecraft":
-                    conv_instances.add(AMPMinecraftInstance(data=entry, controller=self))
+                    conv_instances.add(AMPMinecraftInstance(data=entry, controller=self, session=self.session))
 
                 else:
-                    conv_instances.add(AMPInstance(data=entry, controller=self))
+                    conv_instances.add(AMPInstance(data=entry, controller=self, session=self.session))
 
         elif isinstance(instances, Instance):
             if instances.module == "ADS":
-                return AMPADSInstance(data=instances, controller=self)
+                return AMPADSInstance(data=instances, controller=self, session=self.session)
 
             elif instances.module == "Minecraft":
-                return AMPMinecraftInstance(data=instances, controller=self)
+                return AMPMinecraftInstance(data=instances, controller=self, session=self.session)
 
             else:
-                return AMPInstance(data=instances, controller=self)
+                return AMPInstance(data=instances, controller=self, session=self.session)
         return conv_instances
 
     @overload

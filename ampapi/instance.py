@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Union
 
 from .analytics import AnalyticsPlugin
 from .core import Core
@@ -115,9 +115,11 @@ class AMPInstance(
     url: str
     _controller: Union[AMPControllerInstance, None]
 
-    def __init__(self, data: Union[Instance, None], controller: Union[AMPControllerInstance, None] = None) -> None:
+    def __init__(
+        self, data: Union[Instance, None], controller: Union[AMPControllerInstance, None] = None, **kwargs: Any
+    ) -> None:
         self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
-        super().__init__()
+        super().__init__(**kwargs)
 
         if isinstance(data, Instance):
             self.parse_data(data=data)

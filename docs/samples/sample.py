@@ -2,6 +2,8 @@ import logging
 from pprint import pprint
 from typing import Union
 
+import aiohttp
+
 from ampapi import (
     ActionResultError,
     AMPADSInstance,
@@ -23,9 +25,13 @@ async def Sample_API() -> None:
     """
     Example API Function to call Endpoints.
     """
+    # The API also supports the ability to have an existing `aiohttp.ClientSession`;
+    # Simply supply your existing session to the AMPControllerInstance
+    # Make sure to close your session after running any code. (If needed)
     logger = logging.getLogger()
     _bridge = Bridge(api_params=_params)
-    ADS: AMPControllerInstance = AMPControllerInstance()
+    session: aiohttp.ClientSession = aiohttp.ClientSession()
+    ADS: AMPControllerInstance = AMPControllerInstance(session=session)
     # By default all API calls will be formatted into Dataclasses if possible.
     # You can toggle format_data off with ANY of the API classes that inherit Base().
     ADS.format_data = False
@@ -113,3 +119,6 @@ async def Sample_API() -> None:
     # First you create a filter, then pass the filter into the function call.
     filter_: AnalyticsFilter = AnalyticsFilter(country="US")
     await mcinstance.get_analytics_summary(filters=filter_)
+
+    # Session closing..
+    await session.close()

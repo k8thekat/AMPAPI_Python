@@ -1787,13 +1787,13 @@ class MetricsData:
     Attributes
     -----------
     raw_value: :class:`int`
-        The raw value.
+        The raw value, or the current value of the field.
     max_value: :class:`int`
-        The max value.
+        The max value the field can have.
     percent: :class:`int`
-        The percent.
+        The percent of usage in relation to the ``max_value``.
     units: :class:`str`
-        The unit of measurement.
+        The unit of measurement for the field.
     color: Union[None, :class:`str`]
         Color number 1 if applicable..
     color2: Union[None, :class:`str`]
