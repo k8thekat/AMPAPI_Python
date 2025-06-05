@@ -1,3 +1,14 @@
+## Version - 4.4.0 - [886b0e4](https://github.com/k8thekat/AMPAPI_Python/commit/886b0e4)
+#### Changelog.md
+- Version info from `4.3.0` added.
+
+#### __init__.py
+- Version bump to `4.4.0`
+
+#### Overall
+- Added logic to support a single `aiohttp.ClientSession` at runtime while allowing an existing ClientSession to be supplied at the class `AMPControllerInstance` level.
+- Updated the `sample.py` to show existing session usage.
+
 ## Version - 4.3.0 - [d2e2634](https://github.com/k8thekat/AMPAPI_Python/commit/d2e2634)
 #### Changelog.md
 - Version info from `4.2.0` added.
