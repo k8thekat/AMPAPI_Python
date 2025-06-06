@@ -1,3 +1,17 @@
+## Version - 4.5.2 - [76c4c13](https://github.com/k8thekat/AMPAPI_Python/commit/76c4c13)
+#### Changelog.md
+- Version info from `4.5.1` added.
+
+#### __init__.py
+- Version bump to `4.5.2`
+
+#### base.py
+- Changed format of debug logger statements.
+- Fixed logic handling for closed sessions and attempting to re-create a ClientSession().
+
+#### instance.py
+- Removed unneeded debug print in it's init.
+
 ## Version - 4.5.1 - [87e6630](https://github.com/k8thekat/AMPAPI_Python/commit/87e6630)
 #### Changelog.md
 - Version info from `4.5.0` added.
