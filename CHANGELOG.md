@@ -1,3 +1,13 @@
+## Version - 4.5.1 - [87e6630](https://github.com/k8thekat/AMPAPI_Python/commit/87e6630)
+#### Changelog.md
+- Version info from `4.5.0` added.
+
+#### __init__.py
+- Version bump to `4.5.1`
+
+#### base.py
+- Pulled back connection closing via `Base` to be controlled by the AMPControllerInstance instead.
+
 ## Version - 4.5.0 - [99b12f5](https://github.com/k8thekat/AMPAPI_Python/commit/99b12f5)
 #### Changelog.md
 - Version info from `4.4.0` added.
