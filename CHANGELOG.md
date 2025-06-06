@@ -1,3 +1,15 @@
+## Version - 4.5.0 - [99b12f5](https://github.com/k8thekat/AMPAPI_Python/commit/99b12f5)
+#### Changelog.md
+- Version info from `4.4.0` added.
+
+#### __init__.py
+- Version bump to `4.5.0`
+
+#### base.py
+- Implemented a backoff class from `discord.py`-> ExponentialBackoff.
+- Improved logic handling for `aiohttp.ClientSession` requests upon failure or similar.
+- Added logic to attempt to reopen the ClientSession should it become closed.
+
 ## Version - 4.4.0 - [886b0e4](https://github.com/k8thekat/AMPAPI_Python/commit/886b0e4)
 #### Changelog.md
 - Version info from `4.3.0` added.
