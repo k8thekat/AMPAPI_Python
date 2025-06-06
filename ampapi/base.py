@@ -112,16 +112,16 @@ class Base:
         if isinstance(bridge, Bridge):
             self.parse_bridge(bridge=bridge)
 
-    def __del__(self) -> None:
-        try:
-            asyncio.run(self.__adel__())
-            self.logger.debug("Closing the open `aiohttp.ClientSession`| Session: %s", self.session)
-        except RuntimeError:
-            self.logger.error("Failed to close our `aiohttp.ClientSession`")
+    # def __del__(self) -> None:
+    #     try:
+    #         asyncio.run(self.__adel__())
+    #         self.logger.debug("Closing the open `aiohttp.ClientSession`| Session: %s", self.session)
+    #     except RuntimeError:
+    #         self.logger.error("Failed to close our `aiohttp.ClientSession`")
 
-    async def __adel__(self) -> None:
-        if self.session is not None:
-            await self.session.close()
+    # async def __adel__(self) -> None:
+    #     if self.session is not None:
+    #         await self.session.close()
 
     @property
     def format_data(self) -> bool:
@@ -270,7 +270,7 @@ class Base:
         except RuntimeError as e:
             # ? Suggestion
             # Attempting to re-open the session if it is somehow closed during usage.
-            if "Session is closed" in e.args:
+            if "session is closed" in e.args[0].lower():
                 self.session = aiohttp.ClientSession()
 
             retry: float = self._backoff.delay()
