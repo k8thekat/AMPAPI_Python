@@ -270,11 +270,11 @@ class Base:
         except RuntimeError as e:
             # ? Suggestion
             # Attempting to re-open the session if it is somehow closed during usage.
-            if "session is closed" in e.args[0].lower():
+            if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
                 self.session = aiohttp.ClientSession()
 
             retry: float = self._backoff.delay()
-            self.logger.error("Runtime Error, will retry in %s. | Exception: %s", retry, exc_info=e)
+            self.logger.error("Runtime Error, will retry in %s. | Exception: %s", retry, e)
             await asyncio.sleep(delay=retry)
             return await self._call_api(
                 api=api,
@@ -316,11 +316,16 @@ class Base:
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-        self.logger.debug("RESPONSE JSON %s | REQ JSON TYPE: %s | PARAMETERS: %s", api, type(post_req_json), parameters)
-        self.logger.debug("DEBUG RESPONSE: %s", pformat(post_req_json))
+        self.logger.debug(
+            "URL: %s | aiohttp.ClientResponse.json() type: %s | _call_api parameters: %s",
+            api,
+            type(post_req_json),
+            parameters,
+        )
+        self.logger.debug("aiohttp.ClientResponse.json() formatted: %s", pformat(post_req_json))
         if sanitize_json is True:
             post_req_json = self.sanitize_json(post_req_json)
-            self.logger.debug("DEBUG RESPONSE SANITIZED: %s", pformat(post_req_json))
+            self.logger.debug("Sanitize json: %s | Sanitized data: %s", sanitize_json, pformat(post_req_json))
 
         if isinstance(post_req_json, dict):
             if "title" in post_req_json:

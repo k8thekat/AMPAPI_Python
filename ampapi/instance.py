@@ -118,7 +118,7 @@ class AMPInstance(
     def __init__(
         self, data: Union[Instance, None], controller: Union[AMPControllerInstance, None] = None, **kwargs: Any
     ) -> None:
-        self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
+        # self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
         super().__init__(**kwargs)
 
         if isinstance(data, Instance):
