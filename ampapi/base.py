@@ -16,6 +16,7 @@ from aiohttp import ClientResponse
 from dataclass_wizard import fromdict
 from pyotp import TOTP
 
+from .backoff import ExponentialBackoff
 from .bridge import Bridge
 from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults, Status
 
@@ -71,6 +72,7 @@ class Base:
     # Private Attributes
     logger: logging.Logger = logging.getLogger()
     _bridge: Bridge
+    _backoff: ExponentialBackoff
 
     # Public Attributes
     url: str = ""
@@ -101,6 +103,7 @@ class Base:
 
     def __init__(self, session: Optional[aiohttp.ClientSession] = None) -> None:
         bridge: Bridge = Bridge._get_bridge()
+        self._backoff = ExponentialBackoff()
         # Validate the bridge object is at the same memory address.
         self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
         self.logger.debug("bridge object -> %s", pformat(bridge))
@@ -112,7 +115,7 @@ class Base:
     def __del__(self) -> None:
         try:
             asyncio.run(self.__adel__())
-            self.logger.debug("Closed `aiohttp.ClientSession`| Session: %s", self.session)
+            self.logger.debug("Closing the open `aiohttp.ClientSession`| Session: %s", self.session)
         except RuntimeError:
             self.logger.error("Failed to close our `aiohttp.ClientSession`")
 
@@ -259,17 +262,36 @@ class Base:
             "SESSION GET %s | API CALL: %s | API URL: %s | DATA: %s", self.instance_id, api, _url, pformat(json_data)
         )
         if self.session is None:
-            print("GENERATING A NEW SESSION")
             self.session = aiohttp.ClientSession()
 
         try:
             post_req = await self.session.post(url=_url, headers=header, data=json_data)
-        # TODO - Need to not catch all Excepts..
-        # So I can handle each exception properly.
+        # We have a dynamic backoff function to prevent reconnect attempts to frequently.
+        except RuntimeError as e:
+            # ? Suggestion
+            # Attempting to re-open the session if it is somehow closed during usage.
+            if "Session is closed" in e.args:
+                self.session = aiohttp.ClientSession()
+
+            retry: float = self._backoff.delay()
+            self.logger.error("Runtime Error, will retry in %s. | Exception: %s", retry, exc_info=e)
+            await asyncio.sleep(delay=retry)
+            return await self._call_api(
+                api=api,
+                parameters=parameters,
+                format_data=format_data,
+                format_=format_,
+                sanitize_json=sanitize_json,
+                _use_from_dict=_use_from_dict,
+                _auto_unpack=_auto_unpack,
+                _no_data=_no_data,
+            )
+
         except Exception as e:
-            self.logger.error("DEBUG _call_api exception type: %s", type(e))
+            retry = self._backoff.delay()
+            self.logger.error("Connection Timeout Error, will retry in %s. | Exception: %s", retry, exc_info=e)
+            await asyncio.sleep(delay=retry)
             return ActionResultError(status=False, reason="UNK", result=ValueError(e))
-            # raise ValueError(e)
 
         if post_req.content_length == 0:
             return ActionResultError(status=False, reason="Content Length is 0", result=ValueError(self._no_data))
