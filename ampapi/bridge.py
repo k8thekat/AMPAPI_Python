@@ -31,7 +31,7 @@ class Bridge(APIParams):
     """
 
     api_params: APIParams
-    _logger: logging.Logger = logging.getLogger()
+    _logger: logging.Logger = logging.getLogger(__name__)
 
     def __new__(cls, api_params: Union[APIParams, None] = None, *args: Any, **kwargs: Any) -> Union["Bridge", None]:
         if not hasattr(cls, "_instance"):

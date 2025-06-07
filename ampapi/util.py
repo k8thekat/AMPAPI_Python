@@ -123,7 +123,7 @@ async def _parse_get_api_spec_to_file(
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance. Default is False.
     """
-    _logger: Logger = logging.getLogger()
+    _logger: Logger = logging.getLogger(__name__)
 
     data: APISpec | ActionResultError = await instance.get_api_spec(sanitize_json=sanitize_json)
     diag_info: Diagnostics | ActionResultError = await instance.get_diagnostics_info()
@@ -433,7 +433,7 @@ async def amp_api_update(instance: AMPControllerInstance, sanitize_json: bool) -
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance.
     """
-    _logger: Logger = logging.getLogger()
+    _logger: Logger = logging.getLogger(__name__)
     # We call get_instances() to force a current listing of instances to be populated.
     await instance.get_instances()
     ADS_diag: Diagnostics | ActionResultError = await instance.get_diagnostics_info()
@@ -496,7 +496,7 @@ def dump_to_file(data: Iterable, file_name: str = "", path: Union[Path, None] = 
         The Path to store the dump file, by default None
         - If ``None`` will use the ``../docs/dumps/`` path.
     """
-    _logger = logging.getLogger()
+    _logger = logging.getLogger(__name__)
 
     if file_name == "":
         file_name = str(object=datetime.today().date())
@@ -524,7 +524,7 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     instance: AMPControllerInstance | AMPADSInstance
         Must be of these types as the API endpoint :meth:`get_settingspec` is not available to all.
     """
-    logger: Logger = logging.getLogger()
+    logger: Logger = logging.getLogger(__name__)
     spec: SettingsSpecParent | ActionResultError = await instance.get_setting_spec()
     if isinstance(spec, ActionResultError):
         logger.error("Failed to retrieve Spec Data. | Spec: %s", spec)

@@ -221,6 +221,9 @@ class ActionResultError:
     def __repr__(self) -> str:
         return pformat(vars(self))
 
+    def __str__(self) -> str:
+        return self.__repr__()
+
 
 @dataclass
 class AnalyticsCountryData:
@@ -1547,7 +1550,7 @@ class Instance:
                 try:
                     setattr(self, "amp_version", BuildInfo(**self.amp_version))
                 except Exception as e:
-                    _logger: Logger = logging.getLogger()
+                    _logger: Logger = logging.getLogger(__name__)
                     _logger.warning("We attempted to unpack <self.amp_version> and failed %s", e)
                     return
             if isinstance(self.amp_version, str):
@@ -3076,7 +3079,7 @@ class BuildInfo:
             temp: Self = cls(*[int(entry) for entry in new_data])
 
         except (UnboundLocalError, MissingFields) as e:
-            _logger = logging.getLogger()
+            _logger = logging.getLogger(__name__)
             _logger.error("Unable to convert the data %s | Error: %s", data, e)
             return data
         return temp

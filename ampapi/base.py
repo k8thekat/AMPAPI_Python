@@ -70,26 +70,28 @@ class Base:
     """
 
     # Private Attributes
-    logger: logging.Logger = logging.getLogger()
+    logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     _bridge: Bridge
     _backoff: ExponentialBackoff
 
     # Public Attributes
-    url: str = ""
-    instance_id: str = "0"
-    session_ttl: int = 240
+    url: str
+    instance_id: str
+    session_ttl: ClassVar[int] = 240
     module: str  # TODO - make this var unchangeable via private attr in future release.
 
     # Error response strings.
-    _ads_only: str = "This API call is only available to <class:`ADSModule`> type classes."
-    _failed_api: str = "The API call returned a malformed response."
-    _minecraft_only: str = "This API call is only available on Minecraft type instances."
-    _no_bridge: str = "Failed to setup connection. You need to initiate `<class Bridge>` first."
-    _no_controller: str = "The function failed as the <class:`AMPControllerInstance`> was not properly initialized and set."
-    _no_data: str = "Failed to receive any data from post request."
-    _unauthorized_access: str = "The user does not have the required permissions to interact with this instance."
-    _instance_offline: str = "The requested Instance is not available at this time. | URL: %s"
-    _version_unavailable: str = "The API call %s is no longer available at this version of AMP %s"
+    _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
+    _failed_api: ClassVar[str] = "The API call returned a malformed response."
+    _minecraft_only: ClassVar[str] = "This API call is only available on Minecraft type instances."
+    _no_bridge: ClassVar[str] = "Failed to setup connection. You need to initiate `<class Bridge>` first."
+    _no_controller: ClassVar[str] = (
+        "The function failed as the <class:`AMPControllerInstance`> was not properly initialized and set."
+    )
+    _no_data: ClassVar[str] = "Failed to receive any data from post request."
+    _unauthorized_access: ClassVar[str] = "The user does not have the required permissions to interact with this instance."
+    _instance_offline: ClassVar[str] = "The requested Instance is not available at this time. | URL: %s"
+    _version_unavailable: ClassVar[str] = "The API call %s is no longer available at this version of AMP %s"
 
     # These are used to handle JSON keys that cannot be parsed properly via regex.
     # See :func:`camel_to_snake_re`
@@ -102,12 +104,15 @@ class Base:
     }
 
     def __init__(self, session: Optional[aiohttp.ClientSession] = None) -> None:
+        self.url = ""
+        self.instance_id = "0"
         bridge: Bridge = Bridge._get_bridge()
         self._backoff = ExponentialBackoff()
+
         # Validate the bridge object is at the same memory address.
         self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
         self.logger.debug("bridge object -> %s", pformat(bridge))
-        self.session = session
+        self.session: aiohttp.ClientSession | None = session
 
         if isinstance(bridge, Bridge):
             self.parse_bridge(bridge=bridge)
@@ -274,7 +279,9 @@ class Base:
                 self.session = aiohttp.ClientSession()
 
             retry: float = self._backoff.delay()
-            self.logger.error("Runtime Error, will retry in %s. | Exception: %s", retry, e)
+            self.logger.error(
+                "<Base._call_api> encountered a <RuntimeError> and will retry in %s. | Exception: %s", retry, e
+            )
             await asyncio.sleep(delay=retry)
             return await self._call_api(
                 api=api,
@@ -289,7 +296,7 @@ class Base:
 
         except Exception as e:
             retry = self._backoff.delay()
-            self.logger.error("Connection Timeout Error, will retry in %s. | Exception: %s", retry, exc_info=e)
+            self.logger.error("<Base._call_api> encountered an Exception and will retry in %s. | Exception: %s", retry, e)
             await asyncio.sleep(delay=retry)
             return ActionResultError(status=False, reason="UNK", result=ValueError(e))
 

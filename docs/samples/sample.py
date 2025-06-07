@@ -28,7 +28,7 @@ async def Sample_API() -> None:
     # The API also supports the ability to have an existing `aiohttp.ClientSession`;
     # Simply supply your existing session to the AMPControllerInstance
     # Make sure to close your session after running any code. (If needed)
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     _bridge = Bridge(api_params=_params)
     session: aiohttp.ClientSession = aiohttp.ClientSession()
     ADS: AMPControllerInstance = AMPControllerInstance(session=session)
