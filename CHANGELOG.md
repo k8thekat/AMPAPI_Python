@@ -1,3 +1,15 @@
+## Version - 4.5.3 - [7e4ebc5](https://github.com/k8thekat/AMPAPI_Python/commit/7e4ebc5)
+#### Changelog.md
+- Version info from `4.5.2` added.
+
+#### __init__.py
+- Version bump to `4.5.3`
+
+#### v4.5.3
+- Brief formatting update to logger statements throughout.
+- Added `__name__` to all Loggers.
+- Overwrote the dunder method for `ActionResultError.__str__()`.
+
 ## Version - 4.5.2 - [76c4c13](https://github.com/k8thekat/AMPAPI_Python/commit/76c4c13)
 #### Changelog.md
 - Version info from `4.5.1` added.
