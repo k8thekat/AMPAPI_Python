@@ -1,10 +1,6 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "cc-ampapi"
-dynamic = ["version", "dependencies"]
+dynamic = ["version"]
 authors = [
     { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
 ]
@@ -28,54 +24,44 @@ classifiers = [
     "Typing :: Typed",
 ]
 keywords = ["cubecoders", "cube coders", "amp", "api"]
+dependencies = [
+    "aiohttp>=3.7.4.post0",
+    "dataclass-wizard>=0.22.2",
+    "pyotp>=2.6.0",
+]
+
 [project.urls]
 GitHub = "https://github.com/k8thekat/AMPAPI_Python"
 Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
 
-[tool.setuptools.dynamic]
-dependencies = { file = "requirements.txt" }
-version = { attr = "ampapi.__version__" }
-
-[tool.setuptools]
-packages = ["ampapi"]
-include-package-data = true
-
 [tool.ruff]
 target-version = "py310"
-line-length = 125
+line-length = 140
 exclude = ["docs/extensions/*.py"]
 
 [tool.ruff.lint]
-select = [
-    "A",
-    "C4",
-    "F",
-    "G",
-    "I",
-    "PTH",
-    "RUF",
-    "SIM",
-    # "TC",
-    "UP",
-    "W",
-    "PERF",
-    "ANN",
-]
+select = ["ALL"]
 ignore = [
+    "ANN401",
+    "D401", # Ignore "Imperative Mood" statement for docstrings.
+    "ERA001", #Ignore commented out code.
+    "FIX002", # Ignore TODO's telling you to "fix them".
     "F401",
     "F402",
     "F403",
     "F405",
     "PERF203",
+    "PLR",
     "RUF001",
+    "RUF002", # The character U+2013 "–" could be confused with the ASCII character U+002d "-", which is more common in source code.
     "RUF009",
+    "RUF052", # for filtering "local dummy variable is accessed" eg. - vars using `_`
     "SIM105",
+    "TD003", # Ignore TODO's not having a link/url to an issue.
+    "UP007",
     "UP034",
     "UP038",
-    "UP007",
-    #"ANN101",
-    #"ANN102",
-    "ANN401",
+    "UP045", # Type var `Optional[X]` vs `X | None`
 ]
 
 [tool.ruff.lint.isort]
@@ -91,7 +77,22 @@ mark-parentheses = false
 parametrize-names-type = "tuple"
 
 [tool.pyright]
-useLibraryCodeForTypes = true
-typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "strict"
 pythonVersion = "3.10"
+exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*"]
+include = ["ampapi"]
+useLibraryCodeForTypes = true
 reportIncompatibleMethodOverride = false
+
+[tool.setuptools]
+packages = ["ampapi"]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "ampapi.__version__" }
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
