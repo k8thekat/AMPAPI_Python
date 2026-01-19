@@ -2,7 +2,7 @@ import logging
 from dataclasses import fields
 from typing import Any, Union
 
-from .dataclass import APIParams
+from .modules import APIParams
 
 __all__ = ("Bridge",)
 
@@ -23,12 +23,15 @@ class Bridge(APIParams):
         _bridge: Bridge = Bridge(ap_params=_params)
         del _params
 
-
+    Parameter
+    ----------
+    api_params: :class:`APIParams`
+        The prebuilt class to handle login credentials.
 
     """
 
     api_params: APIParams
-    _logger: logging.Logger = logging.getLogger()
+    _logger: logging.Logger = logging.getLogger(__name__)
 
     def __new__(cls, api_params: Union[APIParams, None] = None, *args: Any, **kwargs: Any) -> Union["Bridge", None]:
         if not hasattr(cls, "_instance"):

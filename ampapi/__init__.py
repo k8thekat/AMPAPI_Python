@@ -25,16 +25,13 @@ from __future__ import annotations
 __title__ = "CubeCoders AMP API"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "1.3.1"
+__version__ = "4.6.0"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
 
-from . import dataclass as dataclass
-from . import enums as enums
-from . import modules as modules
-from . import types_ as types
-from . import util as util
+
+from .util import *
 from .adsmodule import *
 from .analytics import *
 from .base import *
@@ -46,6 +43,9 @@ from .filebackup import *
 from .filemanager import *
 from .instance import *
 from .minecraft import *
+from .modules import *
+from .enums_ import *
+from .backoff import *
 
 
 class VersionInfo(NamedTuple):
@@ -55,6 +55,6 @@ class VersionInfo(NamedTuple):
     releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]
 
 
-version_info: VersionInfo = VersionInfo(Major=1, Minor=3, Revision=1, releaseLevel="release")
+version_info: VersionInfo = VersionInfo(Major=4, Minor=6, Revision=0, releaseLevel="development")
 
 del NamedTuple, Literal, VersionInfo

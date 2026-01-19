@@ -1,10 +1,22 @@
+import logging
 from pprint import pprint
 from typing import Union
 
-from ampapi import *
-from ampapi.dataclass import AnalyticsFilter, AnalyticsSummary, APIParams, Players
-from ampapi.enums import *
-from ampapi.instance import AMPADSInstance, AMPInstance, AMPMinecraftInstance
+import aiohttp
+
+from ampapi import (
+    ActionResultError,
+    AMPADSInstance,
+    AMPControllerInstance,
+    AMPInstance,
+    AMPInstanceState,
+    AMPMinecraftInstance,
+    AnalyticsFilter,
+    AnalyticsSummary,
+    APIParams,
+    Bridge,
+    Players,
+)
 
 _params = APIParams(url="http://192.168.13.130:8080", user="bot_username", password="bot_password")
 
@@ -13,8 +25,13 @@ async def Sample_API() -> None:
     """
     Example API Function to call Endpoints.
     """
+    # The API also supports the ability to have an existing `aiohttp.ClientSession`;
+    # Simply supply your existing session to the AMPControllerInstance
+    # Make sure to close your session after running any code. (If needed)
+    logger = logging.getLogger(__name__)
     _bridge = Bridge(api_params=_params)
-    ADS: AMPControllerInstance = AMPControllerInstance()
+    session: aiohttp.ClientSession = aiohttp.ClientSession()
+    ADS: AMPControllerInstance = AMPControllerInstance(session=session)
     # By default all API calls will be formatted into Dataclasses if possible.
     # You can toggle format_data off with ANY of the API classes that inherit Base().
     ADS.format_data = False
@@ -83,16 +100,25 @@ async def Sample_API() -> None:
     mcinstance.status.metrics
 
     # Want to kick a random person? Here ya go~
-    players: Players = await mcinstance.get_user_list()
+    players: Players | ActionResultError = await mcinstance.get_user_list()
+    if isinstance(players, ActionResultError):
+        logger.error("Failed to retrieve Players")
+        return
     await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
 
     # Analytics Introduction -
     # Simply call the below method.
     # By default it will use current day and time and go back 30 days into the past from now.
-    stats: AnalyticsSummary = await mcinstance.get_analytics_summary()
+    stats: AnalyticsSummary | ActionResultError = await mcinstance.get_analytics_summary()
+    if isinstance(stats, ActionResultError):
+        logger.error("Failed to retrieve Stats")
+        return
     pprint(stats)
 
     # Let's say you ONLY want US players.
     # First you create a filter, then pass the filter into the function call.
     filter_: AnalyticsFilter = AnalyticsFilter(country="US")
     await mcinstance.get_analytics_summary(filters=filter_)
+
+    # Session closing..
+    await session.close()

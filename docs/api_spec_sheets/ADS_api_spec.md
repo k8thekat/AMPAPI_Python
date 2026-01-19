@@ -1,6 +1,6 @@
 INSTANCE TYPE: ADS
-APP VERSION: 2.6.0.12 | None
-BUILD: 24/02/2025 17:12
+APP VERSION: 2.6.2.0 | None
+BUILD: 29/05/2025 16:05
 
 ____________________________________________________
 ads_module:
@@ -28,6 +28,18 @@ ads_module:
 		parameters: [{'name': 'Friendly', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'IsHTTPS', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Host', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Port', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'InstanceID', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
+	attach_ads_with_pairing_code:
+		description: None
+		is_complex_type: True
+		parameters: [{'name': 'PairingCode', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Friendly', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'IsHTTPS', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Host', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Port', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'InstanceID', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}]
+		return_type_name: ActionResult
+		returns: None
+	cancel_pairing:
+		description: None
+		is_complex_type: False
+		parameters: []
+		return_type_name: Void
+		returns: None
 	clone_template:
 		description: None
 		is_complex_type: True
@@ -43,13 +55,13 @@ ads_module:
 	create_instance:
 		description: None
 		is_complex_type: True
-		parameters: [{'name': 'TargetADSInstance', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'NewInstanceId', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Module', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'InstanceName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'FriendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'IPBinding', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'PortNumber', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'AdminUsername', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'AdminPassword', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ProvisionSettings', 'type_name': 'Dictionary<String, String>', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'AutoConfigure', 'type_name': 'Boolean', 'description': 'When enabled, all settings other than the Module, Target and FriendlyName are ignored and replaced with automatically generated values.', 'optional': True, 'param_enum_values': None}, {'name': 'PostCreate', 'type_name': 'PostCreateAppActions', 'description': '', 'optional': True, 'param_enum_values': {'do_nothing': 0, 'update_once': 1, 'update_always': 2, 'update_and_start_once': 3, 'update_and_start_always': 4, 'start_always': 5}}, {'name': 'StartOnBoot', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'DisplayImageSource', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'TargetDatastore', 'type_name': 'Int32', 'description': '', 'optional': True, 'param_enum_values': None}]
+		parameters: [{'name': 'TargetADSInstance', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'NewInstanceId', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Module', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'InstanceName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'FriendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'IPBinding', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'PortNumber', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'AdminUsername', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'AdminPassword', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ProvisionSettings', 'type_name': 'Dictionary<String, String>', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'AutoConfigure', 'type_name': 'Boolean', 'description': 'When enabled, all settings other than the Module, Target and FriendlyName are ignored and replaced with automatically generated values.', 'optional': True, 'param_enum_values': None}, {'name': 'PostCreate', 'type_name': 'PostCreateAppActions', 'description': '', 'optional': True, 'param_enum_values': {'do_nothing': 0, 'update_once': 1, 'update_always': 2, 'update_and_start_once': 3, 'update_and_start_always': 4, 'start_always': 5}}, {'name': 'StartOnBoot', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'DisplayImageSource', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'TargetDatastore', 'type_name': 'Int32', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'Group', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	create_instance_from_spec:
 		description: None
 		is_complex_type: True
-		parameters: [{'name': 'SpecId', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'TargetADSInstance', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'FriendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'PostCreate', 'type_name': 'PostCreateAppActions', 'description': '', 'optional': True, 'param_enum_values': {'do_nothing': 0, 'update_once': 1, 'update_always': 2, 'update_and_start_once': 3, 'update_and_start_always': 4, 'start_always': 5}}, {'name': 'StartOnBoot', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'TargetDatastore', 'type_name': 'Int32', 'description': '', 'optional': True, 'param_enum_values': None}]
+		parameters: [{'name': 'SpecId', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'TargetADSInstance', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'FriendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'PostCreate', 'type_name': 'PostCreateAppActions', 'description': '', 'optional': True, 'param_enum_values': {'do_nothing': 0, 'update_once': 1, 'update_always': 2, 'update_and_start_once': 3, 'update_and_start_always': 4, 'start_always': 5}}, {'name': 'StartOnBoot', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'TargetDatastore', 'type_name': 'Int32', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'Group', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	create_local_instance:
@@ -196,6 +208,12 @@ ads_module:
 		parameters: []
 		return_type_name: JObject
 		returns: None
+	get_target_pairing_code:
+		description: None
+		is_complex_type: True
+		parameters: []
+		return_type_name: ActionResult<String>
+		returns: None
 	handout_instance_configs:
 		description: None
 		is_complex_type: True
@@ -262,6 +280,12 @@ ads_module:
 		parameters: [{'name': 'controllerUrl', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'myUrl', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'username', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'password', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'twoFactorToken', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'friendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
+	register_target_with_code:
+		description: None
+		is_complex_type: True
+		parameters: [{'name': 'controllerUrl', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'myUrl', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'code', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'friendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}]
+		return_type_name: ActionResult
+		returns: None
 	repair_datastore:
 		description: None
 		is_complex_type: True
@@ -295,7 +319,7 @@ ads_module:
 	set_instance_network_info:
 		description: None
 		is_complex_type: True
-		parameters: [{'name': 'InstanceId', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'PortMappings', 'type_name': 'Dictionary<String, Int32>', 'description': '', 'optional': False, 'param_enum_values': None}]
+		parameters: [{'name': 'InstanceId', 'type_name': 'Guid', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'PortMappings', 'type_name': 'Dictionary<String, Int32>', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ApplicationIP', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'mustStop', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	set_instance_suspended:
@@ -328,12 +352,6 @@ ads_module:
 		parameters: [{'name': 'InstanceName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
-	test_ads_login_details:
-		description: None
-		is_complex_type: True
-		parameters: [{'name': 'url', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'username', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'password', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'twoFactorToken', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}]
-		return_type_name: ActionResult
-		returns: None
 	update_datastore:
 		description: None
 		is_complex_type: True
@@ -349,7 +367,7 @@ ads_module:
 	update_instance_info:
 		description: None
 		is_complex_type: True
-		parameters: [{'name': 'InstanceId', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'FriendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Description', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'StartOnBoot', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Suspended', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ExcludeFromFirewall', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'RunInContainer', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ContainerMemory', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ContainerSwap', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'MemoryPolicy', 'type_name': 'ContainerMemoryPolicy', 'description': '', 'optional': False, 'param_enum_values': {'not_specified': 0, 'reserve': 100, 'restrict': 200}}, {'name': 'ContainerMaxCPU', 'type_name': 'Single', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ContainerImage', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'WelcomeMessage', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}]
+		parameters: [{'name': 'InstanceId', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'FriendlyName', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Description', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'StartOnBoot', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Suspended', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ExcludeFromFirewall', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'RunInContainer', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ContainerMemory', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ContainerSwap', 'type_name': 'Int32', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'MemoryPolicy', 'type_name': 'ContainerMemoryPolicy', 'description': '', 'optional': False, 'param_enum_values': {'not_specified': 0, 'reserve': 100, 'restrict': 200}}, {'name': 'ContainerMaxCPU', 'type_name': 'Single', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'ContainerImage', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'WelcomeMessage', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'DisplayGroup', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'CustomMountBindings', 'type_name': 'Dictionary<String, String>', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'ExtraContainerPackages', 'type_name': 'List<String>', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'IsMultiIPAware', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	update_target:
@@ -617,7 +635,7 @@ core:
 	get_oidc_login_url:
 		description: None
 		is_complex_type: False
-		parameters: []
+		parameters: [{'name': 'state', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'redirect_uri', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: String
 		returns: None
 	get_permissions_spec:
@@ -764,6 +782,12 @@ core:
 		parameters: []
 		return_type_name: Void
 		returns: None
+	oidc_login:
+		description: None
+		is_complex_type: True
+		parameters: [{'name': 'code', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'redirect_uri', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'serverId', 'type_name': 'Nullable<Guid>', 'description': '', 'optional': False, 'param_enum_values': None}]
+		return_type_name: JObject
+		returns: None
 	refresh_setting_value_list:
 		description: None
 		is_complex_type: True
@@ -900,6 +924,12 @@ core:
 		description: None
 		is_complex_type: True
 		parameters: []
+		return_type_name: ActionResult
+		returns: None
+	update_public_key:
+		description: None
+		is_complex_type: True
+		parameters: [{'name': 'PubKey', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	update_user_info:

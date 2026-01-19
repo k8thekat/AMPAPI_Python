@@ -283,6 +283,7 @@ Network Nodes
 - Network.DefaultAppIPBinding
 - Network.DefaultIPBinding
 - Network.DockerExternalIPBinding
+- Network.IPAddressList
 - Network.InstanceHostname
 - Network.MetricsServerPort
 - Network.TraefikDomainWildcard

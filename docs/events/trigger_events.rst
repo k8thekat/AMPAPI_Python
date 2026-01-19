@@ -77,11 +77,6 @@ All of these triggers can be accessed via :attr:`~Core.triggers` which when acce
 - Emits: User | UserID
 
 :raw-html:`<hr>`
-**Trigger Description**: A player joins the server for the first time
-
-- Emits: User | UserID
-
-:raw-html:`<hr>`
 **Trigger Description**: A player joins the server while it was empty
 
 - Emits: User | UserID
@@ -104,11 +99,6 @@ All of these triggers can be accessed via :attr:`~Core.triggers` which when acce
 :raw-html:`<hr>`
 **Trigger Description**: A player tries to join the server while it's sleeping
 
-
-:raw-html:`<hr>`
-**Trigger Description**: A player who has previously visited rejoins the server
-
-- Emits: User | UserID
 
 :raw-html:`<hr>`
 **Trigger Description**: A scheduled backup finishes archiving.

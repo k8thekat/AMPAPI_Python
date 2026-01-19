@@ -400,6 +400,9 @@ Take a backup
 
 - ``Event.LocalFileBackupPlugin.TakeBackup``
 
+Consumes these values:
+	* Local: type(Boolean)
+	* S3: type(Boolean)
 
 TakeBackupWhileDown
 ~~~~~~~~~~~~~~~~~~~~
@@ -409,7 +412,9 @@ Shut the server down, take a backup, and start it up again.
 - ``Event.LocalFileBackupPlugin.TakeBackupWhileDown``
 
 Consumes these values:
+	* Local: type(Boolean)
 	* RestartEvenIfNotRunning: type(Boolean)
+	* S3: type(Boolean)
 
 TakeStickyBackup
 ~~~~~~~~~~~~~~~~~
@@ -418,6 +423,9 @@ Take a sticky backup
 
 - ``Event.LocalFileBackupPlugin.TakeStickyBackup``
 
+Consumes these values:
+	* Local: type(Boolean)
+	* S3: type(Boolean)
 
 TeleportToCoords
 ~~~~~~~~~~~~~~~~~
