@@ -1,3 +1,18 @@
+## Version - 4.6.1 - [35548c3](https://github.com/k8thekat/AMPAPI_Python/commit/35548c3)
+#### Changelog.md
+- Version info from `4.5.3` added.
+
+#### __init__.py
+- Version bump to `4.6.1`
+
+#### Overall
+Merge pull request #25 from k8thekat/23-getting-deprecated-warning-when-using-library
+Updated support for AMPs new Authorization Header.
+Developer"
+Developer"
+Developer"
+Developer
+
 ## Version - 4.5.3 - [7e4ebc5](https://github.com/k8thekat/AMPAPI_Python/commit/7e4ebc5)
 #### Changelog.md
 - Version info from `4.5.2` added.
