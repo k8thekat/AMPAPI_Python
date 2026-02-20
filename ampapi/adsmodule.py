@@ -1,11 +1,13 @@
 from typing import Any, Union
 
 from .base import Base
-from .dataclass import (
+from .modules import (
     ActionResult,
+    ActionResultError,
     Application,
     Controller,
     CreateInstance,
+    DeploymentTemplate,
     Endpoints,
     Instance,
     InstanceDatastore,
@@ -19,7 +21,6 @@ from .dataclass import (
     RunningTask,
     Template,
 )
-from .modules import DeploymentTemplate
 
 __all__ = ("ADSModule",)
 
@@ -47,7 +48,7 @@ class ADSModule(Base):
         self,
         new_datastore: InstanceDatastore,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Add a new datastore.
@@ -85,7 +86,7 @@ class ADSModule(Base):
         args: dict[str, str],
         rebuild_configuration: bool = False,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Apply an Instance configuration.
@@ -111,7 +112,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
         """
 
-        parameters: dict[str, Any] = {"instanceId": instance_id, "args": args, "rebuildConfiguration": rebuild_configuration}
+        parameters: dict[str, Any] = {"InstanceID": instance_id, "Args": args, "RebuildConfiguration": rebuild_configuration}
         await self._connect()
         result: Any = await self._call_api(
             api="ADSModule/ApplyInstanceConfiguration", parameters=parameters, format_data=format_data, format_=ActionResult
@@ -121,7 +122,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def apply_template(
         self, instance_id: str, template_id: int, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Overlays an existing template on an existing instance, used to perform package reconfigurations.
@@ -159,20 +160,29 @@ class ADSModule(Base):
     async def attach_ads(
         self,
         friendly_name: str,
-        instance_id: str,
+        is_https: bool,
         host: str,
         port: int,
-        is_https: bool,
+        instance_id: str,
+        pairing_code: str | None = None,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
-        Attach an AMP Instance to the specified Target ADS name.
+        Attach an AMP Instance to the ADS calling the API endpoint with the passed in parameters using either a pairing code or not.
+
+        .. note::
+            This Endpoint is also encapsulating `AttachADSWithPairingCode`; simply provide a "pairing_code" parameter to use the respective endpoint.
+
+
+        .. note::
+            When using the parameter "pairing_code" the API does not need to Authenticate.
+
 
         Parameters
         -----------
         friendly_name: :class:`str`
-            Name of the ADS.
+            The friendly name to be associated with the Instance when it is attached to the ADS.
         instance_id: :class:`str`
             The Instance ID of the Instance you want to attach to the ADS.
         host: :class:`str`
@@ -180,7 +190,9 @@ class ADSModule(Base):
         port: :class:`int`
             The Port you want to attach the Instance to.
         is_https: :class:`bool`
-            To use HTTPS or not.
+            If the Instance uses HTTPS or not.
+        pairing_code: :class:`str`, optional
+            The pairing code generated via :meth:`get_target_pairing_code`.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
@@ -191,12 +203,26 @@ class ADSModule(Base):
         """
 
         parameters: dict[str, Any] = {
-            "friendly": friendly_name,
-            "isHttps": is_https,
-            "host": host,
-            "port": port,
-            "instanceId": instance_id,
+            "Friendly": friendly_name,
+            "IsHTTPS": is_https,
+            "Host": host,
+            "Port": port,
+            "InstanceID": instance_id,
         }
+
+        # TODO
+        # This part of the API does not need to login/connect first; will need to test/debug this.
+        # This is to handle support for the new endpoint "attach_ads_with_pairing_code"
+        if pairing_code is not None:
+            parameters["PairingCode"] = pairing_code
+            result: Any = await self._call_api(
+                api="ADSModule/AttachADSWithPairingCode",
+                parameters=parameters,
+                format_data=format_data,
+                format_=ActionResult,
+            )
+            return result
+
         await self._connect()
         result: Any = await self._call_api(
             api="ADSModule/AttachADS", parameters=parameters, format_data=format_data, format_=ActionResult
@@ -204,7 +230,24 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def clone_template(self, template_id: int, name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def cancel_pairing(self) -> ActionResult | ActionResultError:
+        """|coro|
+
+        Cancel an ongoing ADS Pairing session.
+
+        Returns
+        --------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+        """
+        await self._connect()
+        result: Any = await self._call_api(api="ADSModule/CancelPairing", format_=ActionResult)
+        return result
+
+    @Base.ads_only
+    async def clone_template(
+        self, template_id: int, name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Clone an existing AMP Deployment Template.
@@ -236,7 +279,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def create_deployment_template(self, template_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def create_deployment_template(
+        self, template_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Create a new Deployment Template. Typically used in conjunction with :meth:`update_deployment_template`.
@@ -262,7 +307,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def create_instance(self, instance: CreateInstance, format_data: Union[bool, None] = None) -> ActionResult:
+    async def create_instance(
+        self, instance: CreateInstance, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Create an AMP Instance.
@@ -285,11 +332,64 @@ class ADSModule(Base):
         """
 
         if isinstance(instance, CreateInstance):
-            parameters: dict[Any, Any] = self.dataclass_to_dict(dataclass_=instance)
+            parameters: dict[Any, Any] = instance.to_dict()
 
         await self._connect()
         result: Any = await self._call_api(
             api="ADSModule/CreateInstance", parameters=parameters, format_data=format_data, format_=ActionResult
+        )
+        return result
+
+    @Base.ads_only
+    async def create_instance_from_spec(
+        self,
+        spec_id: str,
+        target_ads: str,
+        friendly_name: str,
+        post_create: PostCreateActionsState | None = None,
+        start_on_boot: bool | None = None,
+        target_datastore: str | None = None,
+        group: str | None = None,
+        format_data: Union[bool, None] = None,
+    ) -> ActionResult | ActionResultError:
+        """|coro|
+
+        Create's an Instance based upon the Spec ID provided.
+
+        Parameters
+        -----------
+        spec_id: :class:`_type_`
+            The Spec GUID.
+        target_ads: :class:`str`
+            The Target ADS Instance ID.
+        friendly_name: :class:`str`
+            The friendly name of the Instance.
+        post_create: :class:`PostCreateActionsState | None`, optional
+            The action the Instance will take after creation, by default None.
+        start_on_boot: :class:`bool | None`, optional
+            If the Instance should start on PC boot, by default None.
+        target_datastore: :class:`str | None`, optional
+            The Datastore ID if any to attach the Instance to, by default None.
+        group: :class:`str | None`, optional
+            The Group ID, by default None.
+
+        Returns
+        --------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+        """
+        await self._connect()
+        parameters: dict[str, Any] = {"SpecId": spec_id, "TargetADSInstance": target_ads, "FriendlyName": friendly_name}
+        if post_create is not None:
+            parameters["PostCreate"] = post_create.value
+        if start_on_boot is not None:
+            parameters["StartOnBoot"] = start_on_boot
+        if target_datastore is not None:
+            parameters["TargetDatastore"] = target_datastore
+        if group is not None:
+            parameters["Group"] = group
+        result: Any = await self._call_api(
+            api="ADSModule/CreateInstanceFromSpec", parameters=parameters, format_data=format_data, format_=ActionResult
         )
         return result
 
@@ -299,7 +399,7 @@ class ADSModule(Base):
         instance: CreateInstance,
         post_create: PostCreateActionsState = PostCreateActionsState.do_nothing,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Create a local AMP Instance, similar to :meth:`create_instance`. Use case could be on a remote Target ADS Instance instead of letting AMP decide where to create the Instance.
@@ -327,7 +427,7 @@ class ADSModule(Base):
         if isinstance(instance, CreateInstance):
             data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=instance)
 
-        parameters: dict[str, Any] = {"instance": data, "postCreate": post_create}
+        parameters: dict[str, Any] = {"Instance": data, "PostCreate": post_create.value}
 
         await self._connect()
         result: Any = await self._call_api(
@@ -337,7 +437,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def delete_datastore(self, datastore_id: int, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_datastore(
+        self, datastore_id: int, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete the specified Datastore by ID.
@@ -367,7 +469,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def delete_deployment_template(self, template_id: int, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_deployment_template(
+        self, template_id: int, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete an existing Deployment Template.
@@ -397,7 +501,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def delete_instance(self, instance_name: str, format_data: Union[bool, None] = None) -> RunningTask:
+    async def delete_instance(
+        self, instance_name: str, format_data: Union[bool, None] = None
+    ) -> RunningTask | ActionResultError:
         """|coro|
 
         Delete an Instance.
@@ -428,7 +534,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def delete_instance_users(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_instance_users(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete all Users from an Instance.
@@ -455,7 +563,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def deploy_template(self, template: Template, format_data: Union[bool, None] = None) -> ActionResult:
+    async def deploy_template(
+        self, template: Template, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Deploy a Instance template.
@@ -472,7 +582,8 @@ class ADSModule(Base):
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
         """
-
+        # TODO
+        # The parameter keys are not cased properly and this will fail it's JSON payload.
         parameters: dict[Any, Any] = self.dataclass_to_dict(dataclass_=template)
         await self._connect()
         result: Any = await self._call_api(
@@ -481,7 +592,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def detach_target(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def detach_target(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         De-tach an Instance from the ADS.
@@ -500,7 +613,7 @@ class ADSModule(Base):
 
         """
 
-        parameters: dict[str, str] = {"id": instance_id}
+        parameters: dict[str, str] = {"Id": instance_id}
         await self._connect()
         result: Any = await self._call_api(
             api="ADSModule/DetachTarget", parameters=parameters, format_data=format_data, format_=ActionResult
@@ -508,7 +621,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def extract_everywhere(self, source_archive: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def extract_everywhere(
+        self, source_archive: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Extracts everything from an archive.
@@ -539,7 +654,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_application_endpoints(self, instance_id: str, format_data: Union[bool, None] = None) -> list[Endpoints]:
+    async def get_application_endpoints(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> list[Endpoints] | ActionResultError:
         """|coro|
 
         Get the application endpoints for the specified instance.
@@ -566,7 +683,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_datastore(self, datastore_id: int, format_data: Union[bool, None] = None) -> InstanceDatastore:
+    async def get_datastore(
+        self, datastore_id: int, format_data: Union[bool, None] = None
+    ) -> InstanceDatastore | ActionResultError:
         """|coro|
 
         Get the information for the specified datastore.
@@ -597,7 +716,7 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_datastores(self, format_data: Union[bool, None] = None) -> list[InstanceDatastore]:
+    async def get_datastores(self, format_data: Union[bool, None] = None) -> list[InstanceDatastore] | ActionResultError:
         """|coro|
 
         Get a list of Datastores.
@@ -618,7 +737,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_datastore_instances(self, datastore_id: int, format_data: Union[bool, None] = None) -> list[Instance]:
+    async def get_datastore_instances(
+        self, datastore_id: int, format_data: Union[bool, None] = None
+    ) -> list[Instance] | ActionResultError:
         """|coro|
 
         Get a list of Instances tied to the specified datastore.
@@ -648,7 +769,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_deployment_templates(self, format_data: Union[bool, None] = None) -> list[DeploymentTemplate]:
+    async def get_deployment_templates(
+        self, format_data: Union[bool, None] = None
+    ) -> list[DeploymentTemplate] | ActionResultError:
         """|coro|
 
         Gets a list of Deployment Templates.
@@ -671,7 +794,7 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_group(self, group_id: str, format_data: Union[bool, None] = None) -> dict:
+    async def get_group(self, group_id: str, format_data: Union[bool, None] = None) -> dict | ActionResultError:
         """|coro|
 
         Get the specified group.
@@ -698,8 +821,7 @@ class ADSModule(Base):
         result: Any = await self._call_api("ADSModule/GetGroup", parameters, format_data=format_data)
         return result
 
-    # @Base.ADSonly
-    async def get_instance(self, instance_id: str, format_data: Union[bool, None] = None) -> Instance:
+    async def get_instance(self, instance_id: str, format_data: Union[bool, None] = None) -> Instance | ActionResultError:
         """|coro|
 
         Returns the Instance information for the provided Instance ID.\n
@@ -727,7 +849,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def get_instances(
         self, include_self: bool = True, format_data: Union[bool, None] = None
-    ) -> list[Union[Controller, Instance]]:
+    ) -> list[Union[Controller, Instance]] | ActionResultError:
         """|coro|
 
         Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.\n
@@ -761,7 +883,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_instance_network_info(self, instance_name: str, format_data: Union[bool, None] = None) -> list[PortInfo]:
+    async def get_instance_network_info(
+        self, instance_name: str, format_data: Union[bool, None] = None
+    ) -> list[PortInfo] | ActionResultError:
         """|coro|
 
         Get the Port and or Network information of an Instance.
@@ -791,10 +915,10 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_instance_statuses(self, format_data: Union[bool, None] = None) -> list[InstanceStatus]:
+    async def get_instance_statuses(self, format_data: Union[bool, None] = None) -> list[InstanceStatus] | ActionResultError:
         """|coro|
 
-        Returns a dictionary of the Instance Status. \n
+        Returns a dictionary of the AMP Instance status. \n
 
         Parameters
         -----------
@@ -814,7 +938,7 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_local_instances(self, format_data: Union[bool, None] = None) -> list[Instance]:
+    async def get_local_instances(self, format_data: Union[bool, None] = None) -> list[Instance] | ActionResultError:
         """
         Gets the local instances related to the ADS or Controller.
 
@@ -835,7 +959,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def get_provision_arguments(
         self, module_name: str, format_data: Union[bool, None] = None
-    ) -> list[ProvisionSettingInfo]:
+    ) -> list[ProvisionSettingInfo] | ActionResultError:
         """|coro|
 
         Get Provision Arguments.
@@ -864,7 +988,7 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_provision_fitness(self, format_data: Union[bool, None] = None) -> Provision:
+    async def get_provision_fitness(self, format_data: Union[bool, None] = None) -> Provision | ActionResultError:
         """|coro|
 
         Get the provision fitness of the ADS or Controller.
@@ -885,7 +1009,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_supported_applications(self, format_data: Union[bool, None] = None) -> list[Application]:
+    async def get_supported_applications(
+        self, format_data: Union[bool, None] = None
+    ) -> list[Application] | ActionResultError:
         """|coro|
 
         Get supported applications, such as :class:`Template` information and the list of :class:`Applications` when creating an Instance.
@@ -907,7 +1033,7 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def get_target_info(self, format_data: Union[bool, None] = None) -> RemoteTargetInfo:
+    async def get_target_info(self, format_data: Union[bool, None] = None) -> RemoteTargetInfo | ActionResultError:
         """|coro|
 
         Get target info.
@@ -928,9 +1054,35 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
+    async def get_target_pairing_code(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+        """|coro|
+
+        Get the ADS/Target pairing code. Used with :meth:`attach_ads` using the "pairing_code" parameter.
+
+
+        __Endpoint__: "ADSModule/GetTargetPairingCode"
+
+
+        Parameters
+        -----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+
+        Returns
+        --------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+        """
+        await self._connect()
+        result: Any = await self._call_api(
+            api="ADSModule/GetTargetPairingCode", format_=ActionResult, format_data=format_data
+        )
+        return result
+
+    @Base.ads_only
     async def handout_instance_configs(
         self, module: str, setting_node: str, values: list[str], format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Handout Instance Configuration.
@@ -960,7 +1112,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def manage_instance(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def manage_instance(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Manage the specified instance.
@@ -1000,7 +1154,7 @@ class ADSModule(Base):
         description: str,
         open_: bool = True,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Modify the Firewall Rule of the specified instance.
@@ -1048,7 +1202,7 @@ class ADSModule(Base):
         instance_id: str,
         datastore_id: int,
         format_data: Union[bool, None] = None,
-    ) -> RunningTask:
+    ) -> RunningTask | ActionResultError:
         """|coro|
 
         Move an Instance to a different Datastore.
@@ -1079,7 +1233,9 @@ class ADSModule(Base):
         )
         return result
 
-    async def reactivate_instance(self, instance_id: str, format_data: Union[bool, None] = None) -> RunningTask:
+    async def reactivate_instance(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> RunningTask | ActionResultError:
         parameters: dict[str, str] = {"instanceId": instance_id}
         await self._connect()
         result: Any = await self._call_api(
@@ -1088,7 +1244,7 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def reactivate_local_instances(self, format_data: Union[bool, None] = None) -> RunningTask:
+    async def reactivate_local_instances(self, format_data: Union[bool, None] = None) -> RunningTask | ActionResultError:
         """|coro|
 
         Reactivate local instances.
@@ -1126,7 +1282,7 @@ class ADSModule(Base):
         return
 
     @Base.ads_only
-    async def refresh_group(self, group_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def refresh_group(self, group_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Refresh the specified group.
@@ -1152,7 +1308,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def refresh_instance_config(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def refresh_instance_config(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Refresh an Instance Configuration.
@@ -1209,7 +1367,7 @@ class ADSModule(Base):
         friendly_name: str,
         two_factor_token: str = "",
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Registers a Target to a Controller.
@@ -1252,7 +1410,56 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def repair_datastore(self, datastore_id: int, format_data: Union[bool, None] = None) -> RunningTask:
+    async def register_target_with_code(
+        self,
+        controller_url: str,
+        my_url: str,
+        code: str,
+        friendly_name: str,
+        format_data: Union[bool, None] = None,
+    ) -> ActionResult | ActionResultError:
+        """|coro|
+
+        Registers an Instance to a Controller/Target with pairing code.
+
+
+        __Endpoint__: "ADSModule/RegisterTargetWithCode"
+
+        Parameters
+        -----------
+        controller_url: :class:`str`
+            The Controller panel url.
+        my_url: :class:`str`
+            The Target AMP panel url.
+        code: :class:`str`
+            The pairing code from :meth:`get_target_pairing_code`.
+        friendly_name: :class:`str`
+            Instance Friendly Name.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+
+        Returns
+        --------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+        """
+
+        parameters: dict[str, str] = {
+            "controllerUrl": controller_url,
+            "myUrl": my_url,
+            "code": code,
+            "friendlyName": friendly_name,
+        }
+        await self._connect()
+        result = await self._call_api(
+            api="ADSModule/RegisterTargetWithCode", parameters=parameters, format_data=format_data, format_=ActionResult
+        )
+        return result
+
+    @Base.ads_only
+    async def repair_datastore(
+        self, datastore_id: int, format_data: Union[bool, None] = None
+    ) -> RunningTask | ActionResultError:
         """|coro|
 
         Repair the specified datastore.
@@ -1284,7 +1491,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def request_datastore_size_calculation(
         self, datastore_id: int, format_data: Union[bool, None] = None
-    ) -> RunningTask:
+    ) -> RunningTask | ActionResultError:
         """|coro|
 
         Request a calculation of the size of the specified Datastore.
@@ -1318,7 +1525,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def restart_instance(self, instance_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def restart_instance(
+        self, instance_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Restart an Instance.
@@ -1349,7 +1558,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def servers(self, id_: str, req_rawjson: str = "application/json", format_data: Union[bool, None] = None) -> Any:
+    async def servers(
+        self, id_: str, req_rawjson: str = "application/json", format_data: Union[bool, None] = None
+    ) -> Any | ActionResultError:
         """|coro|
 
         Used for proxy authentication.
@@ -1380,8 +1591,13 @@ class ADSModule(Base):
 
     @Base.ads_only
     async def set_instance_network_info(
-        self, instance_id: str, port_mappings: dict[str, int], format_data: Union[bool, None] = None
-    ) -> ActionResult:
+        self,
+        instance_id: str,
+        port_mappings: dict[str, int],
+        application_ip: str | None = None,
+        must_stop: bool | None = None,
+        format_data: Union[bool, None] = None,
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set the Port mappings for an Instance.
@@ -1394,6 +1610,10 @@ class ADSModule(Base):
             Port ranges and protocols to map.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        must_stop: :class:`bool`, optional
+            UNK.
+        application_ip: :class:`str`, optional
+            The IP the application will be bound to.
 
         Returns
         --------
@@ -1401,7 +1621,13 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
         """
 
-        parameters: dict[str, Any] = {"instanceId": instance_id, "portMappings": port_mappings}
+        parameters: dict[str, Any] = {"InstanceId": instance_id, "PortMappings": port_mappings}
+
+        if application_ip is not None:
+            parameters["ApplicationIP"] = application_ip
+        if must_stop is not None:
+            parameters["mustStop"] = must_stop
+
         await self._connect()
         result: Any = await self._call_api(
             api="ADSModule/SetInstanceNetworkInfo", parameters=parameters, format_data=format_data, format_=ActionResult
@@ -1411,7 +1637,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def set_instance_config(
         self, instance_name: str, setting_node: str, value: str, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set an :class:`AMPInstance` Setting Node setting.
@@ -1452,7 +1678,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def set_instance_suspended(
         self, instance_name: str, suspended: bool = False, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set an Instances suspended State.
@@ -1485,7 +1711,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def start_all_instances(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def start_all_instances(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Start all Instances.
@@ -1509,7 +1737,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def start_instance(self, instance_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def start_instance(
+        self, instance_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Start an Instance.
@@ -1540,7 +1770,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def stop_all_instances(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def stop_all_instances(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Stop all Instances.
@@ -1564,7 +1796,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def stop_instance(self, instance_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def stop_instance(
+        self, instance_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Stop an Instance.
@@ -1600,7 +1834,7 @@ class ADSModule(Base):
         self,
         updated_datastore: InstanceDatastore,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update an existing datastore.
@@ -1633,7 +1867,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def update_deployment_template(
         self, template_to_update: DeploymentTemplate, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update an existing Deployment Template.
@@ -1662,7 +1896,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def update_instance_info(self, instance_info: InstanceInfo, format_data: Union[bool, None] = None) -> ActionResult:
+    async def update_instance_info(
+        self, instance_info: InstanceInfo, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """
         Update an Instances info.
 
@@ -1723,7 +1959,7 @@ class ADSModule(Base):
         description: str,
         tags: list[str],
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update a target Instance information.
@@ -1764,7 +2000,7 @@ class ADSModule(Base):
     @Base.ads_only
     async def upgrade_all_instances(
         self, instance_id: str, restart_running: bool = False, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Upgrade all Instances.
@@ -1791,7 +2027,9 @@ class ADSModule(Base):
         return result
 
     @Base.ads_only
-    async def upgrade_instance(self, instance_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def upgrade_instance(
+        self, instance_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update or Upgrade the Instance

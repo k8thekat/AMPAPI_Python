@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Union
 
 from dataclass_wizard import fromdict
 
-from .dataclass import ScheduleData
 from .instance import AMPMinecraftInstance
+from .modules import ActionResultError, BuildInfo, Diagnostics, ScheduleData
 from .types_ import ScheduleDataData
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from io import TextIOWrapper
 
     from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
-    from .dataclass import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
+    from .modules import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
     from .types_ import APISpec, PermissionNode, ScheduleDataData
 
 
@@ -123,10 +123,13 @@ async def _parse_get_api_spec_to_file(
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance. Default is False.
     """
-    _logger: Logger = logging.getLogger()
+    _logger: Logger = logging.getLogger(__name__)
 
-    data: APISpec = await instance.get_api_spec(sanitize_json=sanitize_json)
-    diag_info: Diagnostics = await instance.get_diagnostics_info()
+    data: APISpec | ActionResultError = await instance.get_api_spec(sanitize_json=sanitize_json)
+    diag_info: Diagnostics | ActionResultError = await instance.get_diagnostics_info()
+    if isinstance(data, ActionResultError) or isinstance(diag_info, ActionResultError):
+        _logger.error("Failed to retrieved proper data.| Data: %s | DiagInfo: %s", data, diag_info)
+        return
     instance_type = instance.module
 
     _dir: Path = Path(__file__).parent.joinpath(f"../docs/api_spec_sheets/{instance_type}_api_spec.md")
@@ -430,13 +433,27 @@ async def amp_api_update(instance: AMPControllerInstance, sanitize_json: bool) -
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance.
     """
+    _logger: Logger = logging.getLogger(__name__)
     # We call get_instances() to force a current listing of instances to be populated.
     await instance.get_instances()
+    ADS_diag: Diagnostics | ActionResultError = await instance.get_diagnostics_info()
+    if isinstance(ADS_diag, ActionResultError):
+        _logger.error("Failed to retrieved proper Diag Info. | DiagInfo: %s", ADS_diag)
+        return
+    # cur_version: None | AMPMinecraftInstance = None
     for entry in instance.instances:
         # Minecraft instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, AMPMinecraftInstance) and entry.running is True:
-            await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
-            break
+            instance_diag: Diagnostics | ActionResultError = await entry.get_diagnostics_info()
+            if isinstance(instance_diag, ActionResultError):
+                _logger.error("Failed to retrieved proper Diag Info. | DiagInfo: %s", ADS_diag)
+                return
+            if instance_diag.application_version == ADS_diag.application_version:
+                _logger.info(
+                    "Found %s matching the current ADS version `%s` .", entry.instance_name, ADS_diag.application_version
+                )
+                await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
+                break
     # We found our Minecraft Instance, now lets parse our Controller/ADS
     await _parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
 
@@ -479,7 +496,7 @@ def dump_to_file(data: Iterable, file_name: str = "", path: Union[Path, None] = 
         The Path to store the dump file, by default None
         - If ``None`` will use the ``../docs/dumps/`` path.
     """
-    _logger = logging.getLogger()
+    _logger = logging.getLogger(__name__)
 
     if file_name == "":
         file_name = str(object=datetime.today().date())
@@ -507,8 +524,11 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     instance: AMPControllerInstance | AMPADSInstance
         Must be of these types as the API endpoint :meth:`get_settingspec` is not available to all.
     """
-    logger: Logger = logging.getLogger()
-    spec: SettingsSpecParent = await instance.get_setting_spec()
+    logger: Logger = logging.getLogger(__name__)
+    spec: SettingsSpecParent | ActionResultError = await instance.get_setting_spec()
+    if isinstance(spec, ActionResultError):
+        logger.error("Failed to retrieve Spec Data. | Spec: %s", spec)
+        return
 
     _path: Path = Path(__file__).parent.joinpath("../docs/nodes")
 
@@ -519,7 +539,10 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     except Exception:
         logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
     # As far as I know Permission spec information is the same for all instances
-    perms: list[PermissionNode] = await instance.get_permissions_spec()
+    perms: list[PermissionNode] | ActionResultError = await instance.get_permissions_spec()
+    if isinstance(perms, ActionResultError):
+        logger.error("Failed to retrieved proper Perms Info. | Perms: %s", perms)
+        return
     logger.info("Generating Permission Nodes.rst...")
     try:
         _permission_node_parse(data=perms, title="Permission Nodes", title_body="", path=_path.as_posix())
@@ -531,22 +554,34 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     logger.info("Generating Triggers Events.rst and Method Events.rst...")
     await instance.get_instances()
     # data: ScheduleData = await instance.get_schedule_data(format_data=True)
-    data: ScheduleDataData = await instance.get_schedule_data(format_data=False)
+    data: ScheduleDataData | ActionResultError = await instance.get_schedule_data(format_data=False)
+    if isinstance(data, ActionResultError):
+        logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", data)
+        return
     mc_: bool = False
     gen_: bool = False
     src_: bool = False
     for entry in instance.instances:
         # print(entry.running, entry.friendly_name, entry.module)
         if mc_ is False and entry.running and entry.module == "Minecraft":
-            mc_data: ScheduleDataData = await entry.get_schedule_data(format_data=False)
+            mc_data: ScheduleDataData | ActionResultError = await entry.get_schedule_data(format_data=False)
+            if isinstance(mc_data, ActionResultError):
+                logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", mc_data)
+                return
             data = dict_merge(data, mc_data)
             mc_ = True
         if gen_ is False and entry.running and entry.module == "Generic":
-            generic_data: ScheduleDataData = await entry.get_schedule_data(format_data=False)
+            generic_data: ScheduleDataData | ActionResultError = await entry.get_schedule_data(format_data=False)
+            if isinstance(generic_data, ActionResultError):
+                logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", generic_data)
+                return
             data = dict_merge(data, generic_data)
             gen_ = True
         if src_ is False and entry.running and entry.module == "srcds":
-            srcds_data: ScheduleDataData = await entry.get_schedule_data(format_data=False)
+            srcds_data: ScheduleDataData | ActionResultError = await entry.get_schedule_data(format_data=False)
+            if isinstance(srcds_data, ActionResultError):
+                logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", srcds_data)
+                return
             data = dict_merge(data, srcds_data)
             src_ = True
 

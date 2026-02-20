@@ -203,9 +203,9 @@ await arkinstance.get_role_data(format_data=True)
 
 ```
 
-### Contributing to the project
+# Contributing to the Project
 
-# Git Commit message format
+#### Git Commit message format
 
 ```
     # file_name.py
@@ -217,7 +217,7 @@ await arkinstance.get_role_data(format_data=True)
     - Everything below it will be ignored too as long as it has a `-`
 ```
 
-# AMP Version Bump
+#### AMP Version Bump
 
 If the AMP version has changed, please generate new API spec sheets and upload them with any function changes.
 

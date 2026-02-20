@@ -1,6 +1,6 @@
 INSTANCE TYPE: Minecraft
-APP VERSION: 2.6.0.12 | None
-BUILD: 24/02/2025 17:12
+APP VERSION: 2.6.2.0 | None
+BUILD: 29/05/2025 16:05
 
 ____________________________________________________
 analytics_plugin:
@@ -251,7 +251,7 @@ core:
 	get_oidc_login_url:
 		description: None
 		is_complex_type: False
-		parameters: []
+		parameters: [{'name': 'state', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'redirect_uri', 'type_name': 'String', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: String
 		returns: None
 	get_permissions_spec:
@@ -398,6 +398,12 @@ core:
 		parameters: []
 		return_type_name: Void
 		returns: None
+	oidc_login:
+		description: None
+		is_complex_type: True
+		parameters: [{'name': 'code', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'redirect_uri', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'serverId', 'type_name': 'Nullable<Guid>', 'description': '', 'optional': False, 'param_enum_values': None}]
+		return_type_name: JObject
+		returns: None
 	refresh_setting_value_list:
 		description: None
 		is_complex_type: True
@@ -534,6 +540,12 @@ core:
 		description: None
 		is_complex_type: True
 		parameters: []
+		return_type_name: ActionResult
+		returns: None
+	update_public_key:
+		description: None
+		is_complex_type: True
+		parameters: [{'name': 'PubKey', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	update_user_info:
@@ -725,7 +737,7 @@ local_file_backup_plugin:
 	take_backup:
 		description: None
 		is_complex_type: True
-		parameters: [{'name': 'Title', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Description', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Sticky', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'WasCreatedAutomatically', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}]
+		parameters: [{'name': 'Title', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Description', 'type_name': 'String', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Sticky', 'type_name': 'Boolean', 'description': '', 'optional': False, 'param_enum_values': None}, {'name': 'Local', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'S3', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}, {'name': 'WasCreatedAutomatically', 'type_name': 'Boolean', 'description': '', 'optional': True, 'param_enum_values': None}]
 		return_type_name: ActionResult
 		returns: None
 	upload_to_s3:
@@ -855,6 +867,12 @@ minecraft_module:
 		is_complex_type: True
 		parameters: []
 		return_type_name: IEnumerable<JObject>
+		returns: None
+	reject_eula:
+		description: None
+		is_complex_type: False
+		parameters: []
+		return_type_name: Boolean
 		returns: None
 	remove_op_entry:
 		description: None

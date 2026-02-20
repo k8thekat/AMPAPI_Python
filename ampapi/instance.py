@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Union
 
 from .analytics import AnalyticsPlugin
 from .core import Core
-from .dataclass import ActionResult, Instance, InstanceStatus, Updates
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .minecraft import MinecraftModule
+from .modules import ActionResult, ActionResultError, Instance, InstanceStatus, Status, Updates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -50,6 +50,64 @@ class AMPInstance(
 
     Attributes
     -----------
+    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints: list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    app_state: :class:`AMPInstanceState`
+        The state of the application.
+    container_cpus: :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb: :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy: :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon: :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart: :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args: dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description: :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb: :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source: :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall: :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name: :class:`str`
+        The friendly name of the Instance.
+    ip: :class:`str`
+        The IP address of the Instance.
+    instance_id: :class:`str`
+        The Instance GUID.
+    instance_name: :class:`str`
+        The Instance name.
+    is_container_instance: :class:`bool`
+        If the Instance is a container instance.
+    is_https: :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode: :class:`int`
+        The management mode of the Instance.
+    metrics: Union[:class:`Metric`, None]
+        The metrics of the Instance, default is None.
+    module: :class:`str`
+        The module of the Instance.
+    module_display_name: :class:`str`
+        The display name of the module, default is "".
+    port: :class:`str`
+        The port of the Instance.
+    release_stream: :class:`int`
+        The release stream of the Instance.
+    running: :class:`bool`
+        If the Instance is running.
+    suspended: :class:`bool`
+        If the Instance is suspended.
+    tags: Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id: :class:`str`
+        The target ID of the Instance.
     url: :class:`str`
         The API url.
     """
@@ -57,9 +115,11 @@ class AMPInstance(
     url: str
     _controller: Union[AMPControllerInstance, None]
 
-    def __init__(self, data: Union[Instance, None], controller: Union[AMPControllerInstance, None] = None) -> None:
-        self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
-        super().__init__()
+    def __init__(
+        self, data: Union[Instance, None], controller: Union[AMPControllerInstance, None] = None, **kwargs: Any
+    ) -> None:
+        # self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
+        super().__init__(**kwargs)
 
         if isinstance(data, Instance):
             self.parse_data(data=data)
@@ -112,10 +172,10 @@ class AMPInstance(
         return wrapper_has_controller
 
     @Instance.online
-    async def get_application_status(self, format_data: Union[bool, None] = None) -> InstanceStatus:
+    async def get_application_status(self, format_data: Union[bool, None] = None) -> Status | ActionResultError:
         """|coro|
 
-        Gets the AMP Instance Application Status information and updates the class properties(State, Uptime and Metrics)
+        Similar to :meth:`Core.get_status` but with the added benefit of updating our ``self`` object reference.
 
         .. note::
             The Instance MUST be running (:attr:`~Instance.running = True`) or you will get a :class:`ConnectionError`
@@ -136,12 +196,14 @@ class AMPInstance(
         :class:`AppStatus`
             On success returns a :class:`AppStatus` dataclass.
         """
-        result: InstanceStatus = await super().get_status(format_data=format_data)
+        result: Status | ActionResultError = await super().get_status(format_data=format_data)
+        if isinstance(result, ActionResultError):
+            return result
         self.parse_data(data=result)
         return result
 
     @has_controller
-    async def get_instance_status(self) -> Union[AMPInstance, AMPMinecraftInstance]:
+    async def get_instance_status(self) -> Union[AMPInstance, AMPMinecraftInstance] | ActionResultError:
         """|coro|
 
         Requests the recent changes to the Instance, updates our ``self`` object and returns the updated object.
@@ -153,6 +215,9 @@ class AMPInstance(
         .. warning::
             This only applies if you are manually creating these classes.\n
             - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
+
+        .. warning::
+            This will fail if you attempt to call it on the Target or Controller type Instance, returning an :class:`ActionResultError`
 
 
 
@@ -166,12 +231,20 @@ class AMPInstance(
         Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`]
             Returns an updated ``self`` object.
         """
-        result: Instance = await self._controller.get_instance(instance_id=self.instance_id)  # type: ignore -- See the @has_controller decorator.
+
+        result: Instance | ActionResultError = await self._controller.get_instance(instance_id=self.instance_id)  # type: ignore -- See the @has_controller decorator.
+        if isinstance(result, ActionResultError):
+            self.logger.warning(
+                "Failed to retrieved updated Instance information. | Instance ID: %s | Result: %s",
+                self.instance_id,
+                result,
+            )
+            return result
         self.parse_data(data=result)
         return self
 
     @Instance.online
-    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates:
+    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates | ActionResultError:
         """|coro|
 
         Requests the recent Console entries of the Instance, will acquire all updates from previous API call of :meth:`get_updates`
@@ -199,12 +272,19 @@ class AMPInstance(
             On success returns a :class:`Updates` dataclass.
         """
 
-        result: Updates = await super().get_updates(format_data=format_data)
+        result: Updates | ActionResultError = await super().get_updates(format_data=format_data)
+        if isinstance(result, ActionResultError):
+            self.logger.warning(
+                "Failed to retrieved updated Instance information. | Instance ID: %s | Result: %s",
+                self.instance_id,
+                result,
+            )
+            return result
         self.parse_data(data=result)
         return result
 
     @has_controller
-    async def start_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def start_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Start the Instance.
@@ -238,7 +318,7 @@ class AMPInstance(
 
     @Instance.online
     @has_controller
-    async def stop_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def stop_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Stops the Instance.
@@ -274,7 +354,7 @@ class AMPInstance(
 
     @Instance.online
     @has_controller
-    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Restart the Instance.
@@ -309,7 +389,7 @@ class AMPInstance(
         return await self._controller.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @has_controller
-    async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
         Update the AMP Instance.
 
@@ -338,8 +418,66 @@ class AMPMinecraftInstance(MinecraftModule, AMPInstance):
 
     Attributes
     -----------
+    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints: list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    app_state: :class:`AMPInstanceState`
+        The state of the application.
+    container_cpus: :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb: :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy: :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon: :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart: :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args: dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description: :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb: :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source: :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall: :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name: :class:`str`
+        The friendly name of the Instance.
+    ip: :class:`str`
+        The IP address of the Instance.
+    instance_id: :class:`str`
+        The Instance GUID.
+    instance_name: :class:`str`
+        The Instance name.
+    is_container_instance: :class:`bool`
+        If the Instance is a container instance.
+    is_https: :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode: :class:`int`
+        The management mode of the Instance.
+    metrics: Union[:class:`Metric`, None]
+        The metrics of the Instance, default is None.
     module: :class:`str`
-        The API module type, default is "Minecraft".
+        The module of the Instance, default is "Minecraft".
+    module_display_name: :class:`str`
+        The display name of the module, default is "".
+    port: :class:`str`
+        The port of the Instance.
+    release_stream: :class:`int`
+        The release stream of the Instance.
+    running: :class:`bool`
+        If the Instance is running.
+    suspended: :class:`bool`
+        If the Instance is suspended.
+    tags: Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id: :class:`str`
+        The target ID of the Instance.
+    url: :class:`str`
+        The API url.
     """
 
     module: str = "Minecraft"
@@ -355,8 +493,66 @@ class AMPADSInstance(AMPInstance):
 
     Attributes
     -----------
+    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints: list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    app_state: :class:`AMPInstanceState`
+        The state of the application.
+    container_cpus: :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb: :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy: :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon: :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart: :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args: dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description: :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb: :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source: :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall: :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name: :class:`str`
+        The friendly name of the Instance.
+    ip: :class:`str`
+        The IP address of the Instance.
+    instance_id: :class:`str`
+        The Instance GUID.
+    instance_name: :class:`str`
+        The Instance name.
+    is_container_instance: :class:`bool`
+        If the Instance is a container instance.
+    is_https: :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode: :class:`int`
+        The management mode of the Instance.
+    metrics: Union[:class:`Metric`, None]
+        The metrics of the Instance, default is None.
     module: :class:`str`
-        The API module type, default is "ADS".
+        The module of the Instance, default is "ADS".
+    module_display_name: :class:`str`
+        The display name of the module, default is "".
+    port: :class:`str`
+        The port of the Instance.
+    release_stream: :class:`int`
+        The release stream of the Instance.
+    running: :class:`bool`
+        If the Instance is running.
+    suspended: :class:`bool`
+        If the Instance is suspended.
+    tags: Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id: :class:`str`
+        The target ID of the Instance.
+    url: :class:`str`
+        The API url.
     """
 
     module: str = "ADS"

@@ -6,9 +6,11 @@ from pyotp import TOTP
 from typing_extensions import deprecated
 
 from .base import Base
-from .dataclass import (
+from .modules import (
     ActionResult,
+    ActionResultError,
     AuditLogEntry,
+    BuildInfo,
     Diagnostics,
     InstanceStatus,
     LoginResults,
@@ -22,13 +24,14 @@ from .dataclass import (
     Session,
     SettingSpec,
     SettingsSpecParent,
+    Status,
     TimedTrigger,
+    TriggerID,
     UpdateInfo,
     Updates,
     User,
-    VersionInfo,
+    UserApplicationData,
 )
-from .modules import TriggerID, UserApplicationData
 from .types_ import ActionSpec, APISpec, PermissionNode, ScheduleDataData, TriggersData
 
 __all__: tuple[Literal["Core"]] = ("Core",)
@@ -100,7 +103,7 @@ class Core(Base):
 
     async def activate_amp_license(
         self, license_key: str, query_only: bool = False, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Activate an AMP License key.
@@ -127,7 +130,9 @@ class Core(Base):
         )
         return result
 
-    async def add_event_trigger(self, trigger_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def add_event_trigger(
+        self, trigger_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Add an Event Trigger to an Instance.
@@ -157,7 +162,7 @@ class Core(Base):
 
     async def add_task(
         self, trigger_id: str, method_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Add a task.
@@ -190,7 +195,7 @@ class Core(Base):
         )
         return result
 
-    async def cancel_task(self, task_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def cancel_task(self, task_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Cancel an existing Task.
@@ -221,7 +226,7 @@ class Core(Base):
         new_password: str,
         two_factor_pin: str = "",
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         For a user to change their own password, requires knowing the old password.
@@ -260,7 +265,7 @@ class Core(Base):
 
     async def change_task_order(
         self, trigger_id: str, task_id: str, new_order: int, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Change the order of a task.
@@ -291,7 +296,7 @@ class Core(Base):
 
     async def confirm_two_factor_setup(
         self, username: str, two_factor_code: str, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Completes two-factor setup by supplying a valid two factor code based on the secret provided by EnableTwoFactor.
@@ -320,7 +325,7 @@ class Core(Base):
 
     async def create_role(
         self, role_name: str, as_common_role: bool = False, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Creates an AMP Role.
@@ -347,7 +352,7 @@ class Core(Base):
         )
         return result
 
-    async def create_user(self, username: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def create_user(self, username: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Create an AMP user.
@@ -372,7 +377,7 @@ class Core(Base):
         )
         return result
 
-    async def current_session_has_permission(self, node: str) -> bool:
+    async def current_session_has_permission(self, node: str) -> bool | ActionResultError:
         """|coro|
 
         Retrieves the current Session IDs permissions. This will differ between the ADS and a Server/Instance.
@@ -397,7 +402,9 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/CurrentSessionHasPermission", parameters=parameters)
         return result
 
-    async def delete_instance_users(self, instance_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_instance_users(
+        self, instance_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete an Instances User list.
@@ -423,7 +430,7 @@ class Core(Base):
         )
         return results
 
-    async def delete_role(self, role_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_role(self, role_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Deletes a role.
@@ -448,7 +455,9 @@ class Core(Base):
         )
         return result
 
-    async def delete_task(self, trigger_id: str, task_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_task(
+        self, trigger_id: str, task_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete a task.
@@ -476,7 +485,9 @@ class Core(Base):
         )
         return result
 
-    async def delete_trigger(self, trigger_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_trigger(
+        self, trigger_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete a trigger.
@@ -501,7 +512,7 @@ class Core(Base):
         )
         return result
 
-    async def delete_user(self, username: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def delete_user(self, username: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete an AMP user.
@@ -526,7 +537,7 @@ class Core(Base):
         )
         return result
 
-    async def disable_two_factor(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def disable_two_factor(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Disables two-factor authentication for the currently logged in AMP User.
@@ -552,7 +563,7 @@ class Core(Base):
         )
         return result
 
-    async def dismiss_all_tasks(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def dismiss_all_tasks(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Dismiss all task notifications.
@@ -572,7 +583,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/DismissAllTasks", format_data=format_data, format_=ActionResult)
         return result
 
-    async def dismiss_task(self, task_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def dismiss_task(self, task_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Dismiss a task notification.
@@ -607,7 +618,7 @@ class Core(Base):
         days_of_month: int,
         description: str,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Edits an interval trigger.
@@ -665,7 +676,7 @@ class Core(Base):
 
     async def edit_task(
         self, trigger_id: str, task_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Edit a task.
@@ -694,7 +705,9 @@ class Core(Base):
         )
         return result
 
-    async def enable_two_factor(self, username: str, password: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def enable_two_factor(
+        self, username: str, password: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Sets up two-factor authentication for the given user.
@@ -746,7 +759,7 @@ class Core(Base):
         return
 
     @Base.ads_only
-    async def get_active_amp_sessions(self, format_data: Union[bool, None] = None) -> list[Session]:
+    async def get_active_amp_sessions(self, format_data: Union[bool, None] = None) -> list[Session] | ActionResultError:
         """|coro|
 
         Returns currently active AMP Sessions.
@@ -773,7 +786,7 @@ class Core(Base):
         )
         return result
 
-    async def get_all_amp_user_info(self, format_data: Union[bool, None] = None) -> list[User]:
+    async def get_all_amp_user_info(self, format_data: Union[bool, None] = None) -> list[User] | ActionResultError:
         """|coro|
 
         Retrieves all AMP Users and their information.
@@ -795,7 +808,7 @@ class Core(Base):
         )
         return result
 
-    async def get_amp_role_permissions(self, role_id: str) -> list[str]:
+    async def get_amp_role_permissions(self, role_id: str) -> list[str] | ActionResultError:
         """|coro|
 
         Retrieves the AMP Role permission nodes for the provided role ID.
@@ -816,7 +829,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetAMPRolePermissions", parameters=parameters)
         return result
 
-    async def get_amp_user_info(self, name: str, format_data: Union[bool, None] = None) -> User:
+    async def get_amp_user_info(self, name: str, format_data: Union[bool, None] = None) -> User | ActionResultError:
         """|coro|
 
         Retrieves the AMP User information for the provided username.\n
@@ -841,7 +854,7 @@ class Core(Base):
         )
         return result
 
-    async def get_amp_users_summary(self, format_data: Union[bool, None] = None) -> list[LoginUserInfo]:
+    async def get_amp_users_summary(self, format_data: Union[bool, None] = None) -> list[LoginUserInfo] | ActionResultError:
         """|coro|
 
         Get all AMP users summary.
@@ -861,7 +874,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetAMPUsersSummary", format_data=format_data, format_=LoginUserInfo)
         return result
 
-    async def get_api_spec(self, sanitize_json: bool = False) -> APISpec:
+    async def get_api_spec(self, sanitize_json: bool = False) -> APISpec | ActionResultError:
         """|coro|
 
         Get's all the API specs for the Instance.
@@ -882,7 +895,7 @@ class Core(Base):
 
     async def get_audit_log_entries(
         self, before: float = datetime.now().timestamp(), count: int = 10, format_data: Union[bool, None] = None
-    ) -> list[AuditLogEntry]:
+    ) -> list[AuditLogEntry] | ActionResultError:
         """|coro|
 
         Returns the last ``count`` number of audit log entries.
@@ -917,7 +930,9 @@ class Core(Base):
         )
         return result
 
-    async def get_authentication_requirements(self, username: str, format_data: Union[bool, None] = None) -> list[Any]:
+    async def get_authentication_requirements(
+        self, username: str, format_data: Union[bool, None] = None
+    ) -> list[Any] | ActionResultError:
         """|coro|
 
         Get a list of Authentication requirements for the AMP user.
@@ -941,7 +956,7 @@ class Core(Base):
         )
         return result
 
-    async def get_config(self, node: str, format_data: Union[bool, None] = None) -> SettingSpec:
+    async def get_config(self, node: str, format_data: Union[bool, None] = None) -> SettingSpec | ActionResultError:
         """|coro|
 
         Returns the config settings for a specific node.
@@ -970,7 +985,9 @@ class Core(Base):
         )
         return result
 
-    async def get_configs(self, nodes: list[str], format_data: Union[bool, None] = None) -> list[SettingSpec]:
+    async def get_configs(
+        self, nodes: list[str], format_data: Union[bool, None] = None
+    ) -> list[SettingSpec] | ActionResultError:
         """|coro|
 
         Returns the config settings for each node in the list.
@@ -999,7 +1016,7 @@ class Core(Base):
         )
         return result
 
-    async def get_diagnostics_info(self, format_data: Union[bool, None] = None) -> Diagnostics:
+    async def get_diagnostics_info(self, format_data: Union[bool, None] = None) -> Diagnostics | ActionResultError:
         """|coro|
 
         Get's the system diagnostics information.
@@ -1026,7 +1043,7 @@ class Core(Base):
         )
         return result
 
-    async def get_module_info(self, format_data: Union[bool, None] = None) -> Module:
+    async def get_module_info(self, format_data: Union[bool, None] = None) -> Module | ActionResultError:
         """|coro|
 
         Returns the module information.
@@ -1047,7 +1064,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetModuleInfo", format_data=format_data, format_=Module)
         return result
 
-    async def get_new_guid(self, format_data: Union[bool, None] = None) -> dict[str, Any]:
+    async def get_new_guid(self, format_data: Union[bool, None] = None) -> dict[str, Any] | ActionResultError:
         """|coro|
 
         Get a new GUID for the Instance.
@@ -1067,19 +1084,26 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetNewGuid", format_data=format_data)
         return result
 
-    async def get_oidc_login_url(self) -> None:
-        """
+    async def get_oidc_login_url(self, state: str | None = None, redirect_uri: str | None = None) -> None:
+        """|coro|
+
         Interacts with OIDC credentials.
 
-        Returns
-        --------
-        None
+
+        __Endpoint__: "Core/GetOIDCLoginURL"
+
+        Parameters
+        -----------
+        state: :class:`str | None`, optional
+            UNK, by default None.
+        redirect_uri: :class:`str | None`, optional
+            UNK, by default None.
         """
         await self._connect()
         await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
         return
 
-    async def get_permissions_spec(self) -> list[PermissionNode]:
+    async def get_permissions_spec(self) -> list[PermissionNode] | ActionResultError:
         """|coro|
 
         Retrieves the AMP Permissions node tree.
@@ -1094,7 +1118,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetPermissionsSpec")
         return result
 
-    async def get_port_summaries(self, format_data: Union[bool, None] = None) -> list[Port]:
+    async def get_port_summaries(self, format_data: Union[bool, None] = None) -> list[Port] | ActionResultError:
         """|coro|
 
         Get a summary of the Instance's open ports.
@@ -1122,7 +1146,7 @@ class Core(Base):
             return [Port(**port) for port in result]
         return result
 
-    async def get_provision_spec(self, format_data: Union[bool, None] = None) -> list[SettingSpec]:
+    async def get_provision_spec(self, format_data: Union[bool, None] = None) -> list[SettingSpec] | ActionResultError:
         """|coro|
 
         Returns the provisioning spec.
@@ -1147,7 +1171,7 @@ class Core(Base):
         description: Union[str, None] = None,
         is_temporary: Union[bool, None] = None,
         format_data: Union[bool, None] = None,
-    ) -> str:
+    ) -> str | ActionResultError:
         """|coro|
 
         Get the remote login token.
@@ -1172,7 +1196,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetRemoteLoginToken", parameters=parameters, format_data=format_data)
         return result
 
-    async def get_role(self, role_id: str, format_data: Union[bool, None] = None) -> Role:
+    async def get_role(self, role_id: str, format_data: Union[bool, None] = None) -> Role | ActionResultError:
         """|coro|
 
         Retrieves the AMP Role information for the provided role ID.
@@ -1195,7 +1219,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetRole", parameters=parameters, format_data=format_data, format_=Role)
         return result
 
-    async def get_role_data(self, format_data: Union[bool, None] = None) -> list[Role]:
+    async def get_role_data(self, format_data: Union[bool, None] = None) -> list[Role] | ActionResultError:
         """|coro|
 
         Get's a list of all the roles.
@@ -1215,7 +1239,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetRoleData", format_data=format_data, format_=Role)
         return result
 
-    async def get_role_ids(self) -> dict[str, str]:
+    async def get_role_ids(self) -> dict[str, str] | ActionResultError:
         """|coro|
 
         Retrieves all the Roles AMP currently has and the role IDs.
@@ -1231,11 +1255,13 @@ class Core(Base):
         return result
 
     @overload
-    async def get_schedule_data(self, format_data: Union[Literal[False], None]) -> ScheduleDataData: ...
+    async def get_schedule_data(self, format_data: Union[Literal[False], None]) -> ScheduleDataData | ActionResultError: ...
     @overload
-    async def get_schedule_data(self, format_data: Union[Literal[True], None]) -> ScheduleData: ...
+    async def get_schedule_data(self, format_data: Union[Literal[True], None]) -> ScheduleData | ActionResultError: ...
 
-    async def get_schedule_data(self, format_data: Union[bool, None] = None) -> ScheduleData | ScheduleDataData:
+    async def get_schedule_data(
+        self, format_data: Union[bool, None] = None
+    ) -> ScheduleData | ScheduleDataData | ActionResultError:
         """|coro|
 
         Returns a dictionary of the Server/Instance Schedule events and triggers.
@@ -1256,7 +1282,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetScheduleData", format_data=format_data, format_=ScheduleData)
         return result
 
-    async def get_setting_spec(self, format_data: Union[bool, None] = None) -> SettingsSpecParent:
+    async def get_setting_spec(self, format_data: Union[bool, None] = None) -> SettingsSpecParent | ActionResultError:
         """|coro|
 
         Retrieves a list of settings specifications that can be changed.
@@ -1277,11 +1303,14 @@ class Core(Base):
 
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetSettingsSpec", format_data=format_data, format_=SettingsSpecParent, sanitize_json=True
+            api="Core/GetSettingsSpec",
+            format_data=format_data,
+            format_=SettingsSpecParent,  # type:ignore
+            sanitize_json=True,
         )
         return result
 
-    async def get_setting_values(self, setting_node: str) -> dict[str, str]:
+    async def get_setting_values(self, setting_node: str) -> dict[str, str] | ActionResultError:
         """|coro|
 
         Returns the setting values.
@@ -1308,10 +1337,10 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetSettingValues", parameters=parameters)
         return result
 
-    async def get_status(self, format_data: Union[bool, None] = None) -> InstanceStatus:
+    async def get_status(self, format_data: Union[bool, None] = None) -> Status | ActionResultError:
         """|coro|
 
-        Gets the AMP Instance/Application Status information.
+        Gets the AMP Instance application status information. Such as active users, cpu usage, memory usage, state and uptime.
 
         Parameters
         -----------
@@ -1320,15 +1349,15 @@ class Core(Base):
 
         Returns
         --------
-        :class:`InstanceStatus`
-            On success returns a :class:`InstanceStatus` dataclass.
+        :class:`Status`
+            On success returns a :class:`Status` dataclass.
         """
 
         await self._connect()
-        result: Any = await self._call_api(api="Core/GetStatus", format_data=format_data, format_=InstanceStatus)
+        result: Any = await self._call_api(api="Core/GetStatus", format_data=format_data, format_=Status)
         return result
 
-    async def get_tasks(self, format_data: Union[bool, None] = None) -> list[RunningTask]:
+    async def get_tasks(self, format_data: Union[bool, None] = None) -> list[RunningTask] | ActionResultError:
         """|coro|
 
         Get a list of running tasks on the Instance.
@@ -1348,7 +1377,9 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetTasks", format_data=format_data, format_=RunningTask)
         return result
 
-    async def get_time_interval_trigger(self, trigger_id: str, format_data: Union[bool, None] = None) -> TimedTrigger:
+    async def get_time_interval_trigger(
+        self, trigger_id: str, format_data: Union[bool, None] = None
+    ) -> TimedTrigger | ActionResultError:
         """|coro|
 
         Gets a time interval trigger information.
@@ -1373,7 +1404,7 @@ class Core(Base):
         )
         return result
 
-    async def get_triggers(self) -> TriggerID:
+    async def get_triggers(self) -> TriggerID | ActionResultError:
         """|coro|
 
         Retrieves the available trigger IDs for the Instance and sets them as attributes tied to :attr:`triggers`.
@@ -1388,14 +1419,17 @@ class Core(Base):
             A class containing the Trigger Description as attributes referencing the Trigger ID tied to the Instance.
         """
         await self._connect()
-        data: ScheduleDataData = await self.get_schedule_data(format_data=False)
+        data: ScheduleDataData | ActionResultError = await self.get_schedule_data(format_data=False)
+        if isinstance(data, ActionResultError):
+            return data
+
         triggers: list[TriggersData] = data.get("available_triggers")
         for entry in triggers:
             entry["description"] = self.sanitize_json(json=entry["description"])
         self._triggers = TriggerID(data=triggers)
         return self._triggers
 
-    async def get_update_info(self, format_data: Union[bool, None] = None) -> UpdateInfo:
+    async def get_update_info(self, format_data: Union[bool, None] = None) -> UpdateInfo | ActionResultError:
         """|coro|
 
         Gets the Update Version information for AMP.
@@ -1415,7 +1449,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetUpdateInfo", format_data=format_data, format_=UpdateInfo)
         return result
 
-    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates:
+    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates | ActionResultError:
         """|coro|
 
         Gets changes to the server status, in addition to any notifications or console output that have occurred since the last time meth:`get_updates` was called by the current session.
@@ -1435,7 +1469,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetUpdates", format_data=format_data, format_=Updates)
         return result
 
-    async def get_user_action_spec(self, format_data: Union[bool, None] = None) -> ActionSpec:
+    async def get_user_action_spec(self, format_data: Union[bool, None] = None) -> ActionSpec | ActionResultError:
         """|coro|
 
         Get a specification of the user actions.
@@ -1454,7 +1488,9 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetUserActionsSpec", format_data=format_data)
         return result
 
-    async def get_user_info(self, user_id: str, format_data: Union[bool, None] = None) -> UserApplicationData:
+    async def get_user_info(
+        self, user_id: str, format_data: Union[bool, None] = None
+    ) -> UserApplicationData | ActionResultError:
         """|coro|
 
         Provides information about a given in-application user (as opposed to AMP Users).
@@ -1479,7 +1515,7 @@ class Core(Base):
         )
         return result
 
-    async def get_user_list(self, format_data: Union[bool, None] = None) -> Players:
+    async def get_user_list(self, format_data: Union[bool, None] = None) -> Players | ActionResultError:
         """|coro|
 
         Returns the list of the connected users to the Application.
@@ -1501,7 +1537,7 @@ class Core(Base):
         )
         return result
 
-    async def get_webauthn_challenge(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def get_webauthn_challenge(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Get a webauthn challenge.
@@ -1521,7 +1557,9 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetWebauthnChallenge", format_data=format_data, format_=ActionResult)
         return result
 
-    async def get_webauthn_credential_ids(self, username: str, format_data: Union[bool, None] = None) -> list[Any]:
+    async def get_webauthn_credential_ids(
+        self, username: str, format_data: Union[bool, None] = None
+    ) -> list[Any] | ActionResultError:
         """|coro|
 
         Get a webauthn credential IDs.
@@ -1546,7 +1584,7 @@ class Core(Base):
         )
         return result
 
-    async def get_webauthn_credential_summary(self, format_data: Union[bool, None] = None) -> list[Any]:
+    async def get_webauthn_credential_summary(self, format_data: Union[bool, None] = None) -> list[Any] | ActionResultError:
         """|coro|
 
         Get the webauthn credential summaries.
@@ -1566,7 +1604,7 @@ class Core(Base):
         return result
 
     @deprecated("This was removed in `2.6.0.0`", stacklevel=2)
-    async def get_webserver_metrics(self, format_data: Union[bool, None] = None) -> Any:
+    async def get_webserver_metrics(self, format_data: Union[bool, None] = None) -> Any | ActionResultError:
         """|coro|
 
         Gets the webserver metrics.
@@ -1588,7 +1626,7 @@ class Core(Base):
 
         await self._connect()
         try:
-            await self.version_validation(version=VersionInfo(2, 6, 0, 0))
+            await self.version_validation(version=BuildInfo(major=2, minor=6, revision=0, minor_revision=0))
         except RuntimeError as e:
             return e
 
@@ -1637,7 +1675,7 @@ class Core(Base):
         token: str = "",
         rememberME: bool = False,
         format_data: Union[bool, None] = None,
-    ) -> LoginResults:
+    ) -> LoginResults | ActionResultError:
         """|coro|
 
         AMP API login function.
@@ -1707,7 +1745,34 @@ class Core(Base):
         await self._call_api(api="Core/Resume", _no_data=True)
         return
 
-    async def refresh_setting_value_list(self, node: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def oidc_login(self, code: str, redirect_uri: str, instance_id: str) -> dict | ActionResultError:
+        """|coro|
+
+        Related to OIDC credentials. Return type is UNKNOWN as of v`3.0.0`.
+
+        Parameters
+        -----------
+        code: :class:`str`
+            UNK.
+        redirect_uri: :class:`str`
+            UNK.
+        instance_id: :class:`str`
+            The Instance ID, see :attr:`~Instance.instance_id`
+
+        Returns
+        --------
+        :class:`Any`
+            UNK.
+        """
+
+        parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
+        await self._connect()
+        result = await self._call_api(api="Core/OIDCLogin", parameters=parameters, format_data=False)
+        return result
+
+    async def refresh_setting_value_list(
+        self, node: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Refreshes a setting nodes values.
@@ -1734,7 +1799,7 @@ class Core(Base):
         )
         return result
 
-    async def refresh_settings_source_cache(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def refresh_settings_source_cache(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Refreshes the settings source cache.
@@ -1756,7 +1821,9 @@ class Core(Base):
         )
         return result
 
-    async def rename_role(self, role_id: str, new_name: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def rename_role(
+        self, role_id: str, new_name: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Renames a role.
@@ -1786,7 +1853,7 @@ class Core(Base):
     @deprecated(
         "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.", stacklevel=2
     )
-    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -1810,7 +1877,7 @@ class Core(Base):
         )
         return await self.restart_application(format_data=format_data)
 
-    async def restart_application(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def restart_application(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -1832,7 +1899,7 @@ class Core(Base):
 
     async def reset_user_password(
         self, username: str, new_password: str, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """
         For administrative users to alter the password of another user.
 
@@ -1858,7 +1925,9 @@ class Core(Base):
         )
         return result
 
-    async def revoke_webauthn_credential(self, auth_id: int, format_data: Union[bool, None] = None) -> ActionResult:
+    async def revoke_webauthn_credential(
+        self, auth_id: int, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Revoke a webauthn credential.
@@ -1883,7 +1952,7 @@ class Core(Base):
         )
         return result
 
-    async def run_security_check(self, format_data: Union[bool, None] = None) -> Any:
+    async def run_security_check(self, format_data: Union[bool, None] = None) -> Any | ActionResultError:
         """|coro|
 
         Run a security check on the Instance.
@@ -1902,7 +1971,9 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/RunSecurityCheck", format_data=format_data)
         return result
 
-    async def run_event_trigger_immediately(self, trigger_id: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def run_event_trigger_immediately(
+        self, trigger_id: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Runs an event trigger immediately.
@@ -1929,7 +2000,7 @@ class Core(Base):
 
     async def set_amp_user_role_membership(
         self, user_id: str, role_id: str, is_member: bool, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Adds a user to an AMP role.
@@ -1961,7 +2032,7 @@ class Core(Base):
 
     async def set_amp_role_permission(
         self, role_id: str, permission_node: str, enabled: Union[None, bool], format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set a permission node to "True" or "False" for the provided AMP role.
@@ -1992,7 +2063,7 @@ class Core(Base):
 
     async def set_trigger_enabled(
         self, trigger_id: str, enabled: bool, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Sets the enabled state of a trigger.
@@ -2024,6 +2095,9 @@ class Core(Base):
 
         Sends a message or command to the Console. (eg `/list`)
 
+        .. note::
+            Calling :meth:`Core.get_updates` directly after this function will not have the console output, best practice is to delay ~ 1 sec to catch results.
+
         Returns
         --------
         None
@@ -2034,7 +2108,7 @@ class Core(Base):
         await self._call_api(api="Core/SendConsoleMessage", parameters=parameters, _no_data=True)
         return
 
-    async def set_configs(self, data: dict[str, str], format_data: Union[bool, None] = None) -> bool:
+    async def set_configs(self, data: dict[str, str], format_data: Union[bool, None] = None) -> bool | ActionResultError:
         """|coro|
 
         Set multiple Setting Nodes values.
@@ -2057,7 +2131,9 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/SetConfigs", parameters=parameters, format_data=format_data)
         return result
 
-    async def set_config(self, node: str, value: str, format_data: Union[bool, None] = None) -> ActionResult:
+    async def set_config(
+        self, node: str, value: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set a Setting Node value.
@@ -2083,7 +2159,7 @@ class Core(Base):
         )
         return result
 
-    async def start_application(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def start_application(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Starts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -2102,7 +2178,7 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/Start", format_data=format_data, format_=ActionResult)
         return result
 
-    async def stop_application(self) -> None:
+    async def stop_application(self) -> None | ActionResultError:
         """|coro|
 
         Stops the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -2113,8 +2189,8 @@ class Core(Base):
         """
 
         await self._connect()
-        await self._call_api(api="Core/Stop", _no_data=True)
-        return
+        result: Any = await self._call_api(api="Core/Stop", _no_data=True)
+        return result
 
     async def suspend_instance(self) -> None:
         """|coro|
@@ -2132,7 +2208,7 @@ class Core(Base):
 
     async def update_account_info(
         self, email_address: str, two_factor_pin: str, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update account info.
@@ -2201,7 +2277,7 @@ class Core(Base):
         await self._call_api(api="Core/UpdateAMPInstance", _no_data=True)
         return
 
-    async def update_application(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def update_application(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
 
         Update the Instance application.
@@ -2222,6 +2298,29 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/UpdateApplication", format_data=format_data, format_=ActionResult)
         return result
 
+    async def update_public_key(
+        self, pub_key: str, format_data: Union[bool, None] = None
+    ) -> ActionResult | ActionResultError:
+        """
+        Update a public key.
+
+        Parameters
+        -----------
+        pub_key: :class:`str`
+            The public key.
+
+        Returns
+        --------
+        :class:`ActionResult`
+             On success returns a :class:`ActionResult` dataclass.
+        """
+        await self._connect()
+        parameters = {"PubKey": str}
+        result: Any = await self._call_api(
+            api="Core/UpdatePublicKey", parameters=parameters, format_=ActionResult, format_data=format_data
+        )
+        return result
+
     async def update_user_info(
         self,
         username: str,
@@ -2231,7 +2330,7 @@ class Core(Base):
         must_change_password: bool = False,
         email_address: str = "",
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update an AMP user.
@@ -2275,7 +2374,7 @@ class Core(Base):
 
     async def webauthn_register(
         self, attestation_object: str, client_data_json: str, description: str, format_data: Union[bool, None] = None
-    ) -> ActionResult:
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Webauthn register.

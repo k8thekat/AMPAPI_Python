@@ -1,3 +1,194 @@
+## Version - 4.5.3 - [7e4ebc5](https://github.com/k8thekat/AMPAPI_Python/commit/7e4ebc5)
+#### Changelog.md
+- Version info from `4.5.2` added.
+
+#### __init__.py
+- Version bump to `4.5.3`
+
+#### v4.5.3
+- Brief formatting update to logger statements throughout.
+- Added `__name__` to all Loggers.
+- Overwrote the dunder method for `ActionResultError.__str__()`.
+
+## Version - 4.5.2 - [76c4c13](https://github.com/k8thekat/AMPAPI_Python/commit/76c4c13)
+#### Changelog.md
+- Version info from `4.5.1` added.
+
+#### __init__.py
+- Version bump to `4.5.2`
+
+#### base.py
+- Changed format of debug logger statements.
+- Fixed logic handling for closed sessions and attempting to re-create a ClientSession().
+
+#### instance.py
+- Removed unneeded debug print in it's init.
+
+## Version - 4.5.1 - [87e6630](https://github.com/k8thekat/AMPAPI_Python/commit/87e6630)
+#### Changelog.md
+- Version info from `4.5.0` added.
+
+#### __init__.py
+- Version bump to `4.5.1`
+
+#### base.py
+- Pulled back connection closing via `Base` to be controlled by the AMPControllerInstance instead.
+
+## Version - 4.5.0 - [99b12f5](https://github.com/k8thekat/AMPAPI_Python/commit/99b12f5)
+#### Changelog.md
+- Version info from `4.4.0` added.
+
+#### __init__.py
+- Version bump to `4.5.0`
+
+#### base.py
+- Implemented a backoff class from `discord.py`-> ExponentialBackoff.
+- Improved logic handling for `aiohttp.ClientSession` requests upon failure or similar.
+- Added logic to attempt to reopen the ClientSession should it become closed.
+
+## Version - 4.4.0 - [886b0e4](https://github.com/k8thekat/AMPAPI_Python/commit/886b0e4)
+#### Changelog.md
+- Version info from `4.3.0` added.
+
+#### __init__.py
+- Version bump to `4.4.0`
+
+#### Overall
+- Added logic to support a single `aiohttp.ClientSession` at runtime while allowing an existing ClientSession to be supplied at the class `AMPControllerInstance` level.
+- Updated the `sample.py` to show existing session usage.
+
+## Version - 4.3.0 - [d2e2634](https://github.com/k8thekat/AMPAPI_Python/commit/d2e2634)
+#### Changelog.md
+- Version info from `4.2.0` added.
+
+#### __init__.py
+- Version bump to `4.3.0`
+
+#### Overall
+- Fixed Type annotations on multiple modules which was breaking data building.
+
+## Version - 4.2.0 - [7afa8d7](https://github.com/k8thekat/AMPAPI_Python/commit/7afa8d7)
+#### Changelog.md
+- Version info from `4.1.2` added.
+
+#### __init__.py
+- Version bump to `4.2.0`
+
+#### adsmodule.py
+- Docstring change.
+
+#### base.py
+- Fixed parameter type for `parse_data` as it was refrencing the wrong data module.
+
+#### core.py
+- Fixed function `get_status`, the data module it was returning was incorrect and failing. Changed from `InstanceStatus` to just `Status`.
+	- Updated docstring to match.
+
+#### instance.py
+- Fixed function `get_application_status` in tangent to `Core.get_status` as both were incorrect.
+	- Updated docstring to match.
+	- Added a warning in regards to using this function on an Controller/Target Instance.
+
+## Version - 4.1.2 - [dc08462](https://github.com/k8thekat/AMPAPI_Python/commit/dc08462)
+#### Changelog.md
+- Version info from `4.1.1` added.
+
+#### __init__.py
+- Version bump to `4.1.2`
+
+#### Overall
+- Added a `_no_data` check to `_call_api` function to return None early.
+
+## Version - 4.1.1 - [c12da9f](https://github.com/k8thekat/AMPAPI_Python/commit/c12da9f)
+#### Changelog.md
+- Version info from `4.1.0` added.
+
+#### __init__.py
+- Version bump to `4.1.1`
+
+#### controller.py
+- Return type handling for `get_instance` via overloads added.
+
+## Version - 4.1.0 - [a93505e](https://github.com/k8thekat/AMPAPI_Python/commit/a93505e)
+#### Changelog.md
+- Version info from `4.0.0` added.
+
+#### __init__.py
+- Version bump to `4.1.0`
+
+#### Overall
+- Hotfix for import errors and docs.
+- Implemented `ActionResultError` class to handle any Exceptions inside of `_call_api` which all endpoints use.
+
+#### controller.py
+- Created overloads for `instance_conversion` function and added logic to handle a single `Instance` class.
+- Created a function `get_instance` to get a single Instance via "Instance ID" and convert the Instance to it's respective class.
+
+## Version - 4.0.0 - [426bad9](https://github.com/k8thekat/AMPAPI_Python/commit/426bad9)
+#### Changelog.md
+- Version info from `2.0.0` added.
+
+#### __init__.py
+- Version bump to `4.0.0`
+
+#### adsmodule.py
+- Partial refactor of parameter key values as AMP refactors the API parameters to match PascalCase..lol
+- `attach_ads()` has new parameters and was merged with `attach_ads_with_pairing_code` to simplfy code.
+- `set_instance_network_info` has new parameters, "must_stop" and "application_ip".
+- Added new functions!
+	- `cancel_pairing`
+	- `create_instance_from_spec`
+	- `get_target_pairing_code`
+	- `register_target_with_code`
+
+#### core.py
+- Updated `get_oidc_login_url` with new parameters as the API was updated.
+- New function, `oidc_login` and `update_public_key`.
+
+#### filebackup.py
+- Updated `take_backup` with new parameters, "local" and "s3".
+
+#### minecraft.py
+- New function `mc_reject_eula`.
+
+#### modules.py'
+- Added a new function to `CreateInstance` to convert the class into a useable datastructure for the API.
+
+#### utils.py
+- Updated `amp_api_update` function to get the most current version of any Instance as long as it matches the ADS version.
+
+#### Overall
+- Updated docs.
+- Relocated classes from `dataclass.py` file into `modules.py`.
+- Added attributes to docstring of `AMPControllerInstance` and any other classes that inherit from `Instance` dataclass.
+- Updated docs to reflect changes.
+- Updated `sample.py` to reflect changes.
+
+## Version - 2.0.0 - [c765d8f](https://github.com/k8thekat/AMPAPI_Python/commit/c765d8f)
+#### Changelog.md
+- Version info from `1.3.2` added.
+
+#### __init__.py
+- Version bump to `2.0.0`
+
+#### base.py
+- Updated formatting of `debug` logger statements in `_call_api()`.
+- Fixed logic error when handling api response not returning the data correctly.(This may break older versions of AMP)
+- Updated logic inside `json_to_dataclass` as it was returning None on certain edge cases when it should just return the data.
+
+## Version - 1.3.2 - [ac4118a](https://github.com/k8thekat/AMPAPI_Python/commit/ac4118a)
+#### Changelog.md
+- Version info from `1.3.1` added.
+
+#### __init__.py
+- Version bump to `1.3.2`
+
+#### controller.py
+- Updated type definitions for `get_instances()` via overloads.
+
+#### Readme.md
+- Formatting change to Contributing to the Project section.
+
 ## Version - 1.3.1 - [cad740f](https://github.com/k8thekat/AMPAPI_Python/commit/cad740f)
 #### Changelog.md
 - Version info from `1.3.0` added.
