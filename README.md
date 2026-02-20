@@ -32,7 +32,7 @@ CubeCoders AMP API wrapper in Python.
 
 _Python 3.10 or higher is required_
 
-To install run the below command to install the required pip packages from [Requirements](./requirements.txt)
+To install run the below command via your perferred terminal or IDE.
 
 ### PyPi
 
