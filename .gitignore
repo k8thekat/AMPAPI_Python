@@ -12,3 +12,5 @@ docs/build*
 **/dumps
 **/local.ini
 *.vscode/*
+CLAUDE.md
+**/api_spec_sheets/diffs

@@ -196,7 +196,8 @@ class Base:
         _auto_unpack: bool = True,
         _no_data: bool = False,
     ) -> Any:
-        """|coro|
+        """|coro|.
+
         Uses :class:`aiohttp.ClientSession` post request to access the AMP API endpoints. \n
 
         .. note::
@@ -246,7 +247,6 @@ class Base:
         #     When the JSON response has a dict key value of "Unauthorized Access" or permission related error.
 
         global FORMAT_DATA
-
 
         post_req: ClientResponse | None
         self.logger.debug("_call_api -> %s was called with %s", api, parameters)
@@ -354,7 +354,9 @@ class Base:
                             )
 
                         return ActionResultError(
-                            status=False, reason="Unauthorized Access", result=PermissionError(self._unauthorized_access),
+                            status=False,
+                            reason="Unauthorized Access",
+                            result=PermissionError(self._unauthorized_access),
                         )
 
                         # raise PermissionError(self._unauthorized_access)
@@ -501,8 +503,6 @@ class Base:
 
         .. note::
             This will fail on entries with an underscore between to capital characters. |  *eg (Tool_Version = tool__version)*\n
-            Will also not format properly when handling strings that have a multiple uppercase followed by a lowercase. | *eg (ContainerCPUs = container_cp_us)*
-
 
         Parameters
         ----------
@@ -515,6 +515,13 @@ class Base:
             The converted string from CamelCase to snake_case.
 
         """
+        # Pre-pass: collapse plural acronyms so e.g. "IDs" -> "Ids" and "CPUs" -> "Cpus"
+        # before the main passes split them incorrectly into "i_ds" / "cp_us".
+        data = re.sub(
+            pattern=r"([A-Z]{2,})(s)(?=[^a-z]|$)",
+            repl=lambda m: m.group(1)[0] + m.group(1)[1:].lower() + m.group(2),
+            string=data,
+        )
         data = re.sub(pattern="(.)([A-Z][a-z]+)", repl=r"\1_\2", string=data)
         return re.sub(pattern="([a-z0-9])([A-Z])", repl=r"\1_\2", string=data).lower()
 

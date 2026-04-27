@@ -38,17 +38,17 @@ __all__: tuple[Literal["Core"]] = ("Core",)
 
 
 class Core(Base):
-    """
-    Contains the functions for any ``/API/Core/`` AMP API endpoints.
+    """Contains the functions for any ``/API/Core/`` AMP API endpoints.
 
     .. note::
         If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
 
 
     Attributes
-    -----------
+    ----------
     triggers: :class:`TriggerID`
         You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information.
+
     """
 
     @property
@@ -63,11 +63,11 @@ class Core(Base):
 
         **DEV**: Creates a non-ending task with 50% progress for testing purposes
 
-        Returns:
-        ---
+        Returns
+        -------
             None: ""
-        """
 
+        """
         await self._connect()
         await self._call_api(api="Core/CreateTestTask")
         return
@@ -78,12 +78,12 @@ class Core(Base):
         **DEV**: Async test method
 
 
-        Returns:
-        ---
+        Returns
+        -------
         :class:`str`
             Returns a string.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/AsyncTest")
         return result
@@ -94,22 +94,23 @@ class Core(Base):
         Approve an AMP update.
 
         Returns
-        --------
+        -------
         None
+
         """
         await self._connect()
         await self._call_api(api="Core/AcknowledgeAMPUpdate", _no_data=True)
-        return None
+        return
 
     async def activate_amp_license(
-        self, license_key: str, query_only: bool = False, format_data: Union[bool, None] = None
+        self, license_key: str, query_only: bool = False, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Activate an AMP License key.
 
         Parameters
-        -----------
+        ----------
         license_key: :class:`str`
             Your AMP License key.
         query_only: bool, optional
@@ -118,20 +119,20 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"LicenceKey": license_key, "QueryOnly": query_only}
         result: Any = await self._call_api(
-            api="Core/ActivateAMPLicence", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/ActivateAMPLicence", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def add_event_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None
+        self, trigger_id: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -142,26 +143,27 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
             The Trigger ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
         await self._connect()
         parameters: dict[str, str] = {"TriggerId": trigger_id}
         result: Any = await self._call_api(
-            api="Core/AddEventTrigger", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/AddEventTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def add_task(
-        self, trigger_id: str, method_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None
+        self, trigger_id: str, method_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -172,7 +174,7 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         trigger_id: class:`str`
             The ID of the trigger to add.
         method_id: class:`str`
@@ -183,15 +185,15 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "MethodID": method_id, "ParameterMapping": parameter_mapping}
         result: Any = await self._call_api(
-            api="Core/AddTask", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/AddTask", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -201,21 +203,22 @@ class Core(Base):
         Cancel an existing Task.
 
         Parameters
-        -----------
+        ----------
         task_id: :class:`str`
             The ID of the Task.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
         await self._connect()
         parameters: dict[str, str] = {"TaskId": task_id}
         result: Any = await self._call_api(
-            api="Core/CancelTask", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/CancelTask", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -232,7 +235,7 @@ class Core(Base):
         For a user to change their own password, requires knowing the old password.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP user name.
         old_password: :class:`str`
@@ -245,11 +248,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {
             "Username": username,
@@ -259,19 +262,19 @@ class Core(Base):
         }
 
         results: Any = await self._call_api(
-            api="Core/ChangeUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/ChangeUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return results
 
     async def change_task_order(
-        self, trigger_id: str, task_id: str, new_order: int, format_data: Union[bool, None] = None
+        self, trigger_id: str, task_id: str, new_order: int, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Change the order of a task.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
             The ID of the Trigger you want to change the order of a task.
         task_id: :class:`str`
@@ -282,27 +285,27 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "TaskID": task_id, "NewOrder": new_order}
         result: Any = await self._call_api(
-            api="Core/ChangeTaskOrder", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/ChangeTaskOrder", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def confirm_two_factor_setup(
-        self, username: str, two_factor_code: str, format_data: Union[bool, None] = None
+        self, username: str, two_factor_code: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Completes two-factor setup by supplying a valid two factor code based on the secret provided by EnableTwoFactor.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP User name to confirm 2FA setup.
         two_factor_code: :class:`str`
@@ -311,27 +314,27 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Username": username, "TwoFactorCode": two_factor_code}
         result: Any = await self._call_api(
-            api="Core/ConfirmTwoFactorSetup", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/ConfirmTwoFactorSetup", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def create_role(
-        self, role_name: str, as_common_role: bool = False, format_data: Union[bool, None] = None
+        self, role_name: str, as_common_role: bool = False, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Creates an AMP Role.
 
         Parameters
-        -----------
+        ----------
         role_name: :class:`str`
             The name you want for the AMP role.
         as_common_role: :class:`bool`, optional
@@ -340,15 +343,15 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"Name": role_name, "AsCommonRole": as_common_role}
         result: Any = await self._call_api(
-            api="Core/CreateRole", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/CreateRole", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -358,22 +361,22 @@ class Core(Base):
         Create an AMP user.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP User name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Username": username}
         result: Any = await self._call_api(
-            api="Core/CreateUser", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/CreateUser", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -388,45 +391,45 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         node: :class:`str`
             The permission node to check for. eg `Core.RoleManagement.DeleteRoles`. \n
 
         Returns
-        --------
+        -------
         :class:`bool`
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"PermissionNode": node}
         result: Any = await self._call_api(api="Core/CurrentSessionHasPermission", parameters=parameters)
         return result
 
     async def delete_instance_users(
-        self, instance_id: str, format_data: Union[bool, None] = None
+        self, instance_id: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete an Instances User list.
 
         Parameters
-        -----------
+        ----------
         instance_id: :class:`str`
             The AMP Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"InstanceId": instance_id}
 
         results: Any = await self._call_api(
-            api="Core/DeleteInstanceUsers", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DeleteInstanceUsers", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return results
 
@@ -436,27 +439,27 @@ class Core(Base):
         Deletes a role.
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`str`
             The ID of the role to delete.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"RoleId": role_id}
         result: Any = await self._call_api(
-            api="Core/DeleteRole", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DeleteRole", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def delete_task(
-        self, trigger_id: str, task_id: str, format_data: Union[bool, None] = None
+        self, trigger_id: str, task_id: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -464,7 +467,7 @@ class Core(Base):
 
 
         Parameters
-        ------------
+        ----------
         trigger_id: :class:`str`
             The ID of the trigger to delete.
         task_id: :class:`str`
@@ -473,42 +476,42 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"TriggerID": trigger_id, "TaskID": task_id}
         result: Any = await self._call_api(
-            api="Core/DeleteTask", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DeleteTask", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def delete_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None
+        self, trigger_id: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete a trigger.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
             The ID of the trigger to delete.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"TriggerID": trigger_id}
         result: Any = await self._call_api(
-            api="Core/DeleteTrigger", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DeleteTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -518,22 +521,22 @@ class Core(Base):
         Delete an AMP user.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP User name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Username": username}
         result: Any = await self._call_api(
-            api="Core/DeleteUser", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DeleteUser", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -547,19 +550,20 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
         await self._connect()
         parameters: dict[str, str] = {"Password": self._bridge.password, "TwoFactorCode": TOTP(self._bridge.token).now()}
         result: Any = await self._call_api(
-            api="Core/DisableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DisableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -569,16 +573,16 @@ class Core(Base):
         Dismiss all task notifications.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/DismissAllTasks", format_data=format_data, format_=ActionResult)
         return result
@@ -589,22 +593,22 @@ class Core(Base):
         Dismiss a task notification.
 
         Parameters
-        -----------
+        ----------
         task_id: :class:`str`
             The ID of the task to delete. See :meth:`get_schedule_data` and check the :class:`Tasks` class to get IDs.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"TaskId": task_id}
         result: Any = await self._call_api(
-            api="Core/DismissTask", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/DismissTask", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -624,7 +628,7 @@ class Core(Base):
         Edits an interval trigger.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
             The ID of the interval trigger to edit.
         months: :class:`int`
@@ -643,11 +647,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         if months < 1 or months > 12:
             raise ValueError("Months must be between 1 and 12.")
@@ -670,19 +674,19 @@ class Core(Base):
             "description": description,
         }
         result: Any = await self._call_api(
-            api="Core/EditIntervalTrigger", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/EditIntervalTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def edit_task(
-        self, trigger_id: str, task_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None
+        self, trigger_id: str, task_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Edit a task.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
              The ID of the trigger to edit.
         task_id: :class:`str`
@@ -693,20 +697,20 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "TaskID": task_id, "ParameterMapping": parameter_mapping}
         result: Any = await self._call_api(
-            api="Core/EditTask", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/EditTask", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def enable_two_factor(
-        self, username: str, password: str, format_data: Union[bool, None] = None
+        self, username: str, password: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -717,7 +721,7 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP User name.
         password: :class:`str`
@@ -726,15 +730,15 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Username": username, "Password": password}
         result: Any = await self._call_api(
-            api="Core/EnableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/EnableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -749,9 +753,10 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         session_id: :class:`str`
             The AMP Session ID to close.
+
         """
         await self._connect()
         parameters: dict[str, str] = {"Id": session_id}
@@ -770,19 +775,19 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Session`
             On success returns a :class:`Session` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetActiveAMPSessions", format_data=format_data, format_=Session, _use_from_dict=False
+            api="Core/GetActiveAMPSessions", format_data=format_data, format_=Session, _use_from_dict=False,
         )
         return result
 
@@ -792,19 +797,19 @@ class Core(Base):
         Retrieves all AMP Users and their information.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        ---------
+        -------
         list[:class:`User`]
             On success returns a list of :class:`User` dataclasses.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetAllAMPUserInfo", format_data=format_data, format_=User, _use_from_dict=False
+            api="Core/GetAllAMPUserInfo", format_data=format_data, format_=User, _use_from_dict=False,
         )
         return result
 
@@ -814,16 +819,16 @@ class Core(Base):
         Retrieves the AMP Role permission nodes for the provided role ID.
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`str`
             The role ID. eg "5d6566e0-fae2-41d7-bfb6-d21033247f2e"
 
         Returns
-        --------
+        -------
         list[:class:`str`]:
             On success returns a list of strings containing all the permission nodes for the provided role id.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"RoleId": role_id}
         result: Any = await self._call_api(api="Core/GetAMPRolePermissions", parameters=parameters)
@@ -835,22 +840,22 @@ class Core(Base):
         Retrieves the AMP User information for the provided username.\n
 
         Parameters
-        -----------
+        ----------
         name: :class:`str`
             The AMP User name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`User`
             On success returns a :class:`User` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Username": name}
         result: Any = await self._call_api(
-            api="Core/GetAMPUserInfo", parameters=parameters, format_data=format_data, format_=User, _use_from_dict=False
+            api="Core/GetAMPUserInfo", parameters=parameters, format_data=format_data, format_=User, _use_from_dict=False,
         )
         return result
 
@@ -860,16 +865,16 @@ class Core(Base):
         Get all AMP users summary.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`UserInfoSummary`]
             On success returns a list of :class:`UserInfoSummary` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetAMPUsersSummary", format_data=format_data, format_=LoginUserInfo)
         return result
@@ -884,17 +889,17 @@ class Core(Base):
 
 
         Returns
-        --------
+        -------
         :class:`APISpec`
             On success returns a dictionary with all of the API specs, their parameters and return types for the Instance.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetAPISpec", sanitize_json=sanitize_json)
         return result
 
     async def get_audit_log_entries(
-        self, before: float = datetime.now().timestamp(), count: int = 10, format_data: Union[bool, None] = None
+        self, before: float = datetime.now().timestamp(), count: int = 10, format_data: Union[bool, None] = None,
     ) -> list[AuditLogEntry] | ActionResultError:
         """|coro|
 
@@ -905,7 +910,7 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         before: :class:`float`
             A POSIX timestamp, defaults to datetime.now().timestamp().
         count: :class:`int`
@@ -914,11 +919,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`AuditLogEntry`]
             On success returns a list of :class:`AuditLogEntry` dataclasses.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"Before": before, "Count": count}
         result: Any = await self._call_api(
@@ -931,28 +936,29 @@ class Core(Base):
         return result
 
     async def get_authentication_requirements(
-        self, username: str, format_data: Union[bool, None] = None
+        self, username: str, format_data: Union[bool, None] = None,
     ) -> list[Any] | ActionResultError:
         """|coro|
 
         Get a list of Authentication requirements for the AMP user.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP username.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[Any]
             On success returns a list of Authentication requirements.
+
         """
         await self._connect()
         parameters: dict[str, str] = {"username": username}
         result: Any = await self._call_api(
-            api="Core/GetAuthenticationRequirements", parameters=parameters, format_data=format_data
+            api="Core/GetAuthenticationRequirements", parameters=parameters, format_data=format_data,
         )
         return result
 
@@ -966,27 +972,27 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         node: :class:`str`
             The AMP node to inspect. eg "ADSModule.Networking.BaseURL"
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`SettingSpec`
             On success returns a :class:`SettingSpec` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"node": node}
         result: Any = await self._call_api(
-            api="Core/GetConfig", parameters=parameters, format_data=format_data, format_=SettingSpec
+            api="Core/GetConfig", parameters=parameters, format_data=format_data, format_=SettingSpec,
         )
         return result
 
     async def get_configs(
-        self, nodes: list[str], format_data: Union[bool, None] = None
+        self, nodes: list[str], format_data: Union[bool, None] = None,
     ) -> list[SettingSpec] | ActionResultError:
         """|coro|
 
@@ -997,22 +1003,22 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         node: list[:class:`str`]
             The list of setting nodes to look at.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`SettingSpec`]
             On success returns a list of :class:`SettingSpec` dataclasses.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, list[str]] = {"nodes": nodes}
         result: Any = await self._call_api(
-            api="Core/GetConfigs", parameters=parameters, format_data=format_data, format_=SettingSpec
+            api="Core/GetConfigs", parameters=parameters, format_data=format_data, format_=SettingSpec,
         )
         return result
 
@@ -1022,17 +1028,16 @@ class Core(Base):
         Get's the system diagnostics information.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Diagnostics`
             On success returns a :class:`Diagnostics` dataclass.
 
         """
-
         await self._connect()
         result: Any = await self._call_api(
             api="Core/GetDiagnosticsInfo",
@@ -1050,16 +1055,16 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Module`
             On success returns a :class:`Module` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetModuleInfo", format_data=format_data, format_=Module)
         return result
@@ -1070,16 +1075,16 @@ class Core(Base):
         Get a new GUID for the Instance.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetNewGuid", format_data=format_data)
         return result
@@ -1093,15 +1098,41 @@ class Core(Base):
         __Endpoint__: "Core/GetOIDCLoginURL"
 
         Parameters
-        -----------
+        ----------
         state: :class:`str | None`, optional
             UNK, by default None.
         redirect_uri: :class:`str | None`, optional
             UNK, by default None.
+
         """
         await self._connect()
         await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
         return
+    
+
+    async def get_oidc_logout_url(self, redirect_uri: str | None = None) -> str | ActionResultError:
+        """|coro|
+
+        Interacts with OIDC credentials.
+
+
+        __Endpoint__: "Core/GetOIDCLogoutURL"
+
+        Parameters
+        ----------
+        redirect_uri: :class:`str | None`, optional
+            UNK, by default None.
+
+        Returns
+        -------
+        :class:`str`
+            The OIDC logout URL.
+
+        """
+        parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
+        await self._connect()
+        result: Any = await self._call_api(api="Core/GetOIDCLogoutURL", parameters=parameters)
+        return result
 
     async def get_permissions_spec(self) -> list[PermissionNode] | ActionResultError:
         """|coro|
@@ -1109,11 +1140,11 @@ class Core(Base):
         Retrieves the AMP Permissions node tree.
 
         Returns
-        --------
+        -------
         list[:class:`PermissionNode`]
             On success returns a :class:`PermissionNode` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetPermissionsSpec")
         return result
@@ -1124,16 +1155,16 @@ class Core(Base):
         Get a summary of the Instance's open ports.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`Port`]
             On success returns a list of :class:`Port` dataclasses.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetPortSummaries", format_data=format_data, format_=Port)
         if format_data is None:
@@ -1142,7 +1173,7 @@ class Core(Base):
         if format_data is False:
             return result
 
-        elif isinstance(result, list):
+        if isinstance(result, list):
             return [Port(**port) for port in result]
         return result
 
@@ -1152,16 +1183,16 @@ class Core(Base):
         Returns the provisioning spec.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`SettingSpec`]
             On success returns a list of :class:`SettingSpec` dataclasses.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetProvisionSpec", format_data=format_data, format_=SettingSpec)
         return result
@@ -1177,7 +1208,7 @@ class Core(Base):
         Get the remote login token.
 
         Parameters
-        -----------
+        ----------
         description: Union[:class:`str`, None], optional
             You can set a description of what the token is for, defaults to None.
         is_temporary:  Union[:class:`bool`, None], optional
@@ -1186,11 +1217,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`str`
             On success returns a :class:`str`.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"Description": description, "IsTemporary": is_temporary}
         result: Any = await self._call_api(api="Core/GetRemoteLoginToken", parameters=parameters, format_data=format_data)
@@ -1202,18 +1233,18 @@ class Core(Base):
         Retrieves the AMP Role information for the provided role ID.
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`str`
             The role ID to get information for.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Role`
             On success returns a :class:`Role` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"RoleId": role_id}
         result: Any = await self._call_api(api="Core/GetRole", parameters=parameters, format_data=format_data, format_=Role)
@@ -1225,16 +1256,16 @@ class Core(Base):
         Get's a list of all the roles.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`Role`]
             On success returns a list of :class:`Role` dataclasses.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetRoleData", format_data=format_data, format_=Role)
         return result
@@ -1245,11 +1276,11 @@ class Core(Base):
         Retrieves all the Roles AMP currently has and the role IDs.
 
         Returns
-        --------
+        -------
         dict[str, str]
             On success returns a dictionary containing all the roles and their IDs.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetRoleIds")
         return result
@@ -1260,24 +1291,23 @@ class Core(Base):
     async def get_schedule_data(self, format_data: Union[Literal[True], None]) -> ScheduleData | ActionResultError: ...
 
     async def get_schedule_data(
-        self, format_data: Union[bool, None] = None
+        self, format_data: Union[bool, None] = None,
     ) -> ScheduleData | ScheduleDataData | ActionResultError:
         """|coro|
 
         Returns a dictionary of the Server/Instance Schedule events and triggers.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ScheduleData` | :class:`ScheduleDataData`
             On success returns a :class:`ScheduleData` dataclass, unless format_data is False which it will return :class:`ScheduleDataData`.
 
         """
-
         await self._connect()
         result: Any = await self._call_api(api="Core/GetScheduleData", format_data=format_data, format_=ScheduleData)
         return result
@@ -1291,16 +1321,16 @@ class Core(Base):
             See :ref:`Setting Nodes <Documentation>` for more information.
 
         Parameters
-        ---------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`SettingSpecParent`
             On success returns a :class:`SettingSpecParent` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(
             api="Core/GetSettingsSpec",
@@ -1327,11 +1357,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         dict[:class:`str`, :class:`str`]
             On success returns a dictionary of setting values.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"SettingNode": setting_node}
         result: Any = await self._call_api(api="Core/GetSettingValues", parameters=parameters)
@@ -1343,16 +1373,16 @@ class Core(Base):
         Gets the AMP Instance application status information. Such as active users, cpu usage, memory usage, state and uptime.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Status`
             On success returns a :class:`Status` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetStatus", format_data=format_data, format_=Status)
         return result
@@ -1363,44 +1393,44 @@ class Core(Base):
         Get a list of running tasks on the Instance.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`RunningTask`]
             On success returns a list of :class:`RunningTask` dataclasses.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetTasks", format_data=format_data, format_=RunningTask)
         return result
 
     async def get_time_interval_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None
+        self, trigger_id: str, format_data: Union[bool, None] = None,
     ) -> TimedTrigger | ActionResultError:
         """|coro|
 
         Gets a time interval trigger information.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
             The ID of the time interval trigger to get.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`TimedTrigger`
             On success returns a :class:`TimedTrigger` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Id": trigger_id}
         result: Any = await self._call_api(
-            api="Core/GetTimeIntervalTrigger", parameters=parameters, format_data=format_data, format_=TimedTrigger
+            api="Core/GetTimeIntervalTrigger", parameters=parameters, format_data=format_data, format_=TimedTrigger,
         )
         return result
 
@@ -1414,9 +1444,10 @@ class Core(Base):
             This would return the ID string to be passed into a function that requires a Trigger ID value.
 
         Returns
-        --------
+        -------
         :class:`TriggerID`
             A class containing the Trigger Description as attributes referencing the Trigger ID tied to the Instance.
+
         """
         await self._connect()
         data: ScheduleDataData | ActionResultError = await self.get_schedule_data(format_data=False)
@@ -1435,16 +1466,16 @@ class Core(Base):
         Gets the Update Version information for AMP.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`UpdateInfo`
             On success returns a :class:`UpdateInfo` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetUpdateInfo", format_data=format_data, format_=UpdateInfo)
         return result
@@ -1455,16 +1486,16 @@ class Core(Base):
         Gets changes to the server status, in addition to any notifications or console output that have occurred since the last time meth:`get_updates` was called by the current session.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Updates`
             On success returns a :class:`Updates` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetUpdates", format_data=format_data, format_=Updates)
         return result
@@ -1475,43 +1506,44 @@ class Core(Base):
         Get a specification of the user actions.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionSpec`
             On success returns a :class:`ActionSpec`.
+
         """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetUserActionsSpec", format_data=format_data)
         return result
 
     async def get_user_info(
-        self, user_id: str, format_data: Union[bool, None] = None
+        self, user_id: str, format_data: Union[bool, None] = None,
     ) -> UserApplicationData | ActionResultError:
         """|coro|
 
         Provides information about a given in-application user (as opposed to AMP Users).
 
         Parameters
-        -----------
+        ----------
         user_id: :class:`str`
             The Application User id. See :meth:`get_user_list`.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`UserApplicationData`
             On success returns a :class:`UserApplicationData` class.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"UID": user_id}
         result: Any = await self._call_api(
-            api="Core/GetUserInfo", parameters=parameters, format_data=format_data, format_=UserApplicationData
+            api="Core/GetUserInfo", parameters=parameters, format_data=format_data, format_=UserApplicationData,
         )
         return result
 
@@ -1521,19 +1553,19 @@ class Core(Base):
         Returns the list of the connected users to the Application.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`Players`
             On success returns a :class:`Players` dataclasses.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetUserList", format_data=format_data, format_=Players, _use_from_dict=False, _auto_unpack=False
+            api="Core/GetUserList", format_data=format_data, format_=Players, _use_from_dict=False, _auto_unpack=False,
         )
         return result
 
@@ -1543,44 +1575,44 @@ class Core(Base):
         Get a webauthn challenge.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetWebauthnChallenge", format_data=format_data, format_=ActionResult)
         return result
 
     async def get_webauthn_credential_ids(
-        self, username: str, format_data: Union[bool, None] = None
+        self, username: str, format_data: Union[bool, None] = None,
     ) -> list[Any] | ActionResultError:
         """|coro|
 
         Get a webauthn credential IDs.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             Username.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"username": username}
         result: Any = await self._call_api(
-            api="Core/GetWebauthnCredentialIDs", parameters=parameters, format_data=format_data
+            api="Core/GetWebauthnCredentialIDs", parameters=parameters, format_data=format_data,
         )
         return result
 
@@ -1590,15 +1622,15 @@ class Core(Base):
         Get the webauthn credential summaries.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[Any] : List of webauthn credential summaries.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/GetWebauthnCredentialSummaries", format_data=format_data)
         return result
@@ -1614,16 +1646,16 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         Any
             UNK data returned by the API.
-        """
 
+        """
         await self._connect()
         try:
             await self.version_validation(version=BuildInfo(major=2, minor=6, revision=0, minor_revision=0))
@@ -1639,16 +1671,16 @@ class Core(Base):
         Kills the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         await self._call_api(api="Core/Kill", _no_data=True)
         return
 
     @deprecated(
-        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.", stacklevel=2
+        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.", stacklevel=2,
     )
     async def kill_instance(self) -> None:
         """|coro|
@@ -1656,10 +1688,10 @@ class Core(Base):
         Kills the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         warnings.warn(
             message="Core.kill_instance() is deprecated and scheduled for "
             "removal in a future version. Use Core.kill_application() instead to kill your Instance application.",
@@ -1682,7 +1714,7 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         amp_user: :class:`str`
             The username for logging into the AMP Panel
         amp_password: :class:`str`
@@ -1693,14 +1725,14 @@ class Core(Base):
             Remember me token, defaults to False.
 
         Returns
-        --------
+        -------
         :class:`LoginResults`
             On success returns a :class:`LoginResults` dataclass.
 
         """
         parameters = {"username": amp_user, "password": amp_password, "token": token, "rememberMe": rememberME}
         result: Any = await self._call_api(
-            api="Core/Login", parameters=parameters, format_data=format_data, format_=LoginResults
+            api="Core/Login", parameters=parameters, format_data=format_data, format_=LoginResults,
         )
         return result
 
@@ -1710,8 +1742,9 @@ class Core(Base):
         Logout from AMP.
 
         Returns
-        --------
+        -------
         None
+
         """
         await self._connect()
         await self._call_api(api="Core/Logout", _no_data=True)
@@ -1724,10 +1757,10 @@ class Core(Base):
         Restart the AMP Instance
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         await self._call_api(api="Core/RestartAMP", _no_data=True)
         return
@@ -1738,20 +1771,23 @@ class Core(Base):
         Allows the service to be re-started after previously being suspended.
 
         Returns
-        --------
+        -------
         None
+
         """
         await self._connect()
         await self._call_api(api="Core/Resume", _no_data=True)
         return
 
-    async def oidc_login(self, code: str, redirect_uri: str, instance_id: str) -> dict | ActionResultError:
+    async def oidc_login(self, code: str, redirect_uri: str, instance_id: str) -> dict[Any, Any] | ActionResultError:
         """|coro|
 
         Related to OIDC credentials. Return type is UNKNOWN as of v`3.0.0`.
 
+        __EndPoint__: /API/Core/OIDCLogin
+
         Parameters
-        -----------
+        ----------
         code: :class:`str`
             UNK.
         redirect_uri: :class:`str`
@@ -1760,42 +1796,42 @@ class Core(Base):
             The Instance ID, see :attr:`~Instance.instance_id`
 
         Returns
-        --------
+        -------
         :class:`Any`
             UNK.
-        """
 
+        """
         parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
         await self._connect()
         result = await self._call_api(api="Core/OIDCLogin", parameters=parameters, format_data=False)
         return result
 
     async def refresh_setting_value_list(
-        self, node: str, format_data: Union[bool, None] = None
+        self, node: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Refreshes a setting nodes values.
 
         Parameters
-        -----------
+        ----------
         name: :class:`str`
             The setting node name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {
             "Name": node,
         }
         result: Any = await self._call_api(
-            api="Core/RefreshSettingValueList", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/RefreshSettingValueList", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -1805,31 +1841,31 @@ class Core(Base):
         Refreshes the settings source cache.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/RefreshSettingsSourceCache", format_data=format_data, format_=ActionResult
+            api="Core/RefreshSettingsSourceCache", format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def rename_role(
-        self, role_id: str, new_name: str, format_data: Union[bool, None] = None
+        self, role_id: str, new_name: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Renames a role.
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`str`
             The ID of the role to rename.
         new_name: :class:`str`
@@ -1838,20 +1874,20 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"RoleId": role_id, "NewName": new_name}
         result: Any = await self._call_api(
-            api="Core/RenameRole", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/RenameRole", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     @deprecated(
-        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.", stacklevel=2
+        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.", stacklevel=2,
     )
     async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
@@ -1859,16 +1895,16 @@ class Core(Base):
         Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         warnings.warn(
             message="Core.restart_instance() is deprecated and scheduled for "
             "removal in a future version. Use Core.restart_application() instead to restart your Instance application.",
@@ -1888,23 +1924,22 @@ class Core(Base):
             Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/Restart", format_data=format_data, format_=ActionResult)
         return result
 
     async def reset_user_password(
-        self, username: str, new_password: str, format_data: Union[bool, None] = None
+        self, username: str, new_password: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
-        """
-        For administrative users to alter the password of another user.
+        """For administrative users to alter the password of another user.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             Username.
         new_password: :class:`str`
@@ -1913,42 +1948,42 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"Username": username, "NewPassword": new_password}
         result: Any = await self._call_api(
-            api="Core/ResetUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/ResetUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def revoke_webauthn_credential(
-        self, auth_id: int, format_data: Union[bool, None] = None
+        self, auth_id: int, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Revoke a webauthn credential.
 
         Parameters
-        -----------
+        ----------
         auth_id: :class:`int`
             The Web auth ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, int] = {"ID": auth_id}
         result: Any = await self._call_api(
-            api="Core/RevokeWebauthnCredential", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/RevokeWebauthnCredential", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -1958,13 +1993,14 @@ class Core(Base):
         Run a security check on the Instance.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         Any
+
         """
         # TODO - Need to get Proper data back.
         await self._connect()
@@ -1972,41 +2008,41 @@ class Core(Base):
         return result
 
     async def run_event_trigger_immediately(
-        self, trigger_id: str, format_data: Union[bool, None] = None
+        self, trigger_id: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Runs an event trigger immediately.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
              The ID of the event trigger to run.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"TriggerId": trigger_id}
         result: Any = await self._call_api(
-            api="Core/RunEventTriggerImmediately", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/RunEventTriggerImmediately", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def set_amp_user_role_membership(
-        self, user_id: str, role_id: str, is_member: bool, format_data: Union[bool, None] = None
+        self, user_id: str, role_id: str, is_member: bool, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Adds a user to an AMP role.
 
         Parameters
-        -----------
+        ----------
         user_id: :class:`str`
             User ID to add to the role.
         role_id: :class:`str`
@@ -2018,27 +2054,27 @@ class Core(Base):
 
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"UserId": user_id, "RoleId": role_id, "IsMember": is_member}
         result: Any = await self._call_api(
-            api="Core/SetAMPUserRoleMembership", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/SetAMPUserRoleMembership", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def set_amp_role_permission(
-        self, role_id: str, permission_node: str, enabled: Union[None, bool], format_data: Union[bool, None] = None
+        self, role_id: str, permission_node: str, enabled: Union[None, bool], format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set a permission node to "True" or "False" for the provided AMP role.
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`str`
             Role ID to add the user to.
         permission_node: :class:`str`
@@ -2049,27 +2085,27 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"RoleId": role_id, "PermissionNode": permission_node, "Enabled": enabled}
         result: Any = await self._call_api(
-            api="Core/SetAMPRolePermission", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/SetAMPRolePermission", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def set_trigger_enabled(
-        self, trigger_id: str, enabled: bool, format_data: Union[bool, None] = None
+        self, trigger_id: str, enabled: bool, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Sets the enabled state of a trigger.
 
         Parameters
-        -----------
+        ----------
         trigger_id: :class:`str`
             The ID of the trigger to edit.
         enabled: :class:`bool`
@@ -2078,15 +2114,15 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {"Id": trigger_id, "Enabled": enabled}
         result: Any = await self._call_api(
-            api="Core/SetTriggerEnabled", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/SetTriggerEnabled", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -2099,10 +2135,10 @@ class Core(Base):
             Calling :meth:`Core.get_updates` directly after this function will not have the console output, best practice is to delay ~ 1 sec to catch results.
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"message": msg}
         await self._call_api(api="Core/SendConsoleMessage", parameters=parameters, _no_data=True)
@@ -2114,32 +2150,32 @@ class Core(Base):
         Set multiple Setting Nodes values.
 
         Parameters
-        -----------
+        ----------
         data: dict[:class:`str`, :class:`str`]
             Dictionary of Setting Nodes to set.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        ---------
+        -------
         :class:`bool`
             On success returns a boolean.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, dict[str, str]] = {"data": data}
         result: Any = await self._call_api(api="Core/SetConfigs", parameters=parameters, format_data=format_data)
         return result
 
     async def set_config(
-        self, node: str, value: str, format_data: Union[bool, None] = None
+        self, node: str, value: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Set a Setting Node value.
 
         Parameters
-        -----------
+        ----------
         name: :class:`str`
             Setting node name.
         value: :class:`str`
@@ -2148,14 +2184,15 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
         await self._connect()
         parameters: dict[str, str] = {"node": node, "value": value}
         result: Any = await self._call_api(
-            api="Core/SetConfig", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/SetConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -2165,14 +2202,15 @@ class Core(Base):
         Starts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
         await self._connect()
         result: Any = await self._call_api(api="Core/Start", format_data=format_data, format_=ActionResult)
@@ -2184,10 +2222,10 @@ class Core(Base):
         Stops the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/Stop", _no_data=True)
         return result
@@ -2198,16 +2236,16 @@ class Core(Base):
         Prevents the current instance from being started, and stops it if it's currently running.
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         await self._call_api(api="Core/Suspend")
         return
 
     async def update_account_info(
-        self, email_address: str, two_factor_pin: str, format_data: Union[bool, None] = None
+        self, email_address: str, two_factor_pin: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2218,7 +2256,7 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         email_address: :class:`str`
             The new Email address.
         two_factor_pin: :class:`str`
@@ -2227,15 +2265,15 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {"EmailAddress": email_address, "TwoFactorPIN": two_factor_pin}
         result: Any = await self._call_api(
-            api="Core/UpdateAccountInfo", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/UpdateAccountInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -2250,10 +2288,10 @@ class Core(Base):
 
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         await self._call_api(api="Core/UpgradeAMP", _no_data=True)
         return
@@ -2269,10 +2307,10 @@ class Core(Base):
 
 
         Returns
-        --------
+        -------
         None
-        """
 
+        """
         await self._connect()
         await self._call_api(api="Core/UpdateAMPInstance", _no_data=True)
         return
@@ -2284,40 +2322,40 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         result: Any = await self._call_api(api="Core/UpdateApplication", format_data=format_data, format_=ActionResult)
         return result
 
     async def update_public_key(
-        self, pub_key: str, format_data: Union[bool, None] = None
+        self, pub_key: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
-        """
-        Update a public key.
+        """Update a public key.
 
         Parameters
-        -----------
+        ----------
         pub_key: :class:`str`
             The public key.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
              On success returns a :class:`ActionResult` dataclass.
+
         """
         await self._connect()
         parameters = {"PubKey": str}
         result: Any = await self._call_api(
-            api="Core/UpdatePublicKey", parameters=parameters, format_=ActionResult, format_data=format_data
+            api="Core/UpdatePublicKey", parameters=parameters, format_=ActionResult, format_data=format_data,
         )
         return result
 
@@ -2336,7 +2374,7 @@ class Core(Base):
         Update an AMP user.
 
         Parameters
-        -----------
+        ----------
         username: :class:`str`
             The AMP user to update.
         disabled: :class:`bool`, optional
@@ -2353,11 +2391,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, Any] = {
             "Username": username,
@@ -2368,12 +2406,12 @@ class Core(Base):
             "EmailAddress": email_address,
         }
         result: Any = await self._call_api(
-            api="Core/UpdateUserInfo", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/UpdateUserInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def webauthn_register(
-        self, attestation_object: str, client_data_json: str, description: str, format_data: Union[bool, None] = None
+        self, attestation_object: str, client_data_json: str, description: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2384,7 +2422,7 @@ class Core(Base):
 
 
         Parameters
-        -----------
+        ----------
         attestation_object: :class:`str`
             Attestation object.
         client_data_json: :class:`str`
@@ -2395,11 +2433,11 @@ class Core(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
+        """
         await self._connect()
         parameters: dict[str, str] = {
             "attestationObject": attestation_object,
@@ -2407,6 +2445,6 @@ class Core(Base):
             "description": description,
         }
         result: Any = await self._call_api(
-            api="Core/WebauthnRegister", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="Core/WebauthnRegister", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result

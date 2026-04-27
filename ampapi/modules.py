@@ -3103,4 +3103,5 @@ class BuildInfo:
         )
 
     def __repr__(self) -> str:
-        return f"{self.major}.{self.minor}.{self.revision}.{self.minor_revision} | {self.build}"
+        base = f"{self.major}.{self.minor}.{self.revision}.{self.minor_revision}"
+        return base if self.build is None else f"{base}.{self.build}"

@@ -38,12 +38,13 @@ Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
 target-version = "py310"
 line-length = 140
 exclude = ["docs/extensions/*.py"]
-
-[tool.ruff.lint]
 select = ["ALL"]
 ignore = [
     "ANN401",
+    "D301", # `r` backtick for code in Docstrings.
+    "D400", # First line end with a period. (docstrings)
     "D401", # Ignore "Imperative Mood" statement for docstrings.
+    "D415", # Ignore docstring punctuation.
     "ERA001", #Ignore commented out code.
     "FIX002", # Ignore TODO's telling you to "fix them".
     "F401",
@@ -54,14 +55,26 @@ ignore = [
     "PLR",
     "RUF001",
     "RUF002", # The character U+2013 "–" could be confused with the ASCII character U+002d "-", which is more common in source code.
+    "RUF003", # The character U+2013 "–" could be confused with the ASCII character U+002d "-", which is more common in source code, this is for "COMMENTS"
     "RUF009",
     "RUF052", # for filtering "local dummy variable is accessed" eg. - vars using `_`
     "SIM105",
+    "SLF001", # private function/attribute usage outside of the class it was defined.
+    "TD002", # Ignore TODO's not having a link/url to an issue.
     "TD003", # Ignore TODO's not having a link/url to an issue.
+    "TRY400", # Ingoring forced `logging.exception` statement's when using try/except.
+    "T201", # Ignore print statements.
     "UP007",
     "UP034",
-    "UP038",
     "UP045", # Type var `Optional[X]` vs `X | None`
+    "ANN401",
+    "ASYNC240", # Because Umbra said "f anyio~"
+    "C901", # Too complex functions.
+    "D401", # Ignore "Imperative Mood" statement for docstrings.
+    "ERA001", #Ignore commented out code.
+    "FIX002", # Ignore TODO's telling you to "fix them".
+    "FBT001", # Ignore "bool" type arguments and limited functionality statement.
+    "FBT002", # Ignore "bool" type arguments and limited functionality statement.
 ]
 
 [tool.ruff.lint.isort]
@@ -81,7 +94,7 @@ venvPath = "."
 venv = ".venv"
 typeCheckingMode = "strict"
 pythonVersion = "3.10"
-exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*"]
+exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*", "**/node_modules", "**/__pycache__", "**/.*"]
 include = ["ampapi"]
 useLibraryCodeForTypes = true
 reportIncompatibleMethodOverride = false

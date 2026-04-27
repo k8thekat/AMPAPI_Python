@@ -2,7 +2,7 @@
 
 ---
 
-CubeCoders AMP API wrapper in Python.
+An asynchronous Python wrapper for the CubeCoders AMP (Application Management Panel) API, enabling developers to programmatically manage game server instances with a clean, Pythonic interface.
 
 <div align="left">
     <a href="https://discord.gg/BtNyU8DFtt"><img src='https://img.shields.io/discord/705500489248145459?color=blue&label=Discord&logo=Discord%20Server&logoColor=green' alt='Discord Server'></a>
@@ -16,11 +16,12 @@ CubeCoders AMP API wrapper in Python.
 
 ---
 
-- Pythonic API wrapper using `async` and `await`.
-- Data is in dataclasses for easier management and interaction.
+- Pythonic API wrapper using `async` and `await` via `aiohttp`.
+- Data is automatically deserialized into typed dataclasses for easier management and interaction.
   - Optional parameter per function or global to disable formatting of data.
-- Parent classes `ADSInstance` and `AMPInstance` to group endpoints together and make handling of multiple Instances easier.
-  - This will also limit Instance specific API endpoints (eg. Minecraft) to that Instance type only.
+- Inheritance-based instance model (`ADSInstance`, `AMPInstance`, `AMPMinecraftInstance`, etc.) groups endpoints by instance type, preventing invalid calls at the class level.
+- TOTP/2FA authentication support for secure programmatic login via `pyotp`.
+- Fully typed and verified with Pyright in strict mode, compatible with Python 3.10–3.12.
 
 ### Docs
 
@@ -32,7 +33,7 @@ CubeCoders AMP API wrapper in Python.
 
 _Python 3.10 or higher is required_
 
-To install run the below command via your perferred terminal or IDE.
+To install run the below command via your preferred terminal or IDE.
 
 ### PyPi
 
@@ -64,7 +65,7 @@ In your IDE Python file. -> `import ampapi`.
 from ampapi import *
 from ampapi.dataclass import AnalyticsFilter, AnalyticsSummary, APIParams, Players
 from ampapi.enums import *
-from ampapi.instance import AMPControllerInstance, AMPInstance, AMPMinecraftInstance
+from ampapi.instance import AMPADSInstance, AMPControllerInstance, AMPInstance, AMPMinecraftInstance
 
 # You can pull these values from an `.ini` or a `.env` file,
 # then populate the NamedTuple APIparams from `types -> APIParams`
@@ -117,7 +118,7 @@ async def Sample_API() -> None:
         ...
 
     # The State of the Instance.
-    # Can be checked via `AMPInstance.Running`.
+    # Can be checked via `AMPInstance.running`.
     # To keep this updated simply check.
     if mcinstance.running is True:
         print(f"{mcinstance.friendly_name} is Running Nyao~")
@@ -161,21 +162,21 @@ async def Sample_Analytics_API():
     await ADS.get_instances()
     # The index value to get to an MC Instance will be different for you; this is just an example.
     # You can check an Instances Type via the `.Module` attribute of any ADS/Instance class.
-    mcinstance: AMPInstance | AMPMinecraftInstance = ADS.AvailableInstances[2]
+    mcinstance: AMPInstance | AMPMinecraftInstance = ADS.available_instances[2]
     # Example analytics call without a filter.
-    Analytics: Analytics_Summary = await mcinstance.get_analytics_summary()
+    Analytics: AnalyticsSummary = await mcinstance.get_analytics_summary()
     # Then with that class you can access lots of Information, such as Top Players, Stats and SessionTime.
     Analytics.topPlayers # This is a list of this Instances Top Players.
     Analytics.stats # This is a list of different fields such as Unique Users, New Users, etc..
     # _____________________________________________
-    # Now you can also filter the results to look at a specific User or Country. Simply define the `Analytics_Filter` class and pass it into the method call.
-    country_filter: Analytics_Filter = Analytics_Filter(Country="US") # The Country parameter supports `ISO 3166-1 Alpha-2 format` only.
+    # Now you can also filter the results to look at a specific User or Country. Simply define the `AnalyticsFilter` class and pass it into the method call.
+    country_filter: AnalyticsFilter = AnalyticsFilter(Country="US") # The Country parameter supports `ISO 3166-1 Alpha-2 format` only.
     # These results will be filtered to only users within the US.
-    filtered_analytics: Analytics_Summary = await mcinstance.get_analytics_summary(filters=country_filter)
+    filtered_analytics: AnalyticsSummary = await mcinstance.get_analytics_summary(filters=country_filter)
 
-    user_filter: Analytics_Filter = Analytics_Filter(Username="k8_thekat") # The IGN/Username of the user connected to the Server.
+    user_filter: AnalyticsFilter = AnalyticsFilter(Username="k8_thekat") # The IGN/Username of the user connected to the Server.
     # These results will be filtered to only users with that match the parameter Username. (eg. k8_thekat).
-    filtered_analytics2: Analytics_Summary = await mcinstance.get_analytics_summary(filters=user_filter)
+    filtered_analytics2: AnalyticsSummary = await mcinstance.get_analytics_summary(filters=user_filter)
 
 
 ```
