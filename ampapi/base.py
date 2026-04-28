@@ -18,6 +18,7 @@ from pyotp import TOTP
 
 from .backoff import ExponentialBackoff
 from .bridge import Bridge
+from .enums_ import AuthMode
 from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults, Status
 
 if TYPE_CHECKING:
@@ -409,6 +410,11 @@ class Base:
             Stores the ``SESSIONID`` via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
 
 
+        .. note::
+            When :attr:`Bridge.auth_mode` is :attr:`AuthMode.oidc`, this method is a no-op. The caller is expected
+            to populate the session via :meth:`Core.oidc_login` after completing the IdP flow externally.
+
+
         Returns
         -------
         :class:`LoginResults` | None
@@ -420,10 +426,13 @@ class Base:
             If the 2 Factor Authentication code is not a formatted properly aka the :attr:`~Bridge.token` when making the :py:class:`Bridge` object.
 
         """
+        if self._bridge.auth_mode is AuthMode.oidc:
+            return None
+
         code: Union[str, TOTP] = ""
 
         # get our InstanceID and use it to key for session_id
-        session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
+        session: APISession | None = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
         if isinstance(session, APISession):
             ttl: timedelta = datetime.now() - session.ttl
             if ttl.seconds > self.session_ttl:
@@ -438,8 +447,9 @@ class Base:
                     code = TOTP(self._bridge.token).now()
 
                 except AttributeError:
-                    raise ValueError(
-                        "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!",
+                    msg = "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
+                    raise ValueError from AttributeError(
+                        msg,
                     )
             try:
                 parameters: dict[str, Any] = {

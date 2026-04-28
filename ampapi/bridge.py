@@ -8,8 +8,7 @@ __all__ = ("Bridge",)
 
 
 class Bridge(APIParams):
-    """
-    Handles the API login credentials for connecting to AMP.
+    """Handles the API login credentials for connecting to AMP.
 
     Simply create the class similar to the example below and then access any other API class you wish.\n
     Then when creating any API class,  this will pull login details from the :py:class:`Bridge`.
@@ -22,6 +21,20 @@ class Bridge(APIParams):
         _params = APIParams(url="http://192.168.13.130:8080", user="bot_username", password="bot_password")
         _bridge: Bridge = Bridge(ap_params=_params)
         del _params
+
+    For OIDC authentication, set :attr:`APIParams.auth_mode` to :attr:`AuthMode.oidc` and complete the IdP flow
+    externally. The library will skip the standard ``Core/Login`` step; you must call :meth:`Core.oidc_login`
+    once with the authorization code to populate the session before any other API call will succeed.
+
+    .. code-block:: python
+        :linenos:
+
+
+        _params = APIParams(url="http://192.168.13.130:8080", auth_mode=AuthMode.oidc)
+        _bridge: Bridge = Bridge(api_params=_params)
+        core = Core()
+        # User performs the IdP flow externally and obtains `code`.
+        await core.oidc_login(code=code, redirect_uri="http://192.168.13.130:8080/", instance_id="null")
 
     Parameter
     ----------
@@ -47,8 +60,7 @@ class Bridge(APIParams):
 
     @classmethod
     def _get_bridge(cls) -> "Bridge":
-        """
-        Retrieves the singleton :class:`Bridge` object.\n
+        """Retrieves the singleton :class:`Bridge` object.\n
 
         .. warning::
             **DO NOT CALL THIS FUNCTION OUTSIDE OF AN API CLASS (:class:`ADSModule`, :class:`Core`, etc..)**
@@ -60,9 +72,10 @@ class Bridge(APIParams):
             If the :class:`Bridge` has not been created yet.
 
         Returns
-        --------
+        -------
         :class:`Bridge`:
                 A singleton class of Bridge
+
         """
         if cls._instance is None:
             raise ValueError("Failed to setup connection. You need to initiate `<class Bridge>` first.")

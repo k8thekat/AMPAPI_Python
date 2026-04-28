@@ -1,12 +1,10 @@
 from enum import Enum
 
-__all__ = ("ADSModeState", "AMPInstanceState", "AccessModeState", "AppStartupModeState", "PostCreateState")
+__all__ = ("ADSModeState", "AMPInstanceState", "AccessModeState", "AppStartupModeState", "AuthMode", "PostCreateState")
 
 
 class AccessModeState(Enum):
-    """
-    Related to Node: ADSModule.Network.AccessMode
-    """
+    """Related to Node: ADSModule.Network.AccessMode"""
 
     via_target = 0
     direct_controller = 10
@@ -14,9 +12,7 @@ class AccessModeState(Enum):
 
 
 class ADSModeState(Enum):
-    """
-    Related to Node: ADSModule.ADS.Mode
-    """
+    """Related to Node: ADSModule.ADS.Mode"""
 
     not_set = 0
     controller = 10
@@ -26,9 +22,7 @@ class ADSModeState(Enum):
 
 
 class AMPDownloadMirrorState(Enum):
-    """
-    Related to Node: ADSModule.ADS.DownloadMirror
-    """
+    """Related to Node: ADSModule.ADS.DownloadMirror"""
 
     us_central = "[Automatic]"
     eu_west = ""
@@ -36,10 +30,7 @@ class AMPDownloadMirrorState(Enum):
 
 
 class AMPInstanceState(Enum):
-    """
-    Represents the state of an Instance and or Application inside an Instance.
-
-    """
+    """Represents the state of an Instance and or Application inside an Instance."""
 
     undefined = -1
     stopped = 0
@@ -54,9 +45,7 @@ class AMPInstanceState(Enum):
     waiting = 60  # the application is waiting for some external service/application to respond/become available.
     installing = 70
     updating = 75
-    awaiting_user_input = (
-        80  # used during installation, means that some user input is required to complete setup (authentication etc).
-    )
+    awaiting_user_input = 80  # used during installation, means that some user input is required to complete setup (authentication etc).
     failed = 100
     suspended = 200
     maintenance = 250
@@ -64,9 +53,7 @@ class AMPInstanceState(Enum):
 
 
 class AMPTheme(Enum):
-    """
-    Related to Node: Core.AMP.Theme
-    """
+    """Related to Node: Core.AMP.Theme"""
 
     aura = "Aura"
     black = "Black"
@@ -76,18 +63,14 @@ class AMPTheme(Enum):
 
 
 class ApplicationUpdatesState(Enum):
-    """
-    Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
-    """
+    """Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod"""
 
     by_timestamp = 0
     by_build_id = 1
 
 
 class AppStartupModeState(Enum):
-    """
-    Related to Node: Core.AMP.AppStartupMode
-    """
+    """Related to Node: Core.AMP.AppStartupMode"""
 
     do_nothing = 0
     update = 1
@@ -97,6 +80,13 @@ class AppStartupModeState(Enum):
     unk2 = 32
 
 
+class AuthMode(Enum):
+    """The authentication strategy used by :class:`Bridge`."""
+
+    password = 0
+    oidc = 10
+
+
 class ContainerMemoryPolicyState(Enum):
     not_specified = 0
     reserve = 100
@@ -104,9 +94,7 @@ class ContainerMemoryPolicyState(Enum):
 
 
 class DefaultIPBindingState(Enum):
-    """
-    Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding
-    """
+    """Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding"""
 
     ipv4_loopback = "127.0.0.1"
     enp42s0 = "192.168.4.50"
@@ -115,9 +103,7 @@ class DefaultIPBindingState(Enum):
 
 
 class LoggingLevelState(Enum):
-    """
-    Related to Node: Core.Monitoring.LogLevel
-    """
+    """Related to Node: Core.Monitoring.LogLevel"""
 
     debug = 0
     info = 10
@@ -132,19 +118,14 @@ class LoggingLevelState(Enum):
 
 
 class PortAssignmentState(Enum):
-    """
-    Related to Node: ADSModule.Network.PortAssignment
-    """
+    """Related to Node: ADSModule.Network.PortAssignment"""
 
     include_allowed_ports_only = 0
     allow_all_except_excluded = 1
 
 
 class PostCreateActionsState(Enum):
-    """
-    The action the Instance will take after creation. Used in dataclass parameters.
-
-    """
+    """The action the Instance will take after creation. Used in dataclass parameters."""
 
     do_nothing = 0
     start_instance = 1
@@ -154,8 +135,7 @@ class PostCreateActionsState(Enum):
 
 
 class PostCreateState(Enum):
-    """
-    Represents the state of the API call `ADSModule/DeployTemplate`
+    """Represents the state of the API call `ADSModule/DeployTemplate`
     Related to Node: ADSModule.Defaults.DefaultPostCreate
 
     """
@@ -169,9 +149,7 @@ class PostCreateState(Enum):
 
 
 class ReleaseStreamState(Enum):
-    """
-    Related to Node: ADSModule.Defaults.DefaultReleaseStream
-    """
+    """Related to Node: ADSModule.Defaults.DefaultReleaseStream"""
 
     lts = 5
     mainline = 10
@@ -180,9 +158,7 @@ class ReleaseStreamState(Enum):
 
 
 class TwoFactoryModeState(Enum):
-    """
-    Related to Node: Core.Security.TwoFactorMode
-    """
+    """Related to Node: Core.Security.TwoFactorMode"""
 
     optional = 0
     required = 1

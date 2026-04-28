@@ -9,6 +9,7 @@ from .base import Base
 from .modules import (
     ActionResult,
     ActionResultError,
+    APISession,
     AuditLogEntry,
     BuildInfo,
     Diagnostics,
@@ -16,6 +17,7 @@ from .modules import (
     LoginResults,
     LoginUserInfo,
     Module,
+    OIDCLoginResult,
     Players,
     Port,
     Role,
@@ -103,7 +105,10 @@ class Core(Base):
         return
 
     async def activate_amp_license(
-        self, license_key: str, query_only: bool = False, format_data: Union[bool, None] = None,
+        self,
+        license_key: str,
+        query_only: bool = False,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -127,12 +132,17 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"LicenceKey": license_key, "QueryOnly": query_only}
         result: Any = await self._call_api(
-            api="Core/ActivateAMPLicence", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/ActivateAMPLicence",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def add_event_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -158,12 +168,19 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"TriggerId": trigger_id}
         result: Any = await self._call_api(
-            api="Core/AddEventTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/AddEventTrigger",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def add_task(
-        self, trigger_id: str, method_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        method_id: str,
+        parameter_mapping: dict[str, str],
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -193,7 +210,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "MethodID": method_id, "ParameterMapping": parameter_mapping}
         result: Any = await self._call_api(
-            api="Core/AddTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/AddTask",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -218,7 +238,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"TaskId": task_id}
         result: Any = await self._call_api(
-            api="Core/CancelTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/CancelTask",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -262,12 +285,19 @@ class Core(Base):
         }
 
         results: Any = await self._call_api(
-            api="Core/ChangeUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/ChangeUserPassword",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return results
 
     async def change_task_order(
-        self, trigger_id: str, task_id: str, new_order: int, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        task_id: str,
+        new_order: int,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -293,12 +323,18 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "TaskID": task_id, "NewOrder": new_order}
         result: Any = await self._call_api(
-            api="Core/ChangeTaskOrder", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/ChangeTaskOrder",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def confirm_two_factor_setup(
-        self, username: str, two_factor_code: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        two_factor_code: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -322,12 +358,18 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Username": username, "TwoFactorCode": two_factor_code}
         result: Any = await self._call_api(
-            api="Core/ConfirmTwoFactorSetup", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/ConfirmTwoFactorSetup",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def create_role(
-        self, role_name: str, as_common_role: bool = False, format_data: Union[bool, None] = None,
+        self,
+        role_name: str,
+        as_common_role: bool = False,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -351,7 +393,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"Name": role_name, "AsCommonRole": as_common_role}
         result: Any = await self._call_api(
-            api="Core/CreateRole", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/CreateRole",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -376,7 +421,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Username": username}
         result: Any = await self._call_api(
-            api="Core/CreateUser", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/CreateUser",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -406,7 +454,9 @@ class Core(Base):
         return result
 
     async def delete_instance_users(
-        self, instance_id: str, format_data: Union[bool, None] = None,
+        self,
+        instance_id: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -429,7 +479,10 @@ class Core(Base):
         parameters: dict[str, str] = {"InstanceId": instance_id}
 
         results: Any = await self._call_api(
-            api="Core/DeleteInstanceUsers", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DeleteInstanceUsers",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return results
 
@@ -454,12 +507,18 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"RoleId": role_id}
         result: Any = await self._call_api(
-            api="Core/DeleteRole", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DeleteRole",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def delete_task(
-        self, trigger_id: str, task_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        task_id: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -484,12 +543,17 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"TriggerID": trigger_id, "TaskID": task_id}
         result: Any = await self._call_api(
-            api="Core/DeleteTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DeleteTask",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def delete_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -511,7 +575,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"TriggerID": trigger_id}
         result: Any = await self._call_api(
-            api="Core/DeleteTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DeleteTrigger",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -536,7 +603,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Username": username}
         result: Any = await self._call_api(
-            api="Core/DeleteUser", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DeleteUser",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -563,7 +633,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Password": self._bridge.password, "TwoFactorCode": TOTP(self._bridge.token).now()}
         result: Any = await self._call_api(
-            api="Core/DisableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DisableTwoFactor",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -608,7 +681,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"TaskId": task_id}
         result: Any = await self._call_api(
-            api="Core/DismissTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/DismissTask",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -674,12 +750,19 @@ class Core(Base):
             "description": description,
         }
         result: Any = await self._call_api(
-            api="Core/EditIntervalTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/EditIntervalTrigger",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def edit_task(
-        self, trigger_id: str, task_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        task_id: str,
+        parameter_mapping: dict[str, str],
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -705,12 +788,18 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "TaskID": task_id, "ParameterMapping": parameter_mapping}
         result: Any = await self._call_api(
-            api="Core/EditTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/EditTask",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def enable_two_factor(
-        self, username: str, password: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        password: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -738,7 +827,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Username": username, "Password": password}
         result: Any = await self._call_api(
-            api="Core/EnableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/EnableTwoFactor",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -787,7 +879,10 @@ class Core(Base):
         """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetActiveAMPSessions", format_data=format_data, format_=Session, _use_from_dict=False,
+            api="Core/GetActiveAMPSessions",
+            format_data=format_data,
+            format_=Session,
+            _use_from_dict=False,
         )
         return result
 
@@ -809,7 +904,10 @@ class Core(Base):
         """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetAllAMPUserInfo", format_data=format_data, format_=User, _use_from_dict=False,
+            api="Core/GetAllAMPUserInfo",
+            format_data=format_data,
+            format_=User,
+            _use_from_dict=False,
         )
         return result
 
@@ -855,7 +953,11 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Username": name}
         result: Any = await self._call_api(
-            api="Core/GetAMPUserInfo", parameters=parameters, format_data=format_data, format_=User, _use_from_dict=False,
+            api="Core/GetAMPUserInfo",
+            parameters=parameters,
+            format_data=format_data,
+            format_=User,
+            _use_from_dict=False,
         )
         return result
 
@@ -899,7 +1001,10 @@ class Core(Base):
         return result
 
     async def get_audit_log_entries(
-        self, before: float = datetime.now().timestamp(), count: int = 10, format_data: Union[bool, None] = None,
+        self,
+        before: float = datetime.now().timestamp(),
+        count: int = 10,
+        format_data: Union[bool, None] = None,
     ) -> list[AuditLogEntry] | ActionResultError:
         """|coro|
 
@@ -936,7 +1041,9 @@ class Core(Base):
         return result
 
     async def get_authentication_requirements(
-        self, username: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        format_data: Union[bool, None] = None,
     ) -> list[Any] | ActionResultError:
         """|coro|
 
@@ -958,7 +1065,9 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"username": username}
         result: Any = await self._call_api(
-            api="Core/GetAuthenticationRequirements", parameters=parameters, format_data=format_data,
+            api="Core/GetAuthenticationRequirements",
+            parameters=parameters,
+            format_data=format_data,
         )
         return result
 
@@ -987,12 +1096,17 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"node": node}
         result: Any = await self._call_api(
-            api="Core/GetConfig", parameters=parameters, format_data=format_data, format_=SettingSpec,
+            api="Core/GetConfig",
+            parameters=parameters,
+            format_data=format_data,
+            format_=SettingSpec,
         )
         return result
 
     async def get_configs(
-        self, nodes: list[str], format_data: Union[bool, None] = None,
+        self,
+        nodes: list[str],
+        format_data: Union[bool, None] = None,
     ) -> list[SettingSpec] | ActionResultError:
         """|coro|
 
@@ -1018,7 +1132,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, list[str]] = {"nodes": nodes}
         result: Any = await self._call_api(
-            api="Core/GetConfigs", parameters=parameters, format_data=format_data, format_=SettingSpec,
+            api="Core/GetConfigs",
+            parameters=parameters,
+            format_data=format_data,
+            format_=SettingSpec,
         )
         return result
 
@@ -1089,31 +1206,67 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetNewGuid", format_data=format_data)
         return result
 
-    async def get_oidc_login_url(self, state: str | None = None, redirect_uri: str | None = None) -> None:
+    async def get_oidc_login_url(
+        self,
+        client_id: str,
+        response_type: str = "code",
+        scope: str = "openid profile email",
+        state: str | None = None,
+        nonce: str | None = None,
+        redirect_uri: str | None = None,
+    ) -> str | ActionResultError:
         """|coro|
 
-        Interacts with OIDC credentials.
+        Build the IdP authorization URL that the user must visit to obtain an OIDC authorization code.
+
+        .. note::
+            This endpoint does **not** require authentication and can safely be called before :meth:`oidc_login`.
+            The library does not perform the IdP login flow itself; the caller is expected to visit the returned
+            URL, complete the flow externally, extract the ``code`` from the redirect, and pass it to
+            :meth:`oidc_login`.
 
 
         __Endpoint__: "Core/GetOIDCLoginURL"
 
         Parameters
         ----------
+        client_id: :class:`str`
+            The OIDC client identifier registered with the IdP.
+        response_type: :class:`str`, optional
+            The OAuth2 response type, by default "code".
+        scope: :class:`str`, optional
+            Space-separated OIDC scopes, by default "openid profile email".
         state: :class:`str | None`, optional
-            UNK, by default None.
+            Opaque value used to maintain state between the request and callback, by default None.
+        nonce: :class:`str | None`, optional
+            String value used to associate a client session with an ID token, by default None.
         redirect_uri: :class:`str | None`, optional
-            UNK, by default None.
+            The URI the IdP should redirect to after authorization, by default None.
+
+        Returns
+        -------
+        :class:`str`
+            The IdP authorization URL.
 
         """
-        await self._connect()
-        await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
-        return
-    
+        parameters: dict[str, Any] = {
+            "client_id": client_id,
+            "response_type": response_type,
+            "scope": scope,
+            "state": state,
+            "nonce": nonce,
+            "redirect_uri": redirect_uri,
+        }
+        result: Any = await self._call_api(api="Core/GetOIDCLoginURL", parameters=parameters)
+        return result
 
     async def get_oidc_logout_url(self, redirect_uri: str | None = None) -> str | ActionResultError:
         """|coro|
 
-        Interacts with OIDC credentials.
+        Build the IdP logout URL.
+
+        .. note::
+            This endpoint does **not** require authentication.
 
 
         __Endpoint__: "Core/GetOIDCLogoutURL"
@@ -1121,7 +1274,7 @@ class Core(Base):
         Parameters
         ----------
         redirect_uri: :class:`str | None`, optional
-            UNK, by default None.
+            The URI the IdP should redirect to after logout, by default None.
 
         Returns
         -------
@@ -1130,7 +1283,6 @@ class Core(Base):
 
         """
         parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
-        await self._connect()
         result: Any = await self._call_api(api="Core/GetOIDCLogoutURL", parameters=parameters)
         return result
 
@@ -1291,7 +1443,8 @@ class Core(Base):
     async def get_schedule_data(self, format_data: Union[Literal[True], None]) -> ScheduleData | ActionResultError: ...
 
     async def get_schedule_data(
-        self, format_data: Union[bool, None] = None,
+        self,
+        format_data: Union[bool, None] = None,
     ) -> ScheduleData | ScheduleDataData | ActionResultError:
         """|coro|
 
@@ -1408,7 +1561,9 @@ class Core(Base):
         return result
 
     async def get_time_interval_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        format_data: Union[bool, None] = None,
     ) -> TimedTrigger | ActionResultError:
         """|coro|
 
@@ -1430,7 +1585,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Id": trigger_id}
         result: Any = await self._call_api(
-            api="Core/GetTimeIntervalTrigger", parameters=parameters, format_data=format_data, format_=TimedTrigger,
+            api="Core/GetTimeIntervalTrigger",
+            parameters=parameters,
+            format_data=format_data,
+            format_=TimedTrigger,
         )
         return result
 
@@ -1521,7 +1679,9 @@ class Core(Base):
         return result
 
     async def get_user_info(
-        self, user_id: str, format_data: Union[bool, None] = None,
+        self,
+        user_id: str,
+        format_data: Union[bool, None] = None,
     ) -> UserApplicationData | ActionResultError:
         """|coro|
 
@@ -1543,7 +1703,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"UID": user_id}
         result: Any = await self._call_api(
-            api="Core/GetUserInfo", parameters=parameters, format_data=format_data, format_=UserApplicationData,
+            api="Core/GetUserInfo",
+            parameters=parameters,
+            format_data=format_data,
+            format_=UserApplicationData,
         )
         return result
 
@@ -1565,7 +1728,11 @@ class Core(Base):
         """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/GetUserList", format_data=format_data, format_=Players, _use_from_dict=False, _auto_unpack=False,
+            api="Core/GetUserList",
+            format_data=format_data,
+            format_=Players,
+            _use_from_dict=False,
+            _auto_unpack=False,
         )
         return result
 
@@ -1590,7 +1757,9 @@ class Core(Base):
         return result
 
     async def get_webauthn_credential_ids(
-        self, username: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        format_data: Union[bool, None] = None,
     ) -> list[Any] | ActionResultError:
         """|coro|
 
@@ -1612,7 +1781,9 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"username": username}
         result: Any = await self._call_api(
-            api="Core/GetWebauthnCredentialIDs", parameters=parameters, format_data=format_data,
+            api="Core/GetWebauthnCredentialIDs",
+            parameters=parameters,
+            format_data=format_data,
         )
         return result
 
@@ -1680,7 +1851,8 @@ class Core(Base):
         return
 
     @deprecated(
-        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.", stacklevel=2,
+        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.",
+        stacklevel=2,
     )
     async def kill_instance(self) -> None:
         """|coro|
@@ -1732,7 +1904,10 @@ class Core(Base):
         """
         parameters = {"username": amp_user, "password": amp_password, "token": token, "rememberMe": rememberME}
         result: Any = await self._call_api(
-            api="Core/Login", parameters=parameters, format_data=format_data, format_=LoginResults,
+            api="Core/Login",
+            parameters=parameters,
+            format_data=format_data,
+            format_=LoginResults,
         )
         return result
 
@@ -1779,35 +1954,58 @@ class Core(Base):
         await self._call_api(api="Core/Resume", _no_data=True)
         return
 
-    async def oidc_login(self, code: str, redirect_uri: str, instance_id: str) -> dict[Any, Any] | ActionResultError:
+    async def oidc_login(
+        self,
+        code: str,
+        redirect_uri: str,
+        instance_id: str,
+        format_data: Union[bool, None] = None,
+    ) -> OIDCLoginResult | ActionResultError:
         """|coro|
 
-        Related to OIDC credentials. Return type is UNKNOWN as of v`3.0.0`.
+        Exchange an OIDC authorization code for an AMP session token.
+
+        .. note::
+            This endpoint does **not** require a prior :meth:`_connect`. On success the returned
+            ``sessionID`` is stored in :attr:`Bridge._sessions` keyed by :attr:`instance_id`, so subsequent
+            API calls authenticate transparently without invoking ``Core/Login``.
+
 
         __EndPoint__: /API/Core/OIDCLogin
 
         Parameters
         ----------
         code: :class:`str`
-            UNK.
+            The authorization code returned by the IdP after the user completes the login flow.
         redirect_uri: :class:`str`
-            UNK.
+            The redirect URI originally supplied to :meth:`get_oidc_login_url`. Must match exactly.
         instance_id: :class:`str`
-            The Instance ID, see :attr:`~Instance.instance_id`
+            The AMP ``serverId`` to authenticate against. Pass "null" to authenticate against the controller.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
 
         Returns
         -------
-        :class:`Any`
-            UNK.
+        :class:`OIDCLoginResult`
+            On success returns an :class:`OIDCLoginResult` dataclass containing the session token.
 
         """
         parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
-        await self._connect()
-        result = await self._call_api(api="Core/OIDCLogin", parameters=parameters, format_data=False)
+        result: Any = await self._call_api(
+            api="Core/OIDCLogin",
+            parameters=parameters,
+            format_data=format_data,
+            format_=OIDCLoginResult,
+        )
+        if isinstance(result, OIDCLoginResult) and result.session_id:
+            api_session = APISession(id=result.session_id, ttl=datetime.now())
+            self._bridge._sessions.update({self.instance_id: api_session})
         return result
 
     async def refresh_setting_value_list(
-        self, node: str, format_data: Union[bool, None] = None,
+        self,
+        node: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -1831,7 +2029,10 @@ class Core(Base):
             "Name": node,
         }
         result: Any = await self._call_api(
-            api="Core/RefreshSettingValueList", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/RefreshSettingValueList",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -1853,12 +2054,17 @@ class Core(Base):
         """
         await self._connect()
         result: Any = await self._call_api(
-            api="Core/RefreshSettingsSourceCache", format_data=format_data, format_=ActionResult,
+            api="Core/RefreshSettingsSourceCache",
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def rename_role(
-        self, role_id: str, new_name: str, format_data: Union[bool, None] = None,
+        self,
+        role_id: str,
+        new_name: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -1882,12 +2088,16 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"RoleId": role_id, "NewName": new_name}
         result: Any = await self._call_api(
-            api="Core/RenameRole", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/RenameRole",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     @deprecated(
-        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.", stacklevel=2,
+        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.",
+        stacklevel=2,
     )
     async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
         """|coro|
@@ -1934,7 +2144,10 @@ class Core(Base):
         return result
 
     async def reset_user_password(
-        self, username: str, new_password: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        new_password: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """For administrative users to alter the password of another user.
 
@@ -1956,12 +2169,17 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"Username": username, "NewPassword": new_password}
         result: Any = await self._call_api(
-            api="Core/ResetUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/ResetUserPassword",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def revoke_webauthn_credential(
-        self, auth_id: int, format_data: Union[bool, None] = None,
+        self,
+        auth_id: int,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -1983,7 +2201,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, int] = {"ID": auth_id}
         result: Any = await self._call_api(
-            api="Core/RevokeWebauthnCredential", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/RevokeWebauthnCredential",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -2008,7 +2229,9 @@ class Core(Base):
         return result
 
     async def run_event_trigger_immediately(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2030,12 +2253,19 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"TriggerId": trigger_id}
         result: Any = await self._call_api(
-            api="Core/RunEventTriggerImmediately", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/RunEventTriggerImmediately",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def set_amp_user_role_membership(
-        self, user_id: str, role_id: str, is_member: bool, format_data: Union[bool, None] = None,
+        self,
+        user_id: str,
+        role_id: str,
+        is_member: bool,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2062,12 +2292,19 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"UserId": user_id, "RoleId": role_id, "IsMember": is_member}
         result: Any = await self._call_api(
-            api="Core/SetAMPUserRoleMembership", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/SetAMPUserRoleMembership",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def set_amp_role_permission(
-        self, role_id: str, permission_node: str, enabled: Union[None, bool], format_data: Union[bool, None] = None,
+        self,
+        role_id: str,
+        permission_node: str,
+        enabled: Union[None, bool],
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2093,12 +2330,18 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"RoleId": role_id, "PermissionNode": permission_node, "Enabled": enabled}
         result: Any = await self._call_api(
-            api="Core/SetAMPRolePermission", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/SetAMPRolePermission",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def set_trigger_enabled(
-        self, trigger_id: str, enabled: bool, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        enabled: bool,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2122,7 +2365,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, Any] = {"Id": trigger_id, "Enabled": enabled}
         result: Any = await self._call_api(
-            api="Core/SetTriggerEnabled", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/SetTriggerEnabled",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -2168,7 +2414,10 @@ class Core(Base):
         return result
 
     async def set_config(
-        self, node: str, value: str, format_data: Union[bool, None] = None,
+        self,
+        node: str,
+        value: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2192,7 +2441,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"node": node, "value": value}
         result: Any = await self._call_api(
-            api="Core/SetConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/SetConfig",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -2245,7 +2497,10 @@ class Core(Base):
         return
 
     async def update_account_info(
-        self, email_address: str, two_factor_pin: str, format_data: Union[bool, None] = None,
+        self,
+        email_address: str,
+        two_factor_pin: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2273,7 +2528,10 @@ class Core(Base):
         await self._connect()
         parameters: dict[str, str] = {"EmailAddress": email_address, "TwoFactorPIN": two_factor_pin}
         result: Any = await self._call_api(
-            api="Core/UpdateAccountInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/UpdateAccountInfo",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
@@ -2337,7 +2595,9 @@ class Core(Base):
         return result
 
     async def update_public_key(
-        self, pub_key: str, format_data: Union[bool, None] = None,
+        self,
+        pub_key: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """Update a public key.
 
@@ -2355,7 +2615,10 @@ class Core(Base):
         await self._connect()
         parameters = {"PubKey": str}
         result: Any = await self._call_api(
-            api="Core/UpdatePublicKey", parameters=parameters, format_=ActionResult, format_data=format_data,
+            api="Core/UpdatePublicKey",
+            parameters=parameters,
+            format_=ActionResult,
+            format_data=format_data,
         )
         return result
 
@@ -2406,12 +2669,19 @@ class Core(Base):
             "EmailAddress": email_address,
         }
         result: Any = await self._call_api(
-            api="Core/UpdateUserInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/UpdateUserInfo",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
 
     async def webauthn_register(
-        self, attestation_object: str, client_data_json: str, description: str, format_data: Union[bool, None] = None,
+        self,
+        attestation_object: str,
+        client_data_json: str,
+        description: str,
+        format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2445,6 +2715,9 @@ class Core(Base):
             "description": description,
         }
         result: Any = await self._call_api(
-            api="Core/WebauthnRegister", parameters=parameters, format_data=format_data, format_=ActionResult,
+            api="Core/WebauthnRegister",
+            parameters=parameters,
+            format_data=format_data,
+            format_=ActionResult,
         )
         return result
