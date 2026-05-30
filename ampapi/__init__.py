@@ -1,6 +1,6 @@
 # ruff: noqa
 """
-Copyright (C) 2021-2022 Katelynn Cadwallader.
+Copyright (C) 2021-2026 Katelynn Cadwallader.
 
 This file is part of Gatekeeper, the AMP API.
 
@@ -22,7 +22,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
-__title__ = "CubeCoders AMP API"
+__title__ = "AMPAPI Python"
 __author__ = "k8thekat"
 __license__ = "GNU"
 __version__ = "4.6.1"
@@ -31,7 +31,7 @@ __credits__ = "AMP by CubeCoders and associates."
 from typing import Literal, NamedTuple
 
 
-from .util import *
+# from .util import *
 from .adsmodule import *
 from .analytics import *
 from .base import *

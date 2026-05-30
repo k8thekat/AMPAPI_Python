@@ -1,32 +1,36 @@
 from __future__ import annotations
 
 import ast
+import datetime
 import json
 import logging
 import re
 import traceback
-from datetime import datetime
+from datetime import timezone
+from json import JSONEncoder
 from logging import Logger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, TypedDict, Union
 
 from dataclass_wizard import fromdict
+from typing_extensions import Unpack
 
 from docs.samples.method_event_usage import example_note
 
-from .base import Base
+# from .base import Base
 from .instance import AMPMinecraftInstance
 from .modules import ActionResultError, BuildInfo, Diagnostics, ScheduleData
 from .types_ import ScheduleDataData
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from io import TextIOWrapper
 
     from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
     from .modules import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
     from .types_ import APISpec, PermissionNode, ScheduleDataData
 
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 # static strings for documentation
 _instance_id_note = (
@@ -860,31 +864,6 @@ def dict_merge(dict1: ScheduleDataData, dict2: ScheduleDataData) -> ScheduleData
         dict1[key].extend(value)
     return dict1  # type: ignore
 
-
-def dump_to_file(data: Iterable, file_name: str = "", path: Union[Path, None] = None, no_format: bool = True) -> None:
-    """Dump's a list or dict to a file.
-
-    Parameters
-    ----------
-    data : Union[dict, list]
-        The data to dump to a file.
-    path : Union[Path, None], optional
-        The Path to store the dump file, by default None
-        - If ``None`` will use the ``../docs/dumps/`` path.
-
-    """
-    _logger = logging.getLogger(__name__)
-
-    if file_name == "":
-        file_name = str(object=datetime.today().date())
-    if path is None:
-        _cwd: Path = Path("./docs/dumps/").joinpath(f"{file_name}.dump")
-    else:
-        _cwd = path.joinpath(f"{file_name}.dump")
-    _logger.info("Dumping to %s", _cwd.resolve())
-    with _cwd.open(mode="w+") as file:
-        res: str = json.dumps(data, indent=4, skipkeys=True, separators=(",", ": "), sort_keys=True)
-        file.write(res)
 
 
 async def generate_docs_rst(instance: AMPControllerInstance) -> None:

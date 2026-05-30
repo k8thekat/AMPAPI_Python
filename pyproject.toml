@@ -41,6 +41,7 @@ exclude = ["docs/extensions/*.py"]
 select = ["ALL"]
 ignore = [
     "ANN401",
+    "D205", # Blank line requirement of docstrings..
     "D301", # `r` backtick for code in Docstrings.
     "D400", # First line end with a period. (docstrings)
     "D401", # Ignore "Imperative Mood" statement for docstrings.

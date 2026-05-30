@@ -1,46 +1,97 @@
+"""Copyright (C) 2021-2022 Katelynn Cadwallader.
+
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
 from __future__ import annotations
 
 import asyncio
 import copy
+import datetime
 import functools
 import json
 import logging
 import re
+from collections.abc import Callable, Iterable
 from dataclasses import fields, is_dataclass
-from datetime import datetime
+from datetime import timezone
+from json import JSONEncoder
+from pathlib import Path
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, ParamSpec, Union, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, ParamSpec, TypedDict, Union, overload
 
 import aiohttp
 from aiohttp import ClientResponse
 from dataclass_wizard import fromdict
 from pyotp import TOTP
+from typing_extensions import Unpack
 
 from .backoff import ExponentialBackoff
 from .bridge import Bridge
 from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults, Status
 
 if TYPE_CHECKING:
+    import pathlib
     from collections.abc import Callable, Coroutine, Iterable
     from datetime import timedelta
     from typing import Concatenate
 
     from _typeshed import DataclassInstance
+    from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, Self, TypeVar
 
-    from .modules import APIResponseDataTableAlias, Controller, Instance, InstanceStatus, Updates
+    from .modules import APIResponseDataTableAlias, Controller, Instance, Updates
+    from .types_ import ResponseTypeAlias
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
     F = TypeVar("F")
     X = TypeVar("X", bound=DataclassInstance)
 
-__all__ = ("Base",)
+__all__ = ("Base","ResponseHandlerOptions")
 
 FORMAT_DATA: bool = True
 
 
 APIReturnTypeAlias = Union[LoginResults, ActionResultError, ActionResult]
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
+
+class ResponseHandlerOptions(TypedDict, total=False):
+    """Response handling parameters."""
+
+    sanitize_json: bool
+    to_file: bool
+    path: pathlib.Path
+
+
+class DumpParameters(TypedDict, total=False ):
+    skipkeys: bool
+    ensure_ascii: bool
+    check_circular: bool
+    allow_nan: bool
+    cls: type[JSONEncoder] | None
+    indent: None | int | str
+    separators: tuple[str, str] | None
+    default: Callable[[Any], Any] | None
+    sort_keys: bool
+
 
 
 class Base:
@@ -71,14 +122,14 @@ class Base:
     # Private Attributes
     logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     _bridge: Bridge
-    _backoff: ExponentialBackoff
+    _backoff: ExponentialBackoff[bool]
     _old_auth: bool
 
     # Public Attributes
     url: str
     instance_id: str
     session_ttl: ClassVar[int] = 240
-    module: str  # TODO - make this var unchangeable via private attr in future release.
+    module: str  # TODO: - make this var unchangeable via private attr in future release.
 
     # Error response strings.
     _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
@@ -104,8 +155,8 @@ class Base:
     def __init__(self, session: Optional[aiohttp.ClientSession] = None) -> None:
         self.url = ""
         self.instance_id = "0"
-        bridge: Bridge = Bridge._get_bridge()
-        self._backoff = ExponentialBackoff()
+        bridge: Bridge = Bridge._get_bridge() # pyright: ignore[reportPrivateUsage]
+        self._backoff = ExponentialBackoff(integral=True)
         self._old_auth = False
 
         # Validate the bridge object is at the same memory address.
@@ -113,8 +164,8 @@ class Base:
         self.logger.debug("bridge object -> %s", pformat(bridge))
         self.session: aiohttp.ClientSession | None = session
 
-        if isinstance(bridge, Bridge):
-            self.parse_bridge(bridge=bridge)
+        # if isinstance(bridge, Bridge):
+        self.parse_bridge(bridge=bridge)
 
     # def __del__(self) -> None:
     #     try:
@@ -143,7 +194,7 @@ class Base:
             Returns True or False.
 
         """
-        global FORMAT_DATA
+        # global FORMAT_DATA
         return FORMAT_DATA
 
     @format_data.setter
@@ -221,7 +272,8 @@ class Base:
         sanitize_json: :class:`bool`, optional
             Replaces invalid characters in our JSON responses, by default True.
         _use_from_dict: :class:`bool`, optional
-            Controls whether the data will use :meth:`fromdict` of dataclass wizard to unpack the data. Typical usage case is to handle nested :class:`DataclassInstance`, by default True.
+            Controls whether the data will use :meth:`fromdict` of dataclass wizard to unpack the data.
+            Typical usage case is to handle nested :class:`DataclassInstance`, by default True.
         _auto_unpack: :class:`bool`, optional
             Controls whether the data will be unpacked automatically via ``(**data)``, by default True.
         _no_data: :class:`bool`, optional
@@ -234,18 +286,6 @@ class Base:
             otherwise returns an unformatted JSON response if :attr:`format_data` or ``FORMAT_DATA`` is False.
 
         """
-        # Old Docstring Content
-        # Raises
-        # ------
-        # :exc:`ValueError`
-        #     When a JSON response :attr:`ClientSession.content_length` == 0 or :class:`aiohttp.ClientSession` raises an Exception.\n
-        #     When the API endpoint returns a malformed JSON response.
-        # :exc:`ConnectionError`
-        #     When an JSON response status code is not 200.\n
-        #     When an JSON response has a dict key value of "Instance Unavailable.
-        # :exc:`PermissionError`
-        #     When the JSON response has a dict key value of "Unauthorized Access" or permission related error.
-
         global FORMAT_DATA
 
         post_req: ClientResponse | None
@@ -255,7 +295,7 @@ class Base:
         if parameters is None:
             parameters = {}
 
-        api_session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
+        api_session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)))  # pyright: ignore[reportPrivateUsage]
 
         # ?UPCOMING(@k8thekat): - AMP Update; moving SessionID to headers.
         # This is to handle AMPs updated Authorization
@@ -276,7 +316,6 @@ class Base:
             post_req = await self.session.post(url=_url, headers=header, data=json_data)
         # We have a dynamic backoff function to prevent reconnect attempts to frequently.
         except RuntimeError as e:
-            # ? Suggestion
             # Attempting to re-open the session if it is somehow closed during usage.
             if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
                 self.session = aiohttp.ClientSession()
@@ -400,6 +439,249 @@ class Base:
             return self.json_to_dataclass(json=post_req_json, format_=format_, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack)
         return post_req_json
 
+    # TODO: Docstrings and testing..
+    async def _post(
+        self,
+        url: str,
+        parameters: Union[None, dict[str, Any]] = None,
+        *,
+        no_data: bool = False,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | ActionResult | ResponseTypeAlias | Any | None:
+        """|coro|
+
+        Makes a POST request via :class:`aiohttp.ClientSession` and passes the response to :meth:`_response_handler`.
+
+        .. warning::
+            Will return an :class:`ActionResultError` if any errors occur when attempting to call the API.
+
+
+        Parameters
+        ----------
+        url: :class:`str`
+            The API endpoint to POST to, excluding the base panel URL and ``/API/`` prefix, eg ``Core/GetModuleInfo``.
+        parameters: Union[None, dict[:class:`str`, Any]], optional
+            The parameters to supply to the endpoint, by default None.
+        no_data: :class:`bool`, optional
+            Skip processing the :class:`ClientResponse` body when the endpoint returns no data, by default False.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded directly to :meth:`aiohttp.ClientSession.post`. The ``headers``
+            and ``data`` keys are always populated automatically, by default None.
+
+            .. code-block:: python
+
+                headers = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
+                data = json.dumps(parameters)
+
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResultError` | :class:`ActionResult` | :class:`ResponseTypeAlias` | None
+            The processed response on a successful (2xx) status, ``None`` if ``no_data`` is ``True``,
+            otherwise an :class:`ActionResultError`.
+
+        """
+        # TODO: Need a debug print for vars/endpoints.
+        api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
+            self.instance_id,
+            APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)),
+        )
+
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
+
+        _url: str = self.url + "/API/" + url
+
+        # Ver. 2.6.2.8 Authorization header key change.
+        if request_params is None:
+            request_params = {
+                "headers": {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"},
+                "data": json.dumps(parameters),
+            }
+
+        else:
+            request_params["headers"] = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
+            request_params["data"] = json.dumps(parameters)
+
+        try:
+            response: ClientResponse = await self.session.post(url=_url, **request_params)
+
+        except RuntimeError as e:
+            # Attempting to re-open the session if it is somehow closed during usage.
+            if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
+                self.session = aiohttp.ClientSession()
+
+            retry: int | float = self._backoff.delay()
+            self.logger.error(
+                "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
+                __class__.__name__,
+                "_post",
+                retry,
+                e,
+            )
+            await asyncio.sleep(delay=retry)
+            # Attempt a re-call...
+            return await self._post(url=url, parameters=parameters)
+
+        # ? Suggestion
+        # Further see what exceptions may be raised to narrow this comparison.
+        except Exception as e:  # noqa: BLE001
+            self.logger.error(
+                "<%s.%s> encountered an <Exception> | Exception: %s",
+                __class__.__name__,
+                "_post",
+                e,
+            )
+            return ActionResultError(status=False, reason="Exception was raised.", result=ValueError(e))
+
+        if response.content_length == 0:
+            return ActionResultError(status=False, reason="The HTTP Header content length was 0.", result=ValueError(self._no_data))
+
+        match response.status:
+            case status if 200 <= status < 300:
+                if no_data is True:
+                    return None
+                return await self._response_handler(response=response, **response_params)
+
+            case 400:
+                return ActionResultError(status=False, reason="Bad Request", result=ValueError(f"Bad Request [400]: {url}"))
+            case 401:
+                return ActionResultError(status=False, reason="Unauthorized", result=PermissionError(f"Unauthorized [401]: {url}"))
+            case 403:
+                return ActionResultError(status=False, reason="Forbidden", result=PermissionError(f"Forbidden [403]: {url}"))
+            case 404:
+                return ActionResultError(status=False, reason="Not Found", result=ConnectionError(f"Not Found [404]: {url}"))
+            case 408:
+                return ActionResultError(status=False, reason="Request Timeout", result=TimeoutError(f"Request Timeout [408]: {url}"))
+            case 429:
+                return ActionResultError(
+                    status=False,
+                    reason="Too Many Requests",
+                    result=ConnectionError(f"Too Many Requests [429]: {url}"),
+                )
+            case 500:
+                return ActionResultError(
+                    status=False,
+                    reason="Internal Server Error",
+                    result=ConnectionError(f"Internal Server Error [500]: {url}"),
+                )
+            case 502:
+                return ActionResultError(status=False, reason="Bad Gateway", result=ConnectionError(f"Bad Gateway [502]: {url}"))
+            case 503:
+                return ActionResultError(
+                    status=False,
+                    reason="Service Unavailable",
+                    result=ConnectionError(f"Service Unavailable [503]: {url}"),
+                )
+            case 504:
+                return ActionResultError(status=False, reason="Gateway Timeout", result=TimeoutError(f"Gateway Timeout [504]: {url}"))
+            case _:
+                return ActionResultError(
+                    status=False,
+                    reason=f"Unexpected status [{response.status}]",
+                    result=ConnectionError(f"Unexpected status [{response.status}]: {url}"),
+                )
+
+    async def _response_handler(self, response: ClientResponse, *, sanitize_json: bool = True, to_file: bool = False, path: Optional[pathlib.Path] = None) -> ResponseTypeAlias | ActionResultError | Any:
+        """|coro|
+
+        Processes a :class:`aiohttp.ClientResponse` into a parsed response object.
+
+        .. warning::
+            Will return an :class:`ActionResultError` if the response JSON is ``None``,
+            indicates ``"Unauthorized Access"``, ``"Instance Unavailable"``, or has ``status`` of ``False``.
+
+
+        Parameters
+        ----------
+        response: :class:`aiohttp.ClientResponse`
+            The raw HTTP response to process.
+        sanitize_json: :class:`bool`, optional
+            Run the parsed JSON through :meth:`sanitize_json` before returning, by default True.
+        to_file: :class:`bool`, optional
+            Write the response JSON to a file at ``path``, by default False.
+        path: :class:`pathlib.Path` | None, optional
+            Directory to write the response file to when ``to_file`` is ``True``, by default None.
+
+        Returns
+        -------
+        :class:`ResponseTypeAlias` | :class:`ActionResultError` | Any
+            The parsed and optionally sanitized JSON response, or an :class:`ActionResultError` on failure.
+
+        Raises
+        ------
+        :exc:`ValueError`
+            If ``to_file`` is ``True`` but ``path`` is ``None``.
+        :exc:`FileNotFoundError`
+            If the provided ``path`` does not exist.
+
+        """
+        if to_file is True and path is None:
+            msg = "Please provide a valid Path when using `to_file` parameter."
+            raise ValueError(msg)
+
+
+        try:
+            response_json: ResponseTypeAlias | Any = await response.json()
+        except Exception as e:
+            self.logger.error(
+                "<%s.%s> | Encountered an Exception processing the <ClientResponse> as json().",
+                __class__.__name__,
+                "_response_handler",
+                exc_info=e,
+            )
+            return None
+
+        if response_json is None:
+            return ActionResultError(status=False, reason="<ClientResponse> JSON returned <None>.", result=ValueError(self._no_data))
+
+        if sanitize_json is True:
+            response_json = self.sanitize_json(response_json)
+
+        if to_file is True and path is not None:
+            # ? SUGGESTION: May have to make this async in the future if it's blocking enough.
+            if path.exists() is False:
+                msg = "The path provided does not exist. %s"
+                raise FileNotFoundError(msg, path)
+            self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
+
+        #TODO: Flesh out responses via API calls to better type def "response_json".
+        # This will take time.
+        if "title" in response_json:
+            response_json = response_json["title"]
+            if isinstance(response_json, str) and (response_json == "Unauthorized Access" or response_json == "Instance Unavailable"):
+                self.logger.error(
+                    "<%s.%s> failed because of %s. | URL: %s",
+                    __class__.__name__,
+                    "_response_handler",
+                    response_json,
+                    response.url,
+                )
+                api_session = APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc))
+                self._bridge._sessions.update({self.instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+                if response_json == "Unauthorized Access":
+                    return ActionResultError(
+                        status=False,
+                        reason="Unauthorized Access",
+                        result=PermissionError(self._unauthorized_access),
+                    )
+
+                if response_json == "Instance Unavailable":
+                    return ActionResultError(
+                        status=False,
+                        reason="Instance Unavailable",
+                        result=ConnectionError(self._instance_offline, self.url),
+                    )
+                    # raise ConnectionError(self._instance_offline, self.url)
+        elif isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
+            self.logger.error("%s failed because of Status: %s", response.url, response_json["status"])
+            return ActionResultError(status=False, reason="Status is False", result=ValueError(self._failed_api))
+
+        return response_json
+
     async def _connect(self) -> LoginResults | None:
         """|coro|
         Logs into AMP via "API/Core/Login" endpoint using your :class:`Bridge` object.
@@ -423,24 +705,23 @@ class Base:
         code: Union[str, TOTP] = ""
 
         # get our InstanceID and use it to key for session_id
-        session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.now()))
-        if isinstance(session, APISession):
-            ttl: timedelta = datetime.now() - session.ttl
-            if ttl.seconds > self.session_ttl:
-                sessionID = "0"
-            else:
-                sessionID: str = session.id
+        session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc))) # pyright: ignore[reportPrivateUsage]
+        # if isinstance(session, APISession):
+        ttl: timedelta = datetime.datetime.now(tz=timezone.utc) - session.ttl
+        if ttl.seconds > self.session_ttl:
+            session_id = "0"
+        else:
+            session_id: str = session.id
 
-        if sessionID == "0":
+        if session_id == "0":
             if self._bridge.use_2fa is True:
                 try:
                     # Handles time based 2Factory Auth Key/Code
                     code = TOTP(self._bridge.token).now()
 
                 except AttributeError:
-                    raise ValueError(
-                        "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!",
-                    )
+                    msg = "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
+                    raise ValueError(msg) from AttributeError
             try:
                 parameters: dict[str, Any] = {
                     "username": self._bridge.user,
@@ -452,8 +733,8 @@ class Base:
                 result: Any = await self._call_api(api="Core/Login", parameters=parameters, format_data=True, format_=LoginResults)
                 if isinstance(result, LoginResults):
                     # This is our new sessions table to correlate InstanceID to a sessionID.
-                    api_session = APISession(id=result.session_id, ttl=datetime.now())
-                    self._bridge._sessions.update({self.instance_id: api_session})
+                    api_session = APISession(id=result.session_id, ttl=datetime.datetime.now(tz=timezone.utc))
+                    self._bridge._sessions.update({self.instance_id: api_session}) # pyright: ignore[reportPrivateUsage]
                     return result
 
                 self.logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
@@ -593,7 +874,7 @@ class Base:
         ----------
         json: Any
             JSON response data to format.
-        format: Union[:class:`DataclassInstance`, class:`DeploymentTemplate`]
+        format_: Union[:class:`DataclassInstance`, class:`DeploymentTemplate`]
             Must be of type :class:`DataclassInstance` or similar to unpack the JSON response data.
         _use_from_dict: :class:`bool`
             Use :meth:`fromdict` from dataclass_wizard to unpack the JSON response data.
@@ -616,18 +897,83 @@ class Base:
             if _auto_unpack is True:
                 return [format_(**data) for data in json]
 
-            return [format_(data) for data in json]  # type: ignore
+            return [format_(data) for data in json] # pyright: ignore[reportCallIssue]
 
         if isinstance(json, dict):
             # _use_from_dict is to handle nested Dataclasses.
             if _use_from_dict is True:
-                return fromdict(format_, json)
+                return fromdict(format_, json) # pyright: ignore[reportUnknownArgumentType]
 
             if _auto_unpack is True:
-                return format_(**json)
+                return format_(**json) # pyright: ignore[reportUnknownArgumentType]
 
-            return format_(json)  # type: ignore
+            return format_(json) # pyright: ignore[reportCallIssue]
         return json
+
+    @staticmethod
+    def json_to_typeddict(name: str, data: dict[str, Any], *, include_imports: bool = False) -> str:
+        """Generate the source code for a :class:`TypedDict` class from a JSON dict.
+
+        Recursively infers types from values. Nested :class:`dict` entries produce their own
+        named :class:`TypedDict` class using a PascalCase derivation of the parent key,
+        ordered so dependencies appear before the class that references them.
+
+        The returned string can be printed or written directly to a ``.py`` file.
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The class name for the root :class:`TypedDict`.
+        data: dict[:class:`str`, Any]
+            The JSON dict whose keys and values define the fields and their types.
+        include_imports: :class:`bool`
+            To include "from typing import Any\n\nfrom typing_extensions import TypedDict\n" at the top of the file.
+
+        Returns
+        -------
+        :class:`str`
+            Python source code containing one or more :class:`TypedDict` class definitions
+            preceded by the necessary imports.
+
+        """
+        class_defs: list[str] = []
+
+        def _infer(value: Any, key: str) -> str:
+            if value is None:
+                return "None"
+            if isinstance(value, bool):
+                return "bool"
+            if isinstance(value, int):
+                return "int"
+            if isinstance(value, float):
+                return "float"
+            if isinstance(value, str):
+                return "str"
+            if isinstance(value, dict):
+                child_name = "".join(part.title() for part in key.split("_"))
+                _build(child_name, value) # pyright: ignore[reportUnknownArgumentType]
+                return child_name
+            if isinstance(value, list):
+                if not value:
+                    return "list[Any]"
+                first = value[0] # pyright: ignore[reportUnknownVariableType]
+                if isinstance(first, dict):
+                    child_name = "".join(part.title() for part in key.split("_"))
+                    _build(child_name, first) # pyright: ignore[reportUnknownArgumentType]
+                    return f"list[{child_name}]"
+                elem_types = {_infer(v, key) for v in value} # pyright: ignore[reportUnknownVariableType]
+                elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
+                return f"list[{elem}]"
+            return "Any"
+
+        def _build(cls_name: str, fields: dict[str, Any]) -> None:
+            field_lines = [f"    {k}: {_infer(v, k)}" for k, v in fields.items()]
+            body = "\n".join(field_lines) if field_lines else "    ..."
+            class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
+
+        _build(name, data)
+        imports = "from typing import Any\n\nfrom typing_extensions import TypedDict\n" if include_imports is True else ""
+        return imports + "\n\n\n" + "\n\n\n".join(class_defs)
 
     def parse_bridge(self, bridge: Bridge) -> None:
         """Takes the :class:`Bridge` object and set's the :attr:`~Base.url` and sets :attr:`_bridge` to our Bridge object.
@@ -688,10 +1034,10 @@ class Base:
 
     @overload
     @classmethod
-    def sanitize_json(cls, json: Iterable) -> Iterable[Any]: ...
+    def sanitize_json(cls, json: Iterable[Any]) -> Iterable[Any]: ...
 
     @classmethod
-    def sanitize_json(cls, json: Iterable | str) -> Iterable[Any] | str:
+    def sanitize_json(cls, json: Iterable[Any] | str) -> Iterable[Any] | str:
         """|classmethod|
 
         Replaces spaces and underscores in the JSON response dict keys while also formatting keys to ``snake_case``.
@@ -843,3 +1189,46 @@ class Base:
                 raise RuntimeError(self._version_unavailable, "`Core/GetWebserverMetrics`", _version)
         else:
             self.logger.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
+
+    def write_data_to_file(self,
+        file_name: str,
+        data: bytes | dict[Any, Any] | str | list[str],
+        path: Path = Path(__file__).parent,
+        *,
+        mode: str = "w+",
+        **kwargs: Unpack[DumpParameters],
+    ) -> None:
+        """Basic file dump with json handling. If the data parameter is of type `dict`, `json.dumps()` will be used with an indent of 4.
+
+        Parameters
+        ----------
+        path: :class:`Path`, optional
+            The Path to write the data, default's to `Path(__file__).parent`.
+        file_name: :class:`str`
+            The name of the file, include the file extension.
+        data: :class:`bytes | dict | str | list`
+            The data to write out to the path and file_name provided.
+        mode: :class:`str`, optional
+            The mode to open the provided file path with using `<Path.open()>`.
+        **kwargs: :class:`Unpack[DumpParameters]`
+            Any additional kwargs to be supplied to `<json.dumps()>`, if applicable.
+
+        """
+        kwargs["indent"] = 4
+
+        with path.joinpath(file_name).open(mode=mode) as file:
+            LOGGER.debug("<%s.%s> | Wrote data to file %s located at: %s", __name__, "write_data_to_file", path, file_name)
+            if isinstance(data, bytes):
+                file.write(data.decode(encoding="utf-8"))
+            elif isinstance(data, dict):
+                file.write(json.dumps(data, **kwargs))
+            elif isinstance(data, list):
+                file.write("\n".join(data))
+            else:
+                file.write(data)
+        LOGGER.info(
+            "<%s.%s> | File write successful to path: %s ",
+            __name__,
+            "write_data_to_file",
+            path.joinpath(file_name).as_posix(),
+        )

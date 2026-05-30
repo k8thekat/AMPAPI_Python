@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, TypedDict, Union
 
 from typing_extensions import NotRequired
 
+ResponseTypeAlias = Union["Login", "ResponseError"]
+
 
 class ActionSpec(TypedDict):
-    """
-    ads_module: dict[:class:`str`, Any]
+    """ads_module: dict[:class:`str`, Any]
 
     file_manager_plugin: dict[:class:`str`, Any]
 
@@ -27,8 +28,7 @@ class ActionSpec(TypedDict):
 
 
 class APISpec(TypedDict):
-    """
-    analytics_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+    """analytics_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
 
     common_core_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
 
@@ -51,8 +51,7 @@ class APISpec(TypedDict):
 
 
 class APISPecEndpointData(TypedDict):
-    """
-    description: :class:`str`
+    """description: :class:`str`
 
     is_complex_type: :class:`bool`
 
@@ -73,8 +72,7 @@ class APISPecEndpointData(TypedDict):
 
 
 class APISpecEndpointParameters(TypedDict):
-    """
-    description: :class:`str`
+    """description: :class:`str`
 
     name: :class:`str`
 
@@ -95,8 +93,7 @@ class APISpecEndpointParameters(TypedDict):
 
 
 class BukkitCategories(TypedDict):
-    """
-    id: :class:`int`
+    """id: :class:`int`
 
     name: :class:`str`
 
@@ -107,8 +104,7 @@ class BukkitCategories(TypedDict):
 
 
 class Consumes(TypedDict, total=False):
-    """
-    description: :class:`str`
+    """description: :class:`str`
 
     input_type: :class:`str`
 
@@ -126,10 +122,29 @@ class Consumes(TypedDict, total=False):
     value_type: str
     enum_values: NotRequired[str]
 
+class Login(TypedDict):
+    permissions: list[str]
+    remember_me_token: str
+    result: int
+    result_reason: str
+    session_id: str
+    success: bool
+    user_info: UserInfo
+
+class UserInfo(TypedDict):
+    avatar_base64: None
+    disabled: bool
+    email_address: None
+    gravatar_hash: str
+    id: str
+    is_ldap_user: bool
+    is_oidc_user: bool
+    is_two_factor_enabled: bool
+    last_login: str
+    username: str
 
 class MethodsData(TypedDict):
-    """
-    id: :class:`str`
+    """id: :class:`str`
 
     name: :class:`str`
 
@@ -146,8 +161,7 @@ class MethodsData(TypedDict):
 
 
 class ParameterMapping(TypedDict, total=False):
-    """
-    user: NotRequired[:class:`str`]
+    """user: NotRequired[:class:`str`]
 
     reason: NotRequired[:class:`str`]
 
@@ -158,8 +172,7 @@ class ParameterMapping(TypedDict, total=False):
 
 
 class PermissionNode(TypedDict):
-    """
-    name: :class:`str`
+    """name: :class:`str`
 
     node: :class:`str`
 
@@ -178,10 +191,12 @@ class PermissionNode(TypedDict):
     description: str | None
     children: list[PermissionNode]
 
+class ResponseError(TypedDict, total=False):
+    title: str
+    status: bool
 
 class ScheduleDataData(TypedDict):
-    """
-    available_methods: list[:class:`MethodsData`]
+    """available_methods: list[:class:`MethodsData`]
 
     available_triggers: list[:class:`TriggersData`]
 
@@ -195,8 +210,7 @@ class ScheduleDataData(TypedDict):
 
 
 class TriggersData(TypedDict):
-    """
-    id: :class:`str`
+    """id: :class:`str`
 
     description: :class:`str`
 
@@ -228,8 +242,7 @@ class TriggersData(TypedDict):
 
 
 class TriggerTasksData(TypedDict):
-    """
-    id: :class:`str`
+    """id: :class:`str`
 
     task_method_name: :class:`str`
 
@@ -254,8 +267,7 @@ class TriggerTasksData(TypedDict):
 
 
 class MCUserData(TypedDict):
-    """
-    name: :class:`str`
+    """name: :class:`str`
 
     uuid: :class:`str`
     """

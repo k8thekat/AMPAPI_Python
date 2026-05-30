@@ -1,11 +1,12 @@
 import warnings
 from datetime import datetime
-from typing import Any, Literal, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
+from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
 from pyotp import TOTP
-from typing_extensions import deprecated
+from typing_extensions import Unpack, deprecated
 
-from .base import Base
+from .base import Base, ResponseHandlerOptions
 from .modules import (
     ActionResult,
     ActionResultError,
@@ -1108,7 +1109,7 @@ class Core(Base):
         await self._connect()
         await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
         return
-    
+
 
     async def get_oidc_logout_url(self, redirect_uri: str | None = None) -> str | ActionResultError:
         """|coro|
@@ -1705,8 +1706,10 @@ class Core(Base):
         amp_user: str,
         amp_password: str,
         token: str = "",
-        rememberME: bool = False,
-        format_data: Union[bool, None] = None,
+        remember_me: bool = False,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> LoginResults | ActionResultError:
         """|coro|
 
@@ -1721,7 +1724,7 @@ class Core(Base):
             The password for logging into the AMP Panel
         token: :class:`str` , optional
             AMP 2 Factor auth code; typically using :meth:`TOTP.now`, defaults to "".
-        rememberME: :class:`bool` , optional
+        remember_me: :class:`bool` , optional
             Remember me token, defaults to False.
 
         Returns
@@ -1730,11 +1733,15 @@ class Core(Base):
             On success returns a :class:`LoginResults` dataclass.
 
         """
-        parameters = {"username": amp_user, "password": amp_password, "token": token, "rememberMe": rememberME}
-        result: Any = await self._call_api(
-            api="Core/Login", parameters=parameters, format_data=format_data, format_=LoginResults,
-        )
-        return result
+        parameters = {"username": amp_user, "password": amp_password, "token": token, "rememberMe": remember_me}
+        # result: Any = await self._call_api(
+        #     api="Core/Login", parameters=parameters, format_data=format_data, format_=LoginResults,
+        # )
+        if request_params is None:
+            res = await self._post("Core/Login", parameters=parameters, **response_params)
+        else:
+            res = await self._post("Core/Login", parameters, **request_params, **response_params)
+        return res
 
     async def logout(self) -> None:
         """|coro|

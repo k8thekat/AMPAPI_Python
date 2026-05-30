@@ -1,0 +1,23 @@
+{
+    "result": 10,
+    "result_reason": "",
+    "success": true,
+    "permissions": [
+        "*",
+        "UserIdentity.9d342e7a-2b35-4085-9515-f7ce69c19d5b"
+    ],
+    "session_id": "c0d41842-11ac-4d4e-a1d0-aee542dd70e3",
+    "remember_me_token": "",
+    "user_info": {
+        "id": "9d342e7a-2b35-4085-9515-f7ce69c19d5b",
+        "username": "commandblock",
+        "email_address": null,
+        "is_two_factor_enabled": true,
+        "disabled": false,
+        "last_login": "2026-05-30T03:47:51.2734646Z",
+        "gravatar_hash": "7a8d8c508f0d138f6621c7b36a200f24",
+        "is_ldap_user": false,
+        "is_oidc_user": false,
+        "avatar_base64": null
+    }
+}
