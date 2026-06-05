@@ -1,4 +1,4 @@
-"""Copyright (C) 2021-2022 Katelynn Cadwallader.
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
 
 This file is part of AMPAPI_Python.
 
@@ -63,10 +63,7 @@ if TYPE_CHECKING:
     F = TypeVar("F")
     X = TypeVar("X", bound=DataclassInstance)
 
-__all__ = ("Base","ResponseHandlerOptions")
-
-FORMAT_DATA: bool = True
-
+__all__ = ("Base", "ResponseHandlerOptions")
 
 APIReturnTypeAlias = Union[LoginResults, ActionResultError, ActionResult]
 
@@ -81,7 +78,7 @@ class ResponseHandlerOptions(TypedDict, total=False):
     path: pathlib.Path
 
 
-class DumpParameters(TypedDict, total=False ):
+class DumpParameters(TypedDict, total=False):
     skipkeys: bool
     ensure_ascii: bool
     check_circular: bool
@@ -91,7 +88,6 @@ class DumpParameters(TypedDict, total=False ):
     separators: tuple[str, str] | None
     default: Callable[[Any], Any] | None
     sort_keys: bool
-
 
 
 class Base:
@@ -120,16 +116,13 @@ class Base:
     """
 
     # Private Attributes
-    logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     _bridge: Bridge
     _backoff: ExponentialBackoff[bool]
-    _old_auth: bool
-
-    # Public Attributes
-    url: str
-    instance_id: str
-    session_ttl: ClassVar[int] = 240
-    module: str  # TODO: - make this var unchangeable via private attr in future release.
+    _module: str
+    _format_data: ClassVar[bool] = True
+    _url: str
+    _instance_id: str
+    _session_ttl: ClassVar[int] = 240
 
     # Error response strings.
     _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
@@ -152,31 +145,40 @@ class Base:
         "SecurityandPrivacy": "security_and_privacy",
     }
 
-    def __init__(self, session: Optional[aiohttp.ClientSession] = None) -> None:
-        self.url = ""
-        self.instance_id = "0"
-        bridge: Bridge = Bridge._get_bridge() # pyright: ignore[reportPrivateUsage]
-        self._backoff = ExponentialBackoff(integral=True)
-        self._old_auth = False
+    def __init__(self, *, bridge: Optional[Bridge] = None, session: Optional[aiohttp.ClientSession] = None) -> None:
+        if bridge is None:
+            try:
+                self._bridge = Bridge._get_bridge()  # pyright: ignore[reportPrivateUsage]
+            except ValueError:
+                LOGGER.error(
+                    "<%s.%s> | Failed to initialize, you must either must use a Singleton <Bridge> object or pass into the __init__.",
+                    __class__.__name__,
+                    "__init__",
+                )
+                return
+        else:
+            self.parse_bridge(bridge=bridge)
 
-        # Validate the bridge object is at the same memory address.
-        self.logger.debug("DEBUG %s __init__ %s", type(self).__name__, id(self))
-        self.logger.debug("bridge object -> %s", pformat(bridge))
+        self._url = ""
+        self._instance_id = "0"
+        self._backoff = ExponentialBackoff(integral=True)
+
+        LOGGER.debug("<%s.%s> | __init__  -> BRIDGE: %s | SESSION: %s |", __class__.__name__, "__init__", bridge, session)
         self.session: aiohttp.ClientSession | None = session
 
-        # if isinstance(bridge, Bridge):
-        self.parse_bridge(bridge=bridge)
+    @property
+    def module(self) -> str:
+        """The AMP Instance ``type``.
 
-    # def __del__(self) -> None:
-    #     try:
-    #         asyncio.run(self.__adel__())
-    #         self.logger.debug("Closing the open `aiohttp.ClientSession`| Session: %s", self.session)
-    #     except RuntimeError:
-    #         self.logger.error("Failed to close our `aiohttp.ClientSession`")
+        Current Values: `ADS` | `Minecraft` | `Generic` | `SRCDS`
 
-    # async def __adel__(self) -> None:
-    #     if self.session is not None:
-    #         await self.session.close()
+        Returns
+        -------
+        :class:`str`
+            The AMP Instance ``type`` as a string.
+
+        """
+        return self._module
 
     @property
     def format_data(self) -> bool:
@@ -191,16 +193,31 @@ class Base:
         Returns
         -------
         :class:`bool`
-            Returns True or False.
+            Returns ``True`` or ``False``.
 
         """
-        # global FORMAT_DATA
-        return FORMAT_DATA
+        return Base._format_data
 
     @format_data.setter
     def format_data(self, value: bool) -> None:
-        global FORMAT_DATA
-        FORMAT_DATA = value
+        Base._format_data = value
+
+    @property
+    def session_ttl(self) -> int:
+        return Base._session_ttl
+
+    @session_ttl.setter
+    def session_ttl(self, value: int) -> None:
+        Base._session_ttl = value
+
+    @property
+    def instance_id(self) -> str:
+        return self._instance_id
+
+    @property
+    def url(self) -> str:
+        return self._url
+
 
     @staticmethod
     def ads_only(
@@ -227,8 +244,8 @@ class Base:
 
         @functools.wraps(wrapped=func)
         def wrapper_ads_only(self: D, *args: T.args, **kwargs: T.kwargs) -> Coroutine[None, None, F]:
-            from .adsmodule import ADSModule
-            from .instance import AMPADSInstance
+            from .adsmodule import ADSModule  # noqa: PLC0415
+            from .instance import AMPADSInstance  # noqa: PLC0415
 
             if self.module == "ADS" or type(self) is AMPADSInstance or isinstance(self, ADSModule):
                 return func(self, *args, **kwargs)
@@ -289,13 +306,16 @@ class Base:
         global FORMAT_DATA
 
         post_req: ClientResponse | None
-        self.logger.debug("_call_api -> %s was called with %s", api, parameters)
+        LOGGER.debug("_call_api -> %s was called with %s", api, parameters)
 
         # This should save us some boiler plate code throughout our API calls.
         if parameters is None:
             parameters = {}
 
-        api_session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)))  # pyright: ignore[reportPrivateUsage]
+        api_session: APISession = self._bridge._sessions.get(
+            self._instance_id,
+            APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)),
+        )  # pyright: ignore[reportPrivateUsage]
 
         # ?UPCOMING(@k8thekat): - AMP Update; moving SessionID to headers.
         # This is to handle AMPs updated Authorization
@@ -307,8 +327,8 @@ class Base:
 
         json_data: str = json.dumps(obj=parameters)
 
-        _url: str = self.url + "/API/" + api
-        self.logger.debug("SESSION GET %s | API CALL: %s | API URL: %s | DATA: %s", self.instance_id, api, _url, pformat(json_data))
+        _url: str = self._url + "/API/" + api
+        LOGGER.debug("SESSION GET %s | API CALL: %s | API URL: %s | DATA: %s", self._instance_id, api, _url, pformat(json_data))
         if self.session is None:
             self.session = aiohttp.ClientSession()
 
@@ -321,7 +341,7 @@ class Base:
                 self.session = aiohttp.ClientSession()
 
             retry: float = self._backoff.delay()
-            self.logger.error("<Base._call_api> encountered a <RuntimeError> and will retry in %s. | Exception: %s", retry, e)
+            LOGGER.error("<Base._call_api> encountered a <RuntimeError> and will retry in %s. | Exception: %s", retry, e)
             await asyncio.sleep(delay=retry)
             return await self._call_api(
                 api=api,
@@ -336,7 +356,7 @@ class Base:
 
         except Exception as e:
             retry = self._backoff.delay()
-            self.logger.error("<Base._call_api> encountered an Exception and will retry in %s. | Exception: %s", retry, e)
+            LOGGER.error("<Base._call_api> encountered an Exception and will retry in %s. | Exception: %s", retry, e)
             await asyncio.sleep(delay=retry)
             return ActionResultError(status=False, reason="UNK", result=ValueError(e))
 
@@ -359,24 +379,24 @@ class Base:
         # They removed "result" from all replies thus breaking most if not all future code.
         # This was an old example from pre 2.3 AMP API that could have the following return:
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-        self.logger.debug(
+        LOGGER.debug(
             "URL: %s | aiohttp.ClientResponse.json() type: %s | _call_api parameters: %s",
             api,
             type(post_req_json),
             parameters,
         )
-        self.logger.debug("aiohttp.ClientResponse.json() formatted: %s", pformat(post_req_json))
+        LOGGER.debug("aiohttp.ClientResponse.json() formatted: %s", pformat(post_req_json))
         if sanitize_json is True:
             post_req_json = self.sanitize_json(post_req_json)
-            self.logger.debug("Sanitize json: %s | Sanitized data: %s", sanitize_json, pformat(post_req_json))
+            LOGGER.debug("Sanitize json: %s | Sanitized data: %s", sanitize_json, pformat(post_req_json))
 
         if isinstance(post_req_json, dict):
             if "title" in post_req_json:
                 post_req_json = post_req_json["title"]
                 if isinstance(post_req_json, str) and (post_req_json == "Unauthorized Access" or post_req_json == "Instance Unavailable"):
-                    self.logger.error("%s failed because of %s", api, post_req_json)
+                    LOGGER.error("%s failed because of %s", api, post_req_json)
                     api_session = APISession(id="0", ttl=datetime.now())
-                    self._bridge._sessions.update({self.instance_id: api_session})
+                    self._bridge._sessions.update({self._instance_id: api_session})
                     if post_req_json == "Unauthorized Access":
                         # New Header Auth bearer implementation.
                         if self._old_auth is False:
@@ -403,7 +423,7 @@ class Base:
                         return ActionResultError(
                             status=False,
                             reason="Instance Unavailable",
-                            result=ConnectionError(self._instance_offline, self.url),
+                            result=ConnectionError(self._instance_offline, self._url),
                         )
                         # raise ConnectionError(self._instance_offline, self.url)
 
@@ -417,15 +437,15 @@ class Base:
             #     post_req_json = post_req_json["result"]
 
             #     if isinstance(post_req_json, bool) and post_req_json is False:
-            #         self.logger.error("%s failed because of %s", api, post_req_json)
+            #         LOGGER.error("%s failed because of %s", api, post_req_json)
             #         raise ValueError(self._failed_api)
 
             elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] is False:
-                self.logger.error("%s failed because of Status: %s", api, post_req_json)
+                LOGGER.error("%s failed because of Status: %s", api, post_req_json)
                 return ActionResultError(status=False, reason="Status is False", result=ValueError(self._failed_api))
                 # return ValueError(self._failed_api)
 
-        self.logger.debug(
+        LOGGER.debug(
             "DEBUG: FORMAT DATA | local Format Data: %s | global Format Data: %s | format_: %s | POST REQ TYPE: %s",
             format_data,
             FORMAT_DATA,
@@ -439,7 +459,8 @@ class Base:
             return self.json_to_dataclass(json=post_req_json, format_=format_, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack)
         return post_req_json
 
-    # TODO: Docstrings and testing..
+    #TODO: Update/setup Response Type Aliases to encompas all possible returns.
+    # Replace/Combine APIReturnTypeAlias
     async def _post(
         self,
         url: str,
@@ -484,16 +505,15 @@ class Base:
             otherwise an :class:`ActionResultError`.
 
         """
-        # TODO: Need a debug print for vars/endpoints.
         api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
-            self.instance_id,
+            self._instance_id,
             APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)),
         )
 
         if self.session is None:
             self.session = aiohttp.ClientSession()
 
-        _url: str = self.url + "/API/" + url
+        _url: str = self._url + "/API/" + url
 
         # Ver. 2.6.2.8 Authorization header key change.
         if request_params is None:
@@ -508,6 +528,16 @@ class Base:
 
         try:
             response: ClientResponse = await self.session.post(url=_url, **request_params)
+            LOGGER.debug(
+                "<%s.%s> | POST URL: %s | API_SESSION: %s | INSTANCE_ID: %s",
+                __class__.__name__,
+                "_post",
+                _url,
+                api_session,
+                self._instance_id,
+            )
+            LOGGER.debug("<%s.%s> | REQ_PARAMS: %s", __class__.__name__, "_post", request_params)
+            LOGGER.debug("<%s.%s> | RESP_PARAMS: %s", __class__.__name__, "_post", response_params)
 
         except RuntimeError as e:
             # Attempting to re-open the session if it is somehow closed during usage.
@@ -515,7 +545,7 @@ class Base:
                 self.session = aiohttp.ClientSession()
 
             retry: int | float = self._backoff.delay()
-            self.logger.error(
+            LOGGER.error(
                 "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
                 __class__.__name__,
                 "_post",
@@ -524,12 +554,12 @@ class Base:
             )
             await asyncio.sleep(delay=retry)
             # Attempt a re-call...
-            return await self._post(url=url, parameters=parameters)
+            return await self._post(url=url, parameters=parameters, **request_params)
 
         # ? Suggestion
-        # Further see what exceptions may be raised to narrow this comparison.
+        # Further see what exceptions may be raised to narrow this comparison as the noqa can be avoided.
         except Exception as e:  # noqa: BLE001
-            self.logger.error(
+            LOGGER.error(
                 "<%s.%s> encountered an <Exception> | Exception: %s",
                 __class__.__name__,
                 "_post",
@@ -585,7 +615,15 @@ class Base:
                     result=ConnectionError(f"Unexpected status [{response.status}]: {url}"),
                 )
 
-    async def _response_handler(self, response: ClientResponse, *, sanitize_json: bool = True, to_file: bool = False, path: Optional[pathlib.Path] = None) -> ResponseTypeAlias | ActionResultError | Any:
+    # TODO: Flesh out responses via API calls to better type def "response_json".
+    async def _response_handler(
+        self,
+        response: ClientResponse,
+        *,
+        sanitize_json: bool = True,
+        to_file: bool = False,
+        path: Optional[pathlib.Path] = None,
+    ) -> ResponseTypeAlias | ActionResultError | Any:
         """|coro|
 
         Processes a :class:`aiohttp.ClientResponse` into a parsed response object.
@@ -620,14 +658,13 @@ class Base:
 
         """
         if to_file is True and path is None:
-            msg = "Please provide a valid Path when using `to_file` parameter."
+            msg = "Please provide a valid <Path> object when using `to_file` parameter."
             raise ValueError(msg)
-
 
         try:
             response_json: ResponseTypeAlias | Any = await response.json()
         except Exception as e:
-            self.logger.error(
+            LOGGER.error(
                 "<%s.%s> | Encountered an Exception processing the <ClientResponse> as json().",
                 __class__.__name__,
                 "_response_handler",
@@ -642,18 +679,17 @@ class Base:
             response_json = self.sanitize_json(response_json)
 
         if to_file is True and path is not None:
-            # ? SUGGESTION: May have to make this async in the future if it's blocking enough.
+            # ? SUGGESTION: May have to make this async in the future if it becomes blocking.
             if path.exists() is False:
                 msg = "The path provided does not exist. %s"
                 raise FileNotFoundError(msg, path)
             self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
 
-        #TODO: Flesh out responses via API calls to better type def "response_json".
         # This will take time.
         if "title" in response_json:
             response_json = response_json["title"]
             if isinstance(response_json, str) and (response_json == "Unauthorized Access" or response_json == "Instance Unavailable"):
-                self.logger.error(
+                LOGGER.error(
                     "<%s.%s> failed because of %s. | URL: %s",
                     __class__.__name__,
                     "_response_handler",
@@ -661,7 +697,7 @@ class Base:
                     response.url,
                 )
                 api_session = APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc))
-                self._bridge._sessions.update({self.instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+                self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
                 if response_json == "Unauthorized Access":
                     return ActionResultError(
                         status=False,
@@ -673,16 +709,17 @@ class Base:
                     return ActionResultError(
                         status=False,
                         reason="Instance Unavailable",
-                        result=ConnectionError(self._instance_offline, self.url),
+                        result=ConnectionError(self._instance_offline, self._url),
                     )
                     # raise ConnectionError(self._instance_offline, self.url)
         elif isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
-            self.logger.error("%s failed because of Status: %s", response.url, response_json["status"])
+            LOGGER.error("%s failed because of Status: %s", response.url, response_json["status"])
             return ActionResultError(status=False, reason="Status is False", result=ValueError(self._failed_api))
 
         return response_json
 
-    async def _connect(self) -> LoginResults | None:
+    # TODO: Double check code, consider using the updated Login API endpoint as it now supports calling `.now()`.
+    async def _reauth(self) -> LoginResults | None:
         """|coro|
         Logs into AMP via "API/Core/Login" endpoint using your :class:`Bridge` object.
 
@@ -705,7 +742,7 @@ class Base:
         code: Union[str, TOTP] = ""
 
         # get our InstanceID and use it to key for session_id
-        session: APISession = self._bridge._sessions.get(self.instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc))) # pyright: ignore[reportPrivateUsage]
+        session: APISession = self._bridge._sessions.get(self._instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)))  # pyright: ignore[reportPrivateUsage]
         # if isinstance(session, APISession):
         ttl: timedelta = datetime.datetime.now(tz=timezone.utc) - session.ttl
         if ttl.seconds > self.session_ttl:
@@ -734,21 +771,22 @@ class Base:
                 if isinstance(result, LoginResults):
                     # This is our new sessions table to correlate InstanceID to a sessionID.
                     api_session = APISession(id=result.session_id, ttl=datetime.datetime.now(tz=timezone.utc))
-                    self._bridge._sessions.update({self.instance_id: api_session}) # pyright: ignore[reportPrivateUsage]
+                    self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
                     return result
 
-                self.logger.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
+                LOGGER.warning(msg="Failed response from 'API/Core/Login' in <Base>._connect()")
                 return result
 
             except Exception as e:
-                self.logger.warning("Core/Login Exception:", exc_info=e)
+                LOGGER.warning("Core/Login Exception:", exc_info=e)
         else:
             return None
 
-    async def call_end_point(self, api: str, parameters: None | dict[str, Any] = None) -> dict[str, Any]:
+    #TODO: Convert to new "_post" method and test out args/responses.
+    async def call_end_point(self, api: str, parameters: None | dict[str, Any] = None, *, request_params: Optional[AioHTTPRequestOptions] = None, **response_params: Unpack[ResponseHandlerOptions]) -> dict[str, Any]:
         """|coro|
 
-        Universal API function for calling any API endpoint. Some API endpoints require the Instance module type to be ADS. \n
+        Generic function for calling any API endpoint. Some API endpoints require the Instance module type to be ADS. \n
         See `/api_spec_sheets/ADS_api_spec.md` or `/api_spec_sheets/Minecraft_api_spec.md` for full API endpoints and parameter information.
 
 
@@ -774,7 +812,7 @@ class Base:
            The JSON response from the API endpoint.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api=api, parameters=parameters)
         return result
 
@@ -897,17 +935,17 @@ class Base:
             if _auto_unpack is True:
                 return [format_(**data) for data in json]
 
-            return [format_(data) for data in json] # pyright: ignore[reportCallIssue]
+            return [format_(data) for data in json]  # pyright: ignore[reportCallIssue]
 
         if isinstance(json, dict):
             # _use_from_dict is to handle nested Dataclasses.
             if _use_from_dict is True:
-                return fromdict(format_, json) # pyright: ignore[reportUnknownArgumentType]
+                return fromdict(format_, json)  # pyright: ignore[reportUnknownArgumentType]
 
             if _auto_unpack is True:
-                return format_(**json) # pyright: ignore[reportUnknownArgumentType]
+                return format_(**json)  # pyright: ignore[reportUnknownArgumentType]
 
-            return format_(json) # pyright: ignore[reportCallIssue]
+            return format_(json)  # pyright: ignore[reportCallIssue]
         return json
 
     @staticmethod
@@ -951,17 +989,17 @@ class Base:
                 return "str"
             if isinstance(value, dict):
                 child_name = "".join(part.title() for part in key.split("_"))
-                _build(child_name, value) # pyright: ignore[reportUnknownArgumentType]
+                _build(child_name, value)  # pyright: ignore[reportUnknownArgumentType]
                 return child_name
             if isinstance(value, list):
                 if not value:
                     return "list[Any]"
-                first = value[0] # pyright: ignore[reportUnknownVariableType]
+                first = value[0]  # pyright: ignore[reportUnknownVariableType]
                 if isinstance(first, dict):
                     child_name = "".join(part.title() for part in key.split("_"))
-                    _build(child_name, first) # pyright: ignore[reportUnknownArgumentType]
+                    _build(child_name, first)  # pyright: ignore[reportUnknownArgumentType]
                     return f"list[{child_name}]"
-                elem_types = {_infer(v, key) for v in value} # pyright: ignore[reportUnknownVariableType]
+                elem_types = {_infer(v, key) for v in value}  # pyright: ignore[reportUnknownVariableType]
                 elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
                 return f"list[{elem}]"
             return "Any"
@@ -997,17 +1035,17 @@ class Base:
         # We use this later on in _connect to update `_session_id`;
         # so all connections will use the same session id (if possible)
         self._bridge = bridge
-        self.url = bridge.url
+        self._url = bridge.url
         if bridge.use_2fa is True:
             if bridge.token == "":
-                raise ValueError("You must provide a 2FA Token if you are using 2FA.")
+                err = "You must provide a 2FA Token if you are using 2FA."
+                raise ValueError(err)
             # elif bridge.token.startswith(("'", '"')) is False or bridge.token.endswith(("'", '"')) is False:
             #     raise ValueError("2FA Token must be enclosed in quotes.")
             # Removed starting and ending quotes
             if len(bridge.token) < 8:
-                raise ValueError(
-                    "Your 2FA token appears to be too short (<8 characters). Please use the code that generates the timed based tokens.",
-                )
+                err = "Your 2FA token appears to be too short (<8 characters). Please use the code that generates the timed based tokens."
+                raise ValueError(err)
 
     def parse_data(self, data: Union[Controller, Instance, Status, Updates]) -> Self:
         """Takes in a :class:`DataclassInstance` and iterates through it's :meth:`fields` and
@@ -1188,9 +1226,10 @@ class Base:
             if result.application_version < version:
                 raise RuntimeError(self._version_unavailable, "`Core/GetWebserverMetrics`", _version)
         else:
-            self.logger.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
+            LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
 
-    def write_data_to_file(self,
+    def write_data_to_file(
+        self,
         file_name: str,
         data: bytes | dict[Any, Any] | str | list[str],
         path: Path = Path(__file__).parent,

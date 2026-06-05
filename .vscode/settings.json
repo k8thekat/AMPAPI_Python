@@ -1,0 +1,25 @@
+{
+    "cSpell.words": [
+        "automodule",
+        "autosectionlabel",
+        "coro",
+        "cubecoders",
+        "linenos",
+        "maybecoro",
+        "paramlinks",
+        "Securityand",
+        "todolist",
+        "versionremoved"
+    ],
+    "cSpell.ignorePaths": [
+        "./docs/source/_static/*",
+        "./docs/nodes/*",
+        "*util.py"
+    ],
+    "autoDocstring.customTemplatePath": "./ampapi/docstring/template/numpy-overwrite.mustache",
+    "autoDocstring.startOnNewLine": false,
+    "autoDocstring.quoteStyle": "\"\"\"",
+    "autoDocstring.guessTypes": true,
+    "autoDocstring.generateDocstringOnEnter": true,
+    "python.terminal.activateEnvironment": true
+}
