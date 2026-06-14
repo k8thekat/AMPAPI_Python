@@ -1,3 +1,23 @@
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
+
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
 import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
@@ -6,10 +26,23 @@ from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: 
 from pyotp import TOTP
 from typing_extensions import Unpack, deprecated
 
+from ._types import (
+    ActionResultResponse,
+    ActionSpec,
+    APISpec,
+    LoginResponse,
+    PermissionNode,
+    ResponseError,
+    ResponseTypeAlias,
+    ScheduleDataData,
+    TriggersData,
+    UserInfoResponse,
+)
 from .base import Base, ResponseHandlerOptions
 from .modules import (
     ActionResult,
     ActionResultError,
+    APIReturnTypeAlias,
     AuditLogEntry,
     BuildInfo,
     Diagnostics,
@@ -33,7 +66,6 @@ from .modules import (
     User,
     UserApplicationData,
 )
-from .types_ import ActionSpec, APISpec, PermissionNode, ScheduleDataData, TriggersData
 
 __all__: tuple[Literal["Core"]] = ("Core",)
 
@@ -54,12 +86,19 @@ class Core(Base):
 
     @property
     def triggers(self) -> TriggerID:
+        """You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information."""
         try:
             return self._triggers
         except AttributeError:
-            raise AttributeError("You need to first call function <Core.get_triggers()> before accessing this attribute.")
+            err = "You need to first call function <Core.get_triggers()> before accessing this attribute."
+            raise AttributeError(err) from AttributeError
 
-    async def _create_test_task(self) -> None:
+    async def _create_test_task(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         **DEV**: Creates a non-ending task with 50% progress for testing purposes
@@ -69,11 +108,15 @@ class Core(Base):
             None: ""
 
         """
-        await self._connect()
-        await self._call_api(api="Core/CreateTestTask")
-        return
+        await self._reauth()
+        return await self._post(url="Core/CreateTestTask", no_data=True, request_params=request_params, **response_params)
 
-    async def _async_test(self) -> str:
+    async def _async_test(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> str | ActionResultError | None:
         """|coro|
 
         **DEV**: Async test method
@@ -85,11 +128,18 @@ class Core(Base):
             Returns a string.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/AsyncTest")
-        return result
+        await self._reauth()
+        result = await self._post(url="Core/AsyncTest", request_params=request_params, **response_params)
+        if isinstance(result, (str, ActionResultError)):
+            return result
+        return None
 
-    async def acknowledge_amp_update(self) -> None:
+    async def acknowledge_amp_update(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Approve an AMP update.
@@ -99,13 +149,22 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/AcknowledgeAMPUpdate", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/AcknowledgeAMPUpdate", no_data=True, request_params=request_params, **response_params)
 
+    # TODO: This is where I left off 6/11/2025~
+    # Need to think of logic to handle/validate response (checking for ActionResult dict keys)
+    # Rely on format_data function parameter and or check Base.format_data and handle the response data accordingly.
+    # Pack into ActionResult object
     async def activate_amp_license(
-        self, license_key: str, query_only: bool = False, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        license_key: str,
+        query_only: bool = False,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
         Activate an AMP License key.
@@ -125,16 +184,32 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        parameters: dict[str, Any] = {"LicenceKey": license_key, "QueryOnly": query_only}
-        result: Any = await self._call_api(
-            api="Core/ActivateAMPLicence", parameters=parameters, format_data=format_data, format_=ActionResult,
+        await self._reauth()
+        parameters: dict[str, str | bool] = {"LicenceKey": license_key, "QueryOnly": query_only}
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/ActivateAMPLicence",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = self.format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return None
 
     async def add_event_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        trigger_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
         Add an Event Trigger to an Instance.
@@ -156,19 +231,40 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"TriggerId": trigger_id}
-        result: Any = await self._call_api(
-            api="Core/AddEventTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/AddEventTrigger",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if format_data is None:
+            format_data = Base._format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
         return result
 
     async def add_task(
-        self, trigger_id: str, method_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        trigger_id: str,
+        method_id: str,
+        parameter_mapping: dict[str, str],
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
         Add a task.
+
+        This requires knowing the structure of the Method IDs
+        - See http://ampapi-python.readthedocs.io/en/latest/events/method_events.html
 
         .. note::
             Example -> ``parameter_mapping = { "Subtitle": "Hello World", Title: "Hello {@UserID}" }``
@@ -191,14 +287,32 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "MethodID": method_id, "ParameterMapping": parameter_mapping}
-        result: Any = await self._call_api(
-            api="Core/AddTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/AddTask",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if format_data is None:
+            format_data = Base._format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
         return result
 
-    async def cancel_task(self, task_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def cancel_task(
+        self,
+        task_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
         Cancel an existing Task.
@@ -216,11 +330,23 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"TaskId": task_id}
-        result: Any = await self._call_api(
-            api="Core/CancelTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/CancelTask",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if format_data is None:
+            format_data = Base._format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+
         return result
 
     async def change_user_password(
@@ -229,11 +355,17 @@ class Core(Base):
         old_password: str,
         new_password: str,
         two_factor_pin: str = "",
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
-        For a user to change their own password, requires knowing the old password.
+        Change a AMP Users password.
+
+        .. note::
+            Requires having the old password.
 
         Parameters
         ----------
@@ -254,22 +386,40 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {
             "Username": username,
             "OldPassword": old_password,
             "NewPassword": new_password,
             "TwoFactorPIN": two_factor_pin,
         }
-
-        results: Any = await self._call_api(
-            api="Core/ChangeUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/ChangeUserPassword",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return results
+        if format_data is None:
+            format_data = Base._format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+
+        return result
 
     async def change_task_order(
-        self, trigger_id: str, task_id: str, new_order: int, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        trigger_id: str,
+        task_id: str,
+        new_order: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
         Change the order of a task.
@@ -291,16 +441,34 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "TaskID": task_id, "NewOrder": new_order}
-        result: Any = await self._call_api(
-            api="Core/ChangeTaskOrder", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/ChangeTaskOrder",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if format_data is None:
+            format_data = Base._format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+
         return result
 
     async def confirm_two_factor_setup(
-        self, username: str, two_factor_code: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        username: str,
+        two_factor_code: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError | ResponseTypeAlias | None:
         """|coro|
 
         Completes two-factor setup by supplying a valid two factor code based on the secret provided by EnableTwoFactor.
@@ -320,15 +488,33 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Username": username, "TwoFactorCode": two_factor_code}
-        result: Any = await self._call_api(
-            api="Core/ConfirmTwoFactorSetup", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/ConfirmTwoFactorSetup",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if format_data is None:
+            format_data = Base._format_data
+
+        if format_data is False or isinstance(result, ActionResultError):
+            return result
+
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+
         return result
 
     async def create_role(
-        self, role_name: str, as_common_role: bool = False, format_data: Union[bool, None] = None,
+        self,
+        role_name: str,
+        as_common_role: bool = False,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -349,14 +535,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"Name": role_name, "AsCommonRole": as_common_role}
-        result: Any = await self._call_api(
-            api="Core/CreateRole", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/CreateRole",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def create_user(self, username: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def create_user(
+        self,
+        username: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Create an AMP user.
@@ -374,14 +576,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Username": username}
-        result: Any = await self._call_api(
-            api="Core/CreateUser", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/CreateUser",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def current_session_has_permission(self, node: str) -> bool | ActionResultError:
+    async def current_session_has_permission(
+        self,
+        node: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | bool | None:
         """|coro|
 
         Retrieves the current Session IDs permissions. This will differ between the ADS and a Server/Instance.
@@ -401,13 +619,23 @@ class Core(Base):
         :class:`bool`
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"PermissionNode": node}
-        result: Any = await self._call_api(api="Core/CurrentSessionHasPermission", parameters=parameters)
+        result = await self._post(url="Core/CurrentSessionHasPermission", parameters=parameters, request_params=request_params, **response_params)
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False and isinstance(result, bool):
+            return result
+
         return result
 
     async def delete_instance_users(
-        self, instance_id: str, format_data: Union[bool, None] = None,
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -426,15 +654,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"InstanceId": instance_id}
-
-        results: Any = await self._call_api(
-            api="Core/DeleteInstanceUsers", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DeleteInstanceUsers",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return results
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def delete_role(self, role_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def delete_role(
+        self,
+        role_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Deletes a role.
@@ -452,15 +695,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"RoleId": role_id}
-        result: Any = await self._call_api(
-            api="Core/DeleteRole", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DeleteRole",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def delete_task(
-        self, trigger_id: str, task_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        task_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -482,15 +740,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"TriggerID": trigger_id, "TaskID": task_id}
-        result: Any = await self._call_api(
-            api="Core/DeleteTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DeleteTask",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def delete_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -509,14 +781,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"TriggerID": trigger_id}
-        result: Any = await self._call_api(
-            api="Core/DeleteTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DeleteTrigger",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def delete_user(self, username: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def delete_user(
+        self,
+        username: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete an AMP user.
@@ -534,14 +822,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Username": username}
-        result: Any = await self._call_api(
-            api="Core/DeleteUser", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DeleteUser",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def disable_two_factor(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def disable_two_factor(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Disables two-factor authentication for the currently logged in AMP User.
@@ -561,14 +864,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Password": self._bridge.password, "TwoFactorCode": TOTP(self._bridge.token).now()}
-        result: Any = await self._call_api(
-            api="Core/DisableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DisableTwoFactor",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def dismiss_all_tasks(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def dismiss_all_tasks(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Dismiss all task notifications.
@@ -584,11 +902,28 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/DismissAllTasks", format_data=format_data, format_=ActionResult)
-        return result
+        await self._reauth()
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DismissAllTasks",
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def dismiss_task(self, task_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def dismiss_task(
+        self,
+        task_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Dismiss a task notification.
@@ -606,12 +941,21 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"TaskId": task_id}
-        result: Any = await self._call_api(
-            api="Core/DismissTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/DismissTask",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def edit_interval_trigger(
         self,
@@ -622,7 +966,10 @@ class Core(Base):
         minutes: int,
         days_of_month: int,
         description: str,
+        *,
         format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -653,7 +1000,7 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         if months < 1 or months > 12:
             raise ValueError("Months must be between 1 and 12.")
         if days < 0 or days > 7:
@@ -674,13 +1021,29 @@ class Core(Base):
             "daysOfMonth": days_of_month,
             "description": description,
         }
-        result: Any = await self._call_api(
-            api="Core/EditIntervalTrigger", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/EditIntervalTrigger",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def edit_task(
-        self, trigger_id: str, task_id: str, parameter_mapping: dict[str, str], format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        task_id: str,
+        parameter_mapping: dict[str, str],
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -703,15 +1066,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"TriggerID": trigger_id, "TaskID": task_id, "ParameterMapping": parameter_mapping}
-        result: Any = await self._call_api(
-            api="Core/EditTask", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/EditTask",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def enable_two_factor(
-        self, username: str, password: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        password: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -736,15 +1114,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Username": username, "Password": password}
-        result: Any = await self._call_api(
-            api="Core/EnableTwoFactor", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/EnableTwoFactor",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     @Base.ads_only
-    async def end_user_session(self, session_id: str) -> None:
+    async def end_user_session(
+        self,
+        session_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Closes the specified User's session ID to AMP.
@@ -759,10 +1152,15 @@ class Core(Base):
             The AMP Session ID to close.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Id": session_id}
-        await self._call_api(api="Core/EndUserSession", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="Core/EndUserSession",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @Base.ads_only
     async def get_active_amp_sessions(self, format_data: Union[bool, None] = None) -> list[Session] | ActionResultError:
@@ -786,9 +1184,12 @@ class Core(Base):
             On success returns a :class:`Session` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
-            api="Core/GetActiveAMPSessions", format_data=format_data, format_=Session, _use_from_dict=False,
+            api="Core/GetActiveAMPSessions",
+            format_data=format_data,
+            format_=Session,
+            _use_from_dict=False,
         )
         return result
 
@@ -808,9 +1209,12 @@ class Core(Base):
             On success returns a list of :class:`User` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
-            api="Core/GetAllAMPUserInfo", format_data=format_data, format_=User, _use_from_dict=False,
+            api="Core/GetAllAMPUserInfo",
+            format_data=format_data,
+            format_=User,
+            _use_from_dict=False,
         )
         return result
 
@@ -830,7 +1234,7 @@ class Core(Base):
             On success returns a list of strings containing all the permission nodes for the provided role id.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"RoleId": role_id}
         result: Any = await self._call_api(api="Core/GetAMPRolePermissions", parameters=parameters)
         return result
@@ -853,10 +1257,14 @@ class Core(Base):
             On success returns a :class:`User` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Username": name}
         result: Any = await self._call_api(
-            api="Core/GetAMPUserInfo", parameters=parameters, format_data=format_data, format_=User, _use_from_dict=False,
+            api="Core/GetAMPUserInfo",
+            parameters=parameters,
+            format_data=format_data,
+            format_=User,
+            _use_from_dict=False,
         )
         return result
 
@@ -876,7 +1284,7 @@ class Core(Base):
             On success returns a list of :class:`UserInfoSummary` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetAMPUsersSummary", format_data=format_data, format_=LoginUserInfo)
         return result
 
@@ -895,12 +1303,15 @@ class Core(Base):
             On success returns a dictionary with all of the API specs, their parameters and return types for the Instance.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetAPISpec", sanitize_json=sanitize_json)
         return result
 
     async def get_audit_log_entries(
-        self, before: float = datetime.now().timestamp(), count: int = 10, format_data: Union[bool, None] = None,
+        self,
+        before: float = datetime.now().timestamp(),
+        count: int = 10,
+        format_data: Union[bool, None] = None,
     ) -> list[AuditLogEntry] | ActionResultError:
         """|coro|
 
@@ -925,7 +1336,7 @@ class Core(Base):
             On success returns a list of :class:`AuditLogEntry` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"Before": before, "Count": count}
         result: Any = await self._call_api(
             api="Core/GetAuditLogEntries",
@@ -937,7 +1348,9 @@ class Core(Base):
         return result
 
     async def get_authentication_requirements(
-        self, username: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        format_data: Union[bool, None] = None,
     ) -> list[Any] | ActionResultError:
         """|coro|
 
@@ -956,10 +1369,12 @@ class Core(Base):
             On success returns a list of Authentication requirements.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"username": username}
         result: Any = await self._call_api(
-            api="Core/GetAuthenticationRequirements", parameters=parameters, format_data=format_data,
+            api="Core/GetAuthenticationRequirements",
+            parameters=parameters,
+            format_data=format_data,
         )
         return result
 
@@ -985,15 +1400,20 @@ class Core(Base):
             On success returns a :class:`SettingSpec` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"node": node}
         result: Any = await self._call_api(
-            api="Core/GetConfig", parameters=parameters, format_data=format_data, format_=SettingSpec,
+            api="Core/GetConfig",
+            parameters=parameters,
+            format_data=format_data,
+            format_=SettingSpec,
         )
         return result
 
     async def get_configs(
-        self, nodes: list[str], format_data: Union[bool, None] = None,
+        self,
+        nodes: list[str],
+        format_data: Union[bool, None] = None,
     ) -> list[SettingSpec] | ActionResultError:
         """|coro|
 
@@ -1016,10 +1436,13 @@ class Core(Base):
             On success returns a list of :class:`SettingSpec` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, list[str]] = {"nodes": nodes}
         result: Any = await self._call_api(
-            api="Core/GetConfigs", parameters=parameters, format_data=format_data, format_=SettingSpec,
+            api="Core/GetConfigs",
+            parameters=parameters,
+            format_data=format_data,
+            format_=SettingSpec,
         )
         return result
 
@@ -1039,7 +1462,7 @@ class Core(Base):
             On success returns a :class:`Diagnostics` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="Core/GetDiagnosticsInfo",
             format_data=format_data,
@@ -1066,7 +1489,7 @@ class Core(Base):
             On success returns a :class:`Module` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetModuleInfo", format_data=format_data, format_=Module)
         return result
 
@@ -1086,11 +1509,18 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetNewGuid", format_data=format_data)
         return result
 
-    async def get_oidc_login_url(self, state: str | None = None, redirect_uri: str | None = None) -> None:
+    async def get_oidc_login_url(
+        self,
+        state: str | None = None,
+        redirect_uri: str | None = None,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Interacts with OIDC credentials.
@@ -1106,10 +1536,8 @@ class Core(Base):
             UNK, by default None.
 
         """
-        await self._connect()
-        await self._call_api(api="Core/GetOIDCLoginURL", _no_data=True)
-        return
-
+        await self._reauth()
+        return await self._post(url="Core/GetOIDCLoginURL", no_data=True, request_params=request_params, **response_params)
 
     async def get_oidc_logout_url(self, redirect_uri: str | None = None) -> str | ActionResultError:
         """|coro|
@@ -1131,7 +1559,7 @@ class Core(Base):
 
         """
         parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetOIDCLogoutURL", parameters=parameters)
         return result
 
@@ -1146,7 +1574,7 @@ class Core(Base):
             On success returns a :class:`PermissionNode` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetPermissionsSpec")
         return result
 
@@ -1166,7 +1594,7 @@ class Core(Base):
             On success returns a list of :class:`Port` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetPortSummaries", format_data=format_data, format_=Port)
         if format_data is None:
             format_data = self.format_data
@@ -1194,7 +1622,7 @@ class Core(Base):
             On success returns a list of :class:`SettingSpec` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetProvisionSpec", format_data=format_data, format_=SettingSpec)
         return result
 
@@ -1223,7 +1651,7 @@ class Core(Base):
             On success returns a :class:`str`.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"Description": description, "IsTemporary": is_temporary}
         result: Any = await self._call_api(api="Core/GetRemoteLoginToken", parameters=parameters, format_data=format_data)
         return result
@@ -1246,7 +1674,7 @@ class Core(Base):
             On success returns a :class:`Role` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"RoleId": role_id}
         result: Any = await self._call_api(api="Core/GetRole", parameters=parameters, format_data=format_data, format_=Role)
         return result
@@ -1267,7 +1695,7 @@ class Core(Base):
             On success returns a list of :class:`Role` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetRoleData", format_data=format_data, format_=Role)
         return result
 
@@ -1282,7 +1710,7 @@ class Core(Base):
             On success returns a dictionary containing all the roles and their IDs.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetRoleIds")
         return result
 
@@ -1292,7 +1720,8 @@ class Core(Base):
     async def get_schedule_data(self, format_data: Union[Literal[True], None]) -> ScheduleData | ActionResultError: ...
 
     async def get_schedule_data(
-        self, format_data: Union[bool, None] = None,
+        self,
+        format_data: Union[bool, None] = None,
     ) -> ScheduleData | ScheduleDataData | ActionResultError:
         """|coro|
 
@@ -1309,7 +1738,7 @@ class Core(Base):
             On success returns a :class:`ScheduleData` dataclass, unless format_data is False which it will return :class:`ScheduleDataData`.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetScheduleData", format_data=format_data, format_=ScheduleData)
         return result
 
@@ -1332,7 +1761,7 @@ class Core(Base):
             On success returns a :class:`SettingSpecParent` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="Core/GetSettingsSpec",
             format_data=format_data,
@@ -1363,7 +1792,7 @@ class Core(Base):
             On success returns a dictionary of setting values.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"SettingNode": setting_node}
         result: Any = await self._call_api(api="Core/GetSettingValues", parameters=parameters)
         return result
@@ -1384,7 +1813,7 @@ class Core(Base):
             On success returns a :class:`Status` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetStatus", format_data=format_data, format_=Status)
         return result
 
@@ -1404,12 +1833,14 @@ class Core(Base):
             On success returns a list of :class:`RunningTask` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetTasks", format_data=format_data, format_=RunningTask)
         return result
 
     async def get_time_interval_trigger(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        format_data: Union[bool, None] = None,
     ) -> TimedTrigger | ActionResultError:
         """|coro|
 
@@ -1428,10 +1859,13 @@ class Core(Base):
             On success returns a :class:`TimedTrigger` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Id": trigger_id}
         result: Any = await self._call_api(
-            api="Core/GetTimeIntervalTrigger", parameters=parameters, format_data=format_data, format_=TimedTrigger,
+            api="Core/GetTimeIntervalTrigger",
+            parameters=parameters,
+            format_data=format_data,
+            format_=TimedTrigger,
         )
         return result
 
@@ -1450,7 +1884,7 @@ class Core(Base):
             A class containing the Trigger Description as attributes referencing the Trigger ID tied to the Instance.
 
         """
-        await self._connect()
+        await self._reauth()
         data: ScheduleDataData | ActionResultError = await self.get_schedule_data(format_data=False)
         if isinstance(data, ActionResultError):
             return data
@@ -1477,7 +1911,7 @@ class Core(Base):
             On success returns a :class:`UpdateInfo` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetUpdateInfo", format_data=format_data, format_=UpdateInfo)
         return result
 
@@ -1497,7 +1931,7 @@ class Core(Base):
             On success returns a :class:`Updates` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetUpdates", format_data=format_data, format_=Updates)
         return result
 
@@ -1517,12 +1951,14 @@ class Core(Base):
             On success returns a :class:`ActionSpec`.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetUserActionsSpec", format_data=format_data)
         return result
 
     async def get_user_info(
-        self, user_id: str, format_data: Union[bool, None] = None,
+        self,
+        user_id: str,
+        format_data: Union[bool, None] = None,
     ) -> UserApplicationData | ActionResultError:
         """|coro|
 
@@ -1541,10 +1977,13 @@ class Core(Base):
             On success returns a :class:`UserApplicationData` class.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"UID": user_id}
         result: Any = await self._call_api(
-            api="Core/GetUserInfo", parameters=parameters, format_data=format_data, format_=UserApplicationData,
+            api="Core/GetUserInfo",
+            parameters=parameters,
+            format_data=format_data,
+            format_=UserApplicationData,
         )
         return result
 
@@ -1564,13 +2003,23 @@ class Core(Base):
             On success returns a :class:`Players` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
-            api="Core/GetUserList", format_data=format_data, format_=Players, _use_from_dict=False, _auto_unpack=False,
+            api="Core/GetUserList",
+            format_data=format_data,
+            format_=Players,
+            _use_from_dict=False,
+            _auto_unpack=False,
         )
         return result
 
-    async def get_webauthn_challenge(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def get_webauthn_challenge(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Get a webauthn challenge.
@@ -1586,12 +2035,24 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/GetWebauthnChallenge", format_data=format_data, format_=ActionResult)
-        return result
+        await self._reauth()
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/GetWebauthnChallenge",
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def get_webauthn_credential_ids(
-        self, username: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        format_data: Union[bool, None] = None,
     ) -> list[Any] | ActionResultError:
         """|coro|
 
@@ -1610,10 +2071,12 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"username": username}
         result: Any = await self._call_api(
-            api="Core/GetWebauthnCredentialIDs", parameters=parameters, format_data=format_data,
+            api="Core/GetWebauthnCredentialIDs",
+            parameters=parameters,
+            format_data=format_data,
         )
         return result
 
@@ -1632,7 +2095,7 @@ class Core(Base):
         list[Any] : List of webauthn credential summaries.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/GetWebauthnCredentialSummaries", format_data=format_data)
         return result
 
@@ -1657,7 +2120,7 @@ class Core(Base):
             UNK data returned by the API.
 
         """
-        await self._connect()
+        await self._reauth()
         try:
             await self.version_validation(version=BuildInfo(major=2, minor=6, revision=0, minor_revision=0))
         except RuntimeError as e:
@@ -1666,7 +2129,12 @@ class Core(Base):
         result: Any = await self._call_api(api="Core/GetWebserverMetrics", format_data=format_data)
         return result
 
-    async def kill_application(self) -> None:
+    async def kill_application(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Kills the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -1676,14 +2144,19 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/Kill", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/Kill", no_data=True, request_params=request_params, **response_params)
 
     @deprecated(
-        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.", stacklevel=2,
+        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.",
+        stacklevel=2,
     )
-    async def kill_instance(self) -> None:
+    async def kill_instance(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Kills the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -1699,7 +2172,7 @@ class Core(Base):
             category=DeprecationWarning,
             stacklevel=2,
         )
-        return await self.kill_application()
+        return await self.kill_application(request_params=request_params, **response_params)
 
     async def login(
         self,
@@ -1710,7 +2183,7 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> LoginResults | ActionResultError:
+    ) -> APIReturnTypeAlias | None:
         """|coro|
 
         AMP API login function.
@@ -1719,13 +2192,14 @@ class Core(Base):
         Parameters
         ----------
         amp_user: :class:`str`
-            The username for logging into the AMP Panel
+            The username for logging into the AMP Control Panel.
         amp_password: :class:`str`
-            The password for logging into the AMP Panel
+            The password for logging into the AMP Control Panel.
         token: :class:`str` , optional
-            AMP 2 Factor auth code; typically using :meth:`TOTP.now`, defaults to "".
+            Your Two-Factor token string, defaults to "".
+            - Uses :meth:`TOTP.now()` on the provided token.
         remember_me: :class:`bool` , optional
-            Remember me token, defaults to False.
+            Remember me token, defaults to ``False``.
 
         Returns
         -------
@@ -1733,17 +2207,35 @@ class Core(Base):
             On success returns a :class:`LoginResults` dataclass.
 
         """
-        parameters = {"username": amp_user, "password": amp_password, "token": token, "rememberMe": remember_me}
-        # result: Any = await self._call_api(
-        #     api="Core/Login", parameters=parameters, format_data=format_data, format_=LoginResults,
-        # )
-        if request_params is None:
-            res = await self._post("Core/Login", parameters=parameters, **response_params)
-        else:
-            res = await self._post("Core/Login", parameters, **request_params, **response_params)
-        return res
+        code: str = TOTP(token).now()
+        parameters: dict[str, str | bool] = {"username": amp_user, "password": amp_password, "token": code, "rememberMe": remember_me}
+        result: ResponseTypeAlias | ActionResultError | None = await self._post(
+            url="Core/Login",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        # Unpack the data into our Dataclass.
+        if isinstance(result, dict) and "remember_me_token" in result:
+            # user_info = LoginUserInfo(**result.get("user_info"))
+            return LoginResults(**result)
+            # return LoginResults(
+            #     success=result["success"],
+            #     result=result["result"],
+            #     permissions=result["permissions"],
+            #     result_reason=result["result_reason"],
+            #     session_id=result["session_id"],
+            #     remember_me_token=result["remember_me_token"],
+            #     user_info=user_info,
+            # )
+        return None
 
-    async def logout(self) -> None:
+    async def logout(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Logout from AMP.
@@ -1753,12 +2245,16 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/Logout", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
 
     @Base.ads_only
-    async def restart_amp(self) -> None:
+    async def restart_amp(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Restart the AMP Instance
@@ -1768,11 +2264,15 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/RestartAMP", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/RestartAMP", no_data=True, request_params=request_params, **response_params)
 
-    async def resume_instance(self) -> None:
+    async def resume_instance(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Allows the service to be re-started after previously being suspended.
@@ -1782,9 +2282,8 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/Resume", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/Resume", no_data=True, request_params=request_params, **response_params)
 
     async def oidc_login(self, code: str, redirect_uri: str, instance_id: str) -> dict[Any, Any] | ActionResultError:
         """|coro|
@@ -1809,12 +2308,17 @@ class Core(Base):
 
         """
         parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
-        await self._connect()
+        await self._reauth()
         result = await self._call_api(api="Core/OIDCLogin", parameters=parameters, format_data=False)
         return result
 
     async def refresh_setting_value_list(
-        self, node: str, format_data: Union[bool, None] = None,
+        self,
+        node: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -1833,16 +2337,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        parameters: dict[str, str] = {
-            "Name": node,
-        }
-        result: Any = await self._call_api(
-            api="Core/RefreshSettingValueList", parameters=parameters, format_data=format_data, format_=ActionResult,
+        await self._reauth()
+        parameters: dict[str, str] = {"Name": node}
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/RefreshSettingValueList",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def refresh_settings_source_cache(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def refresh_settings_source_cache(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Refreshes the settings source cache.
@@ -1858,14 +2375,28 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(
-            api="Core/RefreshSettingsSourceCache", format_data=format_data, format_=ActionResult,
+        await self._reauth()
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/RefreshSettingsSourceCache",
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def rename_role(
-        self, role_id: str, new_name: str, format_data: Union[bool, None] = None,
+        self,
+        role_id: str,
+        new_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -1886,17 +2417,33 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"RoleId": role_id, "NewName": new_name}
-        result: Any = await self._call_api(
-            api="Core/RenameRole", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/RenameRole",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     @deprecated(
-        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.", stacklevel=2,
+        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.",
+        stacklevel=2,
     )
-    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def restart_instance(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -1918,9 +2465,15 @@ class Core(Base):
             category=DeprecationWarning,
             stacklevel=2,
         )
-        return await self.restart_application(format_data=format_data)
+        return await self.restart_application(format_data=format_data, request_params=request_params, **response_params)
 
-    async def restart_application(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def restart_application(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -1936,12 +2489,28 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/Restart", format_data=format_data, format_=ActionResult)
-        return result
+        await self._reauth()
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/Restart",
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def reset_user_password(
-        self, username: str, new_password: str, format_data: Union[bool, None] = None,
+        self,
+        username: str,
+        new_password: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """For administrative users to alter the password of another user.
 
@@ -1960,15 +2529,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Username": username, "NewPassword": new_password}
-        result: Any = await self._call_api(
-            api="Core/ResetUserPassword", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/ResetUserPassword",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def revoke_webauthn_credential(
-        self, auth_id: int, format_data: Union[bool, None] = None,
+        self,
+        auth_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -1987,12 +2570,21 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, int] = {"ID": auth_id}
-        result: Any = await self._call_api(
-            api="Core/RevokeWebauthnCredential", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/RevokeWebauthnCredential",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def run_security_check(self, format_data: Union[bool, None] = None) -> Any | ActionResultError:
         """|coro|
@@ -2010,12 +2602,17 @@ class Core(Base):
 
         """
         # TODO - Need to get Proper data back.
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="Core/RunSecurityCheck", format_data=format_data)
         return result
 
     async def run_event_trigger_immediately(
-        self, trigger_id: str, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2034,15 +2631,31 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"TriggerId": trigger_id}
-        result: Any = await self._call_api(
-            api="Core/RunEventTriggerImmediately", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/RunEventTriggerImmediately",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def set_amp_user_role_membership(
-        self, user_id: str, role_id: str, is_member: bool, format_data: Union[bool, None] = None,
+        self,
+        user_id: str,
+        role_id: str,
+        is_member: bool,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2066,15 +2679,31 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"UserId": user_id, "RoleId": role_id, "IsMember": is_member}
-        result: Any = await self._call_api(
-            api="Core/SetAMPUserRoleMembership", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/SetAMPUserRoleMembership",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def set_amp_role_permission(
-        self, role_id: str, permission_node: str, enabled: Union[None, bool], format_data: Union[bool, None] = None,
+        self,
+        role_id: str,
+        permission_node: str,
+        enabled: Union[None, bool],
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2097,15 +2726,30 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"RoleId": role_id, "PermissionNode": permission_node, "Enabled": enabled}
-        result: Any = await self._call_api(
-            api="Core/SetAMPRolePermission", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/SetAMPRolePermission",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def set_trigger_enabled(
-        self, trigger_id: str, enabled: bool, format_data: Union[bool, None] = None,
+        self,
+        trigger_id: str,
+        enabled: bool,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2126,14 +2770,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"Id": trigger_id, "Enabled": enabled}
-        result: Any = await self._call_api(
-            api="Core/SetTriggerEnabled", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/SetTriggerEnabled",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def send_console_message(self, msg: str) -> None:
+    async def send_console_message(
+        self,
+        msg: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Sends a message or command to the Console. (eg `/list`)
@@ -2146,11 +2805,19 @@ class Core(Base):
         None
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"message": msg}
-        await self._call_api(api="Core/SendConsoleMessage", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="Core/SendConsoleMessage",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
+    # TODO: Look into sanitizing data structure for array style key/value pairs.
+    # - "value":[\"asd\"]
+    # I am already calling JSON.dumps, look into structure and see what is (possibly) failing.
     async def set_configs(self, data: dict[str, str], format_data: Union[bool, None] = None) -> bool | ActionResultError:
         """|coro|
 
@@ -2169,13 +2836,19 @@ class Core(Base):
             On success returns a boolean.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, dict[str, str]] = {"data": data}
         result: Any = await self._call_api(api="Core/SetConfigs", parameters=parameters, format_data=format_data)
         return result
 
     async def set_config(
-        self, node: str, value: str, format_data: Union[bool, None] = None,
+        self,
+        node: str,
+        value: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2196,14 +2869,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"node": node, "value": value}
-        result: Any = await self._call_api(
-            api="Core/SetConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/SetConfig",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def start_application(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def start_application(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Starts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -2219,11 +2907,26 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/Start", format_data=format_data, format_=ActionResult)
-        return result
+        await self._reauth()
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/Start",
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
-    async def stop_application(self) -> None | ActionResultError:
+    async def stop_application(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Stops the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
@@ -2233,11 +2936,15 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/Stop", _no_data=True)
-        return result
+        await self._reauth()
+        return await self._post(url="Core/Stop", no_data=True, request_params=request_params, **response_params)
 
-    async def suspend_instance(self) -> None:
+    async def suspend_instance(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Prevents the current instance from being started, and stops it if it's currently running.
@@ -2247,12 +2954,17 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/Suspend")
-        return
+        await self._reauth()
+        return await self._post(url="Core/Suspend", no_data=True, request_params=request_params, **response_params)
 
     async def update_account_info(
-        self, email_address: str, two_factor_pin: str, format_data: Union[bool, None] = None,
+        self,
+        email_address: str,
+        two_factor_pin: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2277,15 +2989,29 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"EmailAddress": email_address, "TwoFactorPIN": two_factor_pin}
-        result: Any = await self._call_api(
-            api="Core/UpdateAccountInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/UpdateAccountInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     @Base.ads_only
-    async def upgrade_amp(self) -> None:
+    async def upgrade_amp(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Upgrade the current AMP Instance.
@@ -2299,12 +3025,16 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/UpgradeAMP", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/UpgradeAMP", no_data=True, request_params=request_params, **response_params)
 
     @Base.ads_only
-    async def update_amp_instance(self) -> None:
+    async def update_amp_instance(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResultError | None:
         """|coro|
 
         Updates the ADS Instance.
@@ -2318,11 +3048,16 @@ class Core(Base):
         None
 
         """
-        await self._connect()
-        await self._call_api(api="Core/UpdateAMPInstance", _no_data=True)
-        return
+        await self._reauth()
+        return await self._post(url="Core/UpdateAMPInstance", no_data=True, request_params=request_params, **response_params)
 
-    async def update_application(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def update_application(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultError:
         """|coro|
 
         Update the Instance application.
@@ -2339,12 +3074,27 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        result: Any = await self._call_api(api="Core/UpdateApplication", format_data=format_data, format_=ActionResult)
-        return result
+        await self._reauth()
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/UpdateApplication",
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def update_public_key(
-        self, pub_key: str, format_data: Union[bool, None] = None,
+        self,
+        pub_key: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """Update a public key.
 
@@ -2359,12 +3109,21 @@ class Core(Base):
              On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
-        parameters = {"PubKey": str}
-        result: Any = await self._call_api(
-            api="Core/UpdatePublicKey", parameters=parameters, format_=ActionResult, format_data=format_data,
+        await self._reauth()
+        parameters: dict[str, str] = {"PubKey": pub_key}
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/UpdatePublicKey",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def update_user_info(
         self,
@@ -2374,7 +3133,10 @@ class Core(Base):
         cannot_change_password: bool = False,
         must_change_password: bool = False,
         email_address: str = "",
+        *,
         format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2403,7 +3165,7 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {
             "Username": username,
             "Disabled": disabled,
@@ -2412,13 +3174,29 @@ class Core(Base):
             "MustChangePassword": must_change_password,
             "EmailAddress": email_address,
         }
-        result: Any = await self._call_api(
-            api="Core/UpdateUserInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/UpdateUserInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]
 
     async def webauthn_register(
-        self, attestation_object: str, client_data_json: str, description: str, format_data: Union[bool, None] = None,
+        self,
+        attestation_object: str,
+        client_data_json: str,
+        description: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -2445,13 +3223,22 @@ class Core(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {
             "attestationObject": attestation_object,
             "clientDataJSON": client_data_json,
             "description": description,
         }
-        result: Any = await self._call_api(
-            api="Core/WebauthnRegister", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ActionResultError | ResponseTypeAlias | str | None = await self._post(
+            url="Core/WebauthnRegister",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if format_data is None:
+            format_data = Base._format_data
+        if format_data is False or isinstance(result, ActionResultError):
+            return result  # type: ignore[return-value]
+        if isinstance(result, dict) and "status" in result and format_data is True:
+            return ActionResult(result.get("status"), result.get("reason", ""), result.get("result", ""))
+        return result  # type: ignore[return-value]

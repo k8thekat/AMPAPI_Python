@@ -17,18 +17,19 @@ from typing_extensions import Unpack
 
 from docs.samples.method_event_usage import example_note
 
+from ._types import ScheduleDataData
+
 # from .base import Base
 from .instance import AMPMinecraftInstance
 from .modules import ActionResultError, BuildInfo, Diagnostics, ScheduleData
-from .types_ import ScheduleDataData
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from io import TextIOWrapper
 
+    from ._types import APISpec, PermissionNode, ScheduleDataData
     from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
     from .modules import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
-    from .types_ import APISpec, PermissionNode, ScheduleDataData
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 

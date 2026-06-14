@@ -7,8 +7,7 @@ __all__ = ("EmailSenderPlugin",)
 
 
 class EmailSenderPlugin(Base):
-    """
-    Contains the functions for any ``/API/EmailSenderPlugin/`` API endpoints.
+    """Contains the functions for any ``/API/EmailSenderPlugin/`` API endpoints.
 
     """
 
@@ -21,15 +20,16 @@ class EmailSenderPlugin(Base):
             This is a development endpoint.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns an :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         result = await self._call_api(api="EmailSenderPlugin/TestSMTPSettings", format_data=format_data)
         return ActionResult(**result)

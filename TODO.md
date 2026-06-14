@@ -10,13 +10,14 @@ A small todo list local to the project.
 ## Issues
 
 ---
-
 - N/A
 
 ## Improvements/Suggestions
 
 ---
 
-- Impliment non-dataclass modules to lower overhead and speed.
+- Impliment non-dataclass types to lower overhead and speed via Format_data arg
 - Add API endpoints to the remaining function docstrings.
 - Update local.py and change structure/mess with launch args/etc.
+- Add `__aenter__` and `__aexit__` to `Base()`
+- Update function returns and parameters since adding `bool` to `_post`.

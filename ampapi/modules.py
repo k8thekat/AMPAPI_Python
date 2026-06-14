@@ -18,14 +18,14 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec, Self, TypeVar
 
-    from .types_ import MCUserData, TriggersData
+    from ._types import MCUserData, TriggersData, UserInfoResponse
 
     D = TypeVar("D", bound="Instance")
     T = ParamSpec("T")
     F = TypeVar("F")
     # X = TypeVar("X", bound=DataclassInstance)
 
-from .enums_ import (
+from ._enums import (
     AccessModeState,
     ADSModeState,
     AMPDownloadMirrorState,
@@ -39,12 +39,13 @@ from .enums_ import (
     PortAssignmentState,
     PostCreateActionsState,
     PostCreateState,
+    Protocols,
     ReleaseStreamState,
     TwoFactoryModeState,
 )
 
 APIResponseDataTableAlias = Union["UserApplicationData", "DeploymentTemplate"]
-
+APIReturnTypeAlias = Union["LoginResults", "ActionResultError", "ActionResult"]
 
 SettingSpecTableAliases = Union[
     AccessModeState,
@@ -101,8 +102,7 @@ __all__ = (
 
 
 def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
-    """
-    Removes private attributes (aka ``_attribute``) designation from the dict key values.
+    """Removes private attributes (aka ``_attribute``) designation from the dict key values.
 
     .. note::
         Typically after calling :meth:`vars`.
@@ -117,42 +117,39 @@ def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
     -------
     dict[:class:`str`, Any]
         The private attributes removed.
-    """
 
+    """
     new_vars: dict[str, Any] = {}
     for key, value in vars(data).items():
         # We do this to avoid any private attributes such as the _controller attribute or _logger.
         # Which can cause infinite recursion as the __repr__ functions would call themselves due to inheritance.
         if key.startswith("_"):
             continue
-        else:
-            new_vars[key] = value
+        new_vars[key] = value
     return new_vars
 
 
 def timestamp_converter(data: str) -> datetime:
-    """
-    Convert either the ``C#`` date str into a Python :class:`datetime` object or the ISO format.
+    """Convert either the ``C#`` date str into a Python :class:`datetime` object or the ISO format.
 
     .. note::
         This is for older than 2.6.0.0 AMP Installs.
 
 
     Parameters
-    -----------
+    ----------
     data: :class:`str`
         The date string to convert.
 
     Returns
-    --------
+    -------
     :class:`datetime`
         The converted string as a :class:`datetime` object..
-    """
 
+    """
     if data.startswith("/Date"):
         return datetime.fromtimestamp(int(data[6:-2]) / 1000)
-    else:
-        return datetime.fromisoformat(data)
+    return datetime.fromisoformat(data)
 
 
 # class SettingsLogin(Enum):
@@ -170,17 +167,17 @@ def timestamp_converter(data: str) -> datetime:
 
 @dataclass
 class ActionResult:
-    """
-    Represents the JSON response data from most API Endpoints.
+    """Represents the JSON response data from most API Endpoints.
 
     Attributes
-    -----------
+    ----------
     status: :class:`bool`
         If the API call was successful.
     reason: Union[str, None]
         If :attr:`~ActionResult.status` is ``False`` this will typically have a :class:`str` response.
     result: Union[str, None]
         If :attr:`~ActionResult.status` is ``True`` this will contain data related to the API call.
+
     """
 
     status: bool
@@ -192,11 +189,10 @@ class ActionResult:
 
 
 class ActionResultError:
-    """
-    Represents the :meth:`_call_api` response if an error happens during runtime.
+    """Represents the :meth:`_call_api` response if an error happens during runtime.
 
     Attributes
-    -----------
+    ----------
     status: :class:`bool`
         If the API call was successful, typically this is False.
     reason: :class:`str`
@@ -205,6 +201,7 @@ class ActionResultError:
         The Exception or result of the Error that occured and what it means.
     result_type: Any
         Typically a string representation of the :attr:`result` to know what the Exception was.
+
     """
 
     status: bool
@@ -227,11 +224,10 @@ class ActionResultError:
 
 @dataclass
 class AnalyticsCountryData:
-    """
-    Represents the JSON response data from :attr:`~AnalyticsSummary.country_data`.
+    """Represents the JSON response data from :attr:`~AnalyticsSummary.country_data`.
 
     Attributes
-    -----------
+    ----------
     country: :class:`str`
         The country code; similar to the ISO 3166-1 Alpha-2 format.
     display_session_time: :class:`str`
@@ -248,6 +244,7 @@ class AnalyticsCountryData:
         The unique player percent out of all countries.
     session_percent: :class:`int`
         The percent of total sessions related to this country.
+
     """
 
     country: str
@@ -262,8 +259,7 @@ class AnalyticsCountryData:
 
 @dataclass
 class AnalyticsFilter:
-    """
-    A dataclass to handle filtering for :meth:`~AnalyticsPlugin.get_analytics_summary`, pass this dataclass in as the ``filter_``
+    """A dataclass to handle filtering for :meth:`~AnalyticsPlugin.get_analytics_summary`, pass this dataclass in as the ``filter_``
 
     .. note::
         Simply create this class and fill out either :attr:`username`, :attr:`user_id` and or :attr:`country`.
@@ -274,7 +270,7 @@ class AnalyticsFilter:
 
 
     Attributes
-    -----------
+    ----------
     country: :class:`str`
         The country to filter by.
     first_session: Union[:class:`bool`, None]
@@ -285,6 +281,7 @@ class AnalyticsFilter:
         The username to filter by, defaults to None.
     user_id: Union[str, None]
         The user_id to filter by, currently using the :attr:`username` attribute, defaults to None.
+
     """
 
     country: str
@@ -313,7 +310,7 @@ class AnalyticsFilter:
                                           "SO","ZA","GS","SS","ES","LK","SD","SR","SJ","SZ","SE","CH",
                                           "SY","TW","TJ","TZ","TH","TL","TG","TK","TO","TT","TN","TR",
                                           "TM","TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU",
-                                          "VE","VN","VG","VI","WF","EH","YE","ZM","ZW",]
+                                          "VE","VN","VG","VI","WF","EH","YE","ZM","ZW"]
     # fmt: on
     def __post_init__(self) -> None:
         if self.username is None and self.user_id is None and self.first_session is None and self.country is None:
@@ -325,8 +322,7 @@ class AnalyticsFilter:
 
 @dataclass
 class AnalyticsStats:
-    """
-    Represents the JSON response data from :attr:`AnalyticsSummary.stats`.
+    """Represents the JSON response data from :attr:`AnalyticsSummary.stats`.
 
     .. note::
         * ["Total Sessions", "Unique Users", "New Users", "Total Session Time", "Bounce Rate", "Session Duration", "Sessions Per User", "Longest Session"]
@@ -334,7 +330,7 @@ class AnalyticsStats:
 
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The Name of the current :class:`AnalyticsStats`
     description: :class:`str`
@@ -348,6 +344,7 @@ class AnalyticsStats:
         Has values such as "Infinity", 0, and 0.0.
     previous: Union[:class:`int`, :class:`str`, float]
         UNK
+
     """
 
     name: str
@@ -360,11 +357,10 @@ class AnalyticsStats:
 
 @dataclass
 class AnalyticsSummary:
-    """
-    Represents the JSON response data from :meth:`~AnalyticsPlugin.get_analytics_summary`.
+    """Represents the JSON response data from :meth:`~AnalyticsPlugin.get_analytics_summary`.
 
     Attributes
-    -----------
+    ----------
     busiest_time: dict[:class:`str`, Union[:class:`int`, :class:`str`]]
         UNK, default is a list.
     country_data: list[:class:`AnalyticsCountryData`]
@@ -379,6 +375,7 @@ class AnalyticsSummary:
         The Analytics Stats of the summary, default is a list.
     top_players: list[:class:`AnalyticsTopPlayers`]
         The TOP players from the summary, default is a list.
+
     """
 
     busiest_time: dict[str, Union[int, str]] = field(default_factory=dict)
@@ -395,11 +392,10 @@ class AnalyticsSummary:
 
 @dataclass
 class AnalyticsTopPlayers:
-    """
-    Represents the JSON Response data from :attr:`~Analytics_Summary.top_players`.
+    """Represents the JSON Response data from :attr:`~Analytics_Summary.top_players`.
 
     Attributes
-    -----------
+    ----------
     display_session_time: :class:`str`
         Display the session time.
     percent: :class:`float`
@@ -408,6 +404,7 @@ class AnalyticsTopPlayers:
         The total amount of session time the user has for the day.
     username: :class:`str`
         The name of the session user. Like an IGN.
+
     """
 
     display_session_time: str
@@ -418,8 +415,7 @@ class AnalyticsTopPlayers:
 
 @dataclass
 class APIParams:
-    """
-    A class to hold Login information for the AMP API.
+    """A class to hold Login information for the AMP API.
 
     .. note::
         The :attr:`url` must be relative to the machine running the API and the machine must be able to connect to AMP.
@@ -430,7 +426,7 @@ class APIParams:
 
 
     Attributes
-    -----------
+    ----------
     url: :class:`str`
         The URL to access the Web GUI panel home page/login page.
     user: :class:`str`
@@ -441,6 +437,7 @@ class APIParams:
         To use :py:class:`TOTP` 2 Factor Authentication, default is False.
     token: :class:`str`
         The 2 Factor Authentication Token Code to generate a :class:`TOTP` code, default is ""
+
     """
 
     url: str
@@ -453,32 +450,34 @@ class APIParams:
 
 @dataclass
 class APISession:
-    """
-    Stores the Session ID and the TTL usage for :class:`APIParams._session`.
+    """Stores the Session ID and the TTL usage for :class:`APIParams._session`.
 
     Attributes
-    -----------
+    ----------
     id: :class:`str`
         The ``SESSIONID`` dict key from the JSON response of :meth:`Login`.
     ttl: :class:`datetime`
         The time to live of the :attr:`id`. This can be adjusted by ::class:`Base.session_ttl` value.
+
     """
 
     id: str
     ttl: datetime
 
+    def __repr__(self) -> str:
+        return f"ID: {self.id} | TTL: {self.ttl}"
+
 
 @dataclass
 class Application:
-    """
-    Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`.
+    """Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`.
 
     .. note::
         Shows Template/App information. Similar to the all the applications in a repo lists.
 
 
     Attributes
-    -----------
+    ----------
     author: :class:`str`
         The author of the application/template.
     container_reason: :class:`str`
@@ -505,6 +504,7 @@ class Application:
         UNK
     settings: dict[:class:`str`, Any]
         A dict of Instance specific settings to apply for this application.
+
     """
 
     author: str
@@ -527,11 +527,10 @@ class Application:
 
 @dataclass
 class AuditLogEntry:
-    """
-    Represents the JSON response data from :meth:`Core.get_audit_log_entries`
+    """Represents the JSON response data from :meth:`Core.get_audit_log_entries`
 
     Attributes
-    -----------
+    ----------
     acknowledged: :class:`bool`
         UNK
     category: :class:`str`
@@ -548,6 +547,7 @@ class AuditLogEntry:
         The AMP Username tied to the log entry.
     timestamp: :class:`str` | :class:`datetime`
         The timestamp comes in as  ISO format and :meth:`AuditLogEntry.__post_init__` converts it into a datetime object.
+
     """
 
     acknowledged: bool
@@ -568,11 +568,10 @@ class AuditLogEntry:
 
 @dataclass
 class Backup:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_backups`.
+    """Represents the JSON response data from :meth:`ADSModule.get_backups`.
 
     Attributes
-    -----------
+    ----------
     created_automatically: :class:`bool`
         If the backup was created by a Scheduled Task.
     description: :class:`str`
@@ -597,6 +596,7 @@ class Backup:
         The total size of the backup is bytes.
     timestamp: :class:`datetime`
         The timestamp comes in as  ISO format and converts it into a datetime object.
+
     """
 
     created_automatically: bool
@@ -621,11 +621,10 @@ class Backup:
 
 @dataclass
 class BukkitPlugin:
-    """
-    Represents the JSON response data from any Bukkit function call. Related to :class:`MinecraftModule`.
+    """Represents the JSON response data from any Bukkit function call. Related to :class:`MinecraftModule`.
 
     Attributes
-    -----------
+    ----------
     author: dict:class:`[`str, :class:`int`]
         The author's name and ID tied to the author as a dict key, value pair.
     category: dict[:class:`str`, :class:`int`]
@@ -674,6 +673,7 @@ class BukkitPlugin:
         The contributors to the source code/plugin, default is "".
     donation_link: :class:`str`
         The URL to donate/support the plugin, default is "".
+
     """
 
     author: dict[str, int]
@@ -707,12 +707,10 @@ class BukkitPlugin:
 
 @dataclass
 class ConsoleEntries:
-    """
-    Represents the JSON response data from :attr:`Updates.console_entries`.
-
+    """Represents the JSON response data from :attr:`Updates.console_entries`.
 
     Attributes
-    -----------
+    ----------
     contents: :class:`str`
         The contents of the console entry.
     source: :class:`str`
@@ -721,6 +719,7 @@ class ConsoleEntries:
         The type of message. eg "Console, Chat, Error, ...
     timestamp: :class:`str` | :class:`datetime`
         The timestamp comes in as ISO format and :meth:`~ConsoleEntries.__post_init__` converts it into a datetime object.
+
     """
 
     contents: str
@@ -737,8 +736,7 @@ class ConsoleEntries:
 
 @dataclass
 class Controller:
-    """
-    Represents the JSON response data for an AMP Controller Instance.
+    """Represents the JSON response data for an AMP Controller Instance.
 
     .. note::
         See :meth:`ADSModule.get_instances(include_self = True)` making the first instance "typically" the Controller Instance. aka ``ADS01``.
@@ -751,7 +749,7 @@ class Controller:
 
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         UNK
     disabled: :class:`bool`
@@ -828,8 +826,7 @@ class Controller:
             # We do this to avoid any private attributes such as the _controller attribute or _logger.
             if key.startswith("_"):
                 continue
-            else:
-                new_vars[key] = value
+            new_vars[key] = value
         return pformat(new_vars)
 
         # res = f"Type: {type(self)} | ID : {id(self)}\n"
@@ -843,14 +840,12 @@ class Controller:
 
 @dataclass
 class CPUInfo:
-    """
-
-    Represents the JSON response data from :class:`~PlatformInfo.cpu_info` attribute.\n
+    """Represents the JSON response data from :class:`~PlatformInfo.cpu_info` attribute.\n
     Original Author: p0t4t0sandwich
     :class:`CPUInfo` : https://github.com/p0t4t0sandwich/ampapi-py/blob/7a28af9b640efab329cf9ca2bf39c4112a13b287/ampapi/types.py#L151
 
     Attributes
-    -----------
+    ----------
     sockets: :class:`int`
         The number of CPU sockets the AMP Instance has access to.
     cores: :class:`int`
@@ -865,6 +860,7 @@ class CPUInfo:
         The number of total cores the AMP Instance has access to.
     total_threads: :class:`int`
         The number of total threads the AMP Instance has access to.
+
     """
 
     sockets: int
@@ -881,15 +877,14 @@ class CPUInfo:
 
 @dataclass
 class CreateInstance:
-    """
-    Represents the JSON response data from :meth:`ADSModule.create_instance` function call.
+    """Represents the JSON response data from :meth:`ADSModule.create_instance` function call.
 
     .. note::
         Unsure if this :attr:`~CreateInstance.port_number` respects port ranges of the ADS or not.
 
 
     Attributes
-    -----------
+    ----------
     target_ads_instance: :class:`str`
         The Target instance ID to tie this Instance to.
     friendly_name: :class:`str`
@@ -921,6 +916,7 @@ class CreateInstance:
     target_datastore: :class:`int`
         The Datastore ID to create this Instance on.
             * See :attr:`Controller.datastores` ID values.
+
     """
 
     target_ads_instance: str  # Tied to Auto Configure
@@ -971,11 +967,10 @@ class CreateInstance:
 
 @dataclass
 class DCConsumes:
-    """
-    Represents the JSON response data from :attr:`~Methods.consumes`.
+    """Represents the JSON response data from :attr:`~Methods.consumes`.
 
     Attributes
-    -----------
+    ----------
     description: :class:`str`
         The description of the consumes method.
     input_type: :class:`str`
@@ -986,6 +981,7 @@ class DCConsumes:
         The type of the value when provided.
     enum_values: :class:`str` | dict, optional
         The values to be used for "input_type" if Any, default is "".
+
     """
 
     description: str
@@ -1004,11 +1000,10 @@ class DCConsumes:
 # TODO - update docstring
 @dataclass
 class DCParameterMapping:
-    """
-    Represents the JSON response data for :attr:`~TriggerTasks.parameter_mapping`
+    """Represents the JSON response data for :attr:`~TriggerTasks.parameter_mapping`
 
     Attributes
-    -----------
+    ----------
     user: :class:`str`
         UNK, default is "".
     reason: :class:`str`
@@ -1017,6 +1012,7 @@ class DCParameterMapping:
         UNK, default is "".
     subtitle: :class:`str`
         UNK, default is "".
+
     """
 
     user: str = field(default="")
@@ -1026,15 +1022,14 @@ class DCParameterMapping:
 
 
 class DeploymentTemplate:
-    """
-    Used for :meth:`ADSModule.update_deployment_template` function call.
+    """Used for :meth:`ADSModule.update_deployment_template` function call.
 
     .. note::
         Your pre-created data structure to be parsed for the required API parameters.
 
 
     Attributes
-    -----------
+    ----------
     clone_role_into_user: :class:`bool`
         Clone the :attr:`template_role` to the users of this template.
     description: :class:`str`
@@ -1061,6 +1056,7 @@ class DeploymentTemplate:
         The list of tags to assign to the template or that belong to the template.
     zip_overlay_path: :class:`bool`
         To zip the overlay path.
+
     """
 
     __slots__ = (
@@ -1110,13 +1106,13 @@ class DeploymentTemplate:
         self.start_on_boot: bool = start_on_boot
 
     def to_dict(self) -> dict[str, Any]:
-        """
-        As the function name implies; converts the class to a dict.
+        """As the function name implies; converts the class to a dict.
 
         Returns
         -------
         dict[:class:`str`, Any]
             Returns the class attributes in a key, value paired dict.
+
         """
         temp: dict[str, Any] = {}
         for key in self.__slots__:
@@ -1126,11 +1122,10 @@ class DeploymentTemplate:
 
 @dataclass
 class Diagnostics:
-    """
-    Represents the JSON response data from :meth:`Core.get_diagnostics_info`.
+    """Represents the JSON response data from :meth:`Core.get_diagnostics_info`.
 
     Attributes
-    -----------
+    ----------
     application_name: :class:`str`
         The Instance application name.
     application_version: :class:`str`
@@ -1175,6 +1170,7 @@ class Diagnostics:
         If the system is using a VM or not. *eg VMware*
     os: :class:`str`
         The machine Operating System.
+
     """
 
     application_name: str
@@ -1211,11 +1207,10 @@ class Diagnostics:
 
 @dataclass
 class Directory:
-    """
-    Represents the JSON response data from :meth:`FileManagerPlugin.get_directory_listing`
+    """Represents the JSON response data from :meth:`FileManagerPlugin.get_directory_listing`
 
     Attributes
-    -----------
+    ----------
     is_directory: :class:`bool`
         If the path is a directory.
     is_virtual_directory: :class:`bool`
@@ -1236,6 +1231,7 @@ class Directory:
         The time the file/directory was created.
     modified: :class:`str` | :class:`datetime`
         The time the file/directory was last modified.
+
     """
 
     is_directory: bool
@@ -1256,11 +1252,10 @@ class Directory:
 
 @dataclass
 class Endpoints:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_application_endpoints`
+    """Represents the JSON response data from :meth:`ADSModule.get_application_endpoints`
 
     Attributes
-    -----------
+    ----------
     display_name: :class:`str`
         The name of the endpoint.
     endpoint: :class:`str`
@@ -1277,11 +1272,10 @@ class Endpoints:
 
 @dataclass
 class FileChunk:
-    """
-    Represents the JSON response data from :meth:`FileManagerPlugin.get_file_chunk`
+    """Represents the JSON response data from :meth:`FileManagerPlugin.get_file_chunk`
 
     Attributes
-    -----------
+    ----------
     base_64_data: :class:`str`
         The base64 encoded string of the file chunk.
     bytes_length: :class:`int`
@@ -1295,11 +1289,10 @@ class FileChunk:
 
 @dataclass
 class Fitness:
-    """
-    Represents the JSON response data for :attr:`Instance.fitness` attribute.
+    """Represents the JSON response data for :attr:`Instance.fitness` attribute.
 
     Attributes
-    -----------
+    ----------
     available: :class:`bool`
         If the Instance is available to create more services or not.
     total_services: :class:`int`
@@ -1341,8 +1334,7 @@ class Fitness:
 
 @dataclass
 class InstanceDatastore:
-    """
-    Represents a the class object to be used in :meth:`ADSModule.add_datastore`
+    """Represents a the class object to be used in :meth:`ADSModule.add_datastore`
 
     .. warning::
         AMP must have read/write/execute access to the directory specified in the `Directory` parameter.
@@ -1354,7 +1346,7 @@ class InstanceDatastore:
 
 
     Parameters
-    -----------
+    ----------
     id: :class:`int`
         The ID of the datastore.
     friendly_name: :class:`str`
@@ -1379,6 +1371,7 @@ class InstanceDatastore:
         The current usage of the datastore in megabytes, defaults to -1.
     sanitized_name: :class:`str`
         The sanitized name of the datastore, defaults to "None".
+
     """
 
     id: int
@@ -1397,11 +1390,10 @@ class InstanceDatastore:
 
 @dataclass
 class InstanceInfo:
-    """
-    Represents the JSON response data for :meth:`ADSModule.update_instance_info`.
+    """Represents the JSON response data for :meth:`ADSModule.update_instance_info`.
 
     Attributes
-    -----------
+    ----------
     instance_id: :class:`str`
         The Instance GUID.
     friendly_name: :class:`str`
@@ -1426,6 +1418,7 @@ class InstanceInfo:
         If the Instance should start on boot, default is False.
     welcome_message: :class:`str`
         The welcome message of the Instance, default is None.
+
     """
 
     instance_id: str
@@ -1444,12 +1437,10 @@ class InstanceInfo:
 
 @dataclass(slots=True)
 class Instance:
-    """
-    Represents the JSON response data for :meth:`ADSModule.get_instance` or a list of these from :meth:`ADSModule.get_instances`.
-
+    """Represents the JSON response data for :meth:`ADSModule.get_instance` or a list of these from :meth:`ADSModule.get_instances`.
 
     Attributes
-    -----------
+    ----------
     application_endpoints: list[dict[str, str]]
         The list of application endpoints for the Instance.
     app_state: :class:`AMPInstanceState`
@@ -1508,6 +1499,7 @@ class Instance:
         The source of the display image, default is "".
     description: :class:`str`
         The description of the Instance, default is "".
+
     """
 
     application_endpoints: list[dict[str, str]]
@@ -1548,13 +1540,13 @@ class Instance:
             # Per Mike and Developers of AMP state they will be using string versions from `2.6.0.0` and this handles that.
             if isinstance(self.amp_version, dict):
                 try:
-                    setattr(self, "amp_version", BuildInfo(**self.amp_version))
+                    self.amp_version = BuildInfo(**self.amp_version)
                 except Exception as e:
                     _logger: Logger = logging.getLogger(__name__)
                     _logger.warning("We attempted to unpack <self.amp_version> and failed %s", e)
                     return
             if isinstance(self.amp_version, str):
-                setattr(self, "amp_version", BuildInfo.to_dataclass(self.amp_version))
+                self.amp_version = BuildInfo.to_dataclass(self.amp_version)
 
     def __hash__(self) -> int:
         return hash(self.instance_id)
@@ -1575,32 +1567,30 @@ class Instance:
     def online(
         func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
     ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
-        """
-        Checks the :attr:`running` property and raises :exc:`ConnectionError` if the attribute is equal to "False".
+        """Checks the :attr:`running` property and raises :exc:`ConnectionError` if the attribute is equal to "False".
 
         Raises
-        --------
+        ------
         :exc:`ConnectionError`
             The requested instance is not currently running at this time.
+
         """
 
         @functools.wraps(wrapped=func)
         def wrapper_online(self: D, *args: T.args, **kwargs: T.kwargs) -> Coroutine[None, None, F]:
             if self.running is True:
                 return func(self, *args, **kwargs)
-            else:
-                raise ConnectionError(self._instance_offline)
+            raise ConnectionError(self._instance_offline)
 
         return wrapper_online
 
 
 @dataclass
 class InstanceStatus:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_instance_statuses`.
+    """Represents the JSON response data from :meth:`ADSModule.get_instance_statuses`.
 
     Attributes
-    -----------
+    ----------
     instance_id: :class:`str`
         The Instance ID.
     running: :class:`bool`
@@ -1614,11 +1604,10 @@ class InstanceStatus:
 
 @dataclass
 class LoginResults:
-    """
-    Represents the JSON response data from the AMP Login response.
+    """Represents the JSON response data from the AMP Login response.
 
     Attributes
-    -----------
+    ----------
     success: :class:`bool`
         Whether the login was successful.
     result: :class:`int`
@@ -1638,20 +1627,23 @@ class LoginResults:
 
     success: bool
     result: int
-    permissions: list[str] = field(default_factory=list)
+    permissions: list[str] = field(default_factory=list[str])
     result_reason: str = ""
     session_id: str = ""
     remember_me_token: str = ""
-    user_info: Union[LoginUserInfo, None] = field(default=None)  # second data class
+    user_info: Union[LoginUserInfo | UserInfoResponse, None] = field(default=None)  # second data class
+
+    def __post__init__(self) -> None:
+        if isinstance(self.user_info, dict):
+            self.user_info = LoginUserInfo(**self.user_info)
 
 
 @dataclass
 class LoginUserInfo:
-    """
-    Represents an AMP users information, tied to :class:`LoginResults` along with representing the JSON response from the function :meth`~Core.get_amp_users_summary`
+    """Represents an AMP users information, tied to :class:`LoginResults` along with representing the JSON response from the function :meth`~Core.get_amp_users_summary`
 
     Attributes
-    -----------
+    ----------
     id: :class:`str`
         The user ID.
     username: :class:`str`
@@ -1671,26 +1663,29 @@ class LoginUserInfo:
 
     """
 
-    id: str
-    username: str
-    is_two_factor_enabled: bool
+    avatar_base64: str | None
     disabled: bool
+    email_address: str | None
     gravatar_hash: str
+    id: str
     is_ldap_user: bool
-    last_login: str  # type: ignore
-    email_address: str = ""
+    is_oidc_user: bool
+    is_two_factor_enabled: bool
+    last_login: str | datetime
+    username: str
 
     def __post_init__(self) -> None:
-        self.last_login: datetime = timestamp_converter(self.last_login)  # type:ignore
+        # TODO: This may be best handled with a try/except and setting a default value afterwards. -- 6/14/26'
+        if isinstance(self.last_login, str):
+            self.last_login = timestamp_converter(self.last_login)
 
 
 @dataclass
 class MCUser:
-    """
-    Represents the JSON response data from :meth:`MinecraftModule.mc_get_whitelist`.
+    """Represents the JSON response data from :meth:`MinecraftModule.mc_get_whitelist`.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The username.
     uuid: :class:`str`
@@ -1704,11 +1699,10 @@ class MCUser:
 
 @dataclass
 class Messages:
-    """
-    Represents a Message from the dataclass attribute :attr:`Updates.messages`
+    """Represents a Message from the dataclass attribute :attr:`Updates.messages`
 
     Attributes
-    -----------
+    ----------
     age_minutes: :class:`int`
         The age of the message in minutes.
     expired: :class:`bool`
@@ -1731,13 +1725,12 @@ class Messages:
 
 @dataclass
 class Methods:
-    """
-    Tied to :attr:`ScheduleData.available_methods`.
+    """Tied to :attr:`ScheduleData.available_methods`.
 
     Hold's information regarding Methods/Events that are available to the Instance. Varies depending on instance type.
 
     Attributes
-    -----------
+    ----------
     id: :class:`str`
         The method ID.
     name: :class:`str`
@@ -1763,11 +1756,10 @@ class Methods:
 
 @dataclass
 class Metric:
-    """
-    Represents the JSON response data for :attr:`AppStatus.metrics` and :attr:`Instance.metrics`.
+    """Represents the JSON response data for :attr:`AppStatus.metrics` and :attr:`Instance.metrics`.
 
     Attributes
-    -----------
+    ----------
     active_users: Union[:class:`MetricsData`, None]
         The active users data.
     cpu_usage: Union[:class:`MetricsData`, None]
@@ -1784,11 +1776,10 @@ class Metric:
 
 @dataclass
 class MetricsData:
-    """
-    Represents the JSON response data for each of the attributes of :class:`Metrics`.
+    """Represents the JSON response data for each of the attributes of :class:`Metrics`.
 
     Attributes
-    -----------
+    ----------
     raw_value: :class:`int`
         The raw value, or the current value of the field.
     max_value: :class:`int`
@@ -1817,11 +1808,10 @@ class MetricsData:
 
 @dataclass
 class Module:
-    """
-    Represents the JSON response data from :meth:`Core.get_module_info`
+    """Represents the JSON response data from :meth:`Core.get_module_info`
 
     Attributes
-    -----------
+    ----------
     amp_build: :class:`str`
         The AMP build.
     amp_version: :class:`str`
@@ -1874,6 +1864,7 @@ class Module:
         The tools version.
     version_codename: :class:`str`
         The version codename.
+
     """
 
     amp_build: str
@@ -1906,11 +1897,10 @@ class Module:
 
 @dataclass
 class OPList:
-    """
-    Represents the JSON response data from :meth:`MinecraftModule.get_op_whitelist`.
+    """Represents the JSON response data from :meth:`MinecraftModule.get_op_whitelist`.
 
     Attributes
-    -----------
+    ----------
     level: :class:`int`
         The level of the operator user.
     name: :class:`str`
@@ -1927,11 +1917,10 @@ class OPList:
 
 @dataclass
 class OPWhitelist:
-    """
-    Represents the JSON response data from :meth:`MinecraftModule.get_op_whitelist`.
+    """Represents the JSON response data from :meth:`MinecraftModule.get_op_whitelist`.
 
     Attributes
-    -----------
+    ----------
     op_list: list[:class:`MCUserData`]
         The list of operator users.
     whitelist: list[:class:`MCUserData`]
@@ -1945,11 +1934,10 @@ class OPWhitelist:
 
 @dataclass
 class PlatformInfo:
-    """
-    Represents the data from the attribute :attr:`RemoteTargetInfo.platform_info`.
+    """Represents the data from the attribute :attr:`RemoteTargetInfo.platform_info`.
 
     Attributes
-    -----------
+    ----------
     cpu_info: :class:`CPUInfo`
         The CPU information.
     installed_ram_mb: :class:`int`
@@ -1986,15 +1974,15 @@ class PlatformInfo:
 
 
 class Player(NamedTuple):
-    """
-    Represents a single player connected to a server.
+    """Represents a single player connected to a server.
 
     Attributes
-    -----------
+    ----------
     uuid: :class:`str`
         The UUID of the player.
     name: :class:`str`
         The name of the player.
+
     """
 
     uuid: str = ""
@@ -2009,16 +1997,14 @@ class Player(NamedTuple):
 
 @dataclass(init=False)
 class Players:
-    """
-    Represents the JSON response data from :meth:`~Core.get_user_list`.
-
+    """Represents the JSON response data from :meth:`~Core.get_user_list`.
 
     .. note::
         The print out of this dataclass can be long depending on the number of players connected due to separation by newline.
 
 
     Attributes
-    -----------
+    ----------
     sorted: list[:class:`Player`]
         A sorted list of :class:`Player` objects by name.
 
@@ -2037,30 +2023,28 @@ class Players:
         return "\n".join([p.name for p in self.sorted])
 
     def get_player(self, name_or_uuid: str) -> list[Player]:
-        """
-        Search for a player by their name or UUID.
+        """Search for a player by their name or UUID.
 
         Parameters
-        -----------
+        ----------
         name_or_uuid: :class:`str`
             The players name or UUID.
 
         Returns
-        --------
+        -------
         :class:`list[Player]`
             A list of :class:`Player` objects matching the search string.
+
         """
         return [p for p in self.sorted if name_or_uuid in (p.name, p.uuid)]
 
 
 @dataclass
 class Port:
-    """
-
-    Current Port of the related AMP Instance. Tied to :attr:`Updates.ports` and the JSON response data from :meth:`Core.get_port_summaries`.
+    """Current Port of the related AMP Instance. Tied to :attr:`Updates.ports` and the JSON response data from :meth:`Core.get_port_summaries`.
 
     Attributes
-    -----------
+    ----------
     listening: :class:`bool`
         Whether the port is listening.
     name: :class:`str`
@@ -2086,11 +2070,10 @@ class Port:
 
 @dataclass
 class Provision:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
+    """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
     Attributes
-    -----------
+    ----------
     available: :class:`bool`
         Whether the instance is available.
     cpu_service_ratio: :class:`float`
@@ -2125,11 +2108,10 @@ class Provision:
 
 @dataclass
 class ProvisionSettingInfo:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_provision_arguments`.
+    """Represents the JSON response data from :meth:`ADSModule.get_provision_arguments`.
 
     Attributes
-    -----------
+    ----------
     default_value: :class:`str`
         The default value.
     description: :class:`str`
@@ -2155,11 +2137,10 @@ class ProvisionSettingInfo:
 
 @dataclass
 class PortInfo:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_instance_network_info`.
+    """Represents the JSON response data from :meth:`ADSModule.get_instance_network_info`.
 
     Attributes
-    -----------
+    ----------
     description: :class:`str`
         The description.
     us_user_defined: :class:`bool`
@@ -2168,6 +2149,11 @@ class PortInfo:
         The port number.
     protocol: :class:`int`
         The protocol number.
+        ```
+        0 = TCP
+        1 = UDP
+        2 = TCP & UDP
+        ```
     provision_node_name: :class:`str`
         The provision node name.
     range: :class:`int`
@@ -2180,7 +2166,7 @@ class PortInfo:
     description: str
     us_user_defined: bool
     port_number: int
-    protocol: int
+    protocol: Protocols
     provision_node_name: str
     range: int
     verified: bool
@@ -2188,11 +2174,10 @@ class PortInfo:
 
 @dataclass
 class RemoteTargetInfo:
-    """
-    Represents the JSON response data from :meth:`ADSModule.get_target_info`.
+    """Represents the JSON response data from :meth:`ADSModule.get_target_info`.
 
     Attributes
-    -----------
+    ----------
     ip_address_list: :class:`list[str]`
         The IP address list.
     platform_info: :class:`PlatformInfo`
@@ -2211,11 +2196,10 @@ class RemoteTargetInfo:
 
 @dataclass
 class Role:
-    """
-    Represents the JSON response data from :meth:`Core.get_role`.
+    """Represents the JSON response data from :meth:`Core.get_role`.
 
     Attributes
-    -----------
+    ----------
     id: :class:`str`
         The ID of the AMP role.
     is_default: :class:`bool`
@@ -2253,11 +2237,10 @@ class Role:
 
 @dataclass
 class RunningTask:
-    """
-    Represents the JSON response data from functions that return RunningTask.
+    """Represents the JSON response data from functions that return RunningTask.
 
     Attributes
-    -----------
+    ----------
     is_primary_task: :class:`bool`
         If the task is the primary task or not.
     start_time: :class:`str`
@@ -2314,11 +2297,10 @@ class RunningTask:
 
 @dataclass
 class ScheduleData:
-    """
-    Represents the JSON response data from :meth:`Core.get_schedule_data`.
+    """Represents the JSON response data from :meth:`Core.get_schedule_data`.
 
     Attributes
-    -----------
+    ----------
     available_methods: list[:class:`Methods`]
         The available methods.
     available_triggers: list[:class:`Triggers`]
@@ -2335,11 +2317,10 @@ class ScheduleData:
 
 @dataclass
 class Session:
-    """
-    Represents the JSON response data from :meth:`Core.get_active_amp_sessions`.
+    """Represents the JSON response data from :meth:`Core.get_active_amp_sessions`.
 
     Attributes
-    -----------
+    ----------
     source: :class:`str`
         The source of the session.
     session_id: :class:`str`
@@ -2369,13 +2350,12 @@ class Session:
 
 @dataclass
 class SettingSpec:
-    """
-    Represents the JSON response data from :meth:`Core.get_config` or :meth:`Core.get_configs`.
+    """Represents the JSON response data from :meth:`Core.get_config` or :meth:`Core.get_configs`.
 
     These represent a single setting field in the Instance configuration UI.
 
     Attributes
-    -----------
+    ----------
     category: :class:`str`
         Which category the setting will appear under in the Instance configuration UI.
     actions: list[:class:`SettingSpecAction`]
@@ -2477,11 +2457,10 @@ class SettingSpec:
 
 @dataclass
 class SettingSpecAction:
-    """
-    Represents the JSON response data from :attr:`SettingSpec.actions`.
+    """Represents the JSON response data from :attr:`SettingSpec.actions`.
 
     Attributes
-    -----------
+    ----------
     argument: :class:`str`
         The argument of the action.
     caption: :class:`str`
@@ -2494,6 +2473,7 @@ class SettingSpecAction:
         The module the action belongs to.
     type_id: :class:`str`
         The type id of the action.
+
     """
 
     argument: str
@@ -2506,11 +2486,10 @@ class SettingSpecAction:
 
 @dataclass
 class SettingsSpecAttribute:
-    """
-    Represents the JSON response data from :attr:`SettingSpec.attributes`.
+    """Represents the JSON response data from :attr:`SettingSpec.attributes`.
 
     Attributes
-    -----------
+    ----------
     key_name: :class:`str`
         The name of the key.
     key_placeholder: :class:`str`
@@ -2523,6 +2502,7 @@ class SettingsSpecAttribute:
         The placeholder text for the value.
     read_only_keys: :class:`bool`
         If the key is read only or not.
+
     """
 
     key_name: str
@@ -2535,11 +2515,10 @@ class SettingsSpecAttribute:
 
 @dataclass
 class SettingsSpecParent:
-    """
-    Represents the JSON response data from :meth:`Core.get_setting_spec`.
+    """Represents the JSON response data from :meth:`Core.get_setting_spec`.
 
     Attributes
-    -----------
+    ----------
     branding: list[:class:`SettingSpec`]
         The list of branding settings in the UI, default is an empty list.
     external_services: list[:class:`SettingSpec`]
@@ -2556,6 +2535,7 @@ class SettingsSpecParent:
         The list of system settings in the UI, default is an empty list.
     updates: list[:class:`SettingSpec`]
         The list of update settings in the UI, default is an empty list.
+
     """
 
     branding: list[SettingSpec] = field(default_factory=list)
@@ -2570,17 +2550,17 @@ class SettingsSpecParent:
 
 @dataclass
 class SettingSpecSelectionSource:
-    """
-    Represents the JSON response data from :attr:`SettingSpec.selection_source`.
+    """Represents the JSON response data from :attr:`SettingSpec.selection_source`.
 
     Attributes
-    -----------
+    ----------
     deferred: :class:`bool`
         If the selection source is deferred or not.
     must_validate: :class:`bool`
         If the selection source must validate or not.
     type_id: :class:`str`
         The type id of the selection source.
+
     """
 
     deferred: bool
@@ -2609,17 +2589,17 @@ class SettingSpecTable:
 
 @dataclass
 class Status:
-    """
-    Represents the JSON response data from :meth:`Core.get_updates`
+    """Represents the JSON response data from :meth:`Core.get_updates`
 
     Attributes
-    -----------
+    ----------
     state: :class:`AMPInstanceState`
         The state of the AMP Instance.
     uptime: :class:`str`
         The up time of the Instance, in Days, Hours, Minutes, Seconds format. 00:00:00:00
     metrics: Union[:class:`Metric`, None]
         The Metrics data related to the Instance if any, default is None.
+
     """
 
     state: AMPInstanceState
@@ -2632,15 +2612,13 @@ class Status:
 
 @dataclass
 class Template:
-    """
-    A placeholder class for all the parameters to deploy or create a template.
-
+    """A placeholder class for all the parameters to deploy or create a template.
 
     * :meth:`ADSModule.deploy_template`
 
 
     Attributes
-    -----------
+    ----------
     template_id : int
         The ID of the template to be deployed, as per the Template Management UI in AMP itself.
     new_username : Union[:class:`str`, None] , optional
@@ -2662,6 +2640,7 @@ class Template:
         The action to take after the Instance is created, default is :attr:`PostCreateActionState.do_nothing`.
     extra_provision_settings: Union[dict[:class:`str`, :class:`str`], None]
         A dictionary of setting nodes and values to create the new instance with. Identical in function to the provisioning arguments in the template itself. Default is None.
+
     """
 
     template_id: int
@@ -2683,11 +2662,10 @@ class Template:
 
 @dataclass
 class TimedTrigger:
-    """
-    Represents the data of :meth:`Core.get_time_interval_trigger`.
+    """Represents the data of :meth:`Core.get_time_interval_trigger`.
 
     Attributes
-    -----------
+    ----------
     description: :class:`str`
         The description of the trigger, this is shown in the UI.
     enabled_state: :class:`bool`
@@ -2710,6 +2688,7 @@ class TimedTrigger:
         The order in which this trigger will appear in the Event list.
     tasks: :class:`list[TriggerTasks]`
         The list of tasks associated with this Timed Trigger.
+
     """
 
     description: str
@@ -2726,8 +2705,7 @@ class TimedTrigger:
 
 
 class TriggerID:
-    """
-    Used for a multitude of functions all related to Triggers and their IDs.
+    """Used for a multitude of functions all related to Triggers and their IDs.
 
     Simply access the respective attribute and the unique GUID for that :class:`AMPInstance` Trigger ID will be returned.
     """
@@ -2771,16 +2749,14 @@ class TriggerID:
 
 @dataclass
 class Triggers:
-    """
-    Represents the JSON reponse data for attributes :attr:`ScheduleData.available_triggers` and :attr:`ScheduleData.populated_triggers`.
-
+    """Represents the JSON reponse data for attributes :attr:`ScheduleData.available_triggers` and :attr:`ScheduleData.populated_triggers`.
 
     .. note::
         The :attr:`Triggers.id` is unique per Instance.
 
 
     Attributes
-    -----------
+    ----------
     enabled_state: :class:`int`
         If the trigger is enabled or not.
     tasks: :class:`list[TriggerTasks]`, optional
@@ -2799,6 +2775,7 @@ class Triggers:
         If the last execution of the trigger resulted in an error or not, default is False.
     last_error_reason: :class:`str`, optional
         The reason the last execution of the trigger resulted in an error, default is "".
+
     """
 
     enabled_state: int
@@ -2820,8 +2797,7 @@ class Triggers:
 
 @dataclass
 class TriggerTasks:
-    """
-    Represents the JSON response for the attribute :attr:`Triggers.tasks`.
+    """Represents the JSON response for the attribute :attr:`Triggers.tasks`.
 
     Hold's information regarding AMP Tasks and their status.
 
@@ -2855,11 +2831,10 @@ class TriggerTasks:
 
 @dataclass
 class UpdateInfo:
-    """
-    Represents the JSON response data from :meth:`Core.get_update_info`.
+    """Represents the JSON response data from :meth:`Core.get_update_info`.
 
     Attributes
-    -----------
+    ----------
     update_available: :class:`bool`
         If an update is available or not.
     release_notes_url: :class:`str`
@@ -2872,6 +2847,7 @@ class UpdateInfo:
         The tools version of the update, default is None.
     patch_only: :class:`bool`
         If the update is a patch only update or not, default is None
+
     """
 
     update_available: bool
@@ -2884,11 +2860,10 @@ class UpdateInfo:
 
 @dataclass
 class Updates:
-    """
-    Represents the JSON response data from :meth:`Core.get_updates`.
+    """Represents the JSON response data from :meth:`Core.get_updates`.
 
     Attributes
-    -----------
+    ----------
     console_entries: :class:`list[ConsoleEntries]`
         The list of entries in the console.
     status: :class:`Status`
@@ -2899,6 +2874,7 @@ class Updates:
         The list of ports the Server is listening/using, default is an empty list.
     tasks: :class:`list[RunningTask]` , optional
         The list of tasks the Server is running, default is an empty list.
+
     """
 
     console_entries: list[ConsoleEntries]
@@ -2913,11 +2889,10 @@ class Updates:
 
 @dataclass
 class User:
-    """
-    Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
+    """Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
 
     Attributes
-    -----------
+    ----------
     cannot_change_password: :class:`bool`
         If the user cannot change their password or not.
     disable: :class:`bool`
@@ -3022,8 +2997,7 @@ class UserApplicationData:
 
 @dataclass
 class BuildInfo:
-    """
-    Tied to the class attribute for :class:`UpdateInfo.build`
+    """Tied to the class attribute for :class:`UpdateInfo.build`
 
     .. note::
         * Currently has a converter function ``v2.6.0.0``
@@ -3031,7 +3005,7 @@ class BuildInfo:
 
 
     Attributes
-    -----------
+    ----------
     major: :class:`int`
         The major version number of the AMP build.
     minor: :class:`int`
@@ -3042,6 +3016,7 @@ class BuildInfo:
         The minor revision number of the AMP build.
     build: Union[:class:`int`, None]
         The build number, defaults to None.
+
     """
 
     major: int
@@ -3053,8 +3028,7 @@ class BuildInfo:
 
     @classmethod
     def to_dataclass(cls, data: str, sep: str = ".") -> Union[str, BuildInfo]:
-        """
-        Parse a string type of the Version into a dataclass.
+        """Parse a string type of the Version into a dataclass.
 
         .. note::
             Assumes structure is ``"2.6.0.0"``
@@ -3071,8 +3045,8 @@ class BuildInfo:
         -------
         :class:`str` | :class:`AMPVersionInfo`
             Returns the built dataclass if it succeeds. Otherwise you will get the data passed in back.
-        """
 
+        """
         new_data: list[str] = data.split(sep=sep)
         # Unpack the data converted into ints.
         try:

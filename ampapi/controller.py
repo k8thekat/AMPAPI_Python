@@ -18,8 +18,7 @@ InstanceTypeAliases = Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]
 
 
 class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin, Controller):
-    """
-    The AMPControllerInstance class is the top most level of Instances inside of AMP. This has access the Target ADS and all Instances it can see.\n
+    """The AMPControllerInstance class is the top most level of Instances inside of AMP. This has access the Target ADS and all Instances it can see.\n
 
     .. note::
         All API Endpoints an AMP Controller Instance would have access to this class object does too.
@@ -36,7 +35,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         UNK
     disabled: :class:`bool`
@@ -77,6 +76,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
         The list of tags related to the Controller/Instance if any, default is None.
     triggers: :class:`TriggerID`
         You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information.
+
     """
 
     _controller_exists: bool = False
@@ -88,16 +88,16 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
     def __getattr__(self, name: str) -> Union[AttributeError, Any]:
         if name in [field.name for field in fields(class_or_instance=Controller)] and self._controller_exists is False:
             raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{name}' | You must call <AMPControllerInstance>.get_instances() with 'format_data=True' to update this object."
+                f"'{type(self).__name__}' object has no attribute '{name}' | You must call <AMPControllerInstance>.get_instances() with 'format_data=True' to update this object.",
             )
         return self.__getattribute__(name)
 
     def __del__(self) -> None:
         try:
             asyncio.run(self.__adel__())
-            self.logger.debug("Closed `aiohttp.ClientSession`| Session: %s", self.session)
+            LOGGER.debug("Closed `aiohttp.ClientSession`| Session: %s", self.session)
         except RuntimeError:
-            self.logger.error("Failed to close our `aiohttp.ClientSession`")
+            LOGGER.error("Failed to close our `aiohttp.ClientSession`")
 
     async def __adel__(self) -> None:
         if self.session is not None:
@@ -105,8 +105,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
     @property
     def instances(self) -> set[Union[AMPADSInstance, AMPInstance, AMPMinecraftInstance]]:
-        """
-        Represents all Instances the :class:`AMPControllerInstance` can see,
+        """Represents all Instances the :class:`AMPControllerInstance` can see,
         these are transferred from :attr:`~Controller.available_instance`.\n
 
         .. note::
@@ -115,21 +114,22 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
 
         Returns
-        --------
+        -------
         set[Union[:class:`AMPADSInstance`, :class:`AMPInstance`, :class:`AMPMinecraftInstance`]]
             A set of converted :class:`Instance` classes sorted by :class:`~Instance.instance_id`.
+
         """
         return self._instances
 
     @instances.setter
     def instances(self, data: Any) -> None:
-        """
-        self.instances setter will take :attr:`~Controller.available_instances` and convert them into a type of :class:`AMPInstance`.
+        """self.instances setter will take :attr:`~Controller.available_instances` and convert them into a type of :class:`AMPInstance`.
 
         Parameters
-        -----------
+        ----------
         data: Any
             A list of :class:`Instance`.
+
         """
         self._instances: set[InstanceTypeAliases] = self.instance_conversion(instances=self.available_instances)
 
@@ -140,24 +140,24 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
     def instance_conversion(self, instances: Iterable[Instance]) -> set[InstanceTypeAliases]: ...
 
     def instance_conversion(
-        self, instances: Iterable[Instance] | Instance
+        self, instances: Iterable[Instance] | Instance,
     ) -> set[InstanceTypeAliases] | InstanceTypeAliases:
-        """
-        Takes a set of :class:`Instance` dataclasses and turns them into :class:`AMPInstance`, :class:`AMPMinecraftInstance` and or :class:`AMPADSInstance` respectively to facilitate API function accessibility.
+        """Takes a set of :class:`Instance` dataclasses and turns them into :class:`AMPInstance`, :class:`AMPMinecraftInstance` and or :class:`AMPADSInstance` respectively to facilitate API function accessibility.
 
         .. note::
             By default the list of instances will be sorted.
 
 
         Parameters
-        -----------
+        ----------
         instances: Iterable[:class:`Instance`] | :class:`Instance`
             An Iterable of :class:`Instance` dataclasses or a single object.
 
         Returns
-        --------
+        -------
         set[Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`, :class:`AMPADSInstance`]] | Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`, :class:`AMPADSInstance`]
             The set of converted :class:`Instance` objects or a single converted object.
+
         """
         conv_instances: set[Union[AMPInstance, AMPMinecraftInstance, AMPADSInstance]] = set()
         if isinstance(instances, list) and len(instances) > 0:
@@ -176,60 +176,58 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
             if instances.module == "ADS":
                 return AMPADSInstance(data=instances, controller=self, session=self.session)
 
-            elif instances.module == "Minecraft":
+            if instances.module == "Minecraft":
                 return AMPMinecraftInstance(data=instances, controller=self, session=self.session)
 
-            else:
-                return AMPInstance(data=instances, controller=self, session=self.session)
+            return AMPInstance(data=instances, controller=self, session=self.session)
         return conv_instances
 
     @overload
     async def get_instance(
-        self, instance_id: str, format_data: Union[bool, None] = True
+        self, instance_id: str, format_data: Union[bool, None] = True,
     ) -> InstanceTypeAliases | ActionResultError: ...
 
     @overload
     async def get_instance(
-        self, instance_id: str, format_data: Union[bool, None] = False
+        self, instance_id: str, format_data: Union[bool, None] = False,
     ) -> InstanceTypeAliases | ActionResultError: ...
 
     @overload
     async def get_instance(self, instance_id: str, format_data: Union[bool, None] = False) -> ActionResultError | dict: ...
 
     async def get_instance(
-        self, instance_id: str, format_data: Union[bool, None] = None
+        self, instance_id: str, format_data: Union[bool, None] = None,
     ) -> InstanceTypeAliases | ActionResultError | dict:
-        """
-        Retrieve a single Instance by ID and convert the Instance
+        """Retrieve a single Instance by ID and convert the Instance
 
         Parameters
-        -----------
+        ----------
         instance_id: :class:`str`
             The Instance ID to retrieve.
 
         Returns
-        --------
+        -------
         :class:`InstanceTypeAliases`
             On success returns a :class:`InstanceTypeAliases` dataclass.
+
         """
         result: Instance | ActionResultError = await super().get_instance(instance_id=instance_id, format_data=format_data)
         if isinstance(result, (dict, ActionResultError)):
             return result
-        else:
-            return self.instance_conversion(instances=result)
+        return self.instance_conversion(instances=result)
 
     @overload
     async def get_instances(
-        self, include_self: bool = True, format_data: Union[bool, None] = None
+        self, include_self: bool = True, format_data: Union[bool, None] = None,
     ) -> set[InstanceTypeAliases]: ...
 
     @overload
     async def get_instances(
-        self, include_self: bool = True, format_data: Union[bool, None] = False
+        self, include_self: bool = True, format_data: Union[bool, None] = False,
     ) -> Iterable[Union[Controller, Instance]]: ...
 
     async def get_instances(
-        self, include_self: bool = True, format_data: Union[bool, None] = True
+        self, include_self: bool = True, format_data: Union[bool, None] = True,
     ) -> Union[set[InstanceTypeAliases], Iterable[Union[Controller, Instance]], ActionResultError]:
         """|coro|
 
@@ -244,31 +242,31 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
 
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
 
         Returns
-        --------
+        -------
         Union[set[Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`, :class:`AMPADSInstance`]], list[Union[:class:`Controller`, :class:`Instance`]]]
             On success returns a set of :class:`AMPInstance`, :class:`AMPMinecraftInstance` and or :class:`AMPADSInstance` dataclasses. \n
 
         """
         result: list[Union[Controller, Instance]] | ActionResultError = await super().get_instances(
-            include_self=include_self, format_data=format_data
+            include_self=include_self, format_data=format_data,
         )
         if isinstance(result, ActionResultError):
             return result
 
         if isinstance(result[0], Controller):
-            self.logger.debug(
-                "Updating %s, with Controller dataclass: %s |\nObject:\n%s", __class__.__name__, id(result[0]), result[0]
+            LOGGER.debug(
+                "Updating %s, with Controller dataclass: %s |\nObject:\n%s", __class__.__name__, id(result[0]), result[0],
             )
             # We make the first Controller dataclass our AMPControllerInstance and transfer all the information from the Controller to Self.
-            _url = self.url
+            _url = self._url
             self.parse_data(data=result[0])
             self._controller_exists = True
-            self.url = _url
+            self._url = _url
             # Since we populated all the attributes from result[0] onto ourselves;
             # we can convert Controller.available_instances dynamically by
             # setting it to our self.instances attribute using the @setter for instances attribute.
@@ -279,7 +277,7 @@ class AMPControllerInstance(ADSModule, Core, EmailSenderPlugin, FileManagerPlugi
             for i in result:
                 # If we have another Controller, we want to get it's available_instances and convert them into proper objects to be used.
                 if isinstance(i, Controller):
-                    self.logger.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
+                    LOGGER.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
                     # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we just updated the attribute above.
                     res: set[InstanceTypeAliases] = self.instance_conversion(instances=i.available_instances)
                     if isinstance(res, InstanceTypeAliases):

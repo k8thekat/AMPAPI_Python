@@ -7,8 +7,7 @@ __all__ = ("FileManagerPlugin",)
 
 
 class FileManagerPlugin(Base):
-    """
-    Contains all functions for any ``/API/FileManagerPlugin/`` API endpoints.
+    """Contains all functions for any ``/API/FileManagerPlugin/`` API endpoints.
 
     .. note::
         All file_path fields must include the path to the file and the file name. All paths are relative to the Server/Instance root that is making the API call.
@@ -32,55 +31,56 @@ class FileManagerPlugin(Base):
         Append data to a file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         data: :class:`str`
             Binary data to be written.
         delete: :class:`bool`
             UNK
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, Any] = {"Filename": self.sanitize_path(path=file_path), "Data": data, "Delete": delete}
         await self._call_api(api="FileManagerPlugin/AppendFileChunk", parameters=parameters)
         return
 
     async def calculate_file_md5_sum(
-        self, file_path: str, format_data: Union[bool, None] = None
+        self, file_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Calculate the MD5 sum of a file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"FilePath": self.sanitize_path(path=file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/CalculateFileMD5Sum", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/CalculateFileMD5Sum", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def change_exclusion(
-        self, file_path: str, as_directory: bool, exclude: bool, format_data: Union[bool, None] = None
+        self, file_path: str, as_directory: bool, exclude: bool, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Change a file or directory to be excluded from backups.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         as_directory: :class:`bool`
@@ -91,23 +91,24 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {
             "ModifyPath": self.sanitize_path(path=file_path),
             "AsDirectory": as_directory,
             "Exclude": exclude,
         }
         result: Any = await self._call_api(
-            api="FileManagerPlugin/ChangeExclusion", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/ChangeExclusion", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def copy_file(
-        self, file_path: str, destination_path: str, format_data: Union[bool, None] = None
+        self, file_path: str, destination_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -118,7 +119,7 @@ class FileManagerPlugin(Base):
 
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         destionation_path: :class:`str`
@@ -127,80 +128,81 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"Origin": self.sanitize_path(file_path), "TargetDirectory": destination_path}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/CopyFile", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/CopyFile", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def create_archive(
-        self, file_path: str, format_data: Union[bool, None] = None
+        self, file_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Create an archive file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"PathToArchive": self.sanitize_path(file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/CreateArchive", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/CreateArchive", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def create_directory(
-        self, file_path: str, format_data: Union[bool, None] = None
+        self, file_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Creates a new directory. The parent directory must already exist.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"NewPath": self.sanitize_path(file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/CreateDirectory", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/CreateDirectory", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def download_file_from_url(
-        self, source: str, file_path: str, format_data: Union[bool, None] = None
+        self, source: str, file_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Download a file from a URL.
 
         Parameters
-        -----------
+        ----------
         source: :class:`str`
             The URL to file.
         file_path: :class:`str`
@@ -209,15 +211,15 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"Source": source, "TargetDirectory": self.sanitize_path(file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/DownloadFileFromURL", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/DownloadFileFromURL", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -231,34 +233,34 @@ class FileManagerPlugin(Base):
 
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"TrashDirectoryName": self.sanitize_path(file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/EmptyTrash", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/EmptyTrash", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def extract_archive(
-        self, file_path: str, destination_path: Union[str, None] = None, format_data: Union[bool, None] = None
+        self, file_path: str, destination_path: Union[str, None] = None, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Extract an archive file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         destination_path: Union[:class:`str`, None], optional
@@ -267,24 +269,24 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"ArchivePath": self.sanitize_path(file_path)}
 
         if destination_path is not None:
             parameters["DestinationPath"] = destination_path
 
         result: Any = await self._call_api(
-            api="FileManagerPlugin/ExtractArchive", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/ExtractArchive", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def get_directory_listing(
-        self, file_path: str = "", format_data: Union[bool, None] = None
+        self, file_path: str = "", format_data: Union[bool, None] = None,
     ) -> list[Directory] | ActionResultError:
         """|coro|
 
@@ -295,19 +297,19 @@ class FileManagerPlugin(Base):
 
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`Directory`]
             On success returns a list of :class:`Directory` dataclasses.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"Dir": self.sanitize_path(file_path)}
         result: Any = await self._call_api(
             api="FileManagerPlugin/GetDirectoryListing",
@@ -319,14 +321,14 @@ class FileManagerPlugin(Base):
         return result
 
     async def get_file_chunk(
-        self, file_path: str, index: int, length: int, format_data: Union[bool, None] = None
+        self, file_path: str, index: int, length: int, format_data: Union[bool, None] = None,
     ) -> FileChunk | ActionResultError:
         """|coro|
 
         Returns a specific section of Base64 data from the file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         index: :class:`int`
@@ -337,27 +339,27 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`FileChunk`
             On success returns a :class:`FileChunk` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, Any] = {"Filename": self.sanitize_path(file_path), "Position": index, "Length": length}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/GetFileChunk", parameters=parameters, format_data=format_data, format_=FileChunk
+            api="FileManagerPlugin/GetFileChunk", parameters=parameters, format_data=format_data, format_=FileChunk,
         )
         return result
 
     async def read_file_chunk(
-        self, file_path: str, offset: int, chunk_size: Union[int, None] = None, format_data: Union[bool, None] = None
+        self, file_path: str, offset: int, chunk_size: Union[int, None] = None, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Read a chunk of data from a file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         index: :class:`int`
@@ -368,42 +370,43 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, Any] = {"Filename": self.sanitize_path(file_path), "Offset": offset}
         if chunk_size is not None:
             parameters["ChunkSize"] = chunk_size
 
         result: Any = await self._call_api(
-            api="FileManagerPlugin/ReadFileChunk", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/ReadFileChunk", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     # TODO - Test functionality or get clarification on use/action.
     async def release_file_upload_lock(
-        self, file_path: str, format_data: Union[bool, None] = None
+        self, file_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Releases a File Upload Lock.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Filename": self.sanitize_path(file_path)}
         result: Any = await self._call_api(
             api="FileManagerPlugin/ReleaseFileUploadLock",
@@ -414,14 +417,14 @@ class FileManagerPlugin(Base):
         return result
 
     async def rename_directory(
-        self, file_path: str, name: str, format_data: Union[bool, None] = None
+        self, file_path: str, name: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Rename a directory.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the directory; relative to the Instance root. eg ``./InstanceName/``.
         name: :class:`str`
@@ -430,30 +433,30 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {
             "oldDirectory": self.sanitize_path(path=file_path),
             "newDirectoryName": name,
         }
         result: Any = await self._call_api(
-            api="FileManagerPlugin/RenameDirectory", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/RenameDirectory", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def rename_file(
-        self, file_path: str, file_name: str, format_data: Union[bool, None] = None
+        self, file_path: str, file_name: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Changes the name of a file.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         file_name: :class:`str`
@@ -462,20 +465,20 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"Filename": self.sanitize_path(path=file_path), "NewFilename": file_name}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/RenameFile", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/RenameFile", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def trash_directory(
-        self, file_path: str, format_data: Union[bool, None] = None
+        self, file_path: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
@@ -486,22 +489,22 @@ class FileManagerPlugin(Base):
 
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"DirectoryName": self.sanitize_path(path=file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/TrashDirectory", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/TrashDirectory", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -515,34 +518,34 @@ class FileManagerPlugin(Base):
 
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, str] = {"Filename": self.sanitize_path(path=file_path)}
         result: Any = await self._call_api(
-            api="FileManagerPlugin/TrashFile", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/TrashFile", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
     async def write_file_chunk(
-        self, file_path: str, data: str, offset: int, append: bool = False, format_data: Union[bool, None] = None
+        self, file_path: str, data: str, offset: int, append: bool = False, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Write data to a file with an offset.
 
         Parameters
-        -----------
+        ----------
         file_path: :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         data: :class:`str`
@@ -555,12 +558,12 @@ class FileManagerPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, Any] = {
             "Filename": self.sanitize_path(path=file_path),
             "Data": data,
@@ -568,6 +571,6 @@ class FileManagerPlugin(Base):
             "FinalChunk": append,
         }
         result: Any = await self._call_api(
-            api="FileManagerPlugin/WriteFileChunk", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="FileManagerPlugin/WriteFileChunk", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result

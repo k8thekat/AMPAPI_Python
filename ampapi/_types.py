@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from typing import Any, TypedDict, Union
 
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, Required
 
-ResponseTypeAlias = Union["Login", "ResponseError"]
+ResponseTypeAlias = Union["LoginResponse", "ResponseError", "ActionResultResponse"]
 
+
+class ActionResultResponse(TypedDict, total=False):
+    status: Required[bool]
+    reason: str
+    result: str
 
 class ActionSpec(TypedDict):
     """ads_module: dict[:class:`str`, Any]
@@ -122,19 +127,19 @@ class Consumes(TypedDict, total=False):
     value_type: str
     enum_values: NotRequired[str]
 
-class Login(TypedDict):
+class LoginResponse(TypedDict):
     permissions: list[str]
     remember_me_token: str
     result: int
     result_reason: str
     session_id: str
     success: bool
-    user_info: UserInfo
+    user_info: UserInfoResponse
 
-class UserInfo(TypedDict):
-    avatar_base64: None
+class UserInfoResponse(TypedDict):
+    avatar_base64: str | None
     disabled: bool
-    email_address: None
+    email_address: str |None
     gravatar_hash: str
     id: str
     is_ldap_user: bool
@@ -191,7 +196,10 @@ class PermissionNode(TypedDict):
     description: str | None
     children: list[PermissionNode]
 
-class ResponseError(TypedDict, total=False):
+class ResponseError(TypedDict):
+# class ResponseError(TypedDict, total=False):
+    """...."""
+
     title: str
     status: bool
 

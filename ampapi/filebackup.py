@@ -9,34 +9,34 @@ __all__ = ("LocalFileBackupPlugin",)
 
 
 class LocalFileBackupPlugin(Base):
-    """
-    Contains all functions for any ``/API/LocalFileBackupPlugin/`` API endpoints.
+    """Contains all functions for any ``/API/LocalFileBackupPlugin/`` API endpoints.
 
     """
 
     async def delete_from_s3(
-        self, backup_id: str, format_data: Union[bool, None] = None
+        self, backup_id: str, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Delete a backup from S3.
 
         Parameters
-        -----------
+        ----------
         backup_id: :class:`str`
             The backup ID to delete.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
         result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/DeleteFromS3", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="LocalFileBackupPlugin/DeleteFromS3", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -46,21 +46,22 @@ class LocalFileBackupPlugin(Base):
         Delete a local backup.
 
         Parameters
-        -----------
+        ----------
         backup_id: :class:`str`
             The backup ID to delete.
 
         Returns
-        --------
+        -------
         None
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
         await self._call_api(api="LocalFileBackupPlugin/DeleteLocalBackup", parameters=parameters, _no_data=True)
         return
 
     async def download_from_s3(
-        self, backup_id: str, format_data: Union[bool, None] = None
+        self, backup_id: str, format_data: Union[bool, None] = None,
     ) -> RunningTask | ActionResultError:
         """|coro|
 
@@ -68,21 +69,22 @@ class LocalFileBackupPlugin(Base):
 
 
         Parameters
-        -----------
+        ----------
         backup_id: :class:`str`
             The backup ID to download.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`RunningTask`
             On success returns a :class:`RunningTask` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
         result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/DownloadFromS3", parameters=parameters, format_data=format_data, format_=RunningTask
+            api="LocalFileBackupPlugin/DownloadFromS3", parameters=parameters, format_data=format_data, format_=RunningTask,
         )
         return result
 
@@ -92,18 +94,19 @@ class LocalFileBackupPlugin(Base):
         Get a list of Backups.
 
         Parameters
-        -----------
+        ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         list[:class:`Backup`]
             On success returns a list of :class:`Backup` dataclasses.
+
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/GetBackups", format_data=format_data, format_=Backup, _use_from_dict=False
+            api="LocalFileBackupPlugin/GetBackups", format_data=format_data, format_=Backup, _use_from_dict=False,
         )
         return result
 
@@ -113,22 +116,23 @@ class LocalFileBackupPlugin(Base):
         Refresh the list of backups.
 
         Returns
-        --------
+        -------
         None
+
         """
-        await self._connect()
+        await self._reauth()
         await self._call_api(api="LocalFileBackupPlugin/RefreshBackupList", _no_data=True)
         return
 
     async def restore_backup(
-        self, backup_id: str, delete_existing_data: bool = False, format_data: Union[bool, None] = None
+        self, backup_id: str, delete_existing_data: bool = False, format_data: Union[bool, None] = None,
     ) -> ActionResult | ActionResultError:
         """|coro|
 
         Restore a backup.
 
         Parameters
-        -----------
+        ----------
         backup_id: :class:`str`
             The backup ID to restore.
         delete_existing_data: :class:`bool`, optional
@@ -137,14 +141,15 @@ class LocalFileBackupPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"BackupId": backup_id, "DeleteExistingData": delete_existing_data}
         result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/RestoreBackup", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="LocalFileBackupPlugin/RestoreBackup", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -154,17 +159,18 @@ class LocalFileBackupPlugin(Base):
         Set a backup as sticky.
 
         Parameters
-        -----------
+        ----------
         backup_id: :class:`str`
             The backup ID to set as sticky.
         sticky: :class:`bool`, optional
             Set the backup as sticky, defaults to False.
 
         Returns
-        --------
+        -------
         None
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"BackupId": backup_id, "Sticky": sticky}
         await self._call_api(api="LocalFileBackupPlugin/SetBackupSticky", parameters=parameters, _no_data=True)
         return
@@ -183,7 +189,7 @@ class LocalFileBackupPlugin(Base):
         Takes a backup of the AMP Server.
 
         Parameters
-        -----------
+        ----------
         name: :class:`str`
             The name of the backup.
         description: :class:`str`
@@ -198,12 +204,12 @@ class LocalFileBackupPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`ActionResult`
             On success returns a :class:`ActionResult` dataclass.
-        """
 
-        await self._connect()
+        """
+        await self._reauth()
         parameters: dict[str, Any] = {"Title": name, "Description": description, "Sticky": sticky}
         if local is not None:
             parameters["Local"] = local
@@ -211,7 +217,7 @@ class LocalFileBackupPlugin(Base):
             parameters["S3"] = s3
 
         result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/TakeBackup", parameters=parameters, format_data=format_data, format_=ActionResult
+            api="LocalFileBackupPlugin/TakeBackup", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
         return result
 
@@ -221,20 +227,21 @@ class LocalFileBackupPlugin(Base):
         Upload a backup to S3.
 
         Parameters
-        -----------
+        ----------
         backup_id: :class:`str`
             The backup ID to upload.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`RunningTask`
             On success returns a :class:`RunningTask` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
         result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/UploadToS3", parameters=parameters, format_data=format_data, format_=RunningTask
+            api="LocalFileBackupPlugin/UploadToS3", parameters=parameters, format_data=format_data, format_=RunningTask,
         )
         return result

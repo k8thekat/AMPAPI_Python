@@ -10,8 +10,7 @@ __all__ = ("AnalyticsPlugin",)
 
 
 class AnalyticsPlugin(Base):
-    """
-    Contains the base functions for any `/API/AnalyticsPlugin/` AMP API endpoints.
+    """Contains the base functions for any `/API/AnalyticsPlugin/` AMP API endpoints.
 
     .. note::
         If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
@@ -31,7 +30,7 @@ class AnalyticsPlugin(Base):
         See data such as how many people are playing, how long they've been playing, and where they are from.
 
         Parameters
-        -----------
+        ----------
         period_days: :class:`int`, optional
             How far back in days to go, by default 30
         start_date: :class:`datetime.datetime`, optional
@@ -42,11 +41,12 @@ class AnalyticsPlugin(Base):
             Format the JSON response data, by default None.
 
         Returns
-        --------
+        -------
         :class:`AnalyticsSummary`
             On success returns an :class:`AnalyticsSummary` dataclass.
+
         """
-        await self._connect()
+        await self._reauth()
         if isinstance(start_date, datetime):
             date: float = start_date.timestamp()
 

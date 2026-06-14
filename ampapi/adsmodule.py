@@ -64,7 +64,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
 
         if isinstance(new_datastore, InstanceDatastore):
             data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=new_datastore)
@@ -111,7 +111,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, Any] = {"InstanceID": instance_id, "Args": args, "RebuildConfiguration": rebuild_configuration}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/ApplyInstanceConfiguration", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -147,7 +147,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"InstanceID": instance_id, "TemplateID": template_id}
         result: Any = await self._call_api(
             api="ADSModule/ApplyTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
@@ -221,7 +221,7 @@ class ADSModule(Base):
             )
             return result
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/AttachADS", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -239,7 +239,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="ADSModule/CancelPairing", format_=ActionResult)
         return result
 
@@ -270,7 +270,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"Id": template_id, "NewName": name}
         result: Any = await self._call_api(
             api="ADSModule/CloneTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
@@ -298,7 +298,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"Name": template_name}
         result: Any = await self._call_api(
             api="ADSModule/CreateDeploymentTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
@@ -333,7 +333,7 @@ class ADSModule(Base):
         if isinstance(instance, CreateInstance):
             parameters: dict[Any, Any] = instance.to_dict()
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/CreateInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -378,7 +378,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"SpecId": spec_id, "TargetADSInstance": target_ads, "FriendlyName": friendly_name}
         if post_create is not None:
             parameters["PostCreate"] = post_create.value
@@ -429,7 +429,7 @@ class ADSModule(Base):
 
         parameters: dict[str, Any] = {"Instance": data, "PostCreate": post_create.value}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/CreateLocalInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -461,7 +461,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Union[int, Any]] = {"id": datastore_id}
         result: Any = await self._call_api(
             api="ADSModule/DeleteDatastore", parameters=parameters, format_data=format_data, format_=ActionResult,
@@ -493,7 +493,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, int] = {"Id": template_id}
         result: Any = await self._call_api(
             api="ADSModule/DeleteDeploymentTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
@@ -527,7 +527,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"InstanceName": instance_name}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/DeleteInstance", parameters=parameters, format_data=format_data, format_=RunningTask,
         )
@@ -556,7 +556,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"InstanceId": instance_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/DeleteInstanceUsers", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -586,7 +586,7 @@ class ADSModule(Base):
         # TODO
         # The parameter keys are not cased properly and this will fail it's JSON payload.
         parameters: dict[Any, Any] = self.dataclass_to_dict(dataclass_=template)
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/DeployTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -614,7 +614,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"Id": instance_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/DetachTarget", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -647,7 +647,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"SourceArchive": self.sanitize_path(path=source_archive)}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/ExtractEverywhere", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -676,7 +676,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"instanceId": instance_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetApplicationEndpoints", parameters=parameters, format_data=format_data, format_=Endpoints,
         )
@@ -709,7 +709,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, Union[Any, int]] = {"id": datastore_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetDatastore", parameters=parameters, format_data=format_data, format_=InstanceDatastore,
         )
@@ -732,7 +732,7 @@ class ADSModule(Base):
             On success returns a list of :class:`DatastoreInstance` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="ADSModule/GetDatastores", format_data=format_data, format_=InstanceDatastore)
         return result
 
@@ -762,7 +762,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, Union[Any, int]] = {"datastoreId": datastore_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetDatastoreInstances", parameters=parameters, format_data=format_data, format_=Instance,
         )
@@ -787,7 +787,7 @@ class ADSModule(Base):
             On success returns a list of :class:`DeploymentTemplate` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetDeploymentTemplates", format_data=format_data, format_=DeploymentTemplate,
         )
@@ -817,7 +817,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"groupId": group_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api("ADSModule/GetGroup", parameters, format_data=format_data)
         return result
 
@@ -839,7 +839,7 @@ class ADSModule(Base):
             On success returns a :class:`Instance` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, str] = {"InstanceId": instance_id}
         result: Any = await self._call_api(
             api="ADSModule/GetInstance", parameters=parameters, format_data=format_data, format_=Instance,
@@ -872,7 +872,7 @@ class ADSModule(Base):
             or if used on Target ADS Instance will return a list containing any combination of :class:`AMPADSInstance`, :class:`AMPMinecraftInstance` and :class:`AMPInstance` respectively.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, bool] = {"ForceIncludeSelf": include_self}
 
         if include_self is False:
@@ -909,7 +909,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"instanceName": instance_name}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetInstanceNetworkInfo", parameters=parameters, format_data=format_data, format_=PortInfo,
         )
@@ -932,7 +932,7 @@ class ADSModule(Base):
             On success returns a list of :class:`InstanceStatus` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetInstanceStatuses", format_data=format_data, format_=InstanceStatus,
         )
@@ -953,7 +953,7 @@ class ADSModule(Base):
             On success returns a list of :class:`Instance` dataclasses.
 
         """
-        await self._connect()
+        await self._reauth()
         result = await self._call_api(api="ADSModule/GetLocalInstances", format_data=format_data, format_=Instance)
         return result
 
@@ -979,7 +979,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"ModuleName": module_name}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetProvisionArguments",
             parameters=parameters,
@@ -1005,7 +1005,7 @@ class ADSModule(Base):
             On success returns a :class:`Provision` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="ADSModule/GetProvisionFitness", format_data=format_data, format_=Provision)
         return result
 
@@ -1028,7 +1028,7 @@ class ADSModule(Base):
             Returns a list of all applications that can be deployed.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetSupportedApplications", format_data=format_data, format_=Application,
         )
@@ -1051,7 +1051,7 @@ class ADSModule(Base):
             On success returns a :class:`RemoteTargetInfo` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="ADSModule/GetTargetInfo", format_data=format_data, format_=RemoteTargetInfo)
         return result
 
@@ -1076,7 +1076,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/GetTargetPairingCode", format_=ActionResult, format_data=format_data,
         )
@@ -1108,7 +1108,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, Any] = {"ForModule": module, "SettingNode": setting_node, "Values": values}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/HandoutInstanceConfigs", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1141,7 +1141,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"instanceId": instance_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/ManageInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1194,7 +1194,7 @@ class ADSModule(Base):
             "open": open_,
         }
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/ModifyCustomFirewallRule", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1230,7 +1230,7 @@ class ADSModule(Base):
             On success returns a :class:`RunningTask` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         parameters: dict[str, Any] = {"instanceId": instance_id, "datastoreId": datastore_id}
         result: Any = await self._call_api(
             api="ADSModule/MoveInstanceDatastore", parameters=parameters, format_data=format_data, format_=RunningTask,
@@ -1241,7 +1241,7 @@ class ADSModule(Base):
         self, instance_id: str, format_data: Union[bool, None] = None,
     ) -> RunningTask | ActionResultError:
         parameters: dict[str, str] = {"instanceId": instance_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/ReactivateInstance", parameters=parameters, format_data=format_data, format_=RunningTask,
         )
@@ -1264,7 +1264,7 @@ class ADSModule(Base):
             On success returns a :class:`RunningTask` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/ReactivateLocalInstances", format_data=format_data, format_=RunningTask,
         )
@@ -1281,7 +1281,7 @@ class ADSModule(Base):
         None
 
         """
-        await self._connect()
+        await self._reauth()
         await self._call_api(api="ADSModule/RefreshAppCache", _no_data=True)
         return
 
@@ -1305,7 +1305,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"groupId": group_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/RefreshGroup", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1333,7 +1333,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"InstanceId": instance_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/RefreshInstanceConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1357,7 +1357,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, bool] = {"force": force}
 
-        await self._connect()
+        await self._reauth()
         await self._call_api(api="ADSModule/RefreshRemoteConfigStores", parameters=parameters, _no_data=True)
         return
 
@@ -1407,7 +1407,7 @@ class ADSModule(Base):
             "twoFactorToken": two_factor_token,
             "friendlyName": friendly_name,
         }
-        await self._connect()
+        await self._reauth()
         result = await self._call_api(
             api="ADSModule/RegisterTarget", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1454,7 +1454,7 @@ class ADSModule(Base):
             "code": code,
             "friendlyName": friendly_name,
         }
-        await self._connect()
+        await self._reauth()
         result = await self._call_api(
             api="ADSModule/RegisterTargetWithCode", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1486,7 +1486,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, Union[Any, int]] = {"id": datastore_id}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/RepairDatastore", parameters=parameters, format_data=format_data, format_=RunningTask,
         )
@@ -1519,7 +1519,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, Union[Any, int]] = {"datastoreId": datastore_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/RequestDatastoreSizeCalculation",
             parameters=parameters,
@@ -1555,7 +1555,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"InstanceName": instance_name}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/RestartInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1590,7 +1590,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"id": id_, "REQ_RAWJSON": req_rawjson}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(api="ADSModule/Servers", parameters=parameters, format_data=format_data)
         return result
 
@@ -1633,7 +1633,7 @@ class ADSModule(Base):
         if must_stop is not None:
             parameters["mustStop"] = must_stop
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/SetInstanceNetworkInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1673,7 +1673,7 @@ class ADSModule(Base):
 
         """
         parameters: dict[str, str] = {"InstanceName": instance_name, "SettingNode": setting_node, "Value": value}
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/SetInstanceConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1708,7 +1708,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, Any] = {"InstanceName": instance_name, "Suspended": suspended}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/SetInstanceSuspended", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1735,7 +1735,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"TargetADSInstance": instance_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/StartAllInstances", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1768,7 +1768,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"InstanceName": instance_name}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/StartInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1795,7 +1795,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"TargetADSInstance": instance_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/StopAllInstances", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1828,7 +1828,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"InstanceName": instance_name}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/StopInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1857,7 +1857,7 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
 
         if isinstance(updated_datastore, InstanceDatastore):
             data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=updated_datastore)
@@ -1891,7 +1891,7 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        await self._connect()
+        await self._reauth()
         if isinstance(template_to_update, DeploymentTemplate):
             data: dict[Any, Any] = template_to_update.to_dict()
 
@@ -1923,7 +1923,7 @@ class ADSModule(Base):
         if isinstance(instance_info, InstanceInfo):
             parameters: dict[Any, Any] = self.dataclass_to_dict(dataclass_=instance_info)
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/UpdateInstanceInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -1951,7 +1951,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"TargetID": target_id}
 
-        await self._connect()
+        await self._reauth()
         await self._call_api(api="ADSModule/UpdateTarget", parameters=parameters, _no_data=True)
         return
 
@@ -1996,7 +1996,7 @@ class ADSModule(Base):
             "description": description,
             "tags": tags,
         }
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/UpdateTargetInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -2025,7 +2025,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, Union[str, bool]] = {"RestartRunning": restart_running, "TargetADSInstance": instance_id}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/UpgradeAllInstances", parameters=parameters, format_data=format_data, format_=ActionResult,
         )
@@ -2058,7 +2058,7 @@ class ADSModule(Base):
         """
         parameters: dict[str, str] = {"InstanceName": instance_name}
 
-        await self._connect()
+        await self._reauth()
         result: Any = await self._call_api(
             api="ADSModule/UpgradeInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
         )

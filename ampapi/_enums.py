@@ -4,8 +4,7 @@ __all__ = ("ADSModeState", "AMPInstanceState", "AccessModeState", "AppStartupMod
 
 
 class AccessModeState(Enum):
-    """
-    Related to Node: ADSModule.Network.AccessMode
+    """Related to Node: ADSModule.Network.AccessMode
     """
 
     via_target = 0
@@ -14,8 +13,7 @@ class AccessModeState(Enum):
 
 
 class ADSModeState(Enum):
-    """
-    Related to Node: ADSModule.ADS.Mode
+    """Related to Node: ADSModule.ADS.Mode
     """
 
     not_set = 0
@@ -26,8 +24,7 @@ class ADSModeState(Enum):
 
 
 class AMPDownloadMirrorState(Enum):
-    """
-    Related to Node: ADSModule.ADS.DownloadMirror
+    """Related to Node: ADSModule.ADS.DownloadMirror
     """
 
     us_central = "[Automatic]"
@@ -36,8 +33,7 @@ class AMPDownloadMirrorState(Enum):
 
 
 class AMPInstanceState(Enum):
-    """
-    Represents the state of an Instance and or Application inside an Instance.
+    """Represents the state of an Instance and or Application inside an Instance.
 
     """
 
@@ -64,8 +60,7 @@ class AMPInstanceState(Enum):
 
 
 class AMPTheme(Enum):
-    """
-    Related to Node: Core.AMP.Theme
+    """Related to Node: Core.AMP.Theme
     """
 
     aura = "Aura"
@@ -76,8 +71,7 @@ class AMPTheme(Enum):
 
 
 class ApplicationUpdatesState(Enum):
-    """
-    Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
+    """Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
     """
 
     by_timestamp = 0
@@ -85,8 +79,7 @@ class ApplicationUpdatesState(Enum):
 
 
 class AppStartupModeState(Enum):
-    """
-    Related to Node: Core.AMP.AppStartupMode
+    """Related to Node: Core.AMP.AppStartupMode
     """
 
     do_nothing = 0
@@ -104,8 +97,7 @@ class ContainerMemoryPolicyState(Enum):
 
 
 class DefaultIPBindingState(Enum):
-    """
-    Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding
+    """Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding
     """
 
     ipv4_loopback = "127.0.0.1"
@@ -115,8 +107,7 @@ class DefaultIPBindingState(Enum):
 
 
 class LoggingLevelState(Enum):
-    """
-    Related to Node: Core.Monitoring.LogLevel
+    """Related to Node: Core.Monitoring.LogLevel
     """
 
     debug = 0
@@ -132,8 +123,7 @@ class LoggingLevelState(Enum):
 
 
 class PortAssignmentState(Enum):
-    """
-    Related to Node: ADSModule.Network.PortAssignment
+    """Related to Node: ADSModule.Network.PortAssignment
     """
 
     include_allowed_ports_only = 0
@@ -141,8 +131,7 @@ class PortAssignmentState(Enum):
 
 
 class PostCreateActionsState(Enum):
-    """
-    The action the Instance will take after creation. Used in dataclass parameters.
+    """The action the Instance will take after creation. Used in dataclass parameters.
 
     """
 
@@ -154,8 +143,7 @@ class PostCreateActionsState(Enum):
 
 
 class PostCreateState(Enum):
-    """
-    Represents the state of the API call `ADSModule/DeployTemplate`
+    """Represents the state of the API call `ADSModule/DeployTemplate`
     Related to Node: ADSModule.Defaults.DefaultPostCreate
 
     """
@@ -167,10 +155,23 @@ class PostCreateState(Enum):
     update_and_start_always = 4
     start_always = 5
 
+class Protocols(Enum):
+    """Related to :class:`PortInfo` from function :meth:`ADSModule.get_instance_network_info`.
+
+    ```
+    0 = TCP
+    1 = UDP
+    2 = TCP & UDP
+    ```
+
+    """
+
+    TCP = 0
+    UDP = 1
+    TCP_and_UDP = 2
 
 class ReleaseStreamState(Enum):
-    """
-    Related to Node: ADSModule.Defaults.DefaultReleaseStream
+    """Related to Node: ADSModule.Defaults.DefaultReleaseStream
     """
 
     lts = 5
@@ -180,8 +181,7 @@ class ReleaseStreamState(Enum):
 
 
 class TwoFactoryModeState(Enum):
-    """
-    Related to Node: Core.Security.TwoFactorMode
+    """Related to Node: Core.Security.TwoFactorMode
     """
 
     optional = 0
