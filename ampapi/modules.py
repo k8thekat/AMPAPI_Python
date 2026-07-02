@@ -1232,6 +1232,8 @@ class Directory:
         If the file is an archive.
     is_excluded_from_backups: :class:`bool`
         If the file is excluded from backups.
+    is_smart_excluded_from_backups: :class:`bool`
+        If the file is smart excluded from backups.
     created: :class:`str` | :class:`datetime`
         The time the file/directory was created.
     modified: :class:`str` | :class:`datetime`
@@ -1246,6 +1248,7 @@ class Directory:
     is_editable: bool
     is_archive: bool
     is_excluded_from_backups: bool
+    is_smart_excluded_from_backups: bool
     created: str  # type: ignore
     modified: str  # type: ignore
 
