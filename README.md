@@ -10,7 +10,7 @@ An asynchronous Python wrapper for the CubeCoders AMP (Application Management Pa
 
 <!-- ![Number of GitHub stars](https://img.shields.io/github/stars/d60/twikit) -->
 
-![Version](https://img.shields.io/pypi/v/cubecoders-amp-api-wrapper?label=PyPI)
+![Version](https://img.shields.io/pypi/v/cc-ampapi?label=PyPI)
 
 ### Key Features
 
@@ -19,7 +19,7 @@ An asynchronous Python wrapper for the CubeCoders AMP (Application Management Pa
 - Pythonic API wrapper using `async` and `await` via `aiohttp`.
 - Data is automatically deserialized into typed dataclasses for easier management and interaction.
   - Optional parameter per function or global to disable formatting of data.
-- Inheritance-based instance model (`ADSInstance`, `AMPInstance`, `AMPMinecraftInstance`, etc.) groups endpoints by instance type, preventing invalid calls at the class level.
+- Inheritance-based instance model (`Controller`, `Instance`, `MinecraftInstance`, etc.) groups endpoints by instance type, preventing invalid calls at the class level.
 - TOTP/2FA authentication support for secure programmatic login via `pyotp`.
 - Fully typed and verified with Pyright in strict mode, compatible with Python 3.12+.
 
@@ -34,6 +34,16 @@ An asynchronous Python wrapper for the CubeCoders AMP (Application Management Pa
 _Python 3.12 or higher is required_
 
 To install run the below command via your preferred terminal or IDE.
+
+> **5.0.0 is a breaking release.** The classes were renamed and the modules moved, so code written for 4.x will need a few changes.
+> - `AMPControllerInstance` -> `Controller`
+> - `AMPInstance` -> `Instance`
+> - `AMPMinecraftInstance` -> `MinecraftInstance`
+> - `AMPADSInstance` -> `TargetADS` (found in `ampapi.instance`, it is not part of the star import)
+> - `AMPInstanceState` -> `InstanceState`
+> - `ampapi.dataclass` -> `ampapi.modules`
+> - `ampapi.enums` -> `ampapi._enums` (everything public is still available straight from `ampapi`)
+> - API errors are now raised (see `ampapi.errors`) instead of an `ActionResultError` being returned.
 
 ### PyPi
 
@@ -56,19 +66,28 @@ In your IDE Python file. -> `import ampapi`.
 1. First you need to fill out the APIParams class with the required fields (url, user and password).
 2. Pass the APIParams class into the Bridge class parameter api_params.
    - You only need to make ONE bridge class; the rest of the API classes will get the same object and handle logging in for you.
-3. You can then use the Parent class `ADSInstance()` or the smaller class `AMPInstance()` or any of the API classes as a stand alone.
+3. You can then use the Parent class `Controller()` or the smaller class `Instance()` or any of the API classes as a stand alone.
    - See [Quick Example](https://github.com/k8thekat/AMPAPI_Python/blob/main/docs/samples/sample.py) for a visual example.
 
 ### Quick Example -
 
 ```py
-from ampapi import *
-from ampapi.dataclass import AnalyticsFilter, AnalyticsSummary, APIParams, Players
-from ampapi.enums import *
-from ampapi.instance import AMPADSInstance, AMPControllerInstance, AMPInstance, AMPMinecraftInstance
+from typing import Union
+
+from ampapi import (
+    AnalyticsFilter,
+    AnalyticsSummary,
+    APIParams,
+    Bridge,
+    Controller,
+    Instance,
+    InstanceState,
+    MinecraftInstance,
+    Players,
+)
 
 # You can pull these values from an `.ini` or a `.env` file,
-# then populate the NamedTuple APIparams from `types -> APIParams`
+# then populate the dataclass APIParams from `modules -> APIParams`
 _params = APIParams(url="http://192.168.13.130:8080",
                     user="amp_username",
                     password="amp_password")
@@ -80,28 +99,28 @@ async def Sample_API() -> None:
     Example API Function to call Endpoints.
     """
     _bridge = Bridge(api_params=_params)
-    ADS: AMPControllerInstance = AMPControllerInstance()
+    ADS: Controller = Controller()
     # By default all API calls will be formatted into Dataclasses if possible.
     # You can toggle format_data off with ANY of the API classes that inherit Base().
     ADS.format_data = False
 
-    # This would populate the ADS class property .instances and .available_instances
+    # This would populate the ADS class property .instances
     await ADS.get_instances(format_data=True)
     # We convert the ADS.instances attribute to a list for easier iteration.
     # The data is a set to prevent duplicates.
     ADSinstances = list(ADS.instances)
-    arkinstance: Union[AMPInstance, None] = None
-    mcinstance: Union[AMPInstance, AMPMinecraftInstance, None] = None
+    arkinstance: Union[Instance, None] = None
+    mcinstance: Union[Instance, MinecraftInstance, None] = None
     # We can break out all our instances into their own attributes.
     for instance in ADSinstances:
         # Pre populated from the dataclass and has the API endpoints too!
-        if isinstance(instance, (AMPADSInstance, AMPInstance, AMPMinecraftInstance)):
+        if isinstance(instance, Instance):
             if instance.friendly_name == "ArkInstance":
                 arkinstance = instance
             elif instance.friendly_name == "Minecraft_PVP":
                 mcinstance = instance
 
-    if arkinstance is None or mcinstance is None or not isinstance(mcinstance, AMPMinecraftInstance):
+    if arkinstance is None or mcinstance is None or not isinstance(mcinstance, MinecraftInstance):
         return
     # This turns back on data formatting Globally.
     arkinstance.format_data = True
@@ -118,8 +137,8 @@ async def Sample_API() -> None:
         ...
 
     # The State of the Instance.
-    # Can be checked via `AMPInstance.running`.
-    # To keep this updated simply check.
+    # Can be checked via `Instance.running`.
+    # This is cached, call `ADS.get_instances()` again to refresh it.
     if mcinstance.running is True:
         print(f"{mcinstance.friendly_name} is Running Nyao~")
 
@@ -131,22 +150,20 @@ async def Sample_API() -> None:
     await mcinstance.restart_instance()
     await mcinstance.stop_instance()
 
-    # The State of the Application. eg. Running, Offline, Restarting, etc. See `types.py -> State_enum
-    # This is NOT updated constantly. See about using `get_status()` to keep it current.
-    if mcinstance.app_state == AMPInstanceState.stopped:
+    # The State of the Application. eg. ready, stopped, restarting, etc. See `_enums.py -> InstanceState`
+    # This is NOT updated constantly. See about using `get_status()` to get it current.
+    if mcinstance.app_state == InstanceState.stopped:
         await mcinstance.start_application()
 
     # You can also stop and update the application via
     await mcinstance.stop_application()
     await mcinstance.update_application()
 
-    # To get more current Instance State check out.
-    mcinstance.status.state
-    mcinstance.app_state
-    # To keep the `AMPInstance.State` property current; simply call the function below.
-    await mcinstance.get_status()
+    # To get the current Instance State call the function below, it returns a `Status` dataclass.
+    status = await mcinstance.get_status()
+    status.state
     # You can also check Metrics of an Instance easily.
-    mcinstance.status.metrics
+    status.metrics
 
     # Want to kick a random person? Here ya go~
     players: Players = await mcinstance.get_user_list()
@@ -158,24 +175,30 @@ async def Sample_Analytics_API():
     """
     Example Method to use Instance Analytics.
     """
-    ADS: AMPControllerInstance = AMPControllerInstance()
+    ADS: Controller = Controller()
     await ADS.get_instances()
-    # The index value to get to an MC Instance will be different for you; this is just an example.
-    # You can check an Instances Type via the `.Module` attribute of any ADS/Instance class.
-    mcinstance: AMPInstance | AMPMinecraftInstance = ADS.available_instances[2]
+    # The instances are a set, so we pick the first Minecraft one out of it; this is just an example.
+    # You can check an Instances Type via the `.module` attribute of any Instance class.
+    mcinstance: Union[Instance, MinecraftInstance, None] = None
+    for instance in ADS.instances:
+        if isinstance(instance, MinecraftInstance):
+            mcinstance = instance
+            break
+    if mcinstance is None:
+        return
     # Example analytics call without a filter.
     Analytics: AnalyticsSummary = await mcinstance.get_analytics_summary()
     # Then with that class you can access lots of Information, such as Top Players, Stats and SessionTime.
-    Analytics.topPlayers # This is a list of this Instances Top Players.
+    Analytics.top_players # This is a list of this Instances Top Players.
     Analytics.stats # This is a list of different fields such as Unique Users, New Users, etc..
     # _____________________________________________
     # Now you can also filter the results to look at a specific User or Country. Simply define the `AnalyticsFilter` class and pass it into the method call.
-    country_filter: AnalyticsFilter = AnalyticsFilter(Country="US") # The Country parameter supports `ISO 3166-1 Alpha-2 format` only.
+    country_filter: AnalyticsFilter = AnalyticsFilter(country="US") # The country parameter supports `ISO 3166-1 Alpha-2 format` only.
     # These results will be filtered to only users within the US.
     filtered_analytics: AnalyticsSummary = await mcinstance.get_analytics_summary(filters=country_filter)
 
-    user_filter: AnalyticsFilter = AnalyticsFilter(Username="k8_thekat") # The IGN/Username of the user connected to the Server.
-    # These results will be filtered to only users with that match the parameter Username. (eg. k8_thekat).
+    user_filter: AnalyticsFilter = AnalyticsFilter(username="k8_thekat") # The IGN/Username of the user connected to the Server.
+    # These results will be filtered to only users with that match the parameter username. (eg. k8_thekat).
     filtered_analytics2: AnalyticsSummary = await mcinstance.get_analytics_summary(filters=user_filter)
 
 
@@ -222,4 +245,4 @@ await arkinstance.get_role_data(format_data=True)
 
 If the AMP version has changed, please generate new API spec sheets and upload them with any function changes.
 
-- Run `await APIUtil.amp_api_update(instance=instance_here)`
+- Run `await amp_api_update(instance=controller_here, sanitize_json=True)` from `ampapi.util`, where `controller_here` is your `Controller`.

@@ -1,4 +1,4 @@
-.. currentmodule:: ampapi.enums_
+.. currentmodule:: ampapi._enums
 
 Enums
 ~~~~~~
@@ -12,7 +12,7 @@ Enums
 .. autoenum:: AMPDownloadMirrorState
     :members:
 
-.. autoenum:: AMPInstanceState
+.. autoenum:: InstanceState
     :members:
 
 .. autoenum:: AMPTheme
@@ -33,6 +33,9 @@ Enums
 .. autoenum:: LoggingLevelState
     :members:
 
+.. autoenum:: Module
+    :members:
+
 .. autoenum:: PortAssignmentState
     :members:
 
@@ -48,49 +51,13 @@ Enums
 .. autoenum:: TwoFactoryModeState
     :members:
 
-.. currentmodule:: ampapi.types_
+.. currentmodule:: ampapi._types
 
 Types
 ~~~~~~
 These are all :class:`TypedDicts`
 
-.. autoclass:: ActionSpec
-    :members:
-
-.. autoclass:: APISpec
-    :members:
-
-.. autoclass:: APISPecEndpointData
-    :members:
-    
-.. autoclass:: APISpecEndpointParameters
-    :members:
-    
-.. autoclass:: BukkitCategories
-    :members:
-    
-.. autoclass:: Consumes
-    :members:
-    
-.. autoclass:: MethodsData
-    :members:
-    
-.. autoclass:: ParameterMapping
-    :members:
-    
-.. autoclass:: PermissionNode
-    :members:
-    
-.. autoclass:: ScheduleDataData
-    :members:
-    
-.. autoclass:: TriggersData
-    :members:
-    
-.. autoclass:: TriggerTasksData
-    :members:
-    
-.. autoclass:: MCUserData
+.. automodule:: ampapi._types
     :members:
 
 
@@ -99,3 +66,8 @@ Data Modules
 
 .. automodule:: ampapi.modules
     :members:
+    :exclude-members: Player
+
+.. autoclass:: ampapi.modules.Player
+    :members:
+    :exclude-members: uuid, name
