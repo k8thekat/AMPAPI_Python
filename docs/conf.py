@@ -70,6 +70,10 @@ exclude_patterns = [
 
 autodoc_member_order: str = "bysource"
 
+# Single backticks become cross-references, eg. `Controller` links to its page and `True` to the Python docs.
+# Anything that doesn't resolve still renders as code, and double backticks keep working as plain literals.
+default_role: str = "py:obj"
+
 # -- Napoleon Settings section ------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
 napoleon_google_docstring = False
