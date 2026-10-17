@@ -40,14 +40,13 @@ class Bridge(APIParams):
 
         # This is to handle login details.
         _params = APIParams(url="http://192.168.13.130:8080", user="bot_username", password="bot_password")
-        _bridge: Bridge = Bridge(ap_params=_params)
+        _bridge: Bridge = Bridge(api_params=_params)
         del _params
 
-    .. note::
-        ### Version 5.0:
-        - :class:`Bridge` added optional parameter to allow for non-singleton usage.
+    .. versionadded:: 5.0.0
+        :class:`Bridge` added optional parameter to allow for non-singleton usage.
 
-    Parameter
+    Parameters
     ----------
     api_params: :class:`APIParams`
         The prebuilt class to pass login credentials to <Bridge>.

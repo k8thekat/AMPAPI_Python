@@ -1958,8 +1958,7 @@ class Core(Base):
     # TODO: Need to finish validation.
     async def get_oidc_login_url(
         self,
-        state: str | None = None,
-        redirect_uri: str | None = None,
+        redirect_uri: Union[str, None] = None,
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -1973,9 +1972,7 @@ class Core(Base):
 
         Parameters
         ----------
-        state: :class:`str | None`, optional
-            UNK, by default None.
-        redirect_uri: :class:`str | None`, optional
+        redirect_uri : Union[:class:`str`, None], optional
             UNK, by default None.
         request_params: :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
@@ -1984,7 +1981,14 @@ class Core(Base):
 
         """
         await self._reauth()
-        return await self._post(url="Core/GetOIDCLoginURL", no_data=True, request_params=request_params, **response_params)
+        parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
+        return await self._post(
+            url="Core/GetOIDCLoginURL",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     async def get_oidc_logout_url(
         self,

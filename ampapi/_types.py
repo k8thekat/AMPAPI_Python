@@ -51,6 +51,9 @@ ACTION_RESULT_REQUIRED_KEYS: tuple[str, ...] = ("status",)
 # "console_entries" excludes UpdatesResponse, "is_primary_task" excludes RunningTaskResponse; both carry a "status".
 ACTION_RESULT_EXCLUDED_KEYS: tuple[str, ...] = ("console_entries", "is_primary_task")
 
+ANALYTICS_SUMMARY_REQUIRED_KEYS: tuple[str, ...] = ("stats", "graph_data")
+ANALYTICS_SUMMARY_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 RUNNING_TASK_REQUIRED_KEYS: tuple[str, ...] = ("status", "is_primary_task")
 RUNNING_TASK_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -115,6 +118,11 @@ TIMED_TRIGGER_EXCLUDED_KEYS: tuple[str, ...] = ()
 # user_session_id is the in-application user key; AMP Users (UserInfoResponse) never carry one.
 USER_APPLICATION_DATA_REQUIRED_KEYS: tuple[str, ...] = ("user_session_id", "join_time")
 USER_APPLICATION_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
+
+# TODO: Confirm these keys against a live GetOPWhitelist response.
+# The captured response is a "Missing Method" error, so they come from the `OPWhitelist` dataclass.
+OP_WHITELIST_REQUIRED_KEYS: tuple[str, ...] = ("op_list", "whitelist")
+OP_WHITELIST_EXCLUDED_KEYS: tuple[str, ...] = ()
 
 
 def is_response_type[ResponseT](
@@ -521,6 +529,7 @@ class DirectoryResponse(TypedDict):
     is_editable: bool
     is_archive: bool
     is_excluded_from_backups: bool
+    is_smart_excluded_from_backups: NotRequired[bool]
 
 
 class DiagnosticsInfoResponse(TypedDict):
@@ -747,6 +756,13 @@ class ModuleInfoResponse(TypedDict):
     oidc_provider_friendly_name: str
 
 
+class OPWhitelistResponse(TypedDict):
+    """The raw response from :meth:`MinecraftModule.mc_get_op_whitelist`."""
+
+    op_list: list[MCUserData]
+    whitelist: list[MCUserData]
+
+
 class ParameterMapping(TypedDict, total=False):
     """user: NotRequired[:class:`str`]
 
@@ -771,7 +787,7 @@ class PermissionNode(TypedDict):
 
     description: :class:`str`
 
-    children: list[:class:`PermissionNode`]
+    children: Union[list[:class:`PermissionNode`], None]
 
     """
 
@@ -779,7 +795,7 @@ class PermissionNode(TypedDict):
     node: Required[str]
     display_name: Required[str]
     description: Optional[str]
-    children: Required[list[PermissionNode]]
+    children: Required[Union[list[PermissionNode], None]]
 
 
 class PlatformInfoResponse(TypedDict):

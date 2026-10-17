@@ -5,6 +5,15 @@ from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
 from typing_extensions import deprecated
 
+from ._types import (
+    ACTION_RESULT_EXCLUDED_KEYS,
+    ACTION_RESULT_REQUIRED_KEYS,
+    OP_WHITELIST_EXCLUDED_KEYS,
+    OP_WHITELIST_REQUIRED_KEYS,
+    ActionResultResponse,
+    OPWhitelistResponse,
+    is_response_type,
+)
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
 from .modules import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
@@ -16,7 +25,7 @@ if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import ActionResultResponse, BukkitCategories, RunningTaskResponse
+    from ._types import BukkitCategories, RunningTaskResponse
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -129,7 +138,7 @@ class MinecraftModule(Base):
             raise AMPAPITypeError(end_point="MinecraftModule/AddOPEntry", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "status" not in result:
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="MinecraftModule/AddOPEntry", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
@@ -179,7 +188,7 @@ class MinecraftModule(Base):
             raise AMPAPITypeError(end_point="MinecraftModule/AddToWhitelist", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "status" not in result:
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="MinecraftModule/AddToWhitelist", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
@@ -716,7 +725,7 @@ class MinecraftModule(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> OPWhitelist | dict[str, Any]:
+    ) -> OPWhitelist | OPWhitelistResponse:
         """|coro|
 
         Get the OP whitelist.
@@ -746,6 +755,8 @@ class MinecraftModule(Base):
             raise AMPAPITypeError(end_point="MinecraftModule/GetOPWhitelist", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
+        if not is_response_type(result, OPWhitelistResponse, OP_WHITELIST_REQUIRED_KEYS, OP_WHITELIST_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="MinecraftModule/GetOPWhitelist", cur_type=result, expec_type=dict)
         if format_data is True:
             return OPWhitelist(**result)
         return result

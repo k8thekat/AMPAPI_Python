@@ -36,7 +36,8 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeVar
 
     from ._types import (
-        AvailableMethodsResponse,
+        AnalyticsGraphDataResponse,
+        AnalyticsStatResponse,
         AvailableTriggersResponse,
         ConfigResponse,
         ConsumeResponse,
@@ -402,29 +403,31 @@ class AnalyticsSummary:
 
     Attributes
     ----------
-    busiest_time: dict[:class:`str`, Union[:class:`int`, :class:`str`]]
+    busiest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a list.
     country_data: list[:class:`AnalyticsCountryData`]
         The Country information for the summary, default is a list.
-    graph_data: list[dict[:class:`str`, Union[:class:`int`, :class:`str`]]]
+    graph_data : list[dict[:class:`str`, Union[:class:`int`, :class:`str`]]] | list[:class:`AnalyticsGraphDataResponse`]
         The Data displayed on the Web UI panel Analytics Menu, default is a list.
     is_demo: :class:`bool`
         UNK, default is False.
-    quietest_time: dict[str, Union[:class:`int`, :class:`str`]]
+    quietest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a dict.
-    stats: list[:class:`AnalyticsStats`]
+    stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatResponse`]
         The Analytics Stats of the summary, default is a list.
     top_players: list[:class:`AnalyticsTopPlayers`]
         The TOP players from the summary, default is a list.
 
     """
 
-    busiest_time: dict[str, Union[int, str]] = field(default_factory=dict[str, Union[int, str]])
+    busiest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
     country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
-    graph_data: list[dict[str, Union[int, str]]] = field(default_factory=list[dict[str, Union[int, str]]])
+    graph_data: list[dict[str, Union[int, str]]] | list[AnalyticsGraphDataResponse] = field(
+        default_factory=list[dict[str, Union[int, str]]],
+    )
     is_demo: bool = field(default=False)
-    quietest_time: dict[str, Union[int, str]] = field(default_factory=dict[str, Union[int, str]])
-    stats: list[AnalyticsStats] = field(default_factory=list[AnalyticsStats])
+    quietest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
+    stats: list[AnalyticsStats] | list[AnalyticsStatResponse] = field(default_factory=list[AnalyticsStats])
     top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
 
     def __repr__(self) -> str:  # noqa: D105
@@ -1198,6 +1201,8 @@ class Directory:
         The time the file/directory was created.
     modified: :class:`str` | :class:`datetime`
         The time the file/directory was last modified.
+    is_smart_excluded_from_backups : :class:`bool`
+        If the file is smart excluded from backups.
 
     """
 
@@ -1211,6 +1216,7 @@ class Directory:
     is_excluded_from_backups: bool
     created: str | datetime.datetime
     modified: str | datetime.datetime
+    is_smart_excluded_from_backups: bool = False
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.created, str):
@@ -2254,18 +2260,18 @@ class ScheduleData:
 
     Attributes
     ----------
-    available_methods: list[:class:`Methods` | :class:`AvailableMethodsResponse`]
+    available_methods : list[:class:`Methods`]
         The available methods.
-    available_triggers: list[:class:`Triggers`| :class:`AvailableTriggersResponse`]
+    available_triggers : list[:class:`Triggers`]
         The available triggers.
-    populated_triggers: list[:class:`Triggers` | :class:`AvailableTriggersResponse`]
+    populated_triggers : list[:class:`Triggers`]
         The populated triggers.
 
     """
 
-    available_methods: list[Methods | AvailableMethodsResponse]
-    available_triggers: list[Triggers | AvailableTriggersResponse]
-    populated_triggers: list[Triggers | AvailableTriggersResponse]
+    available_methods: list[Methods]
+    available_triggers: list[Triggers]
+    populated_triggers: list[Triggers]
 
     __slots__ = ("available_methods", "available_triggers", "populated_triggers")
 
@@ -2728,7 +2734,7 @@ class TimedTrigger:
 class TriggerID:
     """Used for a multitude of functions all related to Triggers and their IDs.
 
-    Simply access the respective attribute and the unique GUID for that :class:`AMPInstance` Trigger ID will be returned.
+    Simply access the respective attribute and the unique GUID for that :class:`Instance` Trigger ID will be returned.
     """
 
     a_backup_finishes_archiving: str
