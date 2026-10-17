@@ -526,6 +526,7 @@ class DirectoryResponse(TypedDict):
     is_editable: bool
     is_archive: bool
     is_excluded_from_backups: bool
+    is_smart_excluded_from_backups: NotRequired[bool]
 
 
 class DiagnosticsInfoResponse(TypedDict):

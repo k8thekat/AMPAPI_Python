@@ -1198,6 +1198,8 @@ class Directory:
         The time the file/directory was created.
     modified: :class:`str` | :class:`datetime`
         The time the file/directory was last modified.
+    is_smart_excluded_from_backups : :class:`bool`
+        If the file is smart excluded from backups.
 
     """
 
@@ -1211,6 +1213,7 @@ class Directory:
     is_excluded_from_backups: bool
     created: str | datetime.datetime
     modified: str | datetime.datetime
+    is_smart_excluded_from_backups: bool = False
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.created, str):
