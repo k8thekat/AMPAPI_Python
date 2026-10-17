@@ -11,16 +11,6 @@ A small todo list local to the project.
     `get_setting_spec`, `resume_instance`, `suspend_instance`, ...) show as missing. Match on the `url=` literal instead.
 
 
-## Release blockers
-
----
-
-- `import ampapi` fails once installed: `util.py:17` imports `docs.samples.method_event_usage` at module level
-  and `docs/` is not packaged. Same for the lazy imports at `util.py:711`, `842` and `907`.
-- `Directory` / `DirectoryResponse` are missing `is_smart_excluded_from_backups`; newer AMP sends it and
-  `Directory(**result)` raises `TypeError`. Fixed on `main` by PR #27 (`8d74bd9`), not carried into `Refactor`.
-
-
 ## ampapi/adsmodule.py
 
 ---
@@ -39,15 +29,16 @@ A small todo list local to the project.
 - Remove `call_end_point`; its only caller is `_reauth` for `Core/Login`, and it just forwards to `_post`.
 - Fix the blind exception catch in `_reauth` (`base.py:639`).
 - `version_validation` needs updating for the new data structure handling (`base.py:1155`).
-- `_no_controller` message still names `AMPControllerInstance`.
 - Possibly get active AMP Sessions and close them during `clean_up()`?
 
 ## ampapi/core.py
 
 ---
 
-- `get_oidc_login_url` accepts `state` / `redirect_uri` and forwards neither. The `2.8.0.8` spec has one
-  optional parameter, `redirect_uri`; drop `state` and forward it.
+- `get_oidc_login_url` posts with `no_data=True` and returns `None`, but the spec says it returns the login URL
+  as a String. `get_oidc_logout_url` already returns its `str`; match it.
+- Narrowing sites raise with `end_point="Core/ActionResult"` instead of the endpoint's own url.
+- `get_api_spec` is annotated `APISpec | dict[str, Any]` but always returns a plain `dict(result)`.
 - `TimedTriggerResponse` / `UserApplicationDataResponse` are derived from the `TimedTrigger` /
   `UserApplicationData` definitions, not a live payload; there is no `_responses/` dump for
   `Core/GetTimeIntervalTrigger` or `Core/GetUserInfo`. Their key sets are unverified.
@@ -58,16 +49,14 @@ A small todo list local to the project.
 
 ---
 
-- Replace the `cast("dict[str, Any]", result)` at `analytics.py:106` with an `is_response_type()` narrow.
 - Missing wrapper from `2.8.0.8`: `get_user_details`.
 
 ## ampapi/filemanager.py, filebackup.py, emailsender.py, minecraft.py
 
 ---
 
-- `ActionResult(**result)` is built from an un-narrowed `_post` return; `"status" in result` does not narrow
-  the union. Switch to `is_response_type()` like `adsmodule.py` / `core.py` do.
-  - 21 sites, 87 pyright errors: filemanager 15, filebackup 3, minecraft 2, emailsender 1.
+- `OPWhitelistResponse` is built from the `OPWhitelist` dataclass, not a live payload; `getopwhitelist.json`
+  is a "Missing Method" error and the endpoint is in no spec sheet.
 - `BackupResponse` TypedDict is still missing; `getbackups.json` returned empty `[]` from the tested
   server. Needs a server with actual backups to dump the item structure.
 - What does the `delete` parameter do on `filemanager.py:35`?
@@ -87,9 +76,8 @@ A small todo list local to the project.
 
 ---
 
-- 78 pyright errors, mostly unknown types from `dict_merge` and the schedule data parsing.
-- `generate_docs_rst` is annotated with the removed `AMPControllerInstance` (`util.py:1013`) and `Base` is undefined at `util.py:672`.
-- Stray `print("file_a path", file_a)` at `util.py:382`.
+- The doc generators import their notes from `docs/samples/`, which is not packaged, so they only run from a repo checkout.
+- `ScheduleData` is no longer a dataclass, but `Methods.consumes` still has an open `# TODO:` to convert into `DCConsumes`.
 
 ## Docs
 
@@ -98,8 +86,8 @@ A small todo list local to the project.
 - Add pages for `ResponseHandlerOptions`, `ExponentialBackoff`, `errors` and `TargetADS`.
 - `Base.session_ttl` / `instance_id`, `Core.triggers`, `Instance.app_state` and `Player.uuid` / `name` are documented
   twice, in the class Attributes section and on the member. The rst `:exclude-members:` hides the member's own docstring.
-- Replace the remaining `AMP*Instance` names in docstrings (`instance.py`, `adsmodule.py`, `base.py`, `util.py`).
-- `bridge.py` docstring: `ap_params` typo, "Version 5.0" note, `Parameter` heading.
+- `AMPInstanceState` is still named in docstrings (`instance.py` ~95, 562, 638, 742); the enum is `InstanceState`.
+- `Bridge` docstring says `singleton` defaults to False; the code defaults to True.
 
 ## Issues
 
