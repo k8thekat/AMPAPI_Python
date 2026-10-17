@@ -116,7 +116,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
         if len(method.consumes) > 0:
             file.write("Consumes these values:\n")
             # Methods.consumes holds the raw ConsumeResponse dicts unless a DCConsumes was handed in.
-            consumes: list[Mapping[str, Any]] = [x if isinstance(x, dict) else asdict(x) for x in method.consumes]
+            consumes: list[Mapping[str, Any]] = [consume if isinstance(consume, dict) else asdict(consume) for consume in method.consumes]
             for entry in sorted(consumes, key=lambda x: x["name"]):
                 # print(entry, type(entry.enum_values), entry.enum_values)
                 file.write(f"\t* {entry['name']}: type({entry['value_type']})\n")
