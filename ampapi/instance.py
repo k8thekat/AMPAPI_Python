@@ -83,8 +83,8 @@ class Instance(
     ----------
     data: Union[:class:`Instance`, None]
         The Instance data to be unpacked and set as attributes of this class to execute API calls.
-    controller: Union[:class:`AMPControllerInstance`, None]
-        The :class:`AMPControllerInstance` to be used to execute specific API calls.
+    controller: Union[:class:`Controller`, None]
+        The :class:`Controller` to be used to execute specific API calls.
 
     Attributes
     ----------
@@ -255,7 +255,7 @@ class Instance(
         Raises
         ------
         :exc:`RuntimeError`
-            The API call is only allowed to be run on a type(:class:`AMPControllerInstance`).
+            The API call is only allowed to be run on a type(:class:`Controller`).
 
         Returns
         -------
@@ -359,7 +359,7 @@ class Instance(
 
         .. warning::
             This only applies if you are manually creating these classes.\n
-            - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
+            - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
         .. warning::
             This will fail if you attempt to call it on the Target or Controller type Instance.
@@ -373,7 +373,7 @@ class Instance(
 
         Returns
         -------
-        Union[:class:`AMPInstance`, :class:`AMPMinecraftInstance`]
+        Union[:class:`Instance`, :class:`MinecraftInstance`]
             Returns an updated ``self`` object.
 
         """
@@ -428,7 +428,7 @@ class Instance(
 
         .. warning::
             This only applies if you are manually creating these classes.\n
-            - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
+            - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
 
 
@@ -465,7 +465,7 @@ class Instance(
 
         .. warning::
             This only applies if you are manually creating these classes.\n
-            - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
+            - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
 
         Parameters
@@ -501,7 +501,7 @@ class Instance(
 
         .. warning::
             This only applies if you are manually creating these classes.\n
-            - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
+            - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
 
         Parameters
@@ -532,7 +532,7 @@ class Instance(
 
         .. warning::
             This only applies if you are manually creating these classes.\n
-            - You must have a :class:`AMPControllerInstance` generated and set to :attr:`_controller` first. See ``__init__()``
+            - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
 
         Parameters
@@ -622,11 +622,11 @@ class MinecraftInstance(MinecraftModule, Instance):
 
 
 class TargetADS(Instance):
-    """Typically referred to the "Target ADS" which is apart of the available Instances of the :class:`AMPControllerInstance`
-    via :attr:`~AMPControllerInstance.instances`.
+    """Typically referred to the "Target ADS" which is apart of the available Instances of the :class:`Controller`
+    via :attr:`~Controller.instances`.
 
     .. note::
-        No fundamental difference between this class and a :class:`AMPInstance`.
+        No fundamental difference between this class and a :class:`Instance`.
 
 
     Attributes
@@ -708,7 +708,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     .. note::
         Similar to what you see when you log into AMP web GUI and see the Instances list.
         This attribute is cached and will require calling :meth:`~ADSModule.get_instances` to access the API converted class objects.
-        * See the :attr:`AMPControllerInstance.instances` attribute.
+        * See the :attr:`Controller.instances` attribute.
 
 
     Attributes
@@ -811,12 +811,12 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
     @property
     def instances(self) -> set[InstanceTypeAliases]:
-        """Represents all Instances the :class:`AMPControllerInstance` can see,
+        """Represents all Instances the :class:`Controller` can see,
         these are transferred from :attr:`~Controller.available_instance`.\n
 
         .. note::
-            Similar to :attr:`~Controller.available_instance` but converted into a type of :class:`AMPInstance` classes that have API functions.\n
-            The set of :class:`AMPInstance` types will be ordered by :attr:`~Instance.instance_id`.
+            Similar to :attr:`~Controller.available_instance` but converted into a type of :class:`Instance` classes that have API functions.\n
+            The set of :class:`Instance` types will be ordered by :attr:`~Instance.instance_id`.
 
 
         Returns

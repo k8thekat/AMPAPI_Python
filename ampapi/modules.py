@@ -2734,7 +2734,7 @@ class TimedTrigger:
 class TriggerID:
     """Used for a multitude of functions all related to Triggers and their IDs.
 
-    Simply access the respective attribute and the unique GUID for that :class:`AMPInstance` Trigger ID will be returned.
+    Simply access the respective attribute and the unique GUID for that :class:`Instance` Trigger ID will be returned.
     """
 
     a_backup_finishes_archiving: str

@@ -172,7 +172,7 @@ class Base:
     _failed_api: ClassVar[str] = "The API call returned a malformed response."
     _minecraft_only: ClassVar[str] = "This API call is only available on Minecraft type instances."
     _no_bridge: ClassVar[str] = "Failed to setup connection. You need to initiate `<class Bridge>` first."
-    _no_controller: ClassVar[str] = "The function failed as the <class:`AMPControllerInstance`> was not properly initialized and set."
+    _no_controller: ClassVar[str] = "The function failed as the <class:`Controller`> was not properly initialized and set."
     _no_data: ClassVar[str] = "Failed to receive any data from post request."
     _unauthorized_access: ClassVar[str] = "The user does not have the required permissions to interact with this instance."
     _instance_offline: ClassVar[str] = "The requested Instance is not available at this time. | URL: %s"
@@ -276,7 +276,7 @@ class Base:
     def ads_only(
         func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
     ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
-        """Checks the class attribute ``.module`` and is equal to ``ADS`` or if the type of Instance using the function is AMPADSInstance.
+        """Checks the class attribute ``.module`` and is equal to ``ADS`` or if the type of Instance using the function is TargetADS.
 
         Parameters
         ----------
@@ -291,7 +291,7 @@ class Base:
         Raises
         ------
         RuntimeError
-            The API call is only allowed to be run on a type(:py:class:`AMPADSInstance`).
+            The API call is only allowed to be run on a type(:py:class:`TargetADS`).
 
         """
 
