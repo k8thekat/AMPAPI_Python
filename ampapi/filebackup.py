@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
+from ._types import ACTION_RESULT_EXCLUDED_KEYS, ACTION_RESULT_REQUIRED_KEYS, ActionResultResponse, is_response_type
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
 from .modules import ActionResult, Backup, RunningTask
@@ -9,7 +10,7 @@ from .modules import ActionResult, Backup, RunningTask
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
 
-    from ._types import ActionResultResponse, RunningTaskResponse
+    from ._types import RunningTaskResponse
 
 __all__ = ("LocalFileBackupPlugin",)
 
@@ -60,7 +61,7 @@ class LocalFileBackupPlugin(Base):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "status" not in result:
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
@@ -263,7 +264,7 @@ class LocalFileBackupPlugin(Base):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "status" not in result:
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
@@ -365,7 +366,7 @@ class LocalFileBackupPlugin(Base):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "status" not in result:
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)

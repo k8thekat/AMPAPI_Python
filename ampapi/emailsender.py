@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Union, Unpack
 
+from ._types import ACTION_RESULT_EXCLUDED_KEYS, ACTION_RESULT_REQUIRED_KEYS, ActionResultResponse, is_response_type
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
 from .modules import ActionResult
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
-
-    from ._types import ActionResultResponse
 
 __all__ = ("EmailSenderPlugin",)
 
@@ -56,7 +55,7 @@ class EmailSenderPlugin(Base):
             raise AMPAPITypeError(end_point="EmailSenderPlugin/TestSMTPSettings", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "status" not in result:
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="EmailSenderPlugin/TestSMTPSettings", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)

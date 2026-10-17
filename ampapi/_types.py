@@ -116,6 +116,11 @@ TIMED_TRIGGER_EXCLUDED_KEYS: tuple[str, ...] = ()
 USER_APPLICATION_DATA_REQUIRED_KEYS: tuple[str, ...] = ("user_session_id", "join_time")
 USER_APPLICATION_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
+# TODO: Confirm these keys against a live GetOPWhitelist response.
+# The captured response is a "Missing Method" error, so they come from the `OPWhitelist` dataclass.
+OP_WHITELIST_REQUIRED_KEYS: tuple[str, ...] = ("op_list", "whitelist")
+OP_WHITELIST_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 
 def is_response_type[ResponseT](
     data: ResponseTypeAlias,
@@ -745,6 +750,13 @@ class ModuleInfoResponse(TypedDict):
     base_port: int
     is_oidc_enabled: bool
     oidc_provider_friendly_name: str
+
+
+class OPWhitelistResponse(TypedDict):
+    """The raw response from :meth:`MinecraftModule.mc_get_op_whitelist`."""
+
+    op_list: list[MCUserData]
+    whitelist: list[MCUserData]
 
 
 class ParameterMapping(TypedDict, total=False):
