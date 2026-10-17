@@ -1,4 +1,5 @@
 {
+    "python.analysis.supportRestructuredText": true,
     "cSpell.words": [
         "automodule",
         "autosectionlabel",

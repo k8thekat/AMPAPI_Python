@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
-from .base import Base
-from .modules import ActionResult, ActionResultError, Backup, RunningTask
+from .base import Base, ResponseAliasFull, ResponseHandlerOptions
+from .errors import AMPAPITypeError
+from .modules import ActionResult, Backup, RunningTask
+
+if TYPE_CHECKING:
+    from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
+
+    from ._types import ActionResultResponse, RunningTaskResponse
 
 __all__ = ("LocalFileBackupPlugin",)
 
@@ -14,18 +20,27 @@ class LocalFileBackupPlugin(Base):
     """
 
     async def delete_from_s3(
-        self, backup_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        backup_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Delete a backup from S3.
 
         Parameters
         ----------
-        backup_id: :class:`str`
+        backup_id : :class:`str`
             The backup ID to delete.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -35,20 +50,41 @@ class LocalFileBackupPlugin(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
-        result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/DeleteFromS3", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/DeleteFromS3",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "status" not in result:
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
         return result
 
-    async def delete_local_backup(self, backup_id: str) -> None:
+    async def delete_local_backup(
+        self,
+        backup_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Delete a local backup.
 
         Parameters
         ----------
-        backup_id: :class:`str`
+        backup_id : :class:`str`
             The backup ID to delete.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -57,12 +93,22 @@ class LocalFileBackupPlugin(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
-        await self._call_api(api="LocalFileBackupPlugin/DeleteLocalBackup", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="LocalFileBackupPlugin/DeleteLocalBackup",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     async def download_from_s3(
-        self, backup_id: str, format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
+        self,
+        backup_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Download a backup from S3.
@@ -70,10 +116,14 @@ class LocalFileBackupPlugin(Base):
 
         Parameters
         ----------
-        backup_id: :class:`str`
+        backup_id : :class:`str`
             The backup ID to download.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -83,20 +133,41 @@ class LocalFileBackupPlugin(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
-        result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/DownloadFromS3", parameters=parameters, format_data=format_data, format_=RunningTask,
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/DownloadFromS3",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DownloadFromS3", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "is_primary_task" not in result:
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DownloadFromS3", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return RunningTask(**result)
         return result
 
-    async def get_backups(self, format_data: Union[bool, None] = None) -> list[Backup] | ActionResultError:
+    async def get_backups(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[Backup] | list[dict[str, Any]]:
         """|coro|
 
         Get a list of Backups.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -105,15 +176,35 @@ class LocalFileBackupPlugin(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/GetBackups", format_data=format_data, format_=Backup, _use_from_dict=False,
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/GetBackups",
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/GetBackups", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [Backup(**item) for item in result]
         return result
 
-    async def refresh_backup_list(self) -> None:
+    async def refresh_backup_list(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Refresh the list of backups.
+
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -121,24 +212,38 @@ class LocalFileBackupPlugin(Base):
 
         """
         await self._reauth()
-        await self._call_api(api="LocalFileBackupPlugin/RefreshBackupList", _no_data=True)
-        return
+        return await self._post(
+            url="LocalFileBackupPlugin/RefreshBackupList",
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     async def restore_backup(
-        self, backup_id: str, delete_existing_data: bool = False, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        backup_id: str,
+        delete_existing_data: bool = False,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Restore a backup.
 
         Parameters
         ----------
-        backup_id: :class:`str`
+        backup_id : :class:`str`
             The backup ID to restore.
-        delete_existing_data: :class:`bool`, optional
+        delete_existing_data : :class:`bool`, optional
             Delete the backup after restoring, defaults to False.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -148,22 +253,44 @@ class LocalFileBackupPlugin(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"BackupId": backup_id, "DeleteExistingData": delete_existing_data}
-        result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/RestoreBackup", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/RestoreBackup",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "status" not in result:
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
         return result
 
-    async def set_backup_sticky(self, backup_id: str, sticky: bool = False) -> None:
+    async def set_backup_sticky(
+        self,
+        backup_id: str,
+        sticky: bool = False,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Set a backup as sticky.
 
         Parameters
         ----------
-        backup_id: :class:`str`
+        backup_id : :class:`str`
             The backup ID to set as sticky.
-        sticky: :class:`bool`, optional
+        sticky : :class:`bool`, optional
             Set the backup as sticky, defaults to False.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -172,8 +299,13 @@ class LocalFileBackupPlugin(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"BackupId": backup_id, "Sticky": sticky}
-        await self._call_api(api="LocalFileBackupPlugin/SetBackupSticky", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="LocalFileBackupPlugin/SetBackupSticky",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     async def take_backup(
         self,
@@ -182,26 +314,33 @@ class LocalFileBackupPlugin(Base):
         sticky: bool = False,
         local: bool | None = None,
         s3: bool | None = None,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Takes a backup of the AMP Server.
 
         Parameters
         ----------
-        name: :class:`str`
+        name : :class:`str`
             The name of the backup.
-        description: :class:`str`
+        description : :class:`str`
             Brief description of why or what the backup is for.
-        sticky: :class:`bool`, optional
-            Sticky backups won't be deleted to make room for automatic backups, defaults to ``False``.
-        local: :class:`bool`, optional
+        sticky : :class:`bool`, optional
+            Sticky backups won't be deleted to make room for automatic backups, defaults to `False`.
+        local : :class:`bool`, optional
             If the backup should be local or not.
-        s3: :class:`bool`, optional
+        s3 : :class:`bool`, optional
             If the backup should be on S3 or not.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -216,22 +355,44 @@ class LocalFileBackupPlugin(Base):
         if s3 is not None:
             parameters["S3"] = s3
 
-        result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/TakeBackup", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/TakeBackup",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "status" not in result:
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
         return result
 
-    async def upload_to_s3(self, backup_id: str, format_data: Union[bool, None] = None) -> RunningTask | ActionResultError:
+    async def upload_to_s3(
+        self,
+        backup_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Upload a backup to S3.
 
         Parameters
         ----------
-        backup_id: :class:`str`
+        backup_id : :class:`str`
             The backup ID to upload.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -241,7 +402,18 @@ class LocalFileBackupPlugin(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
-        result: Any = await self._call_api(
-            api="LocalFileBackupPlugin/UploadToS3", parameters=parameters, format_data=format_data, format_=RunningTask,
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/UploadToS3",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/UploadToS3", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "is_primary_task" not in result:
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/UploadToS3", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return RunningTask(**result)
         return result

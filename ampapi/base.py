@@ -27,36 +27,47 @@ import functools
 import json
 import logging
 import re
-from collections.abc import Callable, Iterable
-from dataclasses import fields, is_dataclass
-from datetime import timezone
+import time
+from collections.abc import Callable
+from dataclasses import fields
 from json import JSONEncoder
 from pathlib import Path
-from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, ParamSpec, TypedDict, Union
+
+# from pprint import pformat
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, ParamSpec, TypedDict, Union, Unpack, overload
 
 import aiohttp
 from aiohttp import ClientResponse
-from dataclass_wizard import fromdict
-from pyotp import TOTP
-from typing_extensions import Unpack, overload
 
+# from dataclass_wizard import fromdict
+from pyotp import TOTP
+
+from ._enums import Module
+from ._types import (
+    DIAGNOSTICS_EXCLUDED_KEYS,
+    DIAGNOSTICS_REQUIRED_KEYS,
+    DiagnosticsInfoResponse,
+    EndpointResponseError,
+    ResponseTypeAlias,
+    is_response_type,
+)
 from .backoff import ExponentialBackoff
 from .bridge import Bridge
-from .modules import ActionResult, ActionResultError, APISession, BuildInfo, Diagnostics, LoginResults, Status
+from .errors import AMPAPINetworkError, AMPAPIResponseError
+from .modules import APISession, BuildInfo, Status, timestamp_converter
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Coroutine, Iterable
+    from collections.abc import Callable, Coroutine
     from datetime import timedelta
-    from typing import Concatenate
+    from types import TracebackType
+    from typing import Concatenate, Self
 
     from _typeshed import DataclassInstance
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
-    from typing_extensions import ParamSpec, Self, TypeVar
+    from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import ResponseTypeAlias
-    from .modules import APIResponseDataTableAlias, Controller, Instance, Updates
+    from .modules import Updates
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -64,6 +75,8 @@ if TYPE_CHECKING:
     X = TypeVar("X", bound=DataclassInstance)
 
 __all__ = ("Base", "ResponseHandlerOptions")
+
+ResponseAliasFull = Union[ResponseTypeAlias, str, bool, None]
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -93,10 +106,15 @@ class DumpParameters(TypedDict, total=False):
     check_circular: bool
     allow_nan: bool
     cls: type[JSONEncoder] | None
-    indent: None | int | str
+    indent: int | str | None
     separators: tuple[str, str] | None
     default: Callable[[Any], Any] | None
     sort_keys: bool
+
+
+class BaseArgs(TypedDict):
+    bridge: Optional[Bridge]
+    session: Optional[aiohttp.ClientSession]
 
 
 class Base:
@@ -107,7 +125,8 @@ class Base:
 
 
     .. note::
-        A session expires after 240sec of inactivity per Cube Coders AMP. If for any reason you want to change that value; set the attribute :attr:`session_ttl`.\n
+        A session expires after 240sec of inactivity per Cube Coders AMP.
+        If for any reason you want to change that value; set the attribute :attr:`session_ttl`.\n
 
 
     Attributes
@@ -129,9 +148,24 @@ class Base:
     _backoff: ExponentialBackoff[bool]
     _module: str
     _format_data: ClassVar[bool] = True
-    _url: str
+    _endpoint_url: str
     _instance_id: str
     _session_ttl: ClassVar[int] = 240
+
+    # Cache state for classes whose attributes are populated from an API response rather than __init__.
+    # `_is_cached` flips once data has been applied; `_cached_at` stamps when, so staleness can be told
+    # apart from "never fetched".
+    _is_cached: bool = False
+    _cached_at: Optional[datetime.datetime] = None
+    # Monotonic mirror of `_cached_at`; the staleness check runs on every guarded attribute access, and
+    # `time.monotonic()` is far cheaper than building a tz-aware datetime each time.
+    _cached_monotonic: Optional[float] = None
+    _cache_timeout: ClassVar[int] = 300
+    # Named in the cache messages so they can point at whatever actually refreshes the attribute.
+    # `_cache_source` is the class-wide fallback; `_cache_sources` overrides it per attribute for the
+    # ones populated by a different endpoint.
+    _cache_source: ClassVar[str] = "the API call that populates it"
+    _cache_sources: ClassVar[dict[str, str]] = {}
 
     # Error response strings.
     _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
@@ -142,6 +176,10 @@ class Base:
     _no_data: ClassVar[str] = "Failed to receive any data from post request."
     _unauthorized_access: ClassVar[str] = "The user does not have the required permissions to interact with this instance."
     _instance_offline: ClassVar[str] = "The requested Instance is not available at this time. | URL: %s"
+    _no_cache: ClassVar[str] = "'%s.%s' has not been populated yet. You must call <%s>.%s first."
+    _stale_cache: ClassVar[str] = (
+        "'%s.%s' was cached %s seconds ago and the timeout is %s seconds; the value may be stale. Call <%s>.%s to refresh it."
+    )
     _version_unavailable: ClassVar[str] = "The API call %s is no longer available at this version of AMP %s"
 
     # These are used to handle JSON keys that cannot be parsed properly via regex.
@@ -154,9 +192,8 @@ class Base:
         "SecurityandPrivacy": "security_and_privacy",
     }
 
-
     @property
-    def module(self) -> str:
+    def module(self) -> Module | str:
         """The AMP Instance ``type``.
 
         Current Values: `ADS` | `Minecraft` | `Generic` | `SRCDS`
@@ -167,7 +204,10 @@ class Base:
             The AMP Instance ``type`` as a string.
 
         """
-        return self._module
+        try:
+            return Module(self._module)
+        except ValueError:
+            return self._module
 
     @property
     def format_data(self) -> bool:
@@ -206,12 +246,12 @@ class Base:
         return self._instance_id
 
     @property
-    def url(self) -> str:
+    def endpoint_url(self) -> str:
         """The URL to access the AMP Instance API endpoints."""
-        return self._url
+        return self._endpoint_url
 
-    def __init__(self, *, bridge: Optional[Bridge] = None, session: Optional[aiohttp.ClientSession] = None) -> None:
-        self._url = ""
+    def __init__(self, *, bridge: Optional[Bridge] = None, session: Optional[aiohttp.ClientSession] = None) -> None:  # noqa: D107
+        self._endpoint_url = ""
         self._instance_id = "0"
 
         if bridge is None:
@@ -223,7 +263,7 @@ class Base:
                     __class__.__name__,
                     "__init__",
                 )
-                return
+                raise
         else:
             self.parse_bridge(bridge=bridge)
 
@@ -231,7 +271,6 @@ class Base:
 
         LOGGER.debug("<%s.%s> | BRIDGE: %s | SESSION: %s |", __class__.__name__, "__init__", bridge, session)
         self.session: aiohttp.ClientSession | None = session
-
 
     @staticmethod
     def ads_only(
@@ -259,255 +298,52 @@ class Base:
         @functools.wraps(wrapped=func)
         def wrapper_ads_only(self: D, *args: T.args, **kwargs: T.kwargs) -> Coroutine[None, None, F]:
             from .adsmodule import ADSModule  # noqa: PLC0415
-            from .instance import AMPADSInstance  # noqa: PLC0415
+            # from .instance import Controller
 
-            if self.module == "ADS" or type(self) is AMPADSInstance or isinstance(self, ADSModule):
+            # if self.module == "ADS" or type(self) is Controller or isinstance(self, ADSModule):
+            if self.module == "ADS" or isinstance(self, ADSModule):
                 return func(self, *args, **kwargs)
             raise RuntimeError(self._ads_only)
 
         return wrapper_ads_only
 
-    # async def _call_api(
-    #     self,
-    #     api: str,
-    #     parameters: Union[None, dict[str, Any]] = None,
-    #     format_data: Union[bool, None] = None,
-    #     format_: Union[type[Union[X, APIResponseDataTableAlias]], None] = None,
-    #     sanitize_json: bool = True,
-    #     _use_from_dict: bool = True,
-    #     _auto_unpack: bool = True,
-    #     _no_data: bool = False,
-    # ) -> Any:
-    #     """|coro|.
-
-    #     Uses :class:`aiohttp.ClientSession` post request to access the AMP API endpoints. \n
-
-    #     .. note::
-    #         Will populate the ``SESSIONID`` key for :param:`parameters` if it is not provided. This is the default behavior.
-
-    #     .. warning::
-    #         Will return an :class:`ActionResultError` class if any errors happen when attempting to call the API.
-
-    #     Parameters
-    #     ----------
-    #     api: :class:`str`
-    #         The API endpoint to call, eg ``Core/GetModuleInfo``.
-    #     parameters: Union[None, dict[:class:`str`, Any]], optional
-    #         The parameters to pass to the API endpoint, by default None.
-    #     format_data: Union[:class:`bool`, None], optional
-    #         Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
-    #     format_: :py:class:`DataclassInstance`, optional
-    #         The dataclass the JSON response will formatted to, by default None.
-    #     sanitize_json: :class:`bool`, optional
-    #         Replaces invalid characters in our JSON responses, by default True.
-    #     _use_from_dict: :class:`bool`, optional
-    #         Controls whether the data will use :meth:`fromdict` of dataclass wizard to unpack the data.
-    #         Typical usage case is to handle nested :class:`DataclassInstance`, by default True.
-    #     _auto_unpack: :class:`bool`, optional
-    #         Controls whether the data will be unpacked automatically via ``(**data)``, by default True.
-    #     _no_data: :class:`bool`, optional
-    #         Informs the connection that the API does not have a JSON response, by default False.
-
-    #     Returns
-    #     -------
-    #     Any
-    #         Typical returns are of the same type that is passed in to ``format_``, either in an :class:`Iterable` or not depending on the data,
-    #         otherwise returns an unformatted JSON response if :attr:`format_data` or ``FORMAT_DATA`` is False.
-
-    #     """
-    #     global FORMAT_DATA
-
-    #     post_req: ClientResponse | None
-    #     LOGGER.debug("_call_api -> %s was called with %s", api, parameters)
-
-    #     # This should save us some boiler plate code throughout our API calls.
-    #     if parameters is None:
-    #         parameters = {}
-
-    #     api_session: APISession = self._bridge._sessions.get(
-    #         self._instance_id,
-    #         APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)),
-    #     )  # pyright: ignore[reportPrivateUsage]
-
-    #     # ?UPCOMING(@k8thekat): - AMP Update; moving SessionID to headers.
-    #     # This is to handle AMPs updated Authorization
-    #     header: dict[str, str] = {"Accept": "text/javascript"}
-    #     if self._old_auth is True:
-    #         parameters["SESSIONID"] = api_session.id
-    #     else:
-    #         header["Authorization"] = f"Bearer {api_session.id}"
-
-    #     json_data: str = json.dumps(obj=parameters)
-
-    #     _url: str = self._url + "/API/" + api
-    #     LOGGER.debug("SESSION GET %s | API CALL: %s | API URL: %s | DATA: %s", self._instance_id, api, _url, pformat(json_data))
-    #     if self.session is None:
-    #         self.session = aiohttp.ClientSession()
-
-    #     try:
-    #         post_req = await self.session.post(url=_url, headers=header, data=json_data)
-    #     # We have a dynamic backoff function to prevent reconnect attempts to frequently.
-    #     except RuntimeError as e:
-    #         # Attempting to re-open the session if it is somehow closed during usage.
-    #         if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
-    #             self.session = aiohttp.ClientSession()
-
-    #         retry: float = self._backoff.delay()
-    #         LOGGER.error("<Base._call_api> encountered a <RuntimeError> and will retry in %s. | Exception: %s", retry, e)
-    #         await asyncio.sleep(delay=retry)
-    #         return await self._call_api(
-    #             api=api,
-    #             parameters=parameters,
-    #             format_data=format_data,
-    #             format_=format_,
-    #             sanitize_json=sanitize_json,
-    #             _use_from_dict=_use_from_dict,
-    #             _auto_unpack=_auto_unpack,
-    #             _no_data=_no_data,
-    #         )
-
-    #     except Exception as e:
-    #         retry = self._backoff.delay()
-    #         LOGGER.error("<Base._call_api> encountered an Exception and will retry in %s. | Exception: %s", retry, e)
-    #         await asyncio.sleep(delay=retry)
-    #         return ActionResultError(status=False, reason="UNK", result=ValueError(e))
-
-    #     if post_req.content_length == 0:
-    #         return ActionResultError(status=False, reason="Content Length is 0", result=ValueError(self._no_data))
-    #         # raise ValueError(self._no_data)
-
-    #     if post_req.status != 200:
-    #         return ActionResultError(status=False, reason="Status Code not equal to 200", result=ConnectionError(self._no_data))
-    #         # raise ConnectionError(self._no_data)
-
-    #     post_req_json: Any = await post_req.json()
-
-    #     if post_req_json is None and _no_data is False:
-    #         return ActionResultError(status=False, reason="JSON is None and Data is None", result=ConnectionError(self._no_data))
-    #         # raise ConnectionError(self._no_data)
-    #     if _no_data is True:
-    #         return None
-
-    #     # They removed "result" from all replies thus breaking most if not all future code.
-    #     # This was an old example from pre 2.3 AMP API that could have the following return:
-    #     # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
-    #     LOGGER.debug(
-    #         "URL: %s | aiohttp.ClientResponse.json() type: %s | _call_api parameters: %s",
-    #         api,
-    #         type(post_req_json),
-    #         parameters,
-    #     )
-    #     LOGGER.debug("aiohttp.ClientResponse.json() formatted: %s", pformat(post_req_json))
-    #     if sanitize_json is True:
-    #         post_req_json = self.sanitize_json(post_req_json)
-    #         LOGGER.debug("Sanitize json: %s | Sanitized data: %s", sanitize_json, pformat(post_req_json))
-
-    #     if isinstance(post_req_json, dict):
-    #         if "title" in post_req_json:
-    #             post_req_json = post_req_json["title"]
-    #             if isinstance(post_req_json, str) and (post_req_json == "Unauthorized Access" or post_req_json == "Instance Unavailable"):
-    #                 LOGGER.error("%s failed because of %s", api, post_req_json)
-    #                 api_session = APISession(id="0", ttl=datetime.now())
-    #                 self._bridge._sessions.update({self._instance_id: api_session})
-    #                 if post_req_json == "Unauthorized Access":
-    #                     # New Header Auth bearer implementation.
-    #                     if self._old_auth is False:
-    #                         self._old_auth = True
-    #                         return await self._call_api(
-    #                             api=api,
-    #                             parameters=parameters,
-    #                             format_data=format_data,
-    #                             format_=format_,
-    #                             sanitize_json=sanitize_json,
-    #                             _use_from_dict=_use_from_dict,
-    #                             _auto_unpack=_auto_unpack,
-    #                             _no_data=_no_data,
-    #                         )
-
-    #                     return ActionResultError(
-    #                         status=False,
-    #                         reason="Unauthorized Access",
-    #                         result=PermissionError(self._unauthorized_access),
-    #                     )
-
-    #                     # raise PermissionError(self._unauthorized_access)
-    #                 if post_req_json == "Instance Unavailable":
-    #                     return ActionResultError(
-    #                         status=False,
-    #                         reason="Instance Unavailable",
-    #                         result=ConnectionError(self._instance_offline, self._url),
-    #                     )
-    #                     # raise ConnectionError(self._instance_offline, self.url)
-
-    #         elif api == "Core/Login":
-    #             return LoginResults(**post_req_json)
-
-    #         # ? Suggestion
-    #         # This is breaking newer code as it's grabbing the inner key versus older version of AMP having two `result` keys.
-    #         # We may need to re-add this fuctionality in a different manner going forward.
-    #         # elif "result" in post_req_json:
-    #         #     post_req_json = post_req_json["result"]
-
-    #         #     if isinstance(post_req_json, bool) and post_req_json is False:
-    #         #         LOGGER.error("%s failed because of %s", api, post_req_json)
-    #         #         raise ValueError(self._failed_api)
-
-    #         elif isinstance(post_req_json, dict) and "status" in post_req_json and post_req_json["status"] is False:
-    #             LOGGER.error("%s failed because of Status: %s", api, post_req_json)
-    #             return ActionResultError(status=False, reason="Status is False", result=ValueError(self._failed_api))
-    #             # return ValueError(self._failed_api)
-
-    #     LOGGER.debug(
-    #         "DEBUG: FORMAT DATA | local Format Data: %s | global Format Data: %s | format_: %s | POST REQ TYPE: %s",
-    #         format_data,
-    #         FORMAT_DATA,
-    #         format_,
-    #         type(post_req_json),
-    #     )
-    #     if (format_ is None or format_data is False) or (format_data is None and FORMAT_DATA is False):
-    #         return post_req_json
-
-    #     if isinstance(post_req_json, (dict, list)) and ((format_data is True) or (format_data is None and FORMAT_DATA is True)):
-    #         return self.json_to_dataclass(json=post_req_json, format_=format_, _use_from_dict=_use_from_dict, _auto_unpack=_auto_unpack)
-    #     return post_req_json
-
     @overload
     async def _post(
         self,
         url: str,
-        parameters: Union[None, dict[str, Any]] = None,
+        parameters: Union[dict[str, Any], None] = None,
         *,
         no_data: Literal[True],
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResultError | None: ...
+    ) -> None: ...
 
     @overload
     async def _post(
         self,
         url: str,
-        parameters: Union[None, dict[str, Any]] = None,
+        parameters: Union[dict[str, Any], None] = None,
         *,
         no_data: bool = ...,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResultError | ResponseTypeAlias | bool | None: ...
+    ) -> ResponseTypeAlias | str | bool | None: ...
 
     async def _post(
         self,
         url: str,
-        parameters: Union[None, dict[str, Any]] = None,
+        parameters: Union[dict[str, Any], None] = None,
         *,
         no_data: bool = False,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResultError | ResponseTypeAlias | str | bool | None:
+    ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
         Makes a POST request via :class:`aiohttp.ClientSession` and passes the response to :meth:`_response_handler`.
 
         .. warning::
-            Will return an :class:`ActionResultError` if any errors occur when attempting to call the API.
+            Will raise :exc:`AMPAPINetworkError` or :exc:`AMPAPIResponseError` if any errors occur when attempting to call the API.
 
 
         Parameters
@@ -520,7 +356,7 @@ class Base:
             Skip processing the :class:`ClientResponse` body when the endpoint returns no data, by default False.
         request_params: :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded directly to :meth:`aiohttp.ClientSession.post`. The ``headers``
-            and ``data`` keys are always populated automatically, by default None.
+            and ``data`` keys are populated automatically when ``None``, by default None.
 
             .. code-block:: python
 
@@ -532,30 +368,28 @@ class Base:
 
         Returns
         -------
-        :class:`ActionResultError` | :class:`ActionResult` | :class:`ResponseTypeAlias` | None
-            The processed response on a successful (2xx) status, ``None`` if ``no_data`` is ``True``,
-            otherwise an :class:`ActionResultError`.
+        :class:`ResponseTypeAlias` | :class:`str` | :class:`bool` | None
+            The processed response on a successful (2xx) status, ``None`` if ``no_data`` is ``True``.
 
         """
         api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
             self._instance_id,
-            APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)),
+            APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC)),
         )
         if self.session is None:
             self.session = aiohttp.ClientSession()
 
-        _url: str = self._url + "/API/" + url
+        _url: str = self._endpoint_url + "/API/" + url
+
+        if parameters is None:
+            parameters = {}
 
         # Ver. 2.6.2.8 Authorization header key change.
         if request_params is None:
-            request_params = {
-                "headers": {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"},
-                "data": json.dumps(parameters),
-            }
+            request_params = {}
 
-        else:
-            request_params["headers"] = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
-            request_params["data"] = json.dumps(parameters)
+        request_params.setdefault("headers", {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"})
+        request_params.setdefault("data", json.dumps(parameters))
 
         try:
             response: ClientResponse = await self.session.post(url=_url, **request_params)
@@ -584,69 +418,58 @@ class Base:
                 e,
             )
             await asyncio.sleep(delay=retry)
-            # Attempt a re-call...
-            return await self._post(url=url, parameters=parameters, **request_params)
+            return await self._post(  # pyright: ignore[reportCallIssue]
+                url=url,
+                parameters=parameters,
+                no_data=no_data,
+                request_params=request_params,
+                **response_params,
+            )
 
         # ? Suggestion
         # Further see what exceptions may be raised to narrow this comparison as the noqa can be avoided.
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             LOGGER.error(
                 "<%s.%s> encountered an <Exception> | Exception: %s",
                 __class__.__name__,
                 "_post",
                 e,
             )
-            return ActionResultError(status=False, reason="Exception was raised.", result=ValueError(e))
+            raise AMPAPINetworkError(status=0, url=_url, reason=str(e)) from e
 
         if response.content_length == 0:
-            return ActionResultError(status=False, reason="The HTTP Header content length was 0.", result=ValueError(self._no_data))
+            raise AMPAPINetworkError(status=response.status, url=_url, reason="The HTTP Header content length was 0.")
 
         match response.status:
             case status if 200 <= status < 300:
                 if no_data is True:
+                    response.release()
                     return None
                 return await self._response_handler(response=response, **response_params)
 
             case 400:
-                return ActionResultError(status=False, reason="Bad Request", result=ValueError(f"Bad Request [400]: {url}"))
+                raise AMPAPINetworkError(status=400, url=_url, reason="Bad Request")
             case 401:
-                return ActionResultError(status=False, reason="Unauthorized", result=PermissionError(f"Unauthorized [401]: {url}"))
+                raise AMPAPINetworkError(status=401, url=_url, reason="Unauthorized")
             case 403:
-                return ActionResultError(status=False, reason="Forbidden", result=PermissionError(f"Forbidden [403]: {url}"))
+                raise AMPAPINetworkError(status=403, url=_url, reason="Forbidden")
             case 404:
-                return ActionResultError(status=False, reason="Not Found", result=ConnectionError(f"Not Found [404]: {url}"))
+                raise AMPAPINetworkError(status=404, url=_url, reason="Not Found")
             case 408:
-                return ActionResultError(status=False, reason="Request Timeout", result=TimeoutError(f"Request Timeout [408]: {url}"))
+                raise AMPAPINetworkError(status=408, url=_url, reason="Request Timeout")
             case 429:
-                return ActionResultError(
-                    status=False,
-                    reason="Too Many Requests",
-                    result=ConnectionError(f"Too Many Requests [429]: {url}"),
-                )
+                raise AMPAPINetworkError(status=429, url=_url, reason="Too Many Requests")
             case 500:
-                return ActionResultError(
-                    status=False,
-                    reason="Internal Server Error",
-                    result=ConnectionError(f"Internal Server Error [500]: {url}"),
-                )
+                raise AMPAPINetworkError(status=500, url=_url, reason="Internal Server Error")
             case 502:
-                return ActionResultError(status=False, reason="Bad Gateway", result=ConnectionError(f"Bad Gateway [502]: {url}"))
+                raise AMPAPINetworkError(status=502, url=_url, reason="Bad Gateway")
             case 503:
-                return ActionResultError(
-                    status=False,
-                    reason="Service Unavailable",
-                    result=ConnectionError(f"Service Unavailable [503]: {url}"),
-                )
+                raise AMPAPINetworkError(status=503, url=_url, reason="Service Unavailable")
             case 504:
-                return ActionResultError(status=False, reason="Gateway Timeout", result=TimeoutError(f"Gateway Timeout [504]: {url}"))
+                raise AMPAPINetworkError(status=504, url=_url, reason="Gateway Timeout")
             case _:
-                return ActionResultError(
-                    status=False,
-                    reason=f"Unexpected status [{response.status}]",
-                    result=ConnectionError(f"Unexpected status [{response.status}]: {url}"),
-                )
+                raise AMPAPINetworkError(status=response.status, url=_url, reason=f"Unexpected status [{response.status}]")
 
-    # TODO: Flesh out responses via API calls to better type def "response_json".
     async def _response_handler(
         self,
         response: ClientResponse,
@@ -654,13 +477,13 @@ class Base:
         sanitize_json: bool = True,
         to_file: bool = False,
         path: Optional[pathlib.Path] = None,
-    ) -> ResponseTypeAlias | ActionResultError | str | bool | None:
+    ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
         Processes a :class:`aiohttp.ClientResponse` into a parsed response object.
 
         .. warning::
-            Will return an :class:`ActionResultError` if the response JSON is ``None``,
+            Will raise :exc:`AMPAPIResponseError` if the response JSON is ``None``,
             indicates ``"Unauthorized Access"``, ``"Instance Unavailable"``, or has ``status`` of ``False``.
 
 
@@ -677,11 +500,13 @@ class Base:
 
         Returns
         -------
-        :class:`ResponseTypeAlias` | :class:`ActionResultError` | Any
-            The parsed and optionally sanitized JSON response, or an :class:`ActionResultError` on failure.
+        :class:`ResponseTypeAlias` | :class:`str` | :class:`bool` | None
+            The parsed and optionally sanitized JSON response.
 
         Raises
         ------
+        :exc:`AMPAPIResponseError`
+            If the response indicates an error condition.
         :exc:`ValueError`
             If ``to_file`` is ``True`` but ``path`` is ``None``.
         :exc:`FileNotFoundError`
@@ -693,7 +518,7 @@ class Base:
             raise ValueError(msg)
 
         try:
-            response_json: ResponseTypeAlias | str | bool | None = await response.json()
+            response_json: EndpointResponseError | ResponseTypeAlias | str | bool | None = await response.json()
         except Exception as e:
             LOGGER.error(
                 "<%s.%s> | Encountered an Exception processing the <ClientResponse> as json().",
@@ -715,10 +540,11 @@ class Base:
         LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", response_json)
 
         if response_json is None:
-            return ActionResultError(status=False, reason="<ClientResponse> JSON returned <None>.", result=ValueError(self._no_data))
+            raise AMPAPIResponseError(title="None", url=str(response.url), reason="<ClientResponse> JSON returned <None>.")
 
         if sanitize_json is True:
             response_json = self.sanitize_json(response_json)
+
         if isinstance(response_json, bool):
             return response_json
 
@@ -729,11 +555,11 @@ class Base:
                 raise FileNotFoundError(msg, path)
             self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
 
-        # This will take time.
-        # When getting an error, typical structure is ResponseError and will have the "title" key.
+        # This is the logic gate for when we have an "EndpointResponseError" typically.
         if isinstance(response_json, dict) and "title" in response_json:
-            response_json = response_json.get("title")
-            if response_json == "Unauthorized Access" or response_json == "Instance Unavailable":
+            title: str = response_json.get("title")
+
+            if title == "Unauthorized Access" or title == "Instance Unavailable":
                 LOGGER.error(
                     "<%s.%s> failed because of %s. | URL: %s",
                     __class__.__name__,
@@ -741,25 +567,16 @@ class Base:
                     response_json,
                     response.url,
                 )
-                api_session = APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc))
+                api_session = APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC))
                 self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
-                if response_json == "Unauthorized Access":
-                    return ActionResultError(
-                        status=False,
-                        reason="Unauthorized Access",
-                        result=PermissionError(self._unauthorized_access),
-                    )
 
-                if response_json == "Instance Unavailable":
-                    return ActionResultError(
-                        status=False,
-                        reason="Instance Unavailable",
-                        result=ConnectionError(self._instance_offline, self._url),
-                    )
-                    # raise ConnectionError(self._instance_offline, self.url)
-        elif isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
+            # This will be our default catch all for any "invalid" Responses.
+            raise AMPAPIResponseError(title=response_json["title"], url=str(response.url), reason=response_json.get("message", ""))
+
+        # TODO: See what can trigger this type of structured response.
+        if isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
             LOGGER.error("%s failed because of Status: %s", response.url, response_json["status"])
-            return ActionResultError(status=False, reason="Status is False", result=ValueError(self._failed_api))
+            raise AMPAPIResponseError(title="None", url=str(response.url), reason="Status is False")
 
         return response_json
 
@@ -787,10 +604,10 @@ class Base:
         code: Union[str, TOTP] = ""
 
         # get our InstanceID and use it to key for session_id
-        session: APISession = self._bridge._sessions.get(self._instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=timezone.utc)))  # pyright: ignore[reportPrivateUsage]
+        session: APISession = self._bridge._sessions.get(self._instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC)))  # pyright: ignore[reportPrivateUsage]
         # if isinstance(session, APISession):
-        ttl: timedelta = datetime.datetime.now(tz=timezone.utc) - session.ttl
-        if ttl.seconds > self.session_ttl:
+        ttl: timedelta = datetime.datetime.now(tz=datetime.UTC) - session.ttl
+        if ttl.total_seconds() > self.session_ttl:
             session_id = "0"
         else:
             session_id: str = session.id
@@ -815,7 +632,7 @@ class Base:
                 result = await self.call_end_point(endpoint="Core/Login", parameters=parameters)
                 if isinstance(result, dict):
                     # This is our new sessions table to correlate InstanceID to a sessionID.
-                    api_session = APISession(id=result.get("session_id", "0"), ttl=datetime.datetime.now(tz=timezone.utc))
+                    api_session = APISession(id=result.get("session_id", "0"), ttl=datetime.datetime.now(tz=datetime.UTC))
                     self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
                     return result
 
@@ -830,21 +647,133 @@ class Base:
         else:
             return None
 
+    @property
+    def cache_age(self) -> Optional[float]:
+        """How many seconds ago this class had its API data applied, or None if it never has.
+
+        Returns
+        -------
+        :class:`float` | None
+            The age of the cached data in seconds, otherwise None.
+
+        """
+        if self._cached_monotonic is None:
+            return None
+        return time.monotonic() - self._cached_monotonic
+
+    @property
+    def cache_expired(self) -> bool:
+        """If the cached API data is older than :attr:`_cache_timeout`.
+
+        .. note::
+            Returns False when nothing has been cached yet; use :attr:`_is_cached` to tell the two apart.
+
+
+        Returns
+        -------
+        :class:`bool`
+            True when the data is stale.
+
+        """
+        age: Optional[float] = self.cache_age
+        return age is not None and age > self._cache_timeout
+
+    @classmethod
+    def _cache_hint(cls, name: str) -> str:
+        """The call a user should make to populate or refresh a cached attribute.
+
+        .. note::
+            Falls back to :attr:`_cache_source` when the attribute has no entry in :attr:`_cache_sources`.
+
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The attribute being reported on.
+
+        Returns
+        -------
+        :class:`str`
+            The call to name in the message. (eg. `"get_instances(format_data=True)"`)
+
+        """
+        return cls._cache_sources.get(name, cls._cache_source)
+
+    def _mark_cached(self) -> None:
+        """Stamp this class as holding freshly applied API data."""
+        self._is_cached = True
+        self._cached_at = datetime.datetime.now(tz=datetime.UTC)
+        self._cached_monotonic = time.monotonic()
 
     async def clean_up(self) -> None:
-        LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
-        await self.session.close()
+        """|coro|
 
+        Close any open :class:`aiohttp.ClientSession` belonging to this class.
+
+        .. note::
+            Safe to call more than once; the session is cleared once closed.
+
+        """
+        LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
+        if self.session is not None:
+            await self.session.close()
+            self.session = None
+
+    async def __aenter__(self) -> Self:
+        """|coro|
+
+        Enter the async context manager.
+
+        .. note::
+            Nothing is opened here; the :class:`aiohttp.ClientSession` is created lazily on the first
+            request. This exists so the session is always closed on the way out.
+
+
+        Returns
+        -------
+        :class:`Self`
+            The class that entered the context manager.
+
+        """
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """|coro|
+
+        Exit the async context manager, closing any open session.
+
+        .. note::
+            Exceptions are not suppressed; this returns None so any error propagates.
+
+
+        Parameters
+        ----------
+        exc_type: type[:class:`BaseException`] | None
+            The exception class, if one was raised inside the context.
+        exc_value: :class:`BaseException` | None
+            The exception instance, if one was raised inside the context.
+        traceback: :class:`TracebackType` | None
+            The traceback, if an exception was raised inside the context.
+
+        """
+        await self.clean_up()
 
     # TODO: See about supporting automatic login handling like other Endpoints.
+    # See about re-writing the logic to allow setting the URL and other parameters.
     async def call_end_point(
         self,
         endpoint: str,
-        parameters: None | dict[str, Any] = None,
+        parameters: dict[str, Any] | None = None,
         *,
+        # api_session: Optional[APISession] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResultError | ActionResult | ResponseTypeAlias | None:
+    ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
         Generic function for calling any API endpoint. Some API endpoints require the Instance module type to be ADS. \n
@@ -865,14 +794,18 @@ class Base:
 
         Parameters
         ----------
-        api: :class:`str`
+        endpoint : :class:`str`
             The AMP API endpoint to call. eg "Core/GetModuleInfo"
         parameters : None | dict[:class:`str`, Any], optional
-            The parameters to pass to the API endpoint, by default is None
+            The parameters to pass to the API endpoint, by default is None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        dict[:class:`str`, Any] :
+        :class:`ResponseTypeAlias` | :class:`str` | :class:`bool` | None
            The JSON response from the API endpoint.
 
         """
@@ -928,88 +861,6 @@ class Base:
                 res[key.title()] = value
         return res
 
-    # @staticmethod
-    # def dataclass_to_dict(dataclass_: DataclassInstance) -> dict[str, Any]:
-    #     """Convert a dataclass to a dictionary.
-
-    #     Parameters
-    #     ----------
-    #     dataclass_: :class:`DataclassInstance`
-    #         The dataclass to convert.
-
-    #     Returns
-    #     -------
-    #     dict[:class:`str`, Any]
-    #         The converted dataclass as a dict.
-
-    #     Raises
-    #     ------
-    #     :exc:`TypeError`
-    #         When the object passed in is not of type(:class:`DataclassInstance`).
-
-    #     """
-    #     parameters: dict[Any, Any] = {}
-    #     if is_dataclass(dataclass_) is False:
-    #         raise TypeError(f"The object {dataclass_} is not of the same type as <dataclass>.")
-    #     for field in fields(class_or_instance=dataclass_):
-    #         value: Any = getattr(dataclass_, field.name)
-    #         if value is None:
-    #             continue
-    #         parameters[field.name] = value
-    #     return parameters
-
-    # @staticmethod
-    # def json_to_dataclass(
-    #     json: Iterable[Any],
-    #     format_: type[Union[X, APIResponseDataTableAlias]],
-    #     _use_from_dict: bool,
-    #     _auto_unpack: bool,
-    # ) -> X | list[APIResponseDataTableAlias | X] | APIResponseDataTableAlias | Iterable[Any]:
-    #     """Format the JSON response data to a dataclass.
-
-    #     .. note::
-    #         All JSON response data will be sanitized before it is turned into a dataclass. See :meth:`sanitize_json`.
-
-    #     Parameters
-    #     ----------
-    #     json: Any
-    #         JSON response data to format.
-    #     format_: Union[:class:`DataclassInstance`, class:`DeploymentTemplate`]
-    #         Must be of type :class:`DataclassInstance` or similar to unpack the JSON response data.
-    #     _use_from_dict: :class:`bool`
-    #         Use :meth:`fromdict` from dataclass_wizard to unpack the JSON response data.
-    #         - Typically this is used to handle nested :class:`DataclassInstance`.
-    #     _auto_unpack: :class:`bool`
-    #         Use ``**data`` to unpack the JSON response data.
-
-    #     Returns
-    #     -------
-    #     X | list[:class:`DeploymentTemplate` | X] | :class:`DeploymentTemplate` | None
-    #         Either a list or single entry of :class:`DataclassInstance`.
-
-    #     """
-    #     if isinstance(json, list):
-    #         # _use_from_dict is to handle nested Dataclasses.
-    #         if _use_from_dict is True:
-    #             return [fromdict(format_, data) for data in json]
-
-    #         # Self explanatory; uses the `**` annotation to unpack our data.
-    #         if _auto_unpack is True:
-    #             return [format_(**data) for data in json]
-
-    #         return [format_(data) for data in json]  # pyright: ignore[reportCallIssue]
-
-    #     if isinstance(json, dict):
-    #         # _use_from_dict is to handle nested Dataclasses.
-    #         if _use_from_dict is True:
-    #             return fromdict(format_, json)  # pyright: ignore[reportUnknownArgumentType]
-
-    #         if _auto_unpack is True:
-    #             return format_(**json)  # pyright: ignore[reportUnknownArgumentType]
-
-    #         return format_(json)  # pyright: ignore[reportCallIssue]
-    #     return json
-
     @staticmethod
     def json_to_typeddict(name: str, data: dict[str, Any], *, include_imports: bool = False) -> str:
         """Generate the source code for a :class:`TypedDict` class from a JSON dict.
@@ -1017,6 +868,11 @@ class Base:
         Recursively infers types from values. Nested :class:`dict` entries produce their own
         named :class:`TypedDict` class using a PascalCase derivation of the parent key,
         ordered so dependencies appear before the class that references them.
+
+        When a field is ``None`` in some list items but has a real type in others, the inferred
+        type is ``RealType | None``. Dict values whose keys are not valid Python identifiers
+        (e.g. ``{"0": "Equals", "1": "NotEquals"}``) are emitted as ``dict[str, V]`` rather
+        than a :class:`TypedDict`.
 
         The returned string can be printed or written directly to a ``.py`` file.
 
@@ -1037,6 +893,7 @@ class Base:
 
         """
         class_defs: list[str] = []
+        seen: set[str] = set()
 
         def _infer(value: Any, key: str) -> str:
             if value is None:
@@ -1050,23 +907,69 @@ class Base:
             if isinstance(value, str):
                 return "str"
             if isinstance(value, dict):
+                if not all(k.isidentifier() for k in value):  # type: ignore  # noqa: PGH003
+                    val_types = {_infer(v, key) for v in value.values()} if value else {"Any"}  # pyright: ignore[reportUnknownVariableType]
+                    val_type = next(iter(val_types)) if len(val_types) == 1 else "Any"
+                    return f"dict[str, {val_type}]"
                 child_name = "".join(part.title() for part in key.split("_"))
                 _build(child_name, value)  # pyright: ignore[reportUnknownArgumentType]
                 return child_name
             if isinstance(value, list):
-                if not value:
-                    return "list[Any]"
-                first = value[0]  # pyright: ignore[reportUnknownVariableType]
-                if isinstance(first, dict):
-                    child_name = "".join(part.title() for part in key.split("_"))
-                    _build(child_name, first)  # pyright: ignore[reportUnknownArgumentType]
-                    return f"list[{child_name}]"
-                elem_types = {_infer(v, key) for v in value}  # pyright: ignore[reportUnknownVariableType]
-                elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
-                return f"list[{elem}]"
+                return _infer_list(value, key)  # pyright: ignore[reportUnknownArgumentType]
             return "Any"
 
-        def _build(cls_name: str, fields: dict[str, Any]) -> None:
+        def _infer_list(items: list[Any], key: str) -> str:
+            if not items:
+                return "list[Any]"
+            non_none = [v for v in items if v is not None]
+            if not non_none:
+                return "list[None]"
+            has_none = len(non_none) < len(items)
+            if all(isinstance(v, dict) for v in non_none):
+                child_name = "".join(part.title() for part in key.split("_"))
+                _build_merged(child_name, non_none)  # pyright: ignore[reportUnknownArgumentType]
+                elem = child_name
+            else:
+                elem_types = {_infer(v, key) for v in non_none}  # pyright: ignore[reportUnknownVariableType]
+                elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
+            if has_none:
+                elem = f"{elem} | None"
+            return f"list[{elem}]"
+
+        def _build_merged(cls_name: str, items: list[dict[str, Any]]) -> None:
+            if cls_name in seen:
+                return
+            seen.add(cls_name)
+            key_values: dict[str, list[Any]] = {}
+            for item in items:
+                for k, v in item.items():
+                    key_values.setdefault(k, []).append(v)
+            field_lines: list[str] = []
+            for k, values in key_values.items():
+                non_none = [v for v in values if v is not None]
+                has_none = len(non_none) < len(items)
+                if not non_none:
+                    type_str = "None"
+                elif all(isinstance(v, list) for v in non_none):
+                    # Flatten all list values to infer a single unified element type,
+                    # so mixed empty/non-empty lists don't produce list[Any] | list[X].
+                    combined: list[Any] = [elem for v in non_none for elem in v]
+                    type_str = _infer_list(combined, k)
+                    if has_none:
+                        type_str = f"{type_str} | None"
+                else:
+                    types: set[str] = {_infer(v, k) for v in non_none}
+                    type_str = next(iter(types)) if len(types) == 1 else " | ".join(sorted(types))
+                    if has_none:
+                        type_str = f"{type_str} | None"
+                field_lines.append(f"    {k}: {type_str}")
+            body = "\n".join(field_lines) if field_lines else "    ..."
+            class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
+
+        def _build(cls_name: str, fields: Any | dict[str, Any]) -> None:
+            if cls_name in seen:
+                return
+            seen.add(cls_name)
             field_lines = [f"    {k}: {_infer(v, k)}" for k, v in fields.items()]
             body = "\n".join(field_lines) if field_lines else "    ..."
             class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
@@ -1097,7 +1000,7 @@ class Base:
         # We use this later on in _connect to update `_session_id`;
         # so all connections will use the same session id (if possible)
         self._bridge = bridge
-        self._url = bridge.url
+        self._endpoint_url = bridge.url
         if bridge.use_2fa is True:
             if bridge.token == "":
                 err = "You must provide a 2FA Token if you are using 2FA."
@@ -1109,13 +1012,13 @@ class Base:
                 err = "Your 2FA token appears to be too short (<8 characters). Please use the code that generates the timed based tokens."
                 raise ValueError(err)
 
-    def parse_data(self, data: Union[Controller, Instance, Status, Updates]) -> Self:
+    def parse_data(self, data: Union[Status, Updates]) -> Self:
         """Takes in a :class:`DataclassInstance` and iterates through it's :meth:`fields` and
         set's the values as attributes of the :class:`DataclassInstance` that called this function.
 
         Parameters
         ----------
-        data: Union[:class:`Controller`, :class:`Instance`, :class:`Status`, :class:`Updates`]
+        data : Union[:class:`Status`, :class:`Updates`]
             The :class:`DataclassInstance` to parse.
 
         Returns
@@ -1127,14 +1030,6 @@ class Base:
         for field in fields(class_or_instance=data):
             setattr(self, field.name, getattr(data, field.name))
         return self
-
-    # @overload
-    # @classmethod
-    # def sanitize_json(cls, json: str) -> str: ...
-
-    # @overload
-    # @classmethod
-    # def sanitize_json(cls, json: ResponseTypeAlias) -> ResponseTypeAlias: ...
 
     # TODO: Better type hinting parameters.
     @classmethod
@@ -1157,34 +1052,30 @@ class Base:
 
         """
         if isinstance(json, list):
-            # print("JSON is a list")
-            _new_data = copy.copy(x=json)
-            for i in range(0, len(json), 1):
+            # Bind the narrowed value to a typed local; `json` is Any, so everything derived from it
+            # would otherwise be Unknown under strict mode.
+            source_list: list[Any] = json  # pyright: ignore[reportUnknownVariableType]
+            entries: list[Any] = copy.copy(x=source_list)
+            for index, entry in enumerate(source_list):
                 # If any of our entries are a dictionary; let's go through them.
-                if isinstance(json[i], dict):
-                    # print("List New Data", json[i])
-                    _new_data[i] = cls.sanitize_json(json=json[i])
-                    # print("Sanitized New Data", _new_data[i])
-                    # _new_data[entry] = cls.sanitize_json(json=entry)
-            return _new_data
+                if isinstance(entry, dict):
+                    entries[index] = cls.sanitize_json(json=entry)
+            return entries
 
         if isinstance(json, dict):
-            # print("JSON is a dict")
-            _new_data = copy.copy(x=json)
-            for key, value in json.items():
-                # print("DICT Not cleaned up", key, value)
-                _new_data.pop(key)
+            source_map: dict[str, Any] = json  # pyright: ignore[reportUnknownVariableType]
+            # Iterate the source and build into the copy; mutating what we iterate would raise.
+            new_map: dict[str, Any] = copy.copy(x=source_map)
+            for old_key, old_value in source_map.items():
+                new_map.pop(old_key)
                 # To handle keys with spaces and to remove underscores that exist already.
-                key: str = key.replace(" ", "")
-                key: str = key.replace("_", "")
-                if key in cls.json_key_mapping:
-                    # print("KEY MAPPING OVERWRITE", key, cls.json_key_mapping[key])
-                    key = cls.json_key_mapping[key]
-                key = cls.camel_to_snake_re(data=key)
-                if isinstance(value, (list, dict)):
-                    value = cls.sanitize_json(json=value)
-                _new_data[key] = value
-            return _new_data
+                new_key: str = old_key.replace(" ", "").replace("_", "")
+                if new_key in cls.json_key_mapping:
+                    new_key = cls.json_key_mapping[new_key]
+                new_key = cls.camel_to_snake_re(data=new_key)
+                new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+                new_map[new_key] = new_value
+            return new_map
 
         if isinstance(json, str):
             # Typical use is to make attributes PEP8 compliant for a class.
@@ -1225,7 +1116,8 @@ class Base:
 
         """
         if "_" in path:
-            raise ValueError("You cannot use '_' in path strings.")
+            msg = "You cannot use '_' in path strings."
+            raise ValueError(msg)
 
         path = path.replace("//", "/")
         path = path.replace("\\", "/")
@@ -1235,9 +1127,7 @@ class Base:
         path = path.removeprefix(".")
 
         # Remove starting slashes, all paths start relative to Instance root.
-        path = path.removeprefix("/")
-
-        return path
+        return path.removeprefix("/")
 
     @staticmethod
     def to_snake_case(data: str, /) -> str:
@@ -1262,6 +1152,7 @@ class Base:
             fmt.append(character)
         return "".join(fmt)
 
+    # TODO: Needs to be updated for new data structure handling.
     async def version_validation(self, version: BuildInfo) -> None:
         """Compares the Version of the application/Instance against the version that is passed in.
 
@@ -1276,25 +1167,34 @@ class Base:
             The application version no longer supports this API call..
 
         """
-        result: Any = await self._call_api(
-            api="Core/GetDiagnosticsInfo",
-            format_data=True,
-            format_=Diagnostics,
-            _use_from_dict=False,
-            _auto_unpack=True,
+        result: ResponseAliasFull = await self._post(
+            url="Core/GetDiagnosticsInfo",
         )
 
-        if isinstance(result, Diagnostics) and isinstance(result.application_version, BuildInfo):
-            _version: BuildInfo = result.application_version
-            if result.application_version < version:
-                raise RuntimeError(self._version_unavailable, "`Core/GetWebserverMetrics`", _version)
-        else:
+        if (
+            isinstance(result, (str, bool))
+            or result is None
+            or not is_response_type(result, DiagnosticsInfoResponse, DIAGNOSTICS_REQUIRED_KEYS, DIAGNOSTICS_EXCLUDED_KEYS)
+        ):
             LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
+            return
+        # to_dataclass hands back the raw str when it cannot parse the version; comparing that against a
+        # BuildInfo raises a TypeError, so bail out the same way an unusable response does.
+        _version: BuildInfo | str = BuildInfo.to_dataclass(data=result["application_version"])
+        if isinstance(_version, str):
+            LOGGER.warning(
+                "Unable to parse the application version %r from %s, skipping the version check.",
+                _version,
+                "`Core/GetDiagnosticsInfo`",
+            )
+            return
+        if _version < version:
+            raise RuntimeError(self._version_unavailable, "`Core/GetWebserverMetrics`", _version)
 
     def write_data_to_file(
         self,
         file_name: str,
-        data: ResponseTypeAlias | str,
+        data: EndpointResponseError | ResponseTypeAlias | str,
         path: Path = Path(__file__).parent,
         *,
         mode: str = "w+",
@@ -1322,10 +1222,8 @@ class Base:
             LOGGER.debug("<%s.%s> | Wrote data to file %s located at: %s", __name__, "write_data_to_file", path, file_name)
             if isinstance(data, bytes):
                 file.write(data.decode(encoding="utf-8"))
-            elif isinstance(data, dict):
+            elif isinstance(data, (dict, list)):
                 file.write(json.dumps(data, **kwargs))
-            elif isinstance(data, list):
-                file.write("\n".join(data))
             else:
                 file.write(data)
         LOGGER.info(
@@ -1334,3 +1232,24 @@ class Base:
             "write_data_to_file",
             path.joinpath(file_name).as_posix(),
         )
+
+    @staticmethod
+    def timestamp_converter(timestamp: str) -> datetime.datetime:
+        """Convert either the ``C#`` date str into a Python :class:`datetime` object or the ISO format.
+
+        .. note::
+            This is for older than 2.6.0.0 AMP Installs.
+
+
+        Parameters
+        ----------
+        timestamp: :class:`str`
+            The date string to convert.
+
+        Returns
+        -------
+        :class:`datetime`
+            The converted string as a :class:`datetime` object.
+
+        """
+        return timestamp_converter(timestamp=timestamp)

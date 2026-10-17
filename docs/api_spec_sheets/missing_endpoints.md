@@ -3,11 +3,10 @@
 ## ads_module -> [adsmodule.py](ampapi/adsmodule.py)
 
 - Spec endpoints : 65
-- Implemented    : 63
-- Missing        : 2
+- Implemented    : 65
+- Missing        : 0
 
-- `attach_ads_with_pairing_code`
-- `get_supported_app_summaries`
+_All endpoints implemented._
 
 ## analytics_plugin -> [analytics.py](ampapi/analytics.py)
 
@@ -20,13 +19,11 @@
 ## core -> [core.py](ampapi/core.py)
 
 - Spec endpoints : 94
-- Implemented    : 83
-- Missing        : 11
+- Implemented    : 85
+- Missing        : 9
 
 - `activate_amp_licence`
 - `add_interval_trigger`
-- `async_test`
-- `create_test_task`
 - `get_settings_spec`
 - `get_user_actions_spec`
 - `get_webauthn_credential_i_ds`

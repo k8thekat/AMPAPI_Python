@@ -6,16 +6,15 @@ authors = [
 ]
 readme = { file = "README.md", content-type = "text/markdown" }
 description = "A Python wrapper for the AMP API by CubeCoders"
-requires-python = ">=3.10.0"
+requires-python = ">=3.12.0"
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Framework :: AsyncIO",
     "Topic :: Internet",
     "Topic :: Software Development :: Libraries",
@@ -35,12 +34,13 @@ GitHub = "https://github.com/k8thekat/AMPAPI_Python"
 Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 140
 exclude = ["docs/extensions/*.py"]
 select = ["ALL"]
 ignore = [
     "ANN401",
+    "D101", # Public class without docstring...
     "D205", # Blank line requirement of docstrings..
     "D301", # `r` backtick for code in Docstrings.
     "D400", # First line end with a period. (docstrings)
@@ -94,7 +94,7 @@ parametrize-names-type = "tuple"
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "strict"
-pythonVersion = "3.10"
+pythonVersion = "3.12"
 exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*", "**/node_modules", "**/__pycache__", "**/.*"]
 include = ["ampapi"]
 useLibraryCodeForTypes = true
@@ -110,3 +110,8 @@ version = { attr = "ampapi.__version__" }
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "asqlite>=2.0.0",
+]

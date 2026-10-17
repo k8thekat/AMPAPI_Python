@@ -1,15 +1,81 @@
-from typing import Any, Union
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
 
-from .base import Base
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
+
+from ._types import (
+    ACTION_RESULT_EXCLUDED_KEYS,
+    ACTION_RESULT_REQUIRED_KEYS,
+    APP_SUMMARY_EXCLUDED_KEYS,
+    APP_SUMMARY_REQUIRED_KEYS,
+    APPLICATION_EXCLUDED_KEYS,
+    APPLICATION_REQUIRED_KEYS,
+    CONTROLLER_EXCLUDED_KEYS,
+    CONTROLLER_REQUIRED_KEYS,
+    DEPLOYMENT_TEMPLATE_EXCLUDED_KEYS,
+    DEPLOYMENT_TEMPLATE_REQUIRED_KEYS,
+    ENDPOINTS_EXCLUDED_KEYS,
+    ENDPOINTS_REQUIRED_KEYS,
+    INSTANCE_DATASTORE_EXCLUDED_KEYS,
+    INSTANCE_DATASTORE_REQUIRED_KEYS,
+    INSTANCE_EXCLUDED_KEYS,
+    INSTANCE_REQUIRED_KEYS,
+    INSTANCE_STATUS_EXCLUDED_KEYS,
+    INSTANCE_STATUS_REQUIRED_KEYS,
+    PORT_INFO_EXCLUDED_KEYS,
+    PORT_INFO_REQUIRED_KEYS,
+    PROVISION_EXCLUDED_KEYS,
+    PROVISION_REQUIRED_KEYS,
+    PROVISION_SETTING_INFO_EXCLUDED_KEYS,
+    PROVISION_SETTING_INFO_REQUIRED_KEYS,
+    REMOTE_TARGET_INFO_EXCLUDED_KEYS,
+    REMOTE_TARGET_INFO_REQUIRED_KEYS,
+    RUNNING_TASK_EXCLUDED_KEYS,
+    RUNNING_TASK_REQUIRED_KEYS,
+    ActionResultResponse,
+    ApplicationResponse,
+    AppSummaryResponse,
+    ControllerResponse,
+    DeploymentTemplateResponse,
+    EndpointsResponse,
+    InstanceDatastoreResponse,
+    InstanceResponse,
+    InstanceStatusResponse,
+    PortInfoResponse,
+    ProvisionResponse,
+    ProvisionSettingInfoResponse,
+    RemoteTargetInfoResponse,
+    RunningTaskResponse,
+    is_response_list,
+    is_response_type,
+)
+from .base import Base, ResponseAliasFull, ResponseHandlerOptions
+from .errors import AMPAPIKeyError, AMPAPITypeError
 from .modules import (
     ActionResult,
-    ActionResultError,
     Application,
-    Controller,
     CreateInstance,
     DeploymentTemplate,
     Endpoints,
-    Instance,
     InstanceDatastore,
     InstanceInfo,
     InstanceStatus,
@@ -22,6 +88,11 @@ from .modules import (
     Template,
 )
 
+if TYPE_CHECKING:
+    from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
+
+    from .instance import Instance
+
 __all__ = ("ADSModule",)
 
 
@@ -33,20 +104,25 @@ class ADSModule(Base):
 
 
     .. note::
-        Every function in this class requires the Instance type be of either :class:`AMPADSInstance`, :class:`ADSModule` or the :attr:`~ADSModule.module` attribute to be "ADS".\n
+        Every function in this class requires the Instance type be of either :class:`AMPADSInstance`,
+        :class:`ADSModule` or the :attr:`~ADSModule.module` attribute to be "ADS".\n
         If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
 
 
     """
 
-    module = "ADS"
+    _module = "ADS"
 
+    # TODO: Verify the conversion of the new_datastore parameter into a dict.
     @Base.ads_only
     async def add_datastore(
         self,
         new_datastore: InstanceDatastore,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Add a new datastore.
@@ -57,6 +133,10 @@ class ADSModule(Base):
             Your pre-created data structure to be parsed for the required API parameters.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -66,16 +146,24 @@ class ADSModule(Base):
         """
         await self._reauth()
 
-        if isinstance(new_datastore, InstanceDatastore):
-            data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=new_datastore)
+        data: dict[Any, Any] = new_datastore.__dict__
 
-        parameters: dict[str, Union[dict[Any, Any], Any]] = {
-            "newDatastore": data,
-        }
-        result: Any = await self._call_api(
-            api="ADSModule/AddDatastore", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = {"newDatastore": data}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/AddDatastore",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/AddDatastore", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/AddDatastore", result)  # noqa: EM101
 
     @Base.ads_only
     async def apply_instance_configuration(
@@ -83,8 +171,11 @@ class ADSModule(Base):
         instance_id: str,
         args: dict[str, str],
         rebuild_configuration: bool = False,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Apply an Instance configuration.
@@ -100,9 +191,13 @@ class ADSModule(Base):
         args: dict[:class:`str`, :class:`str`]
             UNK.
         rebuild_configuration: :class:`bool`, optional
-            UNK, defaults to False.
+            UNK, by default False.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -110,26 +205,45 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, Any] = {"InstanceID": instance_id, "Args": args, "RebuildConfiguration": rebuild_configuration}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/ApplyInstanceConfiguration", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = {"InstanceID": instance_id, "Args": args, "RebuildConfiguration": rebuild_configuration}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ApplyInstanceConfiguration",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/ApplyInstanceConfiguration", result)  # noqa: EM101
 
     @Base.ads_only
     async def apply_template(
-        self, instance_id: str, template_id: int, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        template_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Overlays an existing template on an existing instance, used to perform package reconfigurations.
 
         .. warning::
-            Do not use this to "transform" an existing application into another. The instance should be deleted and re-created in that situation.
+            Do not use this to "transform" an existing application into another.
+            The instance should be deleted and re-created in that situation.
 
         .. note::
-            If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and access the :attr:`DeploymentTemplate.id` attribute.
+            If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and
+            access the :attr:`DeploymentTemplate.id` attribute.
 
 
         Parameters
@@ -140,6 +254,10 @@ class ADSModule(Base):
             The Template ID to apply.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -149,10 +267,21 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"InstanceID": instance_id, "TemplateID": template_id}
-        result: Any = await self._call_api(
-            api="ADSModule/ApplyTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ApplyTemplate",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ApplyTemplate", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/ApplyTemplate", result)  # noqa: EM101
 
     @Base.ads_only
     async def attach_ads(
@@ -163,14 +292,18 @@ class ADSModule(Base):
         port: int,
         instance_id: str,
         pairing_code: str | None = None,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Attach an AMP Instance to the ADS calling the API endpoint with the passed in parameters using either a pairing code or not.
 
         .. note::
-            This Endpoint is also encapsulating `AttachADSWithPairingCode`; simply provide a "pairing_code" parameter to use the respective endpoint.
+            This Endpoint is also encapsulating `AttachADSWithPairingCode`;
+            simply provide a "pairing_code" parameter to use the respective endpoint.
 
 
         .. note::
@@ -181,18 +314,22 @@ class ADSModule(Base):
         ----------
         friendly_name: :class:`str`
             The friendly name to be associated with the Instance when it is attached to the ADS.
-        instance_id: :class:`str`
-            The Instance ID of the Instance you want to attach to the ADS.
+        is_https: :class:`bool`
+            If the Instance uses HTTPS or not.
         host: :class:`str`
             The URL/URi to access the Instance.
         port: :class:`int`
             The Port you want to attach the Instance to.
-        is_https: :class:`bool`
-            If the Instance uses HTTPS or not.
-        pairing_code: :class:`str`, optional
-            The pairing code generated via :meth:`get_target_pairing_code`.
+        instance_id: :class:`str`
+            The Instance ID of the Instance you want to attach to the ADS.
+        pairing_code: :class:`str | None`, optional
+            The pairing code generated via :meth:`get_target_pairing_code`, by default None.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -207,31 +344,54 @@ class ADSModule(Base):
             "Port": port,
             "InstanceID": instance_id,
         }
-
-        # TODO
-        # This part of the API does not need to login/connect first; will need to test/debug this.
-        # This is to handle support for the new endpoint "attach_ads_with_pairing_code"
         if pairing_code is not None:
             parameters["PairingCode"] = pairing_code
-            result: Any = await self._call_api(
-                api="ADSModule/AttachADSWithPairingCode",
+            result: ResponseAliasFull = await self._post(
+                url="ADSModule/AttachADSWithPairingCode",
                 parameters=parameters,
-                format_data=format_data,
-                format_=ActionResult,
+                request_params=request_params,
+                **response_params,
             )
-            return result
+        else:
+            await self._reauth()
+            result = await self._post(
+                url="ADSModule/AttachADS",
+                parameters=parameters,
+                request_params=request_params,
+                **response_params,
+            )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/AttachADS", cur_type=result, expec_type=dict)
 
-        await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/AttachADS", parameters=parameters, format_data=format_data, format_=ActionResult,
-        )
-        return result
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/AttachADS", result)  # noqa: EM101
 
     @Base.ads_only
-    async def cancel_pairing(self) -> ActionResult | ActionResultError:
+    async def cancel_pairing(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Cancel an ongoing ADS Pairing session.
+
+        Parameters
+        ----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -240,19 +400,37 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="ADSModule/CancelPairing", format_=ActionResult)
-        return result
+        result: ResponseAliasFull = await self._post(url="ADSModule/CancelPairing", request_params=request_params, **response_params)
+
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CancelPairing", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/CancelPairing", result)  # noqa: EM101
 
     @Base.ads_only
     async def clone_template(
-        self, template_id: int, name: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        template_id: int,
+        name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Clone an existing AMP Deployment Template.
 
         .. note::
-            If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and access the :attr:`DeploymentTemplate.id` attribute.
+            If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and
+            access the :attr:`DeploymentTemplate.id` attribute.
 
 
         Parameters
@@ -263,6 +441,10 @@ class ADSModule(Base):
             The name for the newly cloned Template.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -272,15 +454,33 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"Id": template_id, "NewName": name}
-        result: Any = await self._call_api(
-            api="ADSModule/CloneTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/CloneTemplate",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CloneTemplate", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/CloneTemplate", result)  # noqa: EM101
 
     @Base.ads_only
     async def create_deployment_template(
-        self, template_name: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        template_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Create a new Deployment Template. Typically used in conjunction with :meth:`update_deployment_template`.
@@ -291,6 +491,10 @@ class ADSModule(Base):
             The name for the newly created Template.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -300,15 +504,33 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"Name": template_name}
-        result: Any = await self._call_api(
-            api="ADSModule/CreateDeploymentTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/CreateDeploymentTemplate",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CreateDeploymentTemplate", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/CreateDeploymentTemplate", result)  # noqa: EM101
 
     @Base.ads_only
     async def create_instance(
-        self, instance: CreateInstance, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance: CreateInstance,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Create an AMP Instance.
@@ -323,6 +545,10 @@ class ADSModule(Base):
             Your pre-created data structure to be parsed for the required API parameters.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -330,14 +556,27 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        if isinstance(instance, CreateInstance):
-            parameters: dict[Any, Any] = instance.to_dict()
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/CreateInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        # if isinstance(instance, CreateInstance):
+        parameters: dict[Any, Any] = instance.to_dict()
+
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/CreateInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CreateInstance", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/CreateInstance", result)  # noqa: EM101
 
     @Base.ads_only
     async def create_instance_from_spec(
@@ -349,15 +588,18 @@ class ADSModule(Base):
         start_on_boot: bool | None = None,
         target_datastore: str | None = None,
         group: str | None = None,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Create's an Instance based upon the Spec ID provided.
+        Create an Instance based upon the Spec ID provided.
 
         Parameters
         ----------
-        spec_id: :class:`_type_`
+        spec_id: :class:`str`
             The Spec GUID.
         target_ads: :class:`str`
             The Target ADS Instance ID.
@@ -371,6 +613,12 @@ class ADSModule(Base):
             The Datastore ID if any to attach the Instance to, by default None.
         group: :class:`str | None`, optional
             The Group ID, by default None.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -388,35 +636,53 @@ class ADSModule(Base):
             parameters["TargetDatastore"] = target_datastore
         if group is not None:
             parameters["Group"] = group
-        result: Any = await self._call_api(
-            api="ADSModule/CreateInstanceFromSpec", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/CreateInstanceFromSpec",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/CreateInstanceFromSpec", result)  # noqa: EM101
 
     @Base.ads_only
     async def create_local_instance(
         self,
         instance: CreateInstance,
         post_create: PostCreateActionsState = PostCreateActionsState.do_nothing,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Create a local AMP Instance, similar to :meth:`create_instance`. Use case could be on a remote Target ADS Instance instead of letting AMP decide where to create the Instance.
+        Create a local AMP Instance, similar to :meth:`create_instance`.
+        Use case could be on a remote Target ADS Instance instead of letting AMP decide where to create the Instance.
 
         .. note::
             See the :class:`CreateInstance` for more details on how to configure the Instance when creating.
-
 
 
         Parameters
         ----------
         instance: :class:`CreateInstance`
             Your pre-created data structure to be parsed for the required API parameters.
-        post_create: :class:`PostCreateActions`, optional
-            The action to take after creating the local instance, defaults to :attr:`~PostCreateActions.do_nothing`.
+        post_create: :class:`PostCreateActionsState`, optional
+            The action to take after creating the local instance, by default :attr:`~PostCreateActionsState.do_nothing`.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -424,28 +690,44 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        if isinstance(instance, CreateInstance):
-            data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=instance)
+        await self._reauth()
+
+        data: dict[str, str | int | dict[str, str] | bool] = instance.to_dict()
 
         parameters: dict[str, Any] = {"Instance": data, "PostCreate": post_create.value}
-
-        await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/CreateLocalInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/CreateLocalInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CreateLocalInstance", cur_type=result, expec_type=dict)
 
-        return result
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/CreateLocalInstance", result)  # noqa: EM101
 
     @Base.ads_only
     async def delete_datastore(
-        self, datastore_id: int, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        datastore_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Delete the specified Datastore by ID.
 
         .. note::
-            You will need to know the Datastore ID you want to move the Instance ID to. See :func:`get_datastores` as a means to get the IDs.
+            You will need to know the Datastore ID you want to delete. See :meth:`get_datastores` as a means to get the IDs.
 
 
         Parameters
@@ -454,6 +736,10 @@ class ADSModule(Base):
             The datastore ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -462,22 +748,42 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, Union[int, Any]] = {"id": datastore_id}
-        result: Any = await self._call_api(
-            api="ADSModule/DeleteDatastore", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, int] = {"id": datastore_id}
+
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/DeleteDatastore",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/DeleteDatastore", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/DeleteDatastore", result)  # noqa: EM101
 
     @Base.ads_only
     async def delete_deployment_template(
-        self, template_id: int, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        template_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Delete an existing Deployment Template.
 
         .. note::
-            If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and access the :attr:`DeploymentTemplate.id` attribute.
+            If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and
+            access the :attr:`DeploymentTemplate.id` attribute.
 
 
         Parameters
@@ -486,6 +792,10 @@ class ADSModule(Base):
             The Template id.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -495,15 +805,33 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, int] = {"Id": template_id}
-        result: Any = await self._call_api(
-            api="ADSModule/DeleteDeploymentTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/DeleteDeploymentTemplate",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/DeleteDeploymentTemplate", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/DeleteDeploymentTemplate", result)  # noqa: EM101
 
     @Base.ads_only
     async def delete_instance(
-        self, instance_name: str, format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Delete an Instance.
@@ -518,6 +846,10 @@ class ADSModule(Base):
             The Instance name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -525,18 +857,35 @@ class ADSModule(Base):
             On success returns a :class:`RunningTask` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceName": instance_name}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/DeleteInstance", parameters=parameters, format_data=format_data, format_=RunningTask,
+        parameters: dict[str, str] = {"InstanceName": instance_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/DeleteInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/DeleteInstance", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/DeleteInstance", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def delete_instance_users(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Delete all Users from an Instance.
@@ -547,6 +896,10 @@ class ADSModule(Base):
             The Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -554,28 +907,47 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceId": instance_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/DeleteInstanceUsers", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/DeleteInstanceUsers",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/DeleteInstanceUsers", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/DeleteInstanceUsers", result)  # noqa: EM101
 
     @Base.ads_only
     async def deploy_template(
-        self, template: Template, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        template: Template,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Deploy a Instance template.
+        Deploy an Instance template.
 
         Parameters
         ----------
-        template:  Union[:class:`Template`, None], optional
+        template: :class:`Template`
             Your pre-created data structure to be parsed for the required API parameters.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -583,19 +955,34 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        # TODO
-        # The parameter keys are not cased properly and this will fail it's JSON payload.
-        parameters: dict[Any, Any] = self.dataclass_to_dict(dataclass_=template)
+        # The parameter keys are not cased properly and this will fail its JSON payload.
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/DeployTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = template.to_dict()
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/DeployTemplate",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/DeployTemplate", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/DeployTemplate", result)  # noqa: EM101
 
     @Base.ads_only
     async def detach_target(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         De-tach an Instance from the ADS.
@@ -606,6 +993,10 @@ class ADSModule(Base):
             The Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -613,23 +1004,39 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"Id": instance_id}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/DetachTarget", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"Id": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/DetachTarget",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/DetachTarget", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/DetachTarget", result)  # noqa: EM101
 
     @Base.ads_only
     async def extract_everywhere(
-        self, source_archive: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        source_archive: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Extracts everything from an archive.
 
         .. note::
-            The parameter ``source_archive`` will be sanitized. See :meth:`~Base.sanitized_path`
+            The parameter ``source_archive`` will be sanitized. See :meth:`~Base.sanitize_path`.
 
 
         Parameters
@@ -638,6 +1045,10 @@ class ADSModule(Base):
             The source archive, typically a path to the archive.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -645,18 +1056,33 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"SourceArchive": self.sanitize_path(path=source_archive)}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/ExtractEverywhere", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"SourceArchive": self.sanitize_path(path=source_archive)}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ExtractEverywhere",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ExtractEverywhere", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/ExtractEverywhere", result)  # noqa: EM101
 
     @Base.ads_only
     async def get_application_endpoints(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> list[Endpoints] | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[Endpoints] | list[EndpointsResponse]:
         """|coro|
 
         Get the application endpoints for the specified instance.
@@ -667,6 +1093,10 @@ class ADSModule(Base):
             The Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -674,24 +1104,39 @@ class ADSModule(Base):
             Returns a list of endpoints for the specified instance.
 
         """
-        parameters: dict[str, str] = {"instanceId": instance_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetApplicationEndpoints", parameters=parameters, format_data=format_data, format_=Endpoints,
+        parameters: dict[str, str] = {"instanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetApplicationEndpoints",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetApplicationEndpoints", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(result, EndpointsResponse, ENDPOINTS_REQUIRED_KEYS, ENDPOINTS_EXCLUDED_KEYS):
+            if format_data is True:
+                return [Endpoints(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetApplicationEndpoints", cur_type=result, expec_type=list)
 
     @Base.ads_only
     async def get_datastore(
-        self, datastore_id: int, format_data: Union[bool, None] = None,
-    ) -> InstanceDatastore | ActionResultError:
+        self,
+        datastore_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> InstanceDatastore | InstanceDatastoreResponse:
         """|coro|
 
         Get the information for the specified datastore.
 
         .. note::
-            You will need to know the Datastore ID you want to move the Instance ID to. See :func:`get_datastores` as a means to get the IDs.
+            You will need to know the Datastore ID you want to retrieve. See :meth:`get_datastores` as a means to get the IDs.
 
 
         Parameters
@@ -700,23 +1145,43 @@ class ADSModule(Base):
             The datastore ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        :class:`InstanceDataStore`
-            On success returns an :class:`InstanceDataStore` dataclass.
+        :class:`InstanceDatastore`
+            On success returns an :class:`InstanceDatastore` dataclass.
 
         """
-        parameters: dict[str, Union[Any, int]] = {"id": datastore_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetDatastore", parameters=parameters, format_data=format_data, format_=InstanceDatastore,
+        parameters: dict[str, int] = {"id": datastore_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetDatastore",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetDatastore", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, InstanceDatastoreResponse, INSTANCE_DATASTORE_REQUIRED_KEYS, INSTANCE_DATASTORE_EXCLUDED_KEYS):
+            if format_data is True:
+                return InstanceDatastore(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetDatastore", cur_type=result, expec_type=dict)
 
     @Base.ads_only
-    async def get_datastores(self, format_data: Union[bool, None] = None) -> list[InstanceDatastore] | ActionResultError:
+    async def get_datastores(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[InstanceDatastore] | list[InstanceDatastoreResponse]:
         """|coro|
 
         Get a list of Datastores.
@@ -725,53 +1190,82 @@ class ADSModule(Base):
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        list[:class:`DatastoreInstance`]
-            On success returns a list of :class:`DatastoreInstance` dataclasses.
+        list[:class:`InstanceDatastore`]
+            On success returns a list of :class:`InstanceDatastore` dataclasses.
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="ADSModule/GetDatastores", format_data=format_data, format_=InstanceDatastore)
-        return result
+        result: ResponseAliasFull = await self._post(url="ADSModule/GetDatastores", request_params=request_params, **response_params)
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetDatastores", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(result, InstanceDatastoreResponse, INSTANCE_DATASTORE_REQUIRED_KEYS, INSTANCE_DATASTORE_EXCLUDED_KEYS):
+            if format_data is True:
+                return [InstanceDatastore(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetDatastores", cur_type=result, expec_type=list)
 
     @Base.ads_only
     async def get_datastore_instances(
-        self, datastore_id: int, format_data: Union[bool, None] = None,
-    ) -> list[Instance] | ActionResultError:
+        self,
+        datastore_id: int,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[Instance] | list[InstanceResponse]:
         """|coro|
 
         Get a list of Instances tied to the specified datastore.
 
         .. note::
-            You will need to know the Datastore ID you want to move the Instance ID to. See :func:`get_datastores` as a means to get the IDs.
+            You will need to know the Datastore ID you want to query. See :meth:`get_datastores` as a means to get the IDs.
 
 
         Parameters
         ----------
         datastore_id: :class:`int`
             The datastore ID.
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
         list[:class:`Instance`]
-            On success returns a list of :class:`Instance` dataclasses.
+            On success returns a list of raw Instance dicts.
 
         """
-        parameters: dict[str, Union[Any, int]] = {"datastoreId": datastore_id}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetDatastoreInstances", parameters=parameters, format_data=format_data, format_=Instance,
+        parameters: dict[str, int] = {"datastoreId": datastore_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetDatastoreInstances",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetDatastoreInstances", cur_type=result, expec_type=list)
+        if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetDatastoreInstances", cur_type=result, expec_type=list)
 
     @Base.ads_only
     async def get_deployment_templates(
-        self, format_data: Union[bool, None] = None,
-    ) -> list[DeploymentTemplate] | ActionResultError:
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[DeploymentTemplate] | list[DeploymentTemplateResponse]:
         """|coro|
 
         Gets a list of Deployment Templates.
@@ -780,6 +1274,10 @@ class ADSModule(Base):
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -788,13 +1286,30 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetDeploymentTemplates", format_data=format_data, format_=DeploymentTemplate,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetDeploymentTemplates",
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetDeploymentTemplates", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(result, DeploymentTemplateResponse, DEPLOYMENT_TEMPLATE_REQUIRED_KEYS, DEPLOYMENT_TEMPLATE_EXCLUDED_KEYS):
+            if format_data is True:
+                return [DeploymentTemplate(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetDeploymentTemplates", cur_type=result, expec_type=list)
 
+    # TODO: Build a dataclass and TypedDict for this response; the endpoint's shape is still unknown.
     @Base.ads_only
-    async def get_group(self, group_id: str, format_data: Union[bool, None] = None) -> dict | ActionResultError:
+    async def get_group(
+        self,
+        group_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> dict[str, Any]:
         """|coro|
 
         Get the specified group.
@@ -807,86 +1322,123 @@ class ADSModule(Base):
         ----------
         group_id: :class:`str`
             The Group ID.
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        dict
-            On success returns an dictionary.
+        dict[:class:`str`, Any]
+            On success returns a dictionary.
 
         """
-        parameters: dict[str, str] = {"groupId": group_id}
         await self._reauth()
-        result: Any = await self._call_api("ADSModule/GetGroup", parameters, format_data=format_data)
+        parameters: dict[str, str] = {"groupId": group_id}
+        result: Any = await self._post(
+            url="ADSModule/GetGroup",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetGroup", cur_type=result, expec_type=dict)
         return result
 
-    async def get_instance(self, instance_id: str, format_data: Union[bool, None] = None) -> Instance | ActionResultError:
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> InstanceResponse:
         """|coro|
 
-        Returns the Instance information for the provided Instance ID.\n
+        Returns the Instance information for the provided Instance ID.
 
         Parameters
         ----------
         instance_id: :class:`str`
             The Instance ID.
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        :class:`Instance`
-            On success returns a :class:`Instance` dataclass.
+        :class:`InstanceResponse`
+            On success returns a raw Instance dict.
 
         """
         await self._reauth()
         parameters: dict[str, str] = {"InstanceId": instance_id}
-        result: Any = await self._call_api(
-            api="ADSModule/GetInstance", parameters=parameters, format_data=format_data, format_=Instance,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetInstance", cur_type=result, expec_type=dict)
+        if is_response_type(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetInstance", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def get_instances(
-        self, include_self: bool = True, format_data: Union[bool, None] = None,
-    ) -> list[Union[Controller, Instance]] | ActionResultError:
+        self,
+        include_self: bool = True,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[ControllerResponse]:
         """|coro|
 
-        Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.\n
+        Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.
 
         .. note::
-            If ``include_self`` is False; we force ``format_data = False``
+            If ``include_self`` is False the Controller/ADS entry is excluded from results.
 
 
         Parameters
         ----------
         include_self: :class:`bool`, optional
             Force include the Controller or Target ADS Instance in the results, by default True.
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        list[Union[:class:`Controller`, :class:`Instance`]]
-            If ``format_data`` or global ``FORMAT_DATA`` is True we return a :class:`Controller` dataclasses containing their :class:`Instance` dataclasses
-            or if used on Target ADS Instance will return a list containing any combination of :class:`AMPADSInstance`, :class:`AMPMinecraftInstance` and :class:`AMPInstance` respectively.
+        list[:class:`ControllerResponse`]
+            On success returns a raw list of target dicts.
 
         """
         await self._reauth()
         parameters: dict[str, bool] = {"ForceIncludeSelf": include_self}
-
-        if include_self is False:
-            format_data = False
-
-        result: Any = await self._call_api(
-            api="ADSModule/GetInstances", parameters=parameters, format_data=format_data, format_=Controller,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetInstances",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
+        if is_response_list(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
 
     @Base.ads_only
     async def get_instance_network_info(
-        self, instance_name: str, format_data: Union[bool, None] = None,
-    ) -> list[PortInfo] | ActionResultError:
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[PortInfo] | list[PortInfoResponse]:
         """|coro|
 
         Get the Port and or Network information of an Instance.
@@ -901,6 +1453,10 @@ class ADSModule(Base):
             The name of the Instance we are targeting.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -908,23 +1464,44 @@ class ADSModule(Base):
             On success returns a list of :class:`PortInfo` dataclasses.
 
         """
-        parameters: dict[str, str] = {"instanceName": instance_name}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetInstanceNetworkInfo", parameters=parameters, format_data=format_data, format_=PortInfo,
+        parameters: dict[str, str] = {"instanceName": instance_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetInstanceNetworkInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetInstanceNetworkInfo", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(result, PortInfoResponse, PORT_INFO_REQUIRED_KEYS, PORT_INFO_EXCLUDED_KEYS):
+            if format_data is True:
+                return [PortInfo(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetInstanceNetworkInfo", cur_type=result, expec_type=list)
 
     @Base.ads_only
-    async def get_instance_statuses(self, format_data: Union[bool, None] = None) -> list[InstanceStatus] | ActionResultError:
+    async def get_instance_statuses(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[InstanceStatus] | list[InstanceStatusResponse]:
         """|coro|
 
-        Returns a dictionary of the AMP Instance status. \n
+        Returns a list of the AMP Instance statuses.
 
         Parameters
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -933,34 +1510,66 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetInstanceStatuses", format_data=format_data, format_=InstanceStatus,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetInstanceStatuses",
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetInstanceStatuses", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(result, InstanceStatusResponse, INSTANCE_STATUS_REQUIRED_KEYS, INSTANCE_STATUS_EXCLUDED_KEYS):
+            if format_data is True:
+                return [InstanceStatus(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetInstanceStatuses", cur_type=result, expec_type=list)
 
     @Base.ads_only
-    async def get_local_instances(self, format_data: Union[bool, None] = None) -> list[Instance] | ActionResultError:
-        """Gets the local instances related to the ADS or Controller.
+    async def get_local_instances(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[Instance] | list[InstanceResponse]:
+        """|coro|
+
+        Gets the local instances related to the ADS or Controller.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
         list[:class:`Instance`]
-            On success returns a list of :class:`Instance` dataclasses.
+            On success returns a raw list of Instance dicts.
 
         """
         await self._reauth()
-        result = await self._call_api(api="ADSModule/GetLocalInstances", format_data=format_data, format_=Instance)
-        return result
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetLocalInstances",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
+        if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
 
     @Base.ads_only
     async def get_provision_arguments(
-        self, module_name: str, format_data: Union[bool, None] = None,
-    ) -> list[ProvisionSettingInfo] | ActionResultError:
+        self,
+        module_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[ProvisionSettingInfo] | list[ProvisionSettingInfoResponse]:
         """|coro|
 
         Get Provision Arguments.
@@ -968,9 +1577,13 @@ class ADSModule(Base):
         Parameters
         ----------
         module_name: :class:`str`
-            The Module Name (eg. "Minecraft")
+            The Module Name (eg. "Minecraft").
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -978,18 +1591,37 @@ class ADSModule(Base):
             On success returns a list of :class:`ProvisionSettingInfo` dataclasses.
 
         """
-        parameters: dict[str, str] = {"ModuleName": module_name}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetProvisionArguments",
+        parameters: dict[str, str] = {"ModuleName": module_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetProvisionArguments",
             parameters=parameters,
-            format_data=format_data,
-            format_=ProvisionSettingInfo,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetProvisionArguments", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(
+            result,
+            ProvisionSettingInfoResponse,
+            PROVISION_SETTING_INFO_REQUIRED_KEYS,
+            PROVISION_SETTING_INFO_EXCLUDED_KEYS,
+        ):
+            if format_data is True:
+                return [ProvisionSettingInfo(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetProvisionArguments", cur_type=result, expec_type=list)
 
     @Base.ads_only
-    async def get_provision_fitness(self, format_data: Union[bool, None] = None) -> Provision | ActionResultError:
+    async def get_provision_fitness(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Provision | ProvisionResponse | None:
         """|coro|
 
         Get the provision fitness of the ADS or Controller.
@@ -998,6 +1630,10 @@ class ADSModule(Base):
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1006,21 +1642,85 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="ADSModule/GetProvisionFitness", format_data=format_data, format_=Provision)
-        return result
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetProvisionFitness",
+            request_params=request_params,
+            **response_params,
+        )
+        if result is None:
+            return None
+
+        if isinstance(result, (str, bool)):
+            raise AMPAPITypeError(end_point="ADSModule/GetProvisionFitness", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ProvisionResponse, PROVISION_REQUIRED_KEYS, PROVISION_EXCLUDED_KEYS):
+            if format_data is True:
+                return Provision(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetProvisionFitness", cur_type=result, expec_type=dict)
+
+    @Base.ads_only
+    async def get_supported_app_summaries(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[AppSummaryResponse]:
+        """|coro|
+
+        Get a condensed summary of every application that can be deployed. See :meth:`get_supported_applications` for the full entries.
+
+        .. note::
+            The API returns these entries as untyped JSON objects, so no dataclass conversion
+            is performed; hence no ``format_data`` parameter.
+
+
+        Parameters
+        ----------
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        list[dict[:class:`str`, Any]]
+            On success returns a list of dictionaries.
+
+        """
+        await self._reauth()
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetSupportedAppSummaries",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
+        if is_response_list(result, AppSummaryResponse, APP_SUMMARY_REQUIRED_KEYS, APP_SUMMARY_EXCLUDED_KEYS):
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
 
     @Base.ads_only
     async def get_supported_applications(
-        self, format_data: Union[bool, None] = None,
-    ) -> list[Application] | ActionResultError:
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[Application] | list[ApplicationResponse]:
         """|coro|
 
-        Get supported applications, such as :class:`Template` information and the list of :class:`Applications` when creating an Instance.
+        Get supported applications, such as :class:`Template` information and the list of :class:`Application` when creating an Instance.
 
         Parameters
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1029,13 +1729,29 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetSupportedApplications", format_data=format_data, format_=Application,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetSupportedApplications",
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetSupportedApplications", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_list(result, ApplicationResponse, APPLICATION_REQUIRED_KEYS, APPLICATION_EXCLUDED_KEYS):
+            if format_data is True:
+                return [Application(**entry) for entry in result]
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetSupportedApplications", cur_type=result, expec_type=list)
 
     @Base.ads_only
-    async def get_target_info(self, format_data: Union[bool, None] = None) -> RemoteTargetInfo | ActionResultError:
+    async def get_target_info(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RemoteTargetInfo | RemoteTargetInfoResponse:
         """|coro|
 
         Get target info.
@@ -1044,6 +1760,10 @@ class ADSModule(Base):
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1052,23 +1772,41 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="ADSModule/GetTargetInfo", format_data=format_data, format_=RemoteTargetInfo)
-        return result
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetTargetInfo",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetTargetInfo", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, RemoteTargetInfoResponse, REMOTE_TARGET_INFO_REQUIRED_KEYS, REMOTE_TARGET_INFO_EXCLUDED_KEYS):
+            if format_data is True:
+                return RemoteTargetInfo(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetTargetInfo", cur_type=result, expec_type=dict)
 
     @Base.ads_only
-    async def get_target_pairing_code(self, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def get_target_pairing_code(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Get the ADS/Target pairing code. Used with :meth:`attach_ads` using the "pairing_code" parameter.
-
-
-        __Endpoint__: "ADSModule/GetTargetPairingCode"
-
 
         Parameters
         ----------
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1077,15 +1815,32 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/GetTargetPairingCode", format_=ActionResult, format_data=format_data,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetTargetPairingCode",
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/GetTargetPairingCode", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/GetTargetPairingCode", result)  # noqa: EM101
 
     @Base.ads_only
     async def handout_instance_configs(
-        self, module: str, setting_node: str, values: list[str], format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        module: str,
+        setting_node: str,
+        values: list[str],
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Handout Instance Configuration.
@@ -1093,13 +1848,17 @@ class ADSModule(Base):
         Parameters
         ----------
         module: :class:`str`
-            The Module Name. eg. "Minecraft"
+            The Module Name. eg. "Minecraft".
         setting_node: :class:`str`
-            A setting node. See "./docs/setting_nodes.md"
+            A setting node. See :ref:`Setting Nodes <Documentation>` for more information.
         values: list[:class:`str`]
             The values for the setting node.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1107,17 +1866,33 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, Any] = {"ForModule": module, "SettingNode": setting_node, "Values": values}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/HandoutInstanceConfigs", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = {"ForModule": module, "SettingNode": setting_node, "Values": values}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/HandoutInstanceConfigs",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/HandoutInstanceConfigs", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/HandoutInstanceConfigs", result)  # noqa: EM101
 
     @Base.ads_only
     async def manage_instance(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Manage the specified instance.
@@ -1132,6 +1907,10 @@ class ADSModule(Base):
             The Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1139,13 +1918,23 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"instanceId": instance_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/ManageInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"instanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ManageInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ManageInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/ManageInstance", result)  # noqa: EM101
 
     @Base.ads_only
     async def modify_custom_firewall_rule(
@@ -1156,8 +1945,11 @@ class ADSModule(Base):
         protocol: int,
         description: str,
         open_: bool = True,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Modify the Firewall Rule of the specified instance.
@@ -1175,9 +1967,13 @@ class ADSModule(Base):
         description: :class:`str`
             Description for which the rule is applied.
         open_: :class:`bool`, optional
-            Open or close the port mapping, by default True
+            Open or close the port mapping, by default True.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1185,6 +1981,7 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
+        await self._reauth()
         parameters: dict[str, Any] = {
             "instanceId": instance_id,
             "portNumber": port_number,
@@ -1193,36 +1990,52 @@ class ADSModule(Base):
             "description": description,
             "open": open_,
         }
-
-        await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/ModifyCustomFirewallRule", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ModifyCustomFirewallRule",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ModifyCustomFirewallRule", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/ModifyCustomFirewallRule", result)  # noqa: EM101
 
     @Base.ads_only
     async def move_instance_datastore(
         self,
         instance_id: str,
         datastore_id: int,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Move an Instance to a different Datastore.
 
         .. note::
-            You will need to know the Datastore ID you want to move the Instance ID to. See :func:`get_datastores` as a means to get the IDs.
+            You will need to know the Datastore ID you want to move the Instance to. See :meth:`get_datastores` as a means to get the IDs.
 
 
         Parameters
         ----------
-        instance_id (str):
+        instance_id: :class:`str`
             The Instance ID to move.
         datastore_id: :class:`int`
             The ID of the datastore to move the Instance to.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1232,31 +2045,44 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"instanceId": instance_id, "datastoreId": datastore_id}
-        result: Any = await self._call_api(
-            api="ADSModule/MoveInstanceDatastore", parameters=parameters, format_data=format_data, format_=RunningTask,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/MoveInstanceDatastore",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/MoveInstanceDatastore", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/MoveInstanceDatastore", cur_type=result, expec_type=dict)
 
     async def reactivate_instance(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
-        parameters: dict[str, str] = {"instanceId": instance_id}
-        await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/ReactivateInstance", parameters=parameters, format_data=format_data, format_=RunningTask,
-        )
-        return result
-
-    @Base.ads_only
-    async def reactivate_local_instances(self, format_data: Union[bool, None] = None) -> RunningTask | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
-        Reactivate local instances.
+        Reactivate a specific Instance.
 
         Parameters
         ----------
+        instance_id: :class:`str`
+            The Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1265,16 +2091,83 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/ReactivateLocalInstances", format_data=format_data, format_=RunningTask,
+        parameters: dict[str, str] = {"instanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ReactivateInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ReactivateInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/ReactivateInstance", cur_type=result, expec_type=dict)
 
     @Base.ads_only
-    async def refresh_app_cache(self) -> None:
+    async def reactivate_local_instances(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
+        """|coro|
+
+        Reactivate local instances.
+
+        Parameters
+        ----------
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`RunningTask`
+            On success returns a :class:`RunningTask` dataclass.
+
+        """
+        await self._reauth()
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/ReactivateLocalInstances",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/ReactivateLocalInstances", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/ReactivateLocalInstances", cur_type=result, expec_type=dict)
+
+    @Base.ads_only
+    async def refresh_app_cache(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Refresh the application cache.
+
+        Parameters
+        ----------
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1282,11 +2175,22 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        await self._call_api(api="ADSModule/RefreshAppCache", _no_data=True)
-        return
+        return await self._post(
+            url="ADSModule/RefreshAppCache",
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @Base.ads_only
-    async def refresh_group(self, group_id: str, format_data: Union[bool, None] = None) -> ActionResult | ActionResultError:
+    async def refresh_group(
+        self,
+        group_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Refresh the specified group.
@@ -1297,6 +2201,10 @@ class ADSModule(Base):
             The Group ID to refresh.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1304,17 +2212,33 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"groupId": group_id}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/RefreshGroup", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"groupId": group_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RefreshGroup",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RefreshGroup", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/RefreshGroup", result)  # noqa: EM101
 
     @Base.ads_only
     async def refresh_instance_config(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Refresh an Instance Configuration.
@@ -1325,6 +2249,10 @@ class ADSModule(Base):
             The Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1332,15 +2260,32 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceId": instance_id}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/RefreshInstanceConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RefreshInstanceConfig",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RefreshInstanceConfig", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/RefreshInstanceConfig", result)  # noqa: EM101
 
     @Base.ads_only
-    async def refresh_remote_config_stores(self, force: bool = False) -> None:
+    async def refresh_remote_config_stores(
+        self,
+        force: bool = False,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Refresh remote config stores.
@@ -1348,18 +2293,26 @@ class ADSModule(Base):
         Parameters
         ----------
         force: :class:`bool`, optional
-            Force refresh, defaults to False.
+            Force refresh, by default False.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
         None
 
         """
-        parameters: dict[str, bool] = {"force": force}
-
         await self._reauth()
-        await self._call_api(api="ADSModule/RefreshRemoteConfigStores", parameters=parameters, _no_data=True)
-        return
+        parameters: dict[str, bool] = {"force": force}
+        return await self._post(
+            url="ADSModule/RefreshRemoteConfigStores",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @Base.ads_only
     async def register_target(
@@ -1370,8 +2323,11 @@ class ADSModule(Base):
         password: str,
         friendly_name: str,
         two_factor_token: str = "",
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Registers a Target to a Controller.
@@ -1388,10 +2344,14 @@ class ADSModule(Base):
             The password for logging into the Target AMP panel.
         friendly_name: :class:`str`
             Instance Friendly Name.
-        two_factor_token: :class:`str`
-            The two-factor authentication token for the username. Defaults to ""
+        two_factor_token: :class:`str`, optional
+            The two-factor authentication token for the username, by default "".
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1399,6 +2359,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
+        await self._reauth()
         parameters: dict[str, str] = {
             "controllerUrl": controller_url,
             "myUrl": my_url,
@@ -1407,11 +2368,21 @@ class ADSModule(Base):
             "twoFactorToken": two_factor_token,
             "friendlyName": friendly_name,
         }
-        await self._reauth()
-        result = await self._call_api(
-            api="ADSModule/RegisterTarget", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RegisterTarget",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RegisterTarget", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/RegisterTarget", result)  # noqa: EM101
 
     @Base.ads_only
     async def register_target_with_code(
@@ -1420,14 +2391,14 @@ class ADSModule(Base):
         my_url: str,
         code: str,
         friendly_name: str,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Registers an Instance to a Controller/Target with pairing code.
-
-
-        __Endpoint__: "ADSModule/RegisterTargetWithCode"
 
         Parameters
         ----------
@@ -1441,6 +2412,10 @@ class ADSModule(Base):
             Instance Friendly Name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1448,36 +2423,56 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
+        await self._reauth()
         parameters: dict[str, str] = {
             "controllerUrl": controller_url,
             "myUrl": my_url,
             "code": code,
             "friendlyName": friendly_name,
         }
-        await self._reauth()
-        result = await self._call_api(
-            api="ADSModule/RegisterTargetWithCode", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RegisterTargetWithCode",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RegisterTargetWithCode", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/RegisterTargetWithCode", result)  # noqa: EM101
 
     @Base.ads_only
     async def repair_datastore(
-        self, datastore_id: int, format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
+        self,
+        datastore_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Repair the specified datastore.
 
         .. note::
-            You will need to know the Datastore ID you want to move the Instance ID to. See :func:`get_datastores` as a means to get the IDs.
+            You will need to know the Datastore ID you want to repair. See :meth:`get_datastores` as a means to get the IDs.
 
 
         Parameters
         ----------
-        datastore_id (int):
+        datastore_id: :class:`int`
             The datastore ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1485,31 +2480,51 @@ class ADSModule(Base):
             On success returns a :class:`RunningTask` dataclass.
 
         """
-        parameters: dict[str, Union[Any, int]] = {"id": datastore_id}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/RepairDatastore", parameters=parameters, format_data=format_data, format_=RunningTask,
+        parameters: dict[str, int] = {"id": datastore_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RepairDatastore",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RepairDatastore", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/RepairDatastore", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def request_datastore_size_calculation(
-        self, datastore_id: int, format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
+        self,
+        datastore_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Request a calculation of the size of the specified Datastore.
 
         .. note::
-            You will need to know the Datastore ID you want to move the Instance ID to. See :func:`get_datastores` as a means to get the IDs.
+            You will need to know the Datastore ID you want to query. See :meth:`get_datastores` as a means to get the IDs.
 
 
         Parameters
         ----------
-        datastore_id (int):
+        datastore_id: :class:`int`
             The datastore ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1517,21 +2532,33 @@ class ADSModule(Base):
             On success returns a :class:`RunningTask` dataclass.
 
         """
-        parameters: dict[str, Union[Any, int]] = {"datastoreId": datastore_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/RequestDatastoreSizeCalculation",
+        parameters: dict[str, int] = {"datastoreId": datastore_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RequestDatastoreSizeCalculation",
             parameters=parameters,
-            format_data=format_data,
-            format_=RunningTask,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RequestDatastoreSizeCalculation", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/RequestDatastoreSizeCalculation", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def restart_instance(
-        self, instance_name: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Restart an Instance.
@@ -1546,6 +2573,10 @@ class ADSModule(Base):
             The Instance Name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1553,18 +2584,34 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceName": instance_name}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/RestartInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceName": instance_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/RestartInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/RestartInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/RestartInstance", result)  # noqa: EM101
 
+    # TODO: Returns Any; build a dataclass and TypedDict once the response shape has been confirmed.
     @Base.ads_only
     async def servers(
-        self, id_: str, req_rawjson: str = "application/json", format_data: Union[bool, None] = None,
-    ) -> Any | ActionResultError:
+        self,
+        id_: str,
+        req_rawjson: str = "application/json",
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Any:
         """|coro|
 
         Used for proxy authentication.
@@ -1575,12 +2622,14 @@ class ADSModule(Base):
 
         Parameters
         ----------
-        id_ : str
+        id_: :class:`str`
             The Instance ID.
-        req_rawjson : str, optional
-            The data type, by default "application/json"
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        req_rawjson: :class:`str`, optional
+            The data type, by default "application/json".
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1588,67 +2637,32 @@ class ADSModule(Base):
             UNK.
 
         """
+        await self._reauth()
         parameters: dict[str, str] = {"id": id_, "REQ_RAWJSON": req_rawjson}
-
-        await self._reauth()
-        result: Any = await self._call_api(api="ADSModule/Servers", parameters=parameters, format_data=format_data)
-        return result
-
-    @Base.ads_only
-    async def set_instance_network_info(
-        self,
-        instance_id: str,
-        port_mappings: dict[str, int],
-        application_ip: str | None = None,
-        must_stop: bool | None = None,
-        format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
-        """|coro|
-
-        Set the Port mappings for an Instance.
-
-        Parameters
-        ----------
-        instance_id: :class:`str`
-            The Instance ID.
-        port_mappings: dict[:class:`str`, :class:`int`]
-            Port ranges and protocols to map.
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        must_stop: :class:`bool`, optional
-            UNK.
-        application_ip: :class:`str`, optional
-            The IP the application will be bound to.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
-
-        """
-        parameters: dict[str, Any] = {"InstanceId": instance_id, "PortMappings": port_mappings}
-
-        if application_ip is not None:
-            parameters["ApplicationIP"] = application_ip
-        if must_stop is not None:
-            parameters["mustStop"] = must_stop
-
-        await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/SetInstanceNetworkInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+        return await self._post(
+            url="ADSModule/Servers",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
 
     @Base.ads_only
     async def set_instance_config(
-        self, instance_name: str, setting_node: str, value: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_name: str,
+        setting_node: str,
+        value: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Set an :class:`AMPInstance` Setting Node setting.
 
         .. note::
-            See `../nodes/setting_nodes.md` for possible ``setting_node`` values.
+            See :ref:`Setting Nodes <Documentation>` for possible ``setting_node`` values.
 
 
         .. note::
@@ -1665,6 +2679,10 @@ class ADSModule(Base):
             The value for the setting node.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1672,20 +2690,98 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceName": instance_name, "SettingNode": setting_node, "Value": value}
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/SetInstanceConfig", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceName": instance_name, "SettingNode": setting_node, "Value": value}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/SetInstanceConfig",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/SetInstanceConfig", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/SetInstanceConfig", result)  # noqa: EM101
+
+    @Base.ads_only
+    async def set_instance_network_info(
+        self,
+        instance_id: str,
+        port_mappings: dict[str, int],
+        application_ip: str | None = None,
+        must_stop: bool | None = None,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Set the Port mappings for an Instance.
+
+        Parameters
+        ----------
+        instance_id: :class:`str`
+            The Instance ID.
+        port_mappings: dict[:class:`str`, :class:`int`]
+            Port ranges and protocols to map.
+        application_ip: :class:`str | None`, optional
+            The IP the application will be bound to, by default None.
+        must_stop: :class:`bool | None`, optional
+            UNK, by default None.
+        format_data: Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, Any] = {"InstanceId": instance_id, "PortMappings": port_mappings}
+        if application_ip is not None:
+            parameters["ApplicationIP"] = application_ip
+        if must_stop is not None:
+            parameters["mustStop"] = must_stop
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/SetInstanceNetworkInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/SetInstanceNetworkInfo", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/SetInstanceNetworkInfo", result)  # noqa: EM101
 
     @Base.ads_only
     async def set_instance_suspended(
-        self, instance_name: str, suspended: bool = False, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_name: str,
+        suspended: bool = False,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Set an Instances suspended State.
+        Set an Instance's suspended state.
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
@@ -1695,10 +2791,14 @@ class ADSModule(Base):
         ----------
         instance_name: :class:`str`
             The Instance name.
-        suspended: :class:`bool`
-            Set the instance to be suspended, default False.
+        suspended: :class:`bool`, optional
+            Set the instance to be suspended, by default False.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1706,26 +2806,47 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, Any] = {"InstanceName": instance_name, "Suspended": suspended}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/SetInstanceSuspended", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = {"InstanceName": instance_name, "Suspended": suspended}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/SetInstanceSuspended",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/SetInstanceSuspended", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/SetInstanceSuspended", result)  # noqa: EM101
 
     @Base.ads_only
     async def start_all_instances(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Start all Instances.
 
         Parameters
         ----------
+        instance_id: :class:`str`
+            The Target ADS Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1733,18 +2854,33 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"TargetADSInstance": instance_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/StartAllInstances", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"TargetADSInstance": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/StartAllInstances",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/StartAllInstances", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/StartAllInstances", result)  # noqa: EM101
 
     @Base.ads_only
     async def start_instance(
-        self, instance_name: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Start an Instance.
@@ -1759,6 +2895,10 @@ class ADSModule(Base):
             The Instance name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1766,26 +2906,47 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceName": instance_name}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/StartInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceName": instance_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/StartInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/StartInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/StartInstance", result)  # noqa: EM101
 
     @Base.ads_only
     async def stop_all_instances(
-        self, instance_id: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Stop all Instances.
 
         Parameters
         ----------
+        instance_id: :class:`str`
+            The Target ADS Instance ID.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1793,18 +2954,33 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"TargetADSInstance": instance_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/StopAllInstances", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"TargetADSInstance": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/StopAllInstances",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/StopAllInstances", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/StopAllInstances", result)  # noqa: EM101
 
     @Base.ads_only
     async def stop_instance(
-        self, instance_name: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Stop an Instance.
@@ -1815,10 +2991,14 @@ class ADSModule(Base):
 
         Parameters
         ----------
-        instance_name :
+        instance_name: :class:`str`
             The Instance name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1826,20 +3006,33 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceName": instance_name}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/StopInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceName": instance_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/StopInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/StopInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/StopInstance", result)  # noqa: EM101
 
     @Base.ads_only
     async def update_datastore(
         self,
-        updated_datastore: InstanceDatastore,
+        updated_datastore: InstanceDatastore | InstanceDatastoreResponse,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Update an existing datastore.
@@ -1850,6 +3043,10 @@ class ADSModule(Base):
             Your pre-created data structure to be parsed for the required API parameters.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1858,32 +3055,48 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-
-        if isinstance(updated_datastore, InstanceDatastore):
-            data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=updated_datastore)
-
-        parameters: dict[str, Union[Any, dict[Any, Any]]] = {
-            "updatedDatastore": data,
-        }
-        result: Any = await self._call_api(
-            api="ADSModule/UpdateDatastore", parameters=parameters, format_data=format_data, format_=ActionResult,
+        # Accepts the dataclass or the raw InstanceDatastoreResponse; the TypedDict is already a dict.
+        data: dict[str, Any] = updated_datastore.to_dict() if isinstance(updated_datastore, InstanceDatastore) else dict(updated_datastore)
+        parameters: dict[str, Any] = {"updatedDatastore": data}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/UpdateDatastore",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/UpdateDatastore", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/UpdateDatastore", result)  # noqa: EM101
 
     @Base.ads_only
     async def update_deployment_template(
-        self, template_to_update: DeploymentTemplate, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        template_to_update: DeploymentTemplate,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Update an existing Deployment Template.
 
         Parameters
         ----------
-        template_to_update : :class:`DeploymentTemplate`
+        template_to_update: :class:`DeploymentTemplate`
             Your pre-created data structure to be parsed for the required API parameters.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1892,20 +3105,36 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        if isinstance(template_to_update, DeploymentTemplate):
-            data: dict[Any, Any] = template_to_update.to_dict()
-
-        parameters: dict[str, dict[Any, Any]] = {"templateToUpdate": data}
-        result: Any = await self._call_api(
-            api="ADSModule/UpdateDeploymentTemplate", parameters=parameters, format_data=format_data, format_=ActionResult,
+        data: dict[str, Any] = template_to_update.to_dict()
+        parameters: dict[str, Any] = {"templateToUpdate": data}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/UpdateDeploymentTemplate",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/UpdateDeploymentTemplate", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/UpdateDeploymentTemplate", result)  # noqa: EM101
 
     @Base.ads_only
     async def update_instance_info(
-        self, instance_info: InstanceInfo, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
-        """Update an Instances info.
+        self,
+        instance_info: InstanceInfo,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Update an Instance's info.
 
         Parameters
         ----------
@@ -1913,6 +3142,10 @@ class ADSModule(Base):
             Your pre-created data structure to be parsed for the required API parameters.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1920,40 +3153,63 @@ class ADSModule(Base):
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        if isinstance(instance_info, InstanceInfo):
-            parameters: dict[Any, Any] = self.dataclass_to_dict(dataclass_=instance_info)
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/UpdateInstanceInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = instance_info.to_dict()
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/UpdateInstanceInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/UpdateInstanceInfo", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/UpdateInstanceInfo", result)  # noqa: EM101
 
     @Base.ads_only
-    async def update_target(self, target_id: str) -> None:
+    async def update_target(
+        self,
+        target_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Update Target ADS Instance.
 
         .. note::
-            Typically this will be used on Instances with a the :attr:`~Instance.module` == "ADS"
+            Typically this will be used on Instances with the :attr:`~Instance.module` == "ADS".
 
 
         Parameters
         ----------
         target_id: :class:`str`
             The Target Instance ID.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
         None
 
         """
-        parameters: dict[str, str] = {"TargetID": target_id}
-
         await self._reauth()
-        await self._call_api(api="ADSModule/UpdateTarget", parameters=parameters, _no_data=True)
-        return
+        parameters: dict[str, str] = {"TargetID": target_id}
+        return await self._post(
+            url="ADSModule/UpdateTarget",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @Base.ads_only
     async def update_target_info(
@@ -1963,8 +3219,11 @@ class ADSModule(Base):
         url: str,
         description: str,
         tags: list[str],
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Update a target Instance information.
@@ -1977,11 +3236,16 @@ class ADSModule(Base):
             The Instance friendly name you want to set.
         url: :class:`str`
             The Instance URL you want to set.
-        description (str): The description for the Instance.
+        description: :class:`str`
+            The description for the Instance.
         tags: list[:class:`str`]
             The tags you want to add to the Instance.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -1989,6 +3253,7 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
+        await self._reauth()
         parameters: dict[str, Any] = {
             "id": instance_id,
             "friendlyName": friendly_name,
@@ -1996,26 +3261,48 @@ class ADSModule(Base):
             "description": description,
             "tags": tags,
         }
-        await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/UpdateTargetInfo", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/UpdateTargetInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/UpdateTargetInfo", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/UpdateTargetInfo", result)  # noqa: EM101
 
     @Base.ads_only
     async def upgrade_all_instances(
-        self, instance_id: str, restart_running: bool = False, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_id: str,
+        restart_running: bool = False,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Upgrade all Instances.
 
         Parameters
         ----------
-        restart_running: :class:`bool`
-            Restart any running Instances, default is False.
+        instance_id: :class:`str`
+            The Target ADS Instance ID.
+        restart_running: :class:`bool`, optional
+            Restart any running Instances, by default False.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -2023,21 +3310,36 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, Union[str, bool]] = {"RestartRunning": restart_running, "TargetADSInstance": instance_id}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/UpgradeAllInstances", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, Any] = {"RestartRunning": restart_running, "TargetADSInstance": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/UpgradeAllInstances",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/UpgradeAllInstances", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/UpgradeAllInstances", result)  # noqa: EM101
 
     @Base.ads_only
     async def upgrade_instance(
-        self, instance_name: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Update or Upgrade the Instance
+        Update or Upgrade the Instance.
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
@@ -2049,6 +3351,10 @@ class ADSModule(Base):
             The Instance name.
         format_data: Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params: :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -2056,10 +3362,20 @@ class ADSModule(Base):
             On success returns a :class:`ActionResult` dataclass.
 
         """
-        parameters: dict[str, str] = {"InstanceName": instance_name}
-
         await self._reauth()
-        result: Any = await self._call_api(
-            api="ADSModule/UpgradeInstance", parameters=parameters, format_data=format_data, format_=ActionResult,
+        parameters: dict[str, str] = {"InstanceName": instance_name}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/UpgradeInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
-        return result
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/UpgradeInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/UpgradeInstance", result)  # noqa: EM101

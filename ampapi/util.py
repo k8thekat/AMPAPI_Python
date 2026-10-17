@@ -10,36 +10,31 @@ from datetime import timezone
 from json import JSONEncoder
 from logging import Logger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, Union
+from typing import TYPE_CHECKING, Any, TypedDict, Union, Unpack
 
 from dataclass_wizard import fromdict
-from typing_extensions import Unpack
 
 from docs.samples.method_event_usage import example_note
 
-from ._types import ScheduleDataData
+from ._types import ScheduleDataResponse
 
 # from .base import Base
-from .instance import AMPMinecraftInstance
-from .modules import ActionResultError, BuildInfo, Diagnostics, ScheduleData
+from .instance import MinecraftInstance
+from .modules import BuildInfo, Diagnostics, ScheduleData
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from io import TextIOWrapper
 
-    from ._types import APISpec, PermissionNode, ScheduleDataData
-    from .controller import AMPADSInstance, AMPControllerInstance, AMPInstance
+    from ._types import APISpec, DiagnosticsInfoResponse, PermissionNode, ScheduleDataResponse
+    from .instance import Controller, Instance
     from .modules import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 # static strings for documentation
-_instance_id_note = (
-    """.. note::\n\tReplace ``instance-id`` with the something like the :py:class:`~Instance.instance_id` value.\n\n"""
-)
-_parent_node_note: str = (
-    '.. note::\n\tAll nodes in this section will be prefixed with "%s.", see examples :ref:`Permission Nodes`\n\n'
-)
+_instance_id_note = """.. note::\n\tReplace ``instance-id`` with the something like the :py:class:`~Instance.instance_id` value.\n\n"""
+_parent_node_note: str = '.. note::\n\tAll nodes in this section will be prefixed with "%s.", see examples :ref:`Permission Nodes`\n\n'
 _wildcard_nodes: str = """.. note::\n\tAny node with a '*' at the end of it is a wild card and using that will make all permissions nodes in that section equal to the value set, treat it like parent inheritance.\n\n"""
 
 _trigger_note: str = """"""
@@ -48,21 +43,29 @@ _method_note: str = """"""
 
 # Maps each API spec section name -> (python filename, method name prefix)
 _SPEC_MODULE_MAP: dict[str, tuple[str, str]] = {
-    "ads_module":               ("adsmodule.py",   ""),
-    "analytics_plugin":         ("analytics.py",   ""),
-    "core":                     ("core.py",         ""),
-    "email_sender_plugin":      ("emailsender.py",  ""),
-    "file_manager_plugin":      ("filemanager.py",  ""),
-    "local_file_backup_plugin": ("filebackup.py",   ""),
-    "minecraft_module":         ("minecraft.py",    "mc_"),
+    "ads_module": ("adsmodule.py", ""),
+    "analytics_plugin": ("analytics.py", ""),
+    "core": ("core.py", ""),
+    "email_sender_plugin": ("emailsender.py", ""),
+    "file_manager_plugin": ("filemanager.py", ""),
+    "local_file_backup_plugin": ("filebackup.py", ""),
+    "minecraft_module": ("minecraft.py", "mc_"),
+}
+
+# Spec endpoints that are deliberately reachable through a differently named method rather than
+# their own function. Maps each API spec section name -> {spec endpoint: encapsulating method}.
+_ENCAPSULATED_ENDPOINTS: dict[str, dict[str, str]] = {
+    "ads_module": {
+        # attach_ads() posts to AttachADSWithPairingCode when a "pairing_code" is provided.
+        "attach_ads_with_pairing_code": "attach_ads",
+    },
 }
 
 _METHOD_RE = re.compile(r"^\s+(?:async )?def (\w+)\s*\(")
 _PYTHON_ONLY_PARAMS: frozenset[str] = frozenset({"format_data"})
 
 
-
-def _method_event_parse(data: list[Methods], title: str = "", title_body: str = "", path: None | str = None) -> None:
+def _method_event_parse(data: list[Methods], title: str = "", title_body: str = "", path: str | None = None) -> None:
     """Parses method event data and writes it to a .rst file.
 
     Parameters
@@ -78,9 +81,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
 
     """
     file_name: str = title.lower().replace(" ", "_")
-    _dir: Path = (
-        Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
-    )
+    _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
     mode = "x"
     if _dir.exists():
         mode = "w"
@@ -130,7 +131,8 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
 
 
 async def _parse_get_api_spec_to_file(
-    instance: Union[AMPControllerInstance, AMPADSInstance, AMPInstance, AMPMinecraftInstance], sanitize_json: bool,
+    instance: Union[Controller, Instance, MinecraftInstance],
+    sanitize_json: bool,
 ) -> None:
     """|coro|
 
@@ -148,11 +150,8 @@ async def _parse_get_api_spec_to_file(
     """
     _logger: Logger = logging.getLogger(__name__)
 
-    data: APISpec | ActionResultError = await instance.get_api_spec(sanitize_json=sanitize_json)
-    diag_info: Diagnostics | ActionResultError = await instance.get_diagnostics_info()
-    if isinstance(data, ActionResultError) or isinstance(diag_info, ActionResultError):
-        _logger.error("Failed to retrieved proper data.| Data: %s | DiagInfo: %s", data, diag_info)
-        return
+    data: APISpec = await instance.get_api_spec(sanitize_json=sanitize_json)
+    diag_info: Diagnostics = await instance.get_diagnostics_info()
     instance_type = instance.module
 
     _dir: Path = Path(__file__).parent.joinpath(f"../docs/api_spec_sheets/{diag_info.application_version}/{instance_type}_api_spec.md")
@@ -224,6 +223,132 @@ def _parse_api_spec_file(path: Path) -> dict[str, dict[str, str]]:
     return endpoints
 
 
+def _write_parameter_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str | None) -> None:
+    """Write a human-readable diff of two parameter lists to `file`.
+
+    Parses the raw stringified parameter lists from the spec files and compares them
+    by parameter name, reporting which parameters were added, removed, or modified
+    between the two versions.
+
+    Parameters
+    ----------
+    file : :class:`TextIOWrapper`
+        The open file handle to write the diff output to.
+    raw_a : Union[:class:`str`, None]
+        The raw parameter string from the older spec version.
+    raw_b : Union[:class:`str`, None]
+        The raw parameter string from the newer spec version.
+
+    """
+    try:
+        params_a: list[dict[str, Any]] = ast.literal_eval(raw_a) if raw_a else []
+        params_b: list[dict[str, Any]] = ast.literal_eval(raw_b) if raw_b else []
+    except (ValueError, SyntaxError):
+        # Fallback to the raw dump when the parameter string is not parseable.
+        file.write("**parameters**:\n")
+        file.write(f"- `{raw_a}`\n")
+        file.write(f"+ `{raw_b}`\n\n")
+        return
+
+    by_name_a: dict[str, dict[str, Any]] = {p["name"]: p for p in params_a}
+    by_name_b: dict[str, dict[str, Any]] = {p["name"]: p for p in params_b}
+    names_a = set(by_name_a)
+    names_b = set(by_name_b)
+
+    added_params = sorted(names_b - names_a)
+    removed_params = sorted(names_a - names_b)
+
+    # Fields worth showing when they change between versions.
+    _compare_fields = ("type_name", "optional", "description", "param_enum_values")
+    modified_params: list[tuple[str, list[str]]] = []
+    for name in sorted(names_a & names_b):
+        diffs: list[str] = []
+        for field in _compare_fields:
+            old_val = by_name_a[name].get(field)
+            new_val = by_name_b[name].get(field)
+            if old_val != new_val:
+                diffs.append(f"{field}: `{old_val}` -> `{new_val}`")
+        if diffs:
+            modified_params.append((name, diffs))
+
+    if not added_params and not removed_params and not modified_params:
+        return
+
+    file.write("**parameters**:\n\n")
+
+    if added_params:
+        for name in added_params:
+            param = by_name_b[name]
+            optional_tag = ", optional" if param.get("optional") else ""
+            file.write(f"- Added: `{name}` ({param.get('type_name', '?')}{optional_tag})\n")
+        file.write("\n")
+
+    if removed_params:
+        for name in removed_params:
+            param = by_name_a[name]
+            file.write(f"- Removed: `{name}` ({param.get('type_name', '?')})\n")
+        file.write("\n")
+
+    if modified_params:
+        for name, diffs in modified_params:
+            file.write(f"- Changed: `{name}`\n")
+            for diff_line in diffs:
+                file.write(f"  - {diff_line}\n")
+        file.write("\n")
+
+
+def _write_permissions_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str | None) -> None:
+    """Write a human-readable diff of two permission lists to `file`.
+
+    Parses the raw stringified permission lists from the spec files and compares them
+    as sets, reporting which permissions were added or removed between the two versions.
+
+    Parameters
+    ----------
+    file : :class:`TextIOWrapper`
+        The open file handle to write the diff output to.
+    raw_a : Union[:class:`str`, None]
+        The raw permissions string from the older spec version.
+    raw_b : Union[:class:`str`, None]
+        The raw permissions string from the newer spec version.
+
+    """
+    try:
+        perms_a: set[str] = set(ast.literal_eval(raw_a)) if raw_a and raw_a != "None" else set()
+        perms_b: set[str] = set(ast.literal_eval(raw_b)) if raw_b and raw_b != "None" else set()
+    except (ValueError, SyntaxError):
+        file.write("**required_permissions**:\n")
+        file.write(f"- `{raw_a}`\n")
+        file.write(f"+ `{raw_b}`\n\n")
+        return
+
+    # When the old value was literally None (not tracked), label it as newly defined.
+    was_none = raw_a is None or raw_a == "None"
+
+    added_perms = sorted(perms_b - perms_a)
+    removed_perms = sorted(perms_a - perms_b)
+
+    if not added_perms and not removed_perms and not was_none:
+        return
+
+    file.write("**required_permissions**:\n\n")
+
+    if was_none and added_perms:
+        file.write("- Previously: *not defined*\n")
+        for perm in added_perms:
+            file.write(f"- Added: `{perm}`\n")
+    elif was_none:
+        file.write("- Previously: *not defined*\n")
+        file.write("- Now: *none required*\n")
+    else:
+        for perm in added_perms:
+            file.write(f"- Added: `{perm}`\n")
+        for perm in removed_perms:
+            file.write(f"- Removed: `{perm}`\n")
+
+    file.write("\n")
+
+
 def compare_api_spec_versions(
     version_a: str,
     version_b: str,
@@ -269,11 +394,7 @@ def compare_api_spec_versions(
     removed = sorted(keys_a - keys_b)
     changed = sorted(k for k in keys_a & keys_b if spec_a[k] != spec_b[k])
 
-    _out: Path = (
-        output_path
-        if output_path is not None
-        else _base / "diffs" / f"{instance_type}_{version_a}_to_{version_b}.md"
-    )
+    _out: Path = output_path if output_path is not None else _base / "diffs" / f"{instance_type}_{version_a}_to_{version_b}.md"
     _out.parent.mkdir(parents=True, exist_ok=True)
 
     with _out.open("w") as file:
@@ -300,7 +421,14 @@ def compare_api_spec_versions(
             for field in sorted(spec_a[key].keys() | spec_b[key].keys()):
                 val_a = spec_a[key].get(field)
                 val_b = spec_b[key].get(field)
-                if val_a != val_b:
+                if val_a == val_b:
+                    continue
+
+                if field == "parameters":
+                    _write_parameter_diff(file, val_a, val_b)
+                elif field == "required_permissions":
+                    _write_permissions_diff(file, val_a, val_b)
+                else:
                     file.write(f"**{field}**:\n")
                     file.write(f"- `{val_a}`\n")
                     file.write(f"+ `{val_b}`\n\n")
@@ -312,6 +440,7 @@ def compare_api_spec_versions(
         len(removed),
         len(changed),
     )
+
 
 def _get_implemented_methods(filepath: Path) -> set[str]:
     """Return the set of method names defined in a Python source file.
@@ -372,6 +501,11 @@ def find_missing_endpoints(
     spec section against the corresponding Python module file using :data:`_SPEC_MODULE_MAP`.
     Results are written to a Markdown file and summarised via logging.
 
+    .. note::
+        An endpoint implemented as a private method (eg. ``_create_test_task``) counts as implemented;
+        the ``DEV:`` endpoints in the spec sheets are intentionally kept private. Endpoints folded into a
+        differently named method are declared in :data:`_ENCAPSULATED_ENDPOINTS` and count as implemented too.
+
     Parameters
     ----------
     spec_path : Path | None, optional
@@ -411,11 +545,18 @@ def find_missing_endpoints(
 
     _out: Path = output_path if output_path is not None else _spec_dir / "missing_endpoints.md"
 
-    def _is_implemented(ep: str, prefix: str, py_methods: set[str]) -> bool:
+    def _is_implemented(ep: str, prefix: str, py_methods: set[str], section: str) -> bool:
         full = prefix + ep
-        if full in py_methods:
-            return True
-        return any((full + alias) in py_methods for alias in _aliases)
+        # Endpoints marked "DEV:" in the spec sheets (eg. create_test_task, async_test) are implemented as
+        # private methods, so the underscore prefixed name counts as implemented too.
+        for name in (full, "_" + full):
+            if name in py_methods:
+                return True
+            if any((name + alias) in py_methods for alias in _aliases):
+                return True
+        # Fall back to the encapsulating method; it must exist, otherwise the endpoint is still missing.
+        encapsulator: str | None = _ENCAPSULATED_ENDPOINTS.get(section, {}).get(ep)
+        return encapsulator is not None and encapsulator in py_methods
 
     total_missing = 0
     with _out.open("w") as out_file:
@@ -431,7 +572,7 @@ def find_missing_endpoints(
                 continue
 
             py_methods = _get_implemented_methods(py_path)
-            missing = sorted(ep for ep in spec_endpoints if not _is_implemented(ep, prefix, py_methods))
+            missing = sorted(ep for ep in spec_endpoints if not _is_implemented(ep, prefix, py_methods, section))
             total_missing += len(missing)
 
             out_file.write(f"## {section} -> [{py_file}](ampapi/{py_file})\n\n")
@@ -553,7 +694,9 @@ def find_parameter_mismatches(
             out_file.write("\n")
 
     _logger.info(
-        "Parameter mismatch report written to %s | Total endpoints with mismatches: %d", _out, total_mismatches,
+        "Parameter mismatch report written to %s | Total endpoints with mismatches: %d",
+        _out,
+        total_mismatches,
     )
 
 
@@ -571,9 +714,7 @@ def _permission_node_parse(
     used_keys: list[Any] = []
 
     file_name: str = title.lower().replace(" ", "_")
-    _dir: Path = (
-        Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
-    )
+    _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
     mode = "x"
     if _dir.exists():
         mode = "w"
@@ -650,7 +791,8 @@ def _permission_node_parse(
 
             # These 4 modules DO NOT have 2 layers of parents to get through. So we need to cut them shorter.
             if entry["node"].startswith(("ADS", "FileManager", "LocalFileBackup", "Core")) and isinstance(
-                entry["children"], list,
+                entry["children"],
+                list,
             ):
                 file.write(f"- {temp[-1]}.*\n")
                 for node in sorted(entry["children"], key=lambda x: x["name"]):
@@ -694,7 +836,7 @@ def _settings_node_parse(
     title: str = "",
     title_body: str = "",
     index: int = 0,
-    path: None | str = None,
+    path: str | None = None,
     file: Union[TextIOWrapper, None] = None,
 ) -> None:
     from docs.samples.settings_node_usage import example_note
@@ -702,9 +844,7 @@ def _settings_node_parse(
     index = index
 
     file_name: str = title.lower().replace(" ", "_")
-    _dir: Path = (
-        Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
-    )
+    _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
     mode = "x"
     if _dir.exists():
         mode = "w"
@@ -744,7 +884,7 @@ def _trigger_event_parse(
     data: list[Triggers],
     title: str = "",
     title_body: str = "",
-    path: None | str = None,
+    path: str | None = None,
 ) -> None:
     """This assumes you have acquired the ScheduleData already and are passing in :attr:`~scheduleData.available_triggers`
 
@@ -767,9 +907,7 @@ def _trigger_event_parse(
     from docs.samples.trigger_event_usage import example_note
 
     file_name: str = title.lower().replace(" ", "_")
-    _dir: Path = (
-        Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
-    )
+    _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
     mode = "x"
     if _dir.exists():
         mode = "w"
@@ -798,7 +936,7 @@ def _trigger_event_parse(
     file.close()
 
 
-async def amp_api_update(instance: AMPControllerInstance, sanitize_json: bool) -> None:
+async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     """|coro|
 
     Gets the AMP Instance API Endpoints and writes them out to a file. Used for version changes.
@@ -818,29 +956,35 @@ async def amp_api_update(instance: AMPControllerInstance, sanitize_json: bool) -
     _logger: Logger = logging.getLogger(__name__)
     # We call get_instances() to force a current listing of instances to be populated.
     await instance.get_instances()
-    ADS_diag: Diagnostics | ActionResultError = await instance.get_diagnostics_info()
-    if isinstance(ADS_diag, ActionResultError):
-        _logger.error("Failed to retrieved proper Diag Info. | DiagInfo: %s", ADS_diag)
-        return
+    ads_diag: Diagnostics | DiagnosticsInfoResponse = await instance.get_diagnostics_info()
     # cur_version: None | AMPMinecraftInstance = None
     for entry in instance.instances:
         # Minecraft instances have their own unique API endpoints; so we need to get those.
-        if entry.module == "Minecraft" and isinstance(entry, AMPMinecraftInstance) and entry.running is True:
-            instance_diag: Diagnostics | ActionResultError = await entry.get_diagnostics_info()
-            if isinstance(instance_diag, ActionResultError):
-                _logger.error("Failed to retrieved proper Diag Info. | DiagInfo: %s", ADS_diag)
-                return
-            if instance_diag.application_version == ADS_diag.application_version:
-                _logger.info(
-                    "Found %s matching the current ADS version `%s` .", entry.instance_name, ADS_diag.application_version,
+        if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
+            instance_diag: Diagnostics | DiagnosticsInfoResponse = await entry.get_diagnostics_info()
+            if isinstance(ads_diag, Diagnostics) and isinstance(instance_diag, Diagnostics):
+                if instance_diag.application_version == ads_diag.application_version:
+                    _logger.info(
+                        "Found %s matching the current ADS version `%s` .",
+                        entry.instance_name,
+                        ads_diag.application_version,
+                    )
+                    await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
+                    break
+                _logger.warning(
+                    "<%s.%s> | Version mismatch between the Instance and the ADS. ADS: %s | Instance: %s",
+                    "util",
+                    "amp_api_update",
+                    instance_diag.application_version,
+                    ads_diag.application_version,
                 )
-                await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
-                break
+            err = "Responses are of the wrong type. ADS: %s | Instance: %s"
+            raise TypeError(err, type(ads_diag), type(instance_diag))
     # We found our Minecraft Instance, now lets parse our Controller/ADS
     await _parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
 
 
-def dict_merge(dict1: ScheduleDataData, dict2: ScheduleDataData) -> ScheduleDataData:
+def dict_merge(dict1: ScheduleDataResponse, dict2: ScheduleDataResponse) -> ScheduleDataResponse:
     """Merges dict2 into dict1 with key overlapp but combining data instead of replacing key data.
 
     .. note::
@@ -866,7 +1010,6 @@ def dict_merge(dict1: ScheduleDataData, dict2: ScheduleDataData) -> ScheduleData
     return dict1  # type: ignore
 
 
-
 async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     """|coro|
 
@@ -883,10 +1026,7 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
 
     """
     logger: Logger = logging.getLogger(__name__)
-    spec: SettingsSpecParent | ActionResultError = await instance.get_setting_spec()
-    if isinstance(spec, ActionResultError):
-        logger.error("Failed to retrieve Spec Data. | Spec: %s", spec)
-        return
+    spec: SettingsSpecParent = await instance.get_setting_spec()
 
     _path: Path = Path(__file__).parent.joinpath("../docs/nodes")
 
@@ -897,49 +1037,35 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     except Exception:
         logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
     # As far as I know Permission spec information is the same for all instances
-    perms: list[PermissionNode] | ActionResultError = await instance.get_permissions_spec()
-    if isinstance(perms, ActionResultError):
-        logger.error("Failed to retrieved proper Perms Info. | Perms: %s", perms)
-        return
+    perms: list[PermissionNode] = await instance.get_permissions_spec()
     logger.info("Generating Permission Nodes.rst...")
     try:
         _permission_node_parse(data=perms, title="Permission Nodes", title_body="", path=_path.as_posix())
     except Exception:
         logger.error(
-            "Ran into a <Exception> when attempting to generate the Permission Nodes.rst.\n %s", traceback.print_exc(),
+            "Ran into a <Exception> when attempting to generate the Permission Nodes.rst.\n %s",
+            traceback.print_exc(),
         )
 
     logger.info("Generating Triggers Events.rst and Method Events.rst...")
     await instance.get_instances()
     # data: ScheduleData = await instance.get_schedule_data(format_data=True)
-    data: ScheduleDataData | ActionResultError = await instance.get_schedule_data(format_data=False)
-    if isinstance(data, ActionResultError):
-        logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", data)
-        return
+    data: ScheduleDataResponse = await instance.get_schedule_data(format_data=False)
     mc_: bool = False
     gen_: bool = False
     src_: bool = False
     for entry in instance.instances:
         # print(entry.running, entry.friendly_name, entry.module)
         if mc_ is False and entry.running and entry.module == "Minecraft":
-            mc_data: ScheduleDataData | ActionResultError = await entry.get_schedule_data(format_data=False)
-            if isinstance(mc_data, ActionResultError):
-                logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", mc_data)
-                return
+            mc_data: ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
             data = dict_merge(data, mc_data)
             mc_ = True
         if gen_ is False and entry.running and entry.module == "Generic":
-            generic_data: ScheduleDataData | ActionResultError = await entry.get_schedule_data(format_data=False)
-            if isinstance(generic_data, ActionResultError):
-                logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", generic_data)
-                return
+            generic_data: ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
             data = dict_merge(data, generic_data)
             gen_ = True
         if src_ is False and entry.running and entry.module == "srcds":
-            srcds_data: ScheduleDataData | ActionResultError = await entry.get_schedule_data(format_data=False)
-            if isinstance(srcds_data, ActionResultError):
-                logger.error("Failed to retrieved proper Scheduled Data. | Scheduled Data: %s", srcds_data)
-                return
+            srcds_data: ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
             data = dict_merge(data, srcds_data)
             src_ = True
 

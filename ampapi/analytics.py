@@ -1,10 +1,37 @@
-from datetime import datetime
-from typing import Any, Union
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
 
-from .base import Base
-from .modules import ActionResultError, AnalyticsFilter, AnalyticsSummary
+This file is part of AMPAPI_Python.
 
-# from .enums import *
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict
+from datetime import UTC, datetime, timezone
+from typing import TYPE_CHECKING, Any, Optional, Union, Unpack, cast
+
+from .base import Base, ResponseAliasFull, ResponseHandlerOptions
+from .errors import AMPAPITypeError
+from .modules import AnalyticsFilter, AnalyticsSummary
+
+if TYPE_CHECKING:
+    from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
+
+    from ._types import AnalyticsSummaryResponse
 
 __all__ = ("AnalyticsPlugin",)
 
@@ -21,24 +48,32 @@ class AnalyticsPlugin(Base):
     async def get_analytics_summary(
         self,
         period_days: int = 30,
-        start_date: datetime = datetime.now(),
+        start_date: Optional[datetime] = None,
         filters: Union[AnalyticsFilter, None] = None,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> AnalyticsSummary | ActionResultError:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> AnalyticsSummary | AnalyticsSummaryResponse:
         """|coro|
+
         Retrieves the Analytics data for the Instance. \n
         See data such as how many people are playing, how long they've been playing, and where they are from.
 
         Parameters
         ----------
-        period_days: :class:`int`, optional
-            How far back in days to go, by default 30
-        start_date: :class:`datetime.datetime`, optional
-            The date to start from, by default :meth:`~datetime.datetime.now`
-        filters: Union[:class:`AnalyticsFilter`, None], optional
-            Filters results based upon the supplied dataclass values. See :class:`Analytics_Filter`, by default None
-        format_data: Union[:class:`bool`, None], optional
+        period_days : :class:`int`, optional
+            How far back in days to go, by default 30.
+        start_date : :class:`datetime` | None, optional
+            The date to start from, by default None which uses :meth:`~datetime.datetime.now`.
+        filters : Union[:class:`AnalyticsFilter`, None], optional
+            Filters results based upon the supplied dataclass values. See :class:`AnalyticsFilter`, by default None.
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -47,24 +82,26 @@ class AnalyticsPlugin(Base):
 
         """
         await self._reauth()
-        if isinstance(start_date, datetime):
-            date: float = start_date.timestamp()
-
-        if filters is not None:
-            if isinstance(filters, AnalyticsFilter):
-                data: dict[Any, Any] = self.dataclass_to_dict(dataclass_=filters)
-        else:
-            data: dict[Any, Any] = {}
+        if start_date is None:
+            start_date = datetime.now(tz=UTC)
 
         parameters: dict[str, Any] = {
             "PeriodDays": period_days,
-            "StartDate": date,
-            "Filters": data,
+            "StartDate": start_date.timestamp(),
+            "Filters": asdict(filters) if filters is not None else {},
         }
-        result: Any = await self._call_api(
-            api="AnalyticsPlugin/GetAnalyticsSummary",
+        result: ResponseAliasFull = await self._post(
+            url="AnalyticsPlugin/GetAnalyticsSummary",
             parameters=parameters,
-            format_data=format_data,
-            format_=AnalyticsSummary,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "stats" not in result:
+            raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return AnalyticsSummary(**cast("dict[str, Any]", result))
         return result

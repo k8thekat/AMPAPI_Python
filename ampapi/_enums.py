@@ -1,11 +1,30 @@
-from enum import Enum
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
 
-__all__ = ("ADSModeState", "AMPInstanceState", "AccessModeState", "AppStartupModeState", "PostCreateState")
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
+from enum import Enum, StrEnum
+
+__all__ = ("ADSModeState", "AccessModeState", "AppStartupModeState", "InstanceState", "Module", "PostCreateState")
 
 
 class AccessModeState(Enum):
-    """Related to Node: ADSModule.Network.AccessMode
-    """
+    """Related to Node: ADSModule.Network.AccessMode"""
 
     via_target = 0
     direct_controller = 10
@@ -13,8 +32,7 @@ class AccessModeState(Enum):
 
 
 class ADSModeState(Enum):
-    """Related to Node: ADSModule.ADS.Mode
-    """
+    """Related to Node: ADSModule.ADS.Mode"""
 
     not_set = 0
     controller = 10
@@ -24,18 +42,15 @@ class ADSModeState(Enum):
 
 
 class AMPDownloadMirrorState(Enum):
-    """Related to Node: ADSModule.ADS.DownloadMirror
-    """
+    """Related to Node: ADSModule.ADS.DownloadMirror"""
 
     us_central = "[Automatic]"
     eu_west = ""
     us_central_texas = "US Central - Texas"
 
 
-class AMPInstanceState(Enum):
-    """Represents the state of an Instance and or Application inside an Instance.
-
-    """
+class InstanceState(Enum):
+    """Represents the state of an Instance and or Application inside an Instance."""
 
     undefined = -1
     stopped = 0
@@ -50,9 +65,7 @@ class AMPInstanceState(Enum):
     waiting = 60  # the application is waiting for some external service/application to respond/become available.
     installing = 70
     updating = 75
-    awaiting_user_input = (
-        80  # used during installation, means that some user input is required to complete setup (authentication etc).
-    )
+    awaiting_user_input = 80  # used during installation, means that some user input is required to complete setup (authentication etc).
     failed = 100
     suspended = 200
     maintenance = 250
@@ -60,8 +73,7 @@ class AMPInstanceState(Enum):
 
 
 class AMPTheme(Enum):
-    """Related to Node: Core.AMP.Theme
-    """
+    """Related to Node: Core.AMP.Theme"""
 
     aura = "Aura"
     black = "Black"
@@ -71,16 +83,14 @@ class AMPTheme(Enum):
 
 
 class ApplicationUpdatesState(Enum):
-    """Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
-    """
+    """Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod"""
 
     by_timestamp = 0
     by_build_id = 1
 
 
 class AppStartupModeState(Enum):
-    """Related to Node: Core.AMP.AppStartupMode
-    """
+    """Related to Node: Core.AMP.AppStartupMode"""
 
     do_nothing = 0
     update = 1
@@ -97,18 +107,18 @@ class ContainerMemoryPolicyState(Enum):
 
 
 class DefaultIPBindingState(Enum):
-    """Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding, ADSModule.Network.DefaultIPBinding
+    """Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding,
+    ADSModule.Network.DefaultIPBinding
     """
 
     ipv4_loopback = "127.0.0.1"
     enp42s0 = "192.168.4.50"
-    any_ipv4_address = "0.0.0.0"
+    any_ipv4_address = "0.0.0.0"  # noqa: S104
     any_ipv6_address = "::"
 
 
 class LoggingLevelState(Enum):
-    """Related to Node: Core.Monitoring.LogLevel
-    """
+    """Related to Node: Core.Monitoring.LogLevel"""
 
     debug = 0
     info = 10
@@ -121,19 +131,22 @@ class LoggingLevelState(Enum):
     event = 7
     audit = 8
 
+class Module(StrEnum):
+    ADS = "ADS"
+    Minecraft = "Minecraft"
+    Generic = "Generic"
+    SourceDedicatedServer = "SRCDS"
+
 
 class PortAssignmentState(Enum):
-    """Related to Node: ADSModule.Network.PortAssignment
-    """
+    """Related to Node: ADSModule.Network.PortAssignment"""
 
     include_allowed_ports_only = 0
     allow_all_except_excluded = 1
 
 
 class PostCreateActionsState(Enum):
-    """The action the Instance will take after creation. Used in dataclass parameters.
-
-    """
+    """The action the Instance will take after creation. Used in dataclass parameters."""
 
     do_nothing = 0
     start_instance = 1
@@ -155,6 +168,7 @@ class PostCreateState(Enum):
     update_and_start_always = 4
     start_always = 5
 
+
 class Protocols(Enum):
     """Related to :class:`PortInfo` from function :meth:`ADSModule.get_instance_network_info`.
 
@@ -170,9 +184,9 @@ class Protocols(Enum):
     UDP = 1
     TCP_and_UDP = 2
 
+
 class ReleaseStreamState(Enum):
-    """Related to Node: ADSModule.Defaults.DefaultReleaseStream
-    """
+    """Related to Node: ADSModule.Defaults.DefaultReleaseStream"""
 
     lts = 5
     mainline = 10
@@ -181,8 +195,7 @@ class ReleaseStreamState(Enum):
 
 
 class TwoFactoryModeState(Enum):
-    """Related to Node: Core.Security.TwoFactorMode
-    """
+    """Related to Node: Core.Security.TwoFactorMode"""
 
     optional = 0
     required = 1

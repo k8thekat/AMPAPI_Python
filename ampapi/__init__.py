@@ -1,4 +1,4 @@
-# ruff: noqa
+#ruff: noqa
 """Copyright (C) 2021-2026 Katelynn Cadwallader.
 
 This file is part of AMPAPI_Python.
@@ -30,12 +30,11 @@ __credits__ = "AMP by CubeCoders and associates."
 from typing import Literal, NamedTuple
 
 
-# from .util import *
+from .util import *
 from .adsmodule import *
 from .analytics import *
 from .base import *
 from .bridge import *
-from .controller import *
 from .core import *
 from .emailsender import *
 from .filebackup import *

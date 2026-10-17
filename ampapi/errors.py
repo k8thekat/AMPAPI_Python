@@ -18,49 +18,41 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 02110-1301, USA.
 """
 import logging
-from pprint import pformat
-from typing import Any
 
-__all__ = ("APINetworkError", "ActionResultError")
+__all__ = ("AMPAPIError", "AMPAPIKeyError", "AMPAPINetworkError", "AMPAPIResponseError", "AMPAPITypeError")
 
-LOGGER = logging.getLogger("AMPapi.errors")
-
-class ActionResultError:
-    """Represents the :meth:`_call_api` response if an error happens during runtime.
-
-    Attributes
-    ----------
-    status: :class:`bool`
-        If the API call was successful, typically this is False.
-    reason: :class:`str`
-        The reason for the failure in a generic manner.
-    result: Union[str, :class:`Exception`]
-        The Exception or result of the Error that occured and what it means.
-    result_type: Any
-        Typically a string representation of the :attr:`result` to know what the Exception was.
-
-    """
-
-    status: bool
-    reason: str
-    result: str | Exception
-    result_type: Any
-
-    def __init__(self, status: bool, reason: str, result: Exception | str) -> None:
-        self.status = status
-        self.reason = reason
-        self.result = result
-        self.result_type = type(result)
-
-    def __repr__(self) -> str:
-        return pformat(vars(self))
-
-    def __str__(self) -> str:
-        return self.__repr__()
+LOGGER = logging.getLogger("AMPAPI_Python.errors")
 
 
-class APINetworkError(Exception):
-    def __init__(self, status_code: int, url: str, error_reason: str) -> None:  # noqa: D107
-        message = "We encountered an error during a request to Moogle in %s. Current URL: %r | Status Code: %s"
-        super().__init__(message, error_reason, url, status_code)
-        LOGGER.error(message, error_reason, url, status_code)
+class AMPAPIError(Exception):
+    pass
+
+
+class AMPAPIResponseError(AMPAPIError):
+    def __init__(self, title: str, url: str, reason: str) -> None:  # noqa: D107
+        message = "We encountered an error handling a response from an AMP API Endpoint. Reason: %s | URL: %s | Title: %s"
+        super().__init__(message % (reason, url, title))
+        LOGGER.error(message, reason, url, title)
+
+
+class AMPAPINetworkError(AMPAPIError):
+    def __init__(self, status: int, url: str, reason: str) -> None:  # noqa: D107
+        message = "We encountered an error during a post request to an AMP API Endpoint. Reason: %s | URL: %r | Status: %s"
+        super().__init__(message % (reason, url, status))
+        LOGGER.error(message, reason, url, status)
+
+
+class AMPAPIKeyError(AMPAPIError):
+    def __init__(self, key_name: str, end_point: str, *args: object) -> None:  # noqa: D107
+        message = "We encountered an KeyError in our response data from the AMP API Endpoint %s. | Missing Key Name: %s | Args: %s"
+        super().__init__(message % (end_point, key_name, args))
+        LOGGER.error(message, end_point, key_name, *args)
+
+
+class AMPAPITypeError(AMPAPIError):
+    def __init__(self, end_point: str, cur_type: object, expec_type: object) -> None:  # noqa: D107
+        cur_name = cur_type.__class__.__name__
+        expec_name = expec_type.__name__ if isinstance(expec_type, type) else expec_type.__class__.__name__
+        message = "We encountered a TypeError, the response data from an AMP API Endpoint is invalid in %s. | Response: %s | Expected: %s"
+        super().__init__(message % (end_point, cur_name, expec_name))
+        LOGGER.error(message, end_point, cur_name, expec_name)

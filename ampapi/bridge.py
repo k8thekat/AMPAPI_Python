@@ -20,9 +20,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 import logging
 from dataclasses import fields
-from typing import Union
-
-from typing_extensions import Any, Self
+from typing import Any, Self, Union
 
 from .modules import APIParams
 
@@ -80,8 +78,7 @@ class Bridge(APIParams):
                 return cls._instance
             return cls._instance
 
-        cls._instance = super().__new__(cls, *args, **kwargs)
-        return cls._instance
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, api_params: APIParams, singleton: bool = True) -> None:
         """Initializes the :class:`Bridge` with the provided API credentials.
@@ -96,10 +93,14 @@ class Bridge(APIParams):
             If ``True``, prevents re-initialization of an existing singleton instance, by default True.
 
         """
+        if singleton and getattr(self, "_initialized", False):
+            return
         LOGGER.debug("<%s.%s> | ID: %s | API_PARAMS: %s | SINGLETON: %s", __class__.__name__, "__init__", id(self), api_params, singleton)
 
         for field in fields(class_or_instance=api_params):
             setattr(self, field.name, getattr(api_params, field.name))
+        if singleton:
+            self._initialized = True
 
     @classmethod
     def _get_bridge(cls) -> "Bridge":

@@ -1,5 +1,4 @@
-"""
-The MIT License (MIT)
+"""The MIT License (MIT)
 
 Copyright (c) 2015-present Rapptz
 
@@ -54,6 +53,7 @@ class ExponentialBackoff(Generic[T]):
     integral: :class:`bool`
         Set to ``True`` if whole periods of base is desirable, otherwise any
         number in between may be returned.
+
     """
 
     def __init__(self, base: int = 1, *, integral: T = False) -> None:

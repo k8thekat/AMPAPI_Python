@@ -1,26 +1,58 @@
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
+
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
 from __future__ import annotations
 
-import functools
+import datetime
 import logging
-from dataclasses import dataclass, field, fields
-from datetime import datetime
-from logging import Logger
+from dataclasses import dataclass, field, fields, is_dataclass
+from enum import Enum
 from operator import attrgetter
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self, Union
 
 from dataclass_wizard.errors import MissingFields
-from typing_extensions import Self
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
-    from typing import Concatenate
+    from typing import Self
 
-    from typing_extensions import ParamSpec, Self, TypeVar
+    from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import MCUserData, TriggersData, UserInfoResponse
+    from ._types import (
+        AvailableMethodsResponse,
+        AvailableTriggersResponse,
+        ConfigResponse,
+        ConsumeResponse,
+        LoginUserInfoResponse,
+        MCUserData,
+        MetricsResponse,
+        ParameterMapping,
+        PlatformInfoResponse,
+        ScheduleDataResponse,
+        StatusResponse,
+        TargetDatastoreResponse,
+        TriggersResponse,
+        TriggersTasksResponse,
+    )
 
-    D = TypeVar("D", bound="Instance")
+    # D = TypeVar("D", bound="Instance")
     T = ParamSpec("T")
     F = TypeVar("F")
     # X = TypeVar("X", bound=DataclassInstance)
@@ -29,12 +61,12 @@ from ._enums import (
     AccessModeState,
     ADSModeState,
     AMPDownloadMirrorState,
-    AMPInstanceState,
     AMPTheme,
     ApplicationUpdatesState,
     AppStartupModeState,
     ContainerMemoryPolicyState,
     DefaultIPBindingState,
+    InstanceState,
     LoggingLevelState,
     PortAssignmentState,
     PostCreateActionsState,
@@ -43,9 +75,10 @@ from ._enums import (
     ReleaseStreamState,
     TwoFactoryModeState,
 )
+from .errors import AMPAPITypeError
 
-APIResponseDataTableAlias = Union["UserApplicationData", "DeploymentTemplate"]
-APIReturnTypeAlias = Union["LoginResults", "ActionResultError", "ActionResult"]
+# APIResponseDataTableAlias = Union["UserApplicationData", "DeploymentTemplate"]
+# APIReturnTypeAlias = Union["LoginResults", "ActionResult"]
 
 SettingSpecTableAliases = Union[
     AccessModeState,
@@ -64,9 +97,7 @@ SettingSpecTableAliases = Union[
 
 __all__ = (
     "APIParams",
-    "APIResponseDataTableAlias",
     "ActionResult",
-    "ActionResultError",
     "AnalyticsCountryData",
     "AnalyticsFilter",
     "AnalyticsStats",
@@ -75,13 +106,11 @@ __all__ = (
     "Backup",
     "BuildInfo",
     "ConsoleEntries",
-    "Controller",
     "CreateInstance",
     "DeploymentTemplate",
     "Directory",
     "FileChunk",
     "Fitness",
-    "Instance",
     "InstanceDatastore",
     "MCUser",
     "Messages",
@@ -97,7 +126,7 @@ __all__ = (
     "Status",
     "TriggerID",
     "Updates",
-    "User",
+    "UserInfo",
 )
 
 
@@ -129,7 +158,48 @@ def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
     return new_vars
 
 
-def timestamp_converter(data: str) -> datetime:
+def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
+    """Deconstruct a dataclass into an API parameter dict.
+
+    .. note::
+        Keys are the dataclass field names verbatim; AMP takes these nested payload objects in
+        ``snake_case``, so no key conversion happens here. Attributes set to None are omitted
+        entirely rather than sent as ``null``.
+
+
+    .. note::
+        :class:`Enum` attributes are unwrapped to their ``.value``; :func:`json.dumps` cannot
+        serialize an Enum, so leaving them intact raises when the request is built.
+
+
+    Parameters
+    ----------
+    dataclass_: Any
+        The dataclass instance to deconstruct.
+
+    Returns
+    -------
+    dict[:class:`str`, Any]
+        The dataclass attributes as a key, value paired dict.
+
+    Raises
+    ------
+    :exc:`AMPAPITypeError`
+        When the object passed in is not a dataclass instance.
+
+    """
+    if not is_dataclass(dataclass_):
+        raise AMPAPITypeError(end_point="<dataclass_to_dict>", cur_type=dataclass_, expec_type=dict)
+    values: dict[str, Any] = {}
+    for entry in fields(class_or_instance=dataclass_):
+        value: Any = getattr(dataclass_, entry.name)
+        if value is None:
+            continue
+        values[entry.name] = value.value if isinstance(value, Enum) else value
+    return values
+
+
+def timestamp_converter(timestamp: str) -> datetime.datetime:
     """Convert either the ``C#`` date str into a Python :class:`datetime` object or the ISO format.
 
     .. note::
@@ -138,18 +208,18 @@ def timestamp_converter(data: str) -> datetime:
 
     Parameters
     ----------
-    data: :class:`str`
+    timestamp: :class:`str`
         The date string to convert.
 
     Returns
     -------
     :class:`datetime`
-        The converted string as a :class:`datetime` object..
+        The converted string as a :class:`datetime` object.
 
     """
-    if data.startswith("/Date"):
-        return datetime.fromtimestamp(int(data[6:-2]) / 1000)
-    return datetime.fromisoformat(data)
+    if timestamp.startswith("/Date"):
+        return datetime.datetime.fromtimestamp(int(timestamp[6:-2]) / 1000, tz=datetime.UTC)
+    return datetime.datetime.fromisoformat(timestamp)
 
 
 # class SettingsLogin(Enum):
@@ -184,42 +254,8 @@ class ActionResult:
     reason: Union[str, None] = field(default=None)
     result: Union[str, None] = field(default=None)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
-
-
-class ActionResultError:
-    """Represents the :meth:`_call_api` response if an error happens during runtime.
-
-    Attributes
-    ----------
-    status: :class:`bool`
-        If the API call was successful, typically this is False.
-    reason: :class:`str`
-        The reason for the failure in a generic manner.
-    result: Union[str, :class:`Exception`]
-        The Exception or result of the Error that occured and what it means.
-    result_type: Any
-        Typically a string representation of the :attr:`result` to know what the Exception was.
-
-    """
-
-    status: bool
-    reason: str
-    result: str | Exception
-    result_type: Any
-
-    def __init__(self, status: bool, reason: str, result: Exception | str) -> None:
-        self.status = status
-        self.reason = reason
-        self.result = result
-        self.result_type = type(result)
-
-    def __repr__(self) -> str:
-        return pformat(vars(self))
-
-    def __str__(self) -> str:
-        return self.__repr__()
 
 
 @dataclass
@@ -271,8 +307,8 @@ class AnalyticsFilter:
 
     Attributes
     ----------
-    country: :class:`str`
-        The country to filter by.
+    country: Union[:class:`str`, None]
+        The country to filter by, defaults to None.
     first_session: Union[:class:`bool`, None]
         Whether or not to filter by first session only, defaults to None.
     meta: Union[Any, None]
@@ -284,7 +320,9 @@ class AnalyticsFilter:
 
     """
 
-    country: str
+    # Defaulted to None so the __post_init__ guard below can actually fire; the class docstring has always
+    # described country as one of the optional filters, but it was declared required.
+    country: Union[str, None] = None
     first_session: Union[bool, None] = None
     meta: Union[Any, None] = None
     username: Union[str, None] = None
@@ -312,12 +350,14 @@ class AnalyticsFilter:
                                           "TM","TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU",
                                           "VE","VN","VG","VI","WF","EH","YE","ZM","ZW"]
     # fmt: on
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         if self.username is None and self.user_id is None and self.first_session is None and self.country is None:
-            raise ValueError("At least one of these attributes must be set | (username, user_id, country, first_session).")
+            msg = "At least one of these attributes must be set | (username, user_id, country, first_session)."
+            raise ValueError(msg)
 
         if self.country is not None and self.country not in self._country_list:
-            raise ValueError(f"The Country attribute must be in ISO 3166-1 Alpha-2 format. | Received: {self.country}")
+            msg = f"The Country attribute must be in ISO 3166-1 Alpha-2 format. | Received: {self.country}"
+            raise ValueError(msg)
 
 
 @dataclass
@@ -325,7 +365,8 @@ class AnalyticsStats:
     """Represents the JSON response data from :attr:`AnalyticsSummary.stats`.
 
     .. note::
-        * ["Total Sessions", "Unique Users", "New Users", "Total Session Time", "Bounce Rate", "Session Duration", "Sessions Per User", "Longest Session"]
+        * ["Total Sessions", "Unique Users", "New Users", "Total Session Time", "Bounce Rate",
+          "Session Duration", "Sessions Per User", "Longest Session"]
         * Bounce Rate = "Sessions where the user joined and then quickly left again."
 
 
@@ -378,15 +419,15 @@ class AnalyticsSummary:
 
     """
 
-    busiest_time: dict[str, Union[int, str]] = field(default_factory=dict)
-    country_data: list[AnalyticsCountryData] = field(default_factory=list)
-    graph_data: list[dict[str, Union[int, str]]] = field(default_factory=list)
+    busiest_time: dict[str, Union[int, str]] = field(default_factory=dict[str, Union[int, str]])
+    country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
+    graph_data: list[dict[str, Union[int, str]]] = field(default_factory=list[dict[str, Union[int, str]]])
     is_demo: bool = field(default=False)
-    quietest_time: dict[str, Union[int, str]] = field(default_factory=dict)
-    stats: list[AnalyticsStats] = field(default_factory=list)
-    top_players: list[AnalyticsTopPlayers] = field(default_factory=list)
+    quietest_time: dict[str, Union[int, str]] = field(default_factory=dict[str, Union[int, str]])
+    stats: list[AnalyticsStats] = field(default_factory=list[AnalyticsStats])
+    top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
 
@@ -445,7 +486,7 @@ class APIParams:
     password: str
     use_2fa: bool = False
     token: str = ""
-    _sessions: dict[str, APISession] = field(init=False, default_factory=dict)
+    _sessions: dict[str, APISession] = field(init=False, default_factory=dict[str, "APISession"])
 
 
 @dataclass
@@ -462,7 +503,7 @@ class APISession:
     """
 
     id: str
-    ttl: datetime
+    ttl: datetime.datetime
 
     def __repr__(self) -> str:
         return f"ID: {self.id} | TTL: {self.ttl}"
@@ -507,19 +548,23 @@ class Application:
 
     """
 
-    author: str
-    container_reason: str
+    author: str | None
+    container_reason: str | None
     container_support: int
-    description: str
+    description: str | None
     display_image_source: str
-    extra_setup_steps_uri: str
+    extra_setup_steps_uri: str | None
     friendly_name: str
     id: str
     is_service_spec: bool
     module_name: str
     no_commercial_usage: bool
     supported_platforms: int
-    settings: dict = field(default_factory=dict)
+    deprecated_reason: str | None = field(default=None)
+    is_multi_ip_aware: bool = field(default=False)
+    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    resource_usage_info: str | None = field(default=None)
+    settings: dict[str, Any] = field(default_factory=dict[str, Any])
 
     def __repr__(self) -> str:
         return pformat(vars(self))
@@ -557,10 +602,11 @@ class AuditLogEntry:
     message: str
     source: str
     user: str
-    timestamp: str  # type:ignore
+    timestamp: str | datetime.datetime
 
     def __post_init__(self) -> None:
-        self.timestamp: datetime = timestamp_converter(data=self.timestamp)  # type:ignore
+        if isinstance(self.timestamp, str):
+            self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
     def __repr__(self) -> str:
         return pformat(vars(self))
@@ -610,12 +656,13 @@ class Backup:
     stored_remotely: bool
     taken_by: str
     total_size_bytes: int
-    timestamp: str  # type: ignore
+    timestamp: str | datetime.datetime
 
-    def __post_init__(self) -> None:
-        self.timestamp: datetime = timestamp_converter(data=self.timestamp)  # type:ignore
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.timestamp, str):
+            self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
 
@@ -690,7 +737,7 @@ class BukkitPlugin:
     tested_versions: list[str] = field(default_factory=list[str])
     update_date: Union[int, None] = field(default=None)  # 1708187123
     release_date: Union[int, None] = field(default=None)  # 1417419240
-    rating: dict[str, Union[float, int]] = field(default_factory=dict)
+    rating: dict[str, Union[float, int]] = field(default_factory=dict[str, Union[float, int]])
     external: Union[bool, None] = field(default=None)
     existence_status: Union[int, None] = field(default=None)
     installed_version: Union[int, None] = field(default=None)
@@ -725,117 +772,14 @@ class ConsoleEntries:
     contents: str
     source: str
     type: str
-    timestamp: str  # type: ignore
+    timestamp: str | datetime.datetime
 
-    def __post_init__(self) -> None:
-        self.timestamp: datetime = timestamp_converter(data=self.timestamp)  # type:ignore
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.timestamp, str):
+            self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
-
-
-@dataclass
-class Controller:
-    """Represents the JSON response data for an AMP Controller Instance.
-
-    .. note::
-        See :meth:`ADSModule.get_instances(include_self = True)` making the first instance "typically" the Controller Instance. aka ``ADS01``.
-
-
-    .. note::
-        Similar to what you see when you log into AMP web GUI and see the Instances list.
-        This attribute is cached and will require calling :meth:`~ADSModule.get_instances` to access the API converted class objects.
-        * See the :attr:`AMPControllerInstance.instances` attribute.
-
-
-    Attributes
-    ----------
-    id: :class:`int`
-        UNK
-    disabled: :class:`bool`
-        If the Controller is Disabled or not.
-    is_remote: :class:`bool`
-        If the Controller is remote or not.
-    platform: :class:`PlatformInfo`
-        Platform information related to the Instance.
-    datastores: list[dict[:class:`str`, Union[:class:`str`, :class:`int`]]]
-        The Datastores that the Controller has access to.
-    creates_in_containers: :class:`bool`
-        The Controller will create the Instances in containers.
-    can_create: :class:`bool`
-        If the Controller can create Instances or not.
-    available_instances: list[:class:`Instance`]
-        A list of AMP Instances the Controller/ADS has permissions to see.
-    available_ips : list[:class:`str`]
-        The list of available IPs the Controller/Instance has.
-    tags: list[:class:`str`]
-        The tags related to the Controller/Instance.
-    url: :class:`str`
-        The URL for the Controller/Instance.
-    last_updated: Union[:class:`str`, :class:`datetime`]
-        The last_updated comes in as  ISO format and :meth:`Controller`__post_init__` converts it into a datetime object.
-    instance_id: :class:`str`
-        The Controller/Instance ID tied to the Instance, default is "0".
-    state: :py:class:`AMPInstanceState`
-        The state the Controller/Instance is in. See enum :py:class:`AMPInstanceState`, default is ``AMPInstanceState.UNDEFINED``.
-    fitness: Union[Fitness, None]
-        UNK.
-    friendly_name: :class:`str`
-        The Controller/Instance friendly name, default is "None".
-    state_reason: :class:`str`
-        UNK, default is "".
-    description: :class:`str`
-        Controller/Instance description, default is "".
-    tags_list : Union[list[:class:`str`]]
-        The list of tags related to the Controller/Instance if any, default is None.
-
-    """
-
-    id: int
-    disabled: bool
-    is_remote: bool
-    platform: PlatformInfo
-    datastores: list[dict[str, Union[str, int]]]
-    creates_in_containers: bool
-    can_create: bool
-    available_instances: list[Instance]
-    available_ips: list[str]
-    tags: list[str]
-    url: str
-    last_updated: str  # type: ignore
-    instance_id: str = "0"
-    state: AMPInstanceState = AMPInstanceState.undefined
-    fitness: Union[Fitness, None] = field(default=None)
-    friendly_name: str = "None"
-    state_reason: str = ""
-    description: str = ""
-    tags_list: Union[list[str], None] = field(default=None)
-
-    def __post_init__(self) -> None:
-        self.last_updated: datetime = timestamp_converter(data=self.last_updated)  # type:ignore
-
-    def __hash__(self) -> int:
-        return hash(self.instance_id)
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, self.__class__) and self.instance_id == other.instance_id
-
-    def __repr__(self) -> str:
-        new_vars: dict[str, Any] = {}
-        for key, value in vars(self).items():
-            # We do this to avoid any private attributes such as the _controller attribute or _logger.
-            if key.startswith("_"):
-                continue
-            new_vars[key] = value
-        return pformat(new_vars)
-
-        # res = f"Type: {type(self)} | ID : {id(self)}\n"
-        # res += f"Name: {self.friendly_name}\nInstance ID: {self.instance_id}\n"
-        # res += f"Url: {self.url}\n"
-        # res += f"Instance State: {self.state.name}\n"
-        # res += f"Instances:\n{self.available_instances}"
-        # res += "\n"
-        # return res
 
 
 @dataclass
@@ -906,7 +850,8 @@ class CreateInstance:
     provision_settings: dict[:class:`str`, :class:`str`]
         UNK
     auto_configure: :class:`bool`
-        When enabled, all settings other than the module, target and friendly_name are ignored and replaced with automatically generated values
+        When enabled, all settings other than the module, target and friendly_name are ignored and
+        replaced with automatically generated values
     post_create: :class:`PostCreateActionsState`
         The action to take after creating the instance, defaults to :attr:`~PostCreateActionsState.do_nothing`
     start_on_boot: :class:`bool`
@@ -928,7 +873,7 @@ class CreateInstance:
     port_number: int = field(default=8001)
     admin_username: str = field(default="")
     admin_password: str = field(default="")
-    provision_settings: dict[str, str] = field(default_factory=dict)
+    provision_settings: dict[str, str] = field(default_factory=dict[str, str])
     auto_configure: bool = field(default=False)
     post_create: PostCreateActionsState = field(default=PostCreateActionsState.do_nothing)
     start_on_boot: bool = field(default=False)
@@ -936,14 +881,22 @@ class CreateInstance:
     target_datastore: int = field(default=0)
     group: str | None = field(default=None)
 
-    # TODO - Implement attribute checking.
+    # TODO: Implement attribute checking.
     # def __post_init__(self):
     # if self.auto_configure is False:
     # if any other attributes are NOT set we should error out or ...
     # possibly default all values to None and check for NONE; raise an error so someone doesn't miss a setting?
     # Having default values could be an issue if they forget to set something with auto_configure is False.
-    def to_dict(self) -> dict:
-        data = {
+    def to_dict(self) -> dict[str, str | int | dict[str, str] | bool]:
+        """As the function name implies; converts the class to a dict for use as an API parameter.
+
+        Returns
+        -------
+        dict[:class:`str`, :class:`str` | :class:`int` | dict[:class:`str`, :class:`str`] | :class:`bool`]
+            The class attributes keyed by their AMP API parameter names.
+
+        """
+        data: dict[str, str | int | dict[str, str] | bool] = {
             "TargetADSInstance": self.target_ads_instance,
             "NewInstanceId": self.new_instance_id,
             "Module": self.module,
@@ -988,7 +941,10 @@ class DCConsumes:
     input_type: str
     name: str
     value_type: str
-    enum_values: str | dict = field(default="")
+    enum_values: str | dict[str, str] = field(default="")
+
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__) and self.name == other.name
@@ -997,7 +953,7 @@ class DCConsumes:
         return isinstance(other, self.__class__) and self.name < other.name
 
 
-# TODO - update docstring
+# TODO: Update the docstring.
 @dataclass
 class DCParameterMapping:
     """Represents the JSON response data for :attr:`~TriggerTasks.parameter_mapping`
@@ -1075,7 +1031,7 @@ class DeploymentTemplate:
         "zip_overlay_path",
     )
 
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         id: int,  # noqa: A002 # This is due to id overshadowing Python built-ins.
         name: str,
@@ -1120,6 +1076,7 @@ class DeploymentTemplate:
         return temp
 
 
+# This may be only controller diag info.
 @dataclass
 class Diagnostics:
     """Represents the JSON response data from :meth:`Core.get_diagnostics_info`.
@@ -1140,7 +1097,7 @@ class Diagnostics:
         The name of the CPU.
     codename: :class:`str`
         The release/build code name.
-    installed_ram: :class:`int`
+    installed_ram: :class:`str`
         The amount of installed ram on the system.
     instance_id: :class:`str`
         The Instance GUID
@@ -1164,6 +1121,12 @@ class Diagnostics:
         Mainline, Developer, etc
     system_type: :class:`str`
         The bit type of the Instance Operating System.
+    server_jar : :class:`str`
+        The .jar file to rune a Minecraft application Instance.
+    server_type : :class:`str`
+        The 'type' of server. eg. Forge, Fabric, etc...
+    java_version : :class:`str`
+        The path to the java lib.
     tools_version: :class:`str`
         The version of the build tools for the Instance.
     virtualization: :class:`str`
@@ -1173,29 +1136,33 @@ class Diagnostics:
 
     """
 
-    application_name: str
-    application_version: str | BuildInfo
-    build_date: str
-    build_spec: str
-    cpu_layout: str
-    cpu_model: str
-    codename: str
+    os: str
+    platform: str
+    system_type: str
     hardware_platform: Any
-    installed_ram: int
-    instance_id: str
-    last_arguments: str
-    last_executable: str
-    last_process_id: int
-    loaded_plugins: str
+    cpu_model: str
+    cpu_layout: str
+    installed_ram: str
+    virtualization: str
+    network_mode: Any
     module: str
     module_application: str
-    network_mode: Any
-    platform: str
-    release_stream: str
-    system_type: str
+    loaded_plugins: str
+    application_name: str
+    application_version: str | BuildInfo
+    codename: str
     tools_version: str
-    virtualization: str
-    os: str
+    release_stream: str
+    build_spec: str
+    build_date: str
+    instance_id: str
+    last_executable: str
+    last_arguments: str
+    last_process_id: str
+    # These appear to be Minecraft Instances only.
+    server_jar: str = ""
+    server_type: str = ""
+    java_version: str = ""
 
     def __repr__(self) -> str:
         return pformat(vars(self))
@@ -1242,12 +1209,14 @@ class Directory:
     is_editable: bool
     is_archive: bool
     is_excluded_from_backups: bool
-    created: str  # type: ignore
-    modified: str  # type: ignore
+    created: str | datetime.datetime
+    modified: str | datetime.datetime
 
-    def __post_init__(self) -> None:
-        self.created: datetime = timestamp_converter(self.created)  # type: ignore
-        self.modified: datetime = timestamp_converter(self.modified)  # type: ignore
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.created, str):
+            self.created = timestamp_converter(timestamp=self.created)
+        if isinstance(self.modified, str):
+            self.modified = timestamp_converter(timestamp=self.modified)
 
 
 @dataclass
@@ -1276,14 +1245,14 @@ class FileChunk:
 
     Attributes
     ----------
-    base_64_data: :class:`str`
+    base64_data : :class:`str`
         The base64 encoded string of the file chunk.
     bytes_length: :class:`int`
         The length of the file chunk in bytes.
 
     """
 
-    base_64_data: str
+    base64_data: str
     bytes_length: int
 
 
@@ -1356,7 +1325,9 @@ class InstanceDatastore:
     directory: :class:`str`
         The on-disk location where instances will be stored. Changing this will not affect existing instances, only newly created ones.
     soft_limit_mb: :class:`int`
-        Datastores that reach or exceed this limit in total size will not be considered as deployment targets. This is only a soft limit and does not prevent instances on this datastore from using more space.
+        Datastores that reach or exceed this limit in total size will not be considered as deployment
+        targets. This is only a soft limit and does not prevent instances on this datastore from using
+        more space.
     priority: :class:`int`
         Instances with a lower priority number are preferred over those with a higher number, all other factors being equal.
     tags: list[:class:`str`]
@@ -1369,8 +1340,8 @@ class InstanceDatastore:
         Deactivating a datastore prevents new instances from being provisioned to it, defaults to True.
     current_usage_mb: :class:`int`
         The current usage of the datastore in megabytes, defaults to -1.
-    sanitized_name: :class:`str`
-        The sanitized name of the datastore, defaults to "None".
+    sanitised_name: :class:`str`
+        The sanitised name of the datastore, defaults to "None".
 
     """
 
@@ -1382,10 +1353,22 @@ class InstanceDatastore:
     priority: int
     tags: list[str]
     is_internal: bool
-    instance_limit: str = field(default="0")
+    instance_limit: Union[int, str] = field(default=0)
     active: bool = field(default=True)
     current_usage_mb: int = field(default=-1)
-    sanitized_name: str = field(default="None")
+    # AMP sends the British spelling on the wire; the American spelling silently broke `InstanceDatastore(**result)`.
+    sanitised_name: str = field(default="None")
+
+    def to_dict(self) -> dict[str, Any]:
+        """As the function name implies; converts the class to a dict for use as an API parameter.
+
+        Returns
+        -------
+        dict[:class:`str`, Any]
+            The class attributes as a key, value paired dict; attributes set to None are omitted.
+
+        """
+        return _dataclass_to_dict(self)
 
 
 @dataclass
@@ -1434,155 +1417,16 @@ class InstanceInfo:
     start_on_boot: bool = field(default=False)
     welcome_message: Union[str, None] = field(default=None)
 
+    def to_dict(self) -> dict[str, Any]:
+        """As the function name implies; converts the class to a dict for use as an API parameter.
 
-@dataclass(slots=True)
-class Instance:
-    """Represents the JSON response data for :meth:`ADSModule.get_instance` or a list of these from :meth:`ADSModule.get_instances`.
-
-    Attributes
-    ----------
-    application_endpoints: list[dict[str, str]]
-        The list of application endpoints for the Instance.
-    app_state: :class:`AMPInstanceState`
-        The state of the application.
-    container_memory_mb: :class:`int`
-        The amount of memory allocated to the container in MB.
-    container_memory_policy: :class:`ContainerMemoryPolicyState`
-        The memory policy of the Instance.
-    daemon: :class:`bool`
-        If the Instance is a daemon.
-    daemon_autostart: :class:`bool`
-        If the Instance should be autostart on boot.
-    deployment_args: dict[:class:`str`, :class:`str`]
-        The deployment arguments of the Instance.
-    disk_usage_mb: :class:`int`
-        The disk usage of the Instance in MB.
-    exclude_from_firewall: :class:`bool`
-        If the Instance should be excluded from the firewall.
-    friendly_name: :class:`str`
-        The friendly name of the Instance.
-    ip: :class:`str`
-        The IP address of the Instance.
-    instance_id: :class:`str`
-        The Instance GUID.
-    instance_name: :class:`str`
-        The Instance name.
-    is_container_instance: :class:`bool`
-        If the Instance is a container instance.
-    is_https: :class:`bool`
-        If the Instance is using HTTPS.
-    management_mode: :class:`int`
-        The management mode of the Instance.
-    module: :class:`str`
-        The module of the Instance.
-    port: :class:`str`
-        The port of the Instance.
-    release_stream: :class:`int`
-        The release stream of the Instance.
-    running: :class:`bool`
-        If the Instance is running.
-    suspended: :class:`bool`
-        If the Instance is suspended.
-    target_id: :class:`str`
-        The target ID of the Instance.
-    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
-        The version of the AMP, default is None.
-    container_cpus: :class:`float`
-        The amount of CPU cores allocated to the container, default is 0.0.
-    tags: Union[:class:`None`, :class:`list`]
-        The list of tags of the Instance, default is None.
-    module_display_name: :class:`str`
-        The display name of the module, default is "".
-    metrics: Union[:class:`Metric`, None]
-        The metrics of the Instance, default is None.
-    display_image_source: :class:`str`
-        The source of the display image, default is "".
-    description: :class:`str`
-        The description of the Instance, default is "".
-
-    """
-
-    application_endpoints: list[dict[str, str]]
-    app_state: AMPInstanceState
-    container_memory_mb: int
-    container_memory_policy: ContainerMemoryPolicyState
-    daemon: bool
-    daemon_autostart: bool
-    deployment_args: dict[str, str]
-    disk_usage_mb: int
-    exclude_from_firewall: bool
-    friendly_name: str
-    ip: str
-    instance_id: str
-    instance_name: str
-    is_container_instance: bool
-    is_https: bool
-    management_mode: int
-    module: str
-    port: str
-    release_stream: int
-    running: bool
-    suspended: bool
-    target_id: str
-    amp_version: Union[str, dict, BuildInfo, None] = field(default=None)
-    container_cpus: float = field(default=0.0)
-    tags: Union[list, None] = field(default=None)
-    module_display_name: str = ""
-    metrics: Union[Metric, None] = field(default=None)
-    display_image_source: str = ""
-    description: str = ""
-
-    _instance_offline: str = "The requested instance is not available at this time."
-
-    def __post_init__(self) -> None:
-        if self.amp_version is not None:
-            # This is only used for older versions of AMP v ``>2.6.0.0``  and earlier.
-            # Per Mike and Developers of AMP state they will be using string versions from `2.6.0.0` and this handles that.
-            if isinstance(self.amp_version, dict):
-                try:
-                    self.amp_version = BuildInfo(**self.amp_version)
-                except Exception as e:
-                    _logger: Logger = logging.getLogger(__name__)
-                    _logger.warning("We attempted to unpack <self.amp_version> and failed %s", e)
-                    return
-            if isinstance(self.amp_version, str):
-                self.amp_version = BuildInfo.to_dataclass(self.amp_version)
-
-    def __hash__(self) -> int:
-        return hash(self.instance_id)
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, self.__class__) and self.instance_id == other.instance_id
-
-    def __lt__(self, other: object) -> bool:
-        return isinstance(other, self.__class__) and self.instance_id < other.instance_id
-
-    def __repr__(self) -> str:
-        res: str = f"Type: {type(self)} | ID: {id(self)}\n"
-        res += f"Name: {self.instance_name}\nInstance ID: {self.instance_id}\n"
-        res += f"Application State: {self.app_state.name}\nInstance Running: {self.running}\nModule: {self.module}\nPort: {self.port}\n"
-        return res
-
-    @staticmethod
-    def online(
-        func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
-    ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
-        """Checks the :attr:`running` property and raises :exc:`ConnectionError` if the attribute is equal to "False".
-
-        Raises
-        ------
-        :exc:`ConnectionError`
-            The requested instance is not currently running at this time.
+        Returns
+        -------
+        dict[:class:`str`, Any]
+            The class attributes as a key, value paired dict; attributes set to None are omitted.
 
         """
-
-        @functools.wraps(wrapped=func)
-        def wrapper_online(self: D, *args: T.args, **kwargs: T.kwargs) -> Coroutine[None, None, F]:
-            if self.running is True:
-                return func(self, *args, **kwargs)
-            raise ConnectionError(self._instance_offline)
-
-        return wrapper_online
+        return _dataclass_to_dict(self)
 
 
 @dataclass
@@ -1631,16 +1475,19 @@ class LoginResults:
     result_reason: str = ""
     session_id: str = ""
     remember_me_token: str = ""
-    user_info: Union[LoginUserInfo | UserInfoResponse, None] = field(default=None)  # second data class
+    # LoginUserInfoResponse, not UserInfoResponse; the latter is the AMP User shape and has no username,
+    # which is what LoginUserInfo needs.
+    user_info: Union[LoginUserInfo | LoginUserInfoResponse, None] = field(default=None)  # second data class
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         if isinstance(self.user_info, dict):
             self.user_info = LoginUserInfo(**self.user_info)
 
 
 @dataclass
 class LoginUserInfo:
-    """Represents an AMP users information, tied to :class:`LoginResults` along with representing the JSON response from the function :meth`~Core.get_amp_users_summary`
+    """Represents an AMP users information, tied to :class:`LoginResults` along with representing the
+    JSON response from the function :meth`~Core.get_amp_users_summary`
 
     Attributes
     ----------
@@ -1671,7 +1518,7 @@ class LoginUserInfo:
     is_ldap_user: bool
     is_oidc_user: bool
     is_two_factor_enabled: bool
-    last_login: str | datetime
+    last_login: str | datetime.datetime
     username: str
 
     def __post_init__(self) -> None:
@@ -1737,7 +1584,11 @@ class Methods:
         The method name.
     description: :class:`str`
         The method description.
-    consumes: list[:class:`DCConsumes`]
+    category: :class:`str`
+        The category the method appears under in the Schedule UI, default is "".
+    display_format: Union[:class:`str`, None]
+        How the Schedule UI renders the method, default is None.
+    consumes: list[:class:`DCConsumes` | :class:`ConsumeResponse`]
         A list of parameters the method consumes.
 
     """
@@ -1745,7 +1596,16 @@ class Methods:
     id: str = ""
     name: str = ""
     description: str = ""
-    consumes: list[DCConsumes] = field(default_factory=list)
+    # Confirmed against getscheduledata.json; both were absent and made Methods(**entry) raise a TypeError.
+    category: str = ""
+    display_format: Union[str, None] = field(default=None)
+    # TODO: Convert consumes into DCConsumes in a __post_init__.
+    # Methods(**entry) currently assigns the nested dicts straight through; ConsumeResponse needs
+    # confirming against more instance types before converting.
+    consumes: list[DCConsumes] | list[ConsumeResponse] = field(default_factory=list[DCConsumes])
+
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__) and self.name == other.name
@@ -1794,6 +1654,8 @@ class MetricsData:
         Color number 2 if applicable.
     color3: Union[None, :class:`str`]
         Color number 3 if applicable.
+    short_name: Union[None, :class:`str`], optional
+        The short label AMP displays on the metric tile (eg "CPU", "RAM"), default is None.
 
     """
 
@@ -1804,11 +1666,13 @@ class MetricsData:
     color: Union[str, None] = field(default=None)
     color2: Union[str, None] = field(default=None)
     color3: Union[str, None] = field(default=None)
+    # Present on every metric in getstatus.json; defaulted so older responses still construct.
+    short_name: Union[str, None] = field(default=None)
 
 
 @dataclass
 class Module:
-    """Represents the JSON response data from :meth:`Core.get_module_info`
+    """Represents the JSON response data from :meth:`Core.get_module_info`.
 
     Attributes
     ----------
@@ -1822,36 +1686,42 @@ class Module:
         Whether remember me is allowed.
     analytics: :class:`bool`
         Whether analytics is enabled.
+    analytics_tag: :class:`str`
+        The analytics tag.
     app_name: :class:`str`
         The app name.
     author: :class:`str`
         The author.
     base_port: :class:`int`
         The base port.
-    branding: :class:`dict`
+    branding: :class:`dict[str, Any]`
         The branding data.
     build_spec: :class:`str`
         The build spec.
     display_base_uri: :class:`str`
-        The display base uri.
-    end_point_ur: :class:`str`
-        The end point uri.
-    feature_set: :class:`list`
+        The display base URI.
+    endpoint_uri: :class:`str`
+        The endpoint URI.
+    feature_set: :class:`list[Any]`
         The feature set.
     friendly_name: :class:`str`
         The friendly name.
     instance_id: :class:`str`
-        The instance id.
+        The instance ID.
     instance_name: :class:`str`
         The instance name.
+    is_oidc_enabled: :class:`bool`
+        Whether OIDC login is enabled.
     is_remote_instance: :class:`bool`
         Whether the instance is remote.
-    loaded_plugins: list[:class:`str`]
+    loaded_plugins: :class:`list[str]`
         A list of loaded plugins.
     module_name: :class:`str`
         The module name.
     name: :class:`str`
         The full name.
+    oidc_provider_friendly_name: :class:`str`
+        The OIDC provider friendly name.
     primary_endpoint: :class:`str`
         The primary endpoint.
     requires_full_load: :class:`bool`
@@ -1872,27 +1742,30 @@ class Module:
     api_version: str
     allow_remember_me: bool
     analytics: bool
+    analytics_tag: str
     app_name: str
     author: str
     base_port: int
-    branding: dict  # ': {'BackgroundURL': '','BrandingMessage': '','CompanyName': '','DisplayBranding': False,'ForgotPasswordURL': '','LogoURL': '','PageTitle': 'Provider Page Title Not Set','ShortBrandingMessage': 'PoweredByAMP','SplashFrameURL': '','SubmitTicketURL': '','SupportText': '','SupportURL': '','URL': '','WelcomeMessage': ''},
+    branding: dict[str, Any]
     build_spec: str
     display_base_uri: str
-    end_point_ur: str
-    feature_set: list
-    friendly_name: str  # ': 'ADS',
-    instance_id: str  # ': '5777d7ac-a2ae-4a72-87f6-64893737a30f',
-    instance_name: str  # ': 'ADS01',
-    is_remote_instance: bool  # ': False,
-    loaded_plugins: list[str]  # ': ['ADSModule', 'FileManagerPlugin', 'LocalFileBackupPlugin'],
-    module_name: str  # ': 'ADSModule',
-    name: str  # ': 'Application Deployment Server',
-    primary_endpoint: str  # ': '0.0.0.0:2223',
-    requires_full_load: bool  # ': True,
-    supports_sleep: bool  # ': False,
-    timestamp: str  # ': '22/03/2024 17:32',
-    tools_version: str  # ': '2.4.6.10',
-    version_codename: str  # ': 'Callisto'}
+    endpoint_uri: str
+    feature_set: list[Any]
+    friendly_name: str
+    instance_id: str
+    instance_name: str
+    is_oidc_enabled: bool
+    is_remote_instance: bool
+    loaded_plugins: list[str]
+    module_name: str
+    name: str
+    oidc_provider_friendly_name: str
+    primary_endpoint: str
+    requires_full_load: bool
+    supports_sleep: bool
+    timestamp: str
+    tools_version: str
+    version_codename: str
 
 
 @dataclass
@@ -1928,8 +1801,8 @@ class OPWhitelist:
 
     """
 
-    op_list: list[MCUserData] = field(default_factory=list)
-    whitelist: list[MCUserData] = field(default_factory=list)
+    op_list: list[MCUserData] = field(default_factory=list["MCUserData"])
+    whitelist: list[MCUserData] = field(default_factory=list["MCUserData"])
 
 
 @dataclass
@@ -1958,6 +1831,12 @@ class PlatformInfo:
         The hardware platform name.
     installed_glibc_version: :class:`str`
         The installed glibc version.
+    docker_network_is_host_mode: :class:`bool`
+        If the target's Docker network runs in host mode, defaults to False.
+    has_memory_limit: :class:`bool`
+        If the target has a memory limit applied, defaults to False.
+    max_swap_mb: :class:`int`
+        The maximum swap in MB available to the target, defaults to 0.
 
     """
 
@@ -1971,6 +1850,11 @@ class PlatformInfo:
     admin_rights: int = field(default=0)
     hardware_platform_name: str = field(default="")
     installed_glibc_version: str = field(default="")  # "AMPVersionInfo"
+    # GetTargetInfo omits the four fields above; the `platform` block on a GetInstances target sends them
+    # plus `max_swap_mb`. Everything here is defaulted so both shapes construct.
+    docker_network_is_host_mode: bool = field(default=False)
+    has_memory_limit: bool = field(default=False)
+    max_swap_mb: int = field(default=0)
 
 
 class Player(NamedTuple):
@@ -1988,10 +1872,13 @@ class Player(NamedTuple):
     uuid: str = ""
     name: str = ""
 
-    def __eq__(self, other: object) -> bool:
+    def __hash__(self) -> int:  # noqa: D105
+        return hash(self.name)
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name < other.name
 
 
@@ -2013,13 +1900,15 @@ class Players:
     # {'781a2971-c14b-42c2-8742-d1e2b029d00a': 'k8_thekat', '50686fad-4027-4bdb-a4a5-2533f8a1e51f': 'WolfDevilAngel'}
     sorted: list[Player]
 
-    def __init__(self, data: dict[str, str]) -> None:
+    # NARROW-REFACTOR: widened data to dict[str, Any] — the source map is an unmodeled uuid->name dict passed as
+    # dict(result) from get_user_list (revert: restore dict[str, str]).
+    def __init__(self, data: dict[str, Any]) -> None:  # noqa: D107
         self.sorted = []
         for uuid, name in data.items():
-            self.sorted.append(Player(uuid=uuid, name=name))
+            self.sorted.append(Player(uuid=uuid, name=str(name)))
         self.sorted.sort(key=attrgetter("name"))
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return "\n".join([p.name for p in self.sorted])
 
     def get_player(self, name_or_uuid: str) -> list[Player]:
@@ -2041,7 +1930,8 @@ class Players:
 
 @dataclass
 class Port:
-    """Current Port of the related AMP Instance. Tied to :attr:`Updates.ports` and the JSON response data from :meth:`Core.get_port_summaries`.
+    """Current Port of the related AMP Instance. Tied to :attr:`Updates.ports` and the JSON response
+    data from :meth:`Core.get_port_summaries`.
 
     Attributes
     ----------
@@ -2112,7 +2002,7 @@ class ProvisionSettingInfo:
 
     Attributes
     ----------
-    default_value: :class:`str`
+    default_value: Union[:class:`str`, :class:`int`, None]
         The default value.
     description: :class:`str`
         The description.
@@ -2124,15 +2014,27 @@ class ProvisionSettingInfo:
         The type.
     value_range: Union[:class:`int`, :class:`str`]
         The value range.
+    custom_field_type: Union[:class:`str`, None]
+        The custom field type, if the setting uses one. (eg. "TCPUDPPort") Defaults to None.
+    related_setting: Union[:class:`str`, None]
+        The node of a setting this one is tied to, otherwise None.
+    endpoint_format: Union[:class:`str`, None]
+        The format string used to render the endpoint, otherwise None.
 
     """
 
-    default_value: str
+    default_value: Union[str, int, None]
     description: str
     endpoint_name: str
     node: str
     type: str
     value_range: Union[int, str]
+    custom_field_type: Union[str, None] = field(default=None)
+    related_setting: Union[str, None] = field(default=None)
+    endpoint_format: Union[str, None] = field(default=None)
+    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    hidden: bool = field(default=False)
+    min_listening: int = field(default=0)
 
 
 @dataclass
@@ -2143,7 +2045,7 @@ class PortInfo:
     ----------
     description: :class:`str`
         The description.
-    us_user_defined: :class:`bool`
+    is_user_defined: :class:`bool`
         Whether the port is user defined.
     port_number: :class:`int`
         The port number.
@@ -2160,16 +2062,30 @@ class PortInfo:
         The range.
     verified: :class:`bool`
         Whether the port is verified.
+    is_firewall_target: :class:`bool`
+        Whether the port is targeted by a firewall rule, defaults to False.
 
     """
 
     description: str
-    us_user_defined: bool
+    is_user_defined: bool
     port_number: int
-    protocol: Protocols
+    protocol: Protocols | int
     provision_node_name: str
     range: int
     verified: bool
+    is_firewall_target: bool = field(default=False)
+    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    is_child: bool = field(default=False)
+    min_listening: int = field(default=0)
+    offset: int = field(default=0)
+    parent_node: Union[str, None] = field(default=None)
+    parent_ref: Union[str, None] = field(default=None)
+
+    def __post_init__(self) -> None:
+        # AMP sends the protocol as an int; convert it so the annotation holds true.
+        if isinstance(self.protocol, int):
+            self.protocol = Protocols(self.protocol)
 
 
 @dataclass
@@ -2180,17 +2096,22 @@ class RemoteTargetInfo:
     ----------
     ip_address_list: :class:`list[str]`
         The IP address list.
-    platform_info: :class:`PlatformInfo`
-        The platform info.
-    datastores: list[:class:`InstanceDatastore`]
-        The datastores.
+    platform_info: :class:`PlatformInfoResponse`
+        The platform info; left as the raw response dict, see the note above.
+    datastores: list[:class:`TargetDatastoreResponse`]
+        The datastores, carrying only an ``id`` and ``friendly_name``.
     deploys_in_containers: :class:`bool`
+        If the target deploys instances inside containers.
 
     """
 
     ip_address_list: list[str]
-    platform_info: PlatformInfo
-    datastores: list[InstanceDatastore]
+    # These two are NOT converted; `RemoteTargetInfo(**result)` assigns the nested dicts straight through.
+    # The old `PlatformInfo` / `list[InstanceDatastore]` annotations were never true at runtime - the target
+    # payload only carries {id, friendly_name} per datastore, which cannot build a full InstanceDatastore.
+    # TODO: Convert these in a __post_init__ once the nested shapes are confirmed across more AMP targets.
+    platform_info: PlatformInfoResponse
+    datastores: list[TargetDatastoreResponse]
     deploys_in_containers: bool
 
 
@@ -2243,10 +2164,14 @@ class RunningTask:
     ----------
     is_primary_task: :class:`bool`
         If the task is the primary task or not.
-    start_time: :class:`str`
-        The start time of the task.
+    start_time: :class:`str` | :class:`datetime.datetime`
+        The start time of the task; converted to a :class:`datetime` object.
     id: :class:`str`
         The ID of the task.
+    remote_instance_id: :class:`str` | None
+        The GUID of the Instance the task belongs to, otherwise None when the task is local.
+    parent_task_id: :class:`str` | None
+        The ID of the task that spawned this one, otherwise None when it has no parent.
     name: :class:`str`
         The name of the task.
     description: :class:`str`
@@ -2255,64 +2180,108 @@ class RunningTask:
         If the task is hidden from the UI or not.
     fast_dismiss: :class:`bool`
         If the task is fast dismiss or not.
-    last_update_pushed: :class:`str`
-        The last update pushed of the task.
+    last_update_pushed: :class:`str` | :class:`datetime.datetime`
+        The last update pushed of the task; converted to a :class:`datetime` object.
     progress_percent: :class:`float`
         The progress percent of the task.
+    speed: :class:`str` | None
+        UNK - The task's throughput, if it reports one. Has only ever been observed as None.
     is_cancellable: :class:`bool`
         If the task is cancellable or not.
     origin: :class:`str`
-        The origin of the task.
+        The origin of the task. (eg. "Core.CreateTestTask")
+    dont_propagate: :class:`bool`
+        If the task is withheld from being pushed up to the ADS or not.
     is_indeterminate: :class:`bool`
         If the task is indeterminate or not.
     state: :class:`int`
         The state of the task.
-    status: :class:`str`
+    state_message: :class:`str` | None
+        The message tied to the current state, otherwise None.
+    end_time: :class:`str` | :class:`datetime.datetime` | None
+        The end time of the task; converted to a :class:`datetime` object. None while the task is still running.
+    status: :class:`bool`
         The status of the task.
+    reason: :class:`str` | None
+        The reason for the task's status, otherwise None.
+    support_url: :class:`str` | None
+        A URL pointing to related support information, otherwise None.
+    support_title: :class:`str` | None
+        The title to display for the :attr:`support_url`, otherwise None.
 
     """
 
     is_primary_task: bool
-    start_time: str  # type: ignore
+    start_time: str | datetime.datetime
     id: str
+    remote_instance_id: str | None
+    parent_task_id: str | None
     name: str
     description: str
     hide_from_ui: bool
     fast_dismiss: bool
-    last_update_pushed: str  # type: ignore
+    last_update_pushed: str | datetime.datetime
     progress_percent: float
+    speed: str | None
     is_cancellable: bool
     origin: str
+    dont_propagate: bool
     is_indeterminate: bool
     state: int
-    status: str
+    state_message: str | None
+    end_time: str | datetime.datetime | None
+    status: bool
+    reason: str | None
+    support_url: str | None
+    support_title: str | None
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self), indent=1)
 
-    def __post_init__(self) -> None:
-        self.last_update_pushed: datetime = timestamp_converter(data=self.last_update_pushed)  # type: ignore
-        self.start_time: datetime = timestamp_converter(data=self.start_time)  # type: ignore
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.last_update_pushed, str):
+            self.last_update_pushed = timestamp_converter(timestamp=self.last_update_pushed)
+        if isinstance(self.start_time, str):
+            self.start_time = timestamp_converter(timestamp=self.start_time)
+        # end_time stays None until the task finishes, so it can't be converted unconditionally.
+        if isinstance(self.end_time, str):
+            self.end_time = timestamp_converter(timestamp=self.end_time)
 
 
-@dataclass
+# @dataclass
 class ScheduleData:
     """Represents the JSON response data from :meth:`Core.get_schedule_data`.
 
     Attributes
     ----------
-    available_methods: list[:class:`Methods`]
+    available_methods: list[:class:`Methods` | :class:`AvailableMethodsResponse`]
         The available methods.
-    available_triggers: list[:class:`Triggers`]
+    available_triggers: list[:class:`Triggers`| :class:`AvailableTriggersResponse`]
         The available triggers.
-    populated_triggers: list[:class:`Triggers`]
+    populated_triggers: list[:class:`Triggers` | :class:`AvailableTriggersResponse`]
         The populated triggers.
 
     """
 
-    available_methods: list[Methods] = field(default_factory=list)
-    available_triggers: list[Triggers] = field(default_factory=list)
-    populated_triggers: list[Triggers] = field(default_factory=list)
+    available_methods: list[Methods | AvailableMethodsResponse]
+    available_triggers: list[Triggers | AvailableTriggersResponse]
+    populated_triggers: list[Triggers | AvailableTriggersResponse]
+
+    __slots__ = ("available_methods", "available_triggers", "populated_triggers")
+
+    def __init__(self, data: ScheduleDataResponse) -> None:
+        """..."""
+        for key in self.__slots__:
+            value = data.get(key, None)
+            if value is None:
+                setattr(self, key, [])
+                continue
+            if key == "available_methods":
+                self.available_methods = [Methods(**entry) for entry in value]
+                continue
+            if key == "available_triggers" or key == "populated_triggers":
+                setattr(self, key, [Triggers(**entry) for entry in value])
+                continue
 
 
 @dataclass
@@ -2340,12 +2309,14 @@ class Session:
     session_id: str
     username: str
     session_type: str
-    start_time: str  # type: ignore
-    last_activity: str  # type: ignore
+    start_time: str | datetime.datetime
+    last_activity: str | datetime.datetime
 
-    def __post_init__(self) -> None:
-        self.start_time: datetime = timestamp_converter(self.start_time)  # type: ignore
-        self.last_activity: datetime = timestamp_converter(self.last_activity)  # type: ignore
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.start_time, str):
+            self.start_time = timestamp_converter(timestamp=self.start_time)
+        if isinstance(self.last_activity, str):
+            self.last_activity = timestamp_converter(timestamp=self.last_activity)
 
 
 @dataclass
@@ -2414,10 +2385,11 @@ class SettingSpec:
     """
 
     category: str
-    actions: list[SettingSpecAction] = field(default_factory=list)
+    actions: list[str] | list[SettingSpecAction] = field(default_factory=list[str])
     always_allow_read: bool = field(default=False)
     attributes: Union[SettingsSpecAttribute, None] = field(default=None)
-    current_value: Union[list, str, bool, int, dict, SettingSpecTableAliases] = ""
+    # TODO: This will need a tighter type definition.
+    current_value: Union[list[SettingSpecTableAliases], str, bool, int, dict[Any, Any], SettingSpecTableAliases] = ""
     description: str = ""
     enum_values: Union[dict[str, Any], None] = field(default=None)
     enum_values_are_deferred: bool = field(default=False)
@@ -2445,8 +2417,11 @@ class SettingSpec:
     def __post_init__(self) -> None:
         # determines the current value type and converts the data into the respective dataclass if needed.
         _table = SettingSpecTable().table
-        if self.node in _table and isinstance(self.current_value, int) and self.node is not None:
+        if self.node in _table and isinstance(self.current_value, int):
             self.current_value = _table[self.node](self.current_value)
+
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__) and self.name == other.name
@@ -2538,14 +2513,23 @@ class SettingsSpecParent:
 
     """
 
-    branding: list[SettingSpec] = field(default_factory=list)
-    external_services: list[SettingSpec] = field(default_factory=list)
-    file_manager: list[SettingSpec] = field(default_factory=list)
-    instance_deployment: list[SettingSpec] = field(default_factory=list)
-    login: list[SettingSpec] = field(default_factory=list)
-    security_and_privacy: list[SettingSpec] = field(default_factory=list)
-    system_settings: list[SettingSpec] = field(default_factory=list)
-    updates: list[SettingSpec] = field(default_factory=list)
+    # Every category arrives as a list of raw setting dicts, the same shape Core.get_config returns for a
+    # single node; __post_init__ converts them so the SettingSpec annotation holds true.
+    # Spelled as a union of lists rather than list[SettingSpec | ConfigResponse]; list is invariant in its
+    # element type, so the raw response would not be assignable to the combined form.
+    branding: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    external_services: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    file_manager: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    instance_deployment: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    login: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    security_and_privacy: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    system_settings: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    updates: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+
+    def __post_init__(self) -> None:
+        for category in fields(class_or_instance=self):
+            entries: list[SettingSpec] | list[ConfigResponse] = getattr(self, category.name)
+            setattr(self, category.name, [SettingSpec(**entry) if isinstance(entry, dict) else entry for entry in entries])
 
 
 @dataclass
@@ -2593,21 +2577,32 @@ class Status:
 
     Attributes
     ----------
-    state: :class:`AMPInstanceState`
+    state: :class:`InstanceState`
         The state of the AMP Instance.
     uptime: :class:`str`
         The up time of the Instance, in Days, Hours, Minutes, Seconds format. 00:00:00:00
-    metrics: Union[:class:`Metric`, None]
-        The Metrics data related to the Instance if any, default is None.
+    metrics: dict[:class:`str`, :class:`MetricsData`], optional
+        The Metrics data related to the Instance keyed by metric name, default is an empty dict.
 
     """
 
-    state: AMPInstanceState
+    # AMP sends both of these raw; __post_init__ converts them so the first annotation of each holds true.
+    state: InstanceState | int
     uptime: str
-    metrics: Union[Metric, None] = field(default=None)
+    # Spelled as a union of dicts rather than dict[str, MetricsData | MetricsResponse]; dict is invariant
+    # in its value type, so the raw response would not be assignable to the combined form.
+    # ?SUGGESTION: metrics comes back keyed by metric name, so it cannot be a Metric.
+    # getstatus.json carries five entries; the three Metric has, plus physical_ram_usage and swap_usage,
+    # so Metric(**metrics) would raise. Worth deciding if Metric still has a use anywhere.
+    metrics: dict[str, MetricsData] | dict[str, MetricsResponse] = field(default_factory=dict[str, MetricsData])
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
+
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.state, int):
+            self.state = InstanceState(self.state)
+        self.metrics = {name: MetricsData(**entry) if isinstance(entry, dict) else entry for name, entry in self.metrics.items()}
 
 
 @dataclass
@@ -2625,21 +2620,29 @@ class Template:
         If specified, AMP will create a new user with this name for this instance. Default is None.
         * Must be unique, If this user already exists, this will be ignored but the new instance will be assigned to this user.
     new_password: Union[:class:`str`, None] , optional
-        If :attr:`new_username` is specified and the user doesn't already exist, the password will be assigned to this user. Default is None.
+        If :attr:`new_username` is specified and the user doesn't already exist, the password will be
+        assigned to this user. Default is None.
     new_email : Union[:class:`str`, None] , optional
-        If :attr:`new_username` is specified and the user doesn't already exist, the email address will be assigned to this user. Default is None.
+        If :attr:`new_username` is specified and the user doesn't already exist, the email address will
+        be assigned to this user. Default is None.
     required_tags: Union[list[:class:`str`], None] , optional
-        If specified, AMP will only deploy this template to targets that have every single 'tag' specified in their target configuration. You can adjust this via the controller by clicking 'Edit' on the target settings. Default is None.
+        If specified, AMP will only deploy this template to targets that have every single 'tag'
+        specified in their target configuration. You can adjust this via the controller by clicking
+        'Edit' on the target settings. Default is None.
     tag : Union[:class:`str`, None] , optional
-        Unrelated to required_tags. This is to uniquely identify this instance to your own systems. It may be something like an order ID or service ID so you can find the associated instance again at a later time. Default is None.
+        Unrelated to required_tags. This is to uniquely identify this instance to your own systems. It
+        may be something like an order ID or service ID so you can find the associated instance again
+        at a later time. Default is None.
     friendly_name: Union[:class:`str`, None] , optional
         A friendly name for this instance. If left blank, AMP will generate one for you. Defaults is None.
     secret : Union[:class:`str`, None] , optional
-        Must be a non-empty strong in order to get a callback on deployment state change. This secret will be passed back to you in the callback so you can verify the request. Default is None.
+        Must be a non-empty strong in order to get a callback on deployment state change. This secret
+        will be passed back to you in the callback so you can verify the request. Default is None.
     post_create: :class:`PostCreateActionState`, optional
         The action to take after the Instance is created, default is :attr:`PostCreateActionState.do_nothing`.
     extra_provision_settings: Union[dict[:class:`str`, :class:`str`], None]
-        A dictionary of setting nodes and values to create the new instance with. Identical in function to the provisioning arguments in the template itself. Default is None.
+        A dictionary of setting nodes and values to create the new instance with. Identical in function
+        to the provisioning arguments in the template itself. Default is None.
 
     """
 
@@ -2655,9 +2658,20 @@ class Template:
     extra_provision_settings: Union[dict[str, str], None] = field(default=None)
 
     def __repr__(self) -> str:
-        return self.__class__.__qualname__ + " ".join([
-            f"{f.name}={{self.{f.name}!r}}" for f in fields(class_or_instance=self) if f is not None
-        ])
+        # The braces were doubled, so this emitted the literal text "{self.tag!r}" instead of the value.
+        # fields() yields Field objects and never None, so the old "if f is not None" filter was dead.
+        return self.__class__.__qualname__ + " " + " ".join([f"{f.name}={getattr(self, f.name)!r}" for f in fields(class_or_instance=self)])
+
+    def to_dict(self) -> dict[str, Any]:
+        """As the function name implies; converts the class to a dict for use as an API parameter.
+
+        Returns
+        -------
+        dict[:class:`str`, Any]
+            The class attributes as a key, value paired dict; attributes set to None are omitted.
+
+        """
+        return _dataclass_to_dict(self)
 
 
 @dataclass
@@ -2701,7 +2715,14 @@ class TimedTrigger:
     match_months: list[int]
     name: str
     order: int
-    tasks: TriggerTasks
+    # AMP sends a list of raw task dicts; __post_init__ converts them so the annotation holds true.
+    # The old TriggerTasks annotation was singular and unwrapped, which was never true at runtime.
+    # Spelled as a union of lists rather than list[TriggerTasks | TriggersTasksResponse]; list is invariant
+    # in its element type, so the raw response would not be assignable to the combined form.
+    tasks: list[TriggerTasks] | list[TriggersTasksResponse] = field(default_factory=list["TriggerTasks"])
+
+    def __post_init__(self) -> None:
+        self.tasks = [TriggerTasks(**entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
 class TriggerID:
@@ -2737,11 +2758,13 @@ class TriggerID:
     the_server_enters_sleep_mode: str
     the_server_wakes_up_from_sleep_mode_due_to_player_connect: str
 
-    def __init__(self, data: list[TriggersData]) -> None:
+    # Core.get_triggers feeds this from ScheduleData.available_triggers, which is the reduced
+    # AvailableTriggersResponse shape; only description and id are read, and both shapes carry them.
+    def __init__(self, data: list[TriggersResponse] | list[AvailableTriggersResponse]) -> None:  # noqa: D107
         for entry in data:
             setattr(self, entry["description"], entry["id"])
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         _temp: dict[str, str] = vars(self)
         _temp.pop("_init")
         return pformat(_temp)
@@ -2775,18 +2798,28 @@ class Triggers:
         If the last execution of the trigger resulted in an error or not, default is False.
     last_error_reason: :class:`str`, optional
         The reason the last execution of the trigger resulted in an error, default is "".
+    last_run: Union[:class:`str`, None], optional
+        When the trigger last fired, default is None.
 
     """
 
     enabled_state: int
-    tasks: list[TriggerTasks] = field(default_factory=list)
+    # TODO: Convert tasks into TriggerTasks in a __post_init__.
+    # Triggers(**entry) currently assigns the nested dicts straight through; getscheduledata.json only
+    # ever captured an empty populated_triggers, so TriggersTasksResponse is unconfirmed.
+    tasks: list[TriggerTasks] | list[TriggersTasksResponse] = field(default_factory=list["TriggerTasks"])
     id: str = ""
     type: str = ""
     description: str = ""
     trigger_type: str = ""
-    emits: list[str] = field(default_factory=list)
+    emits: list[str] = field(default_factory=list[str])
     last_execute_error: bool = field(default=False)
     last_error_reason: str = field(default="")
+    # Confirmed against getscheduledata.json; it was absent and made Triggers(**entry) raise a TypeError.
+    last_run: Union[str, None] = field(default=None)
+
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__) and self.description == other.description
@@ -2807,8 +2840,8 @@ class TriggerTasks:
         The ID of the task, these are unique per Instance.
     task_method_name: :class:`str`
         The name of the task method.
-    parameter_mapping: :class:`DCParameterMapping`
-        The parameter mapping for the task.
+    parameter_mapping: :class:`DCParameterMapping` | :class:`ParameterMapping`
+        The parameter mapping for the task; still assigned as the raw response dict.
     enabled_state: :class:`int`
         If the task is enabled or not.
     locked: :class:`bool`
@@ -2822,7 +2855,10 @@ class TriggerTasks:
 
     id: str
     task_method_name: str
-    parameter_mapping: DCParameterMapping
+    # TODO: Convert parameter_mapping into DCParameterMapping in a __post_init__.
+    # TriggerTasks(**entry) currently assigns the raw dict straight through. ParameterMapping is
+    # total=False and its keys are still UNK, so converting risks a TypeError on an unknown key.
+    parameter_mapping: DCParameterMapping | ParameterMapping
     enabled_state: int
     locked: bool
     created_by: str
@@ -2878,17 +2914,24 @@ class Updates:
     """
 
     console_entries: list[ConsoleEntries]
-    status: Status
+    # AMP sends this raw; __post_init__ converts it so the Status annotation holds true.
+    status: Status | StatusResponse
     messages: list[Messages]
-    ports: list[Port] = field(default_factory=list)
-    tasks: list[RunningTask] = field(default_factory=list)
+    ports: list[Port] = field(default_factory=list[Port])
+    tasks: list[RunningTask] = field(default_factory=list[RunningTask])
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
+
+    def __post_init__(self) -> None:  # noqa: D105
+        # TODO: Convert console_entries, messages, ports and tasks; they are still left as raw dicts.
+        # Needs their nested shapes pinned down the same way StatusResponse now is.
+        if isinstance(self.status, dict):
+            self.status = Status(**self.status)
 
 
 @dataclass
-class User:
+class UserInfo:
     """Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
 
     Attributes
@@ -2924,23 +2967,26 @@ class User:
 
     """
 
-    cannot_change_password: bool
-    disable: bool
-    gravatar_hash: str
     id: str
-    is_ldap_user: bool
-    is_super_user: bool
-    is_two_factor_enabled: bool
-    must_change_password: bool
     name: str
+    email_address: None
+    disabled: bool
+    permissions: None
+    is_super_user: bool
+    last_login: str | datetime.datetime
     password_expires: bool
-    permissions: list[str]
+    cannot_change_password: bool
+    must_change_password: bool
+    is_two_factor_enabled: bool
     roles: list[str]
-    email_address: str
-    last_login: str  # type:ignore
+    is_ldap_user: bool
+    is_oidc_user: bool
+    gravatar_hash: str
+    avatar_base64: None
 
-    def __post_init__(self) -> None:
-        self.last_login: datetime = timestamp_converter(self.last_login)  # type:ignore
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.last_login, str):
+            self.last_login = timestamp_converter(timestamp=self.last_login)
 
 
 class UserApplicationData:
@@ -2948,7 +2994,7 @@ class UserApplicationData:
     user_session_id: str
     session_id: str | None
     name: str
-    join_time: datetime  # ISO format timestamp.
+    join_time: datetime.datetime  # ISO format timestamp.
     tags: str | None
     uid: str
     ip_address: str
@@ -2984,7 +3030,9 @@ class UserApplicationData:
         self.id = id
         self.user_session_id = user_session_id
         self.name = name
-        self.join_time = datetime.fromisoformat(join_time)
+        # `datetime` here is the module, so datetime.fromisoformat raised an AttributeError on every
+        # construction. timestamp_converter is what every other timestamp in this file goes through.
+        self.join_time = timestamp_converter(timestamp=join_time)
         self.uid = uid
         self.ip_address = ip_address
         self.port = port
@@ -3058,7 +3106,10 @@ class BuildInfo:
             return data
         return temp
 
-    def __eq__(self, other: object) -> bool:
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         return (
             isinstance(other, self.__class__)
             and self.major == other.major
@@ -3067,7 +3118,7 @@ class BuildInfo:
             and self.minor_revision == other.minor_revision
         )
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: object) -> bool:  # noqa: D105
         return (
             isinstance(other, self.__class__)
             and self.major < other.major
@@ -3076,6 +3127,6 @@ class BuildInfo:
             and self.minor_revision < other.minor_revision
         )
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         base = f"{self.major}.{self.minor}.{self.revision}.{self.minor_revision}"
         return base if self.build is None else f"{base}.{self.build}"

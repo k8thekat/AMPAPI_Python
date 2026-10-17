@@ -21,7 +21,7 @@ An asynchronous Python wrapper for the CubeCoders AMP (Application Management Pa
   - Optional parameter per function or global to disable formatting of data.
 - Inheritance-based instance model (`ADSInstance`, `AMPInstance`, `AMPMinecraftInstance`, etc.) groups endpoints by instance type, preventing invalid calls at the class level.
 - TOTP/2FA authentication support for secure programmatic login via `pyotp`.
-- Fully typed and verified with Pyright in strict mode, compatible with Python 3.10–3.12.
+- Fully typed and verified with Pyright in strict mode, compatible with Python 3.12+.
 
 ### Docs
 
@@ -31,7 +31,7 @@ An asynchronous Python wrapper for the CubeCoders AMP (Application Management Pa
 
 ---
 
-_Python 3.10 or higher is required_
+_Python 3.12 or higher is required_
 
 To install run the below command via your preferred terminal or IDE.
 
@@ -214,8 +214,8 @@ await arkinstance.get_role_data(format_data=True)
     - Change 2
     -- Change 2 sub-change 1
 
-    $ This commit message will be omitted because of `$`
-    - Everything below it will be ignored too as long as it has a `-`
+    $ Only this line is omitted from the changelog, because it starts with `$`
+    $ A line after it is kept unless it also starts with `$`, so prefix every line to hide
 ```
 
 #### AMP Version Bump

@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
-from .base import Base
-from .modules import ActionResult, ActionResultError, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
+from typing_extensions import deprecated
+
+from .base import Base, ResponseAliasFull, ResponseHandlerOptions
+from .errors import AMPAPITypeError
+from .modules import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
     from typing import Concatenate
 
+    from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import BukkitCategories
+    from ._types import ActionResultResponse, BukkitCategories, RunningTaskResponse
 
     D = TypeVar("D", bound="Base")
     T = ParamSpec("T")
@@ -48,10 +52,22 @@ class MinecraftModule(Base):
         return wrapper_mc_only
 
     @mc_only
-    async def mc_accept_eula(self) -> bool:
+    async def mc_accept_eula(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> bool:
         """|coro|
 
         Accept the EULA summary.
+
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -60,21 +76,40 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="MinecraftModule/AcceptEULA")
-        return result
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/AcceptEULA",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, bool):
+            return result
+        raise AMPAPITypeError(end_point="MinecraftModule/AcceptEULA", cur_type=result, expec_type=bool)
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_add_op_entry(
-        self, user_or_uuid: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        user_or_uuid: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Add an entry to the OP list.
 
         Parameters
         ----------
-        user_or_uuid: :class:`str`
+        user_or_uuid : :class:`str`
             The Minecraft UUID or Username.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -84,24 +119,47 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"UserOrUUID": user_or_uuid}
-
-        result = await self._call_api(
-            api="MinecraftModule/AddOPEntry", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/AddOPEntry",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="MinecraftModule/AddOPEntry", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "status" not in result:
+            raise AMPAPITypeError(end_point="MinecraftModule/AddOPEntry", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_add_to_whitelist(
-        self, user_or_uuid: str, format_data: Union[bool, None] = None,
-    ) -> ActionResult | ActionResultError:
+        self,
+        user_or_uuid: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Add a user to the whitelist.
 
         Parameters
         ----------
-        user_or_uuid: :class:`str`
+        user_or_uuid : :class:`str`
             The Minecraft UUID or Username.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -111,13 +169,31 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"UserOrUUID": user_or_uuid}
-        result: Any = await self._call_api(
-            api="MinecraftModule/AddToWhitelist", parameters=parameters, format_data=format_data, format_=ActionResult,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/AddToWhitelist",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="MinecraftModule/AddToWhitelist", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "status" not in result:
+            raise AMPAPITypeError(end_point="MinecraftModule/AddToWhitelist", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_buk_get_categories(self) -> list[BukkitCategories] | ActionResultError:
+    async def mc_buk_get_categories(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[BukkitCategories]:
         """|coro|
 
         Get Bukkit categories.
@@ -126,6 +202,13 @@ class MinecraftModule(Base):
             CATEGORIES: 'Bungee - Spigot', 'Bungee - Proxy', 'Spigot', 'Transportation', 'Chat', 'Tools and Utilities', 'Misc', 'Libraries / APIs'
 
 
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
         Returns
         -------
         list[:class:`BukkitCategories`]
@@ -133,21 +216,37 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="MinecraftModule/BukGetCategories")
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetCategories",
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetCategories", cur_type=result, expec_type=list)
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_buk_get_installed_plugins(
-        self, format_data: Union[bool, None] = None,
-    ) -> list[BukkitPlugin] | ActionResultError:
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[BukkitPlugin] | list[dict[str, Any]]:
         """|coro|
 
         Get Bukkit installed plugins.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -156,25 +255,44 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="MinecraftModule/BukGetInstalledPlugins", format_data=format_data, format_=BukkitPlugin,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetInstalledPlugins",
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetInstalledPlugins", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [BukkitPlugin(**item) for item in result]
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_buk_get_install_update_plugin(
-        self, plugin_id: int, format_data: Union[bool, None] = None,
-    ) -> RunningTask | ActionResultError:
+        self,
+        plugin_id: int,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Get update for Bukkit plugin.
 
         Parameters
         ----------
-        plugin_id: :class:`int`
+        plugin_id : :class:`int`
             The plugin ID. See :class:`BukkitPlugin` for the ID value.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -184,16 +302,32 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, int] = {"pluginId": plugin_id}
-        result: Any = await self._call_api(
-            api="MinecraftModule/BukGetInstallUpdatePlugin",
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetInstallUpdatePlugin",
             parameters=parameters,
-            format_data=format_data,
-            format_=RunningTask,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetInstallUpdatePlugin", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if "is_primary_task" not in result:
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetInstallUpdatePlugin", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return RunningTask(**result)
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_buk_get_plugin_info(self, plugin_id: int, format_data: Union[bool, None] = None) -> Any | ActionResultError:
+    async def mc_buk_get_plugin_info(
+        self,
+        plugin_id: int,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Any:
         """|coro|
 
         Get Bukkit plugin info.
@@ -201,10 +335,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        plugin_id: :class:`int`
+        plugin_id : :class:`int`
             The plugin ID. See :class:`BukkitPlugin` for the ID value.
-        format_data: Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -214,29 +350,45 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, int] = {"PluginId": plugin_id}
-        result: Any = await self._call_api(
-            api="MinecraftModule/BukGetPluginInfo", parameters=parameters, format_data=format_data,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetPluginInfo",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_buk_get_plugins_for_category(
-        self, category_id: str, page_number: int = 1, page_size: int = 10, format_data: Union[bool, None] = None,
-    ) -> list[BukkitPlugin] | ActionResultError:
+        self,
+        category_id: str,
+        page_number: int = 1,
+        page_size: int = 10,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[BukkitPlugin] | list[dict[str, Any]]:
         """|coro|
 
         Get Bukkit plugins from category.
 
         Parameters
         ----------
-        category_id: :class:`str`
+        category_id : :class:`str`
             The plugin category ID. See -> :meth:`mc_buk_get_categories`
-        page_number: :class:`int`
+        page_number : :class:`int`
             The page number, default is 1.
-        page_size: :class:`int`
+        page_size : :class:`int`
             The number of entries per page, default is 10.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
 
         Returns
@@ -247,27 +399,42 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"CategoryId": category_id, "PageNumber": page_number, "PageSize": page_size}
-
-        result: Any = await self._call_api(
-            api="MinecraftModule/BukGetPluginsForCategory",
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetPluginsForCategory",
             parameters=parameters,
-            format_data=format_data,
-            format_=BukkitPlugin,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetPluginsForCategory", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [BukkitPlugin(**item) for item in result]
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_buk_get_popular_plugins(
-        self, format_data: Union[bool, None] = None,
-    ) -> list[BukkitPlugin] | ActionResultError:
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[BukkitPlugin] | list[dict[str, Any]]:
         """|coro|
 
         Get Bukkit popular plugins.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -276,21 +443,41 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="MinecraftModule/BukGetPopularPlugins", format_data=format_data, format_=BukkitPlugin,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetPopularPlugins",
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetPopularPlugins", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [BukkitPlugin(**item) for item in result]
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_buk_get_remove_plugin(self, plugin_id: int) -> None:
+    async def mc_buk_get_remove_plugin(
+        self,
+        plugin_id: int,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Remove Bukkit plugin.
 
         Parameters
         ----------
-        plugin_id: :class:`int`
+        plugin_id : :class:`int`
             The plugin ID. See :class:`BukkitPlugin` for the ID value.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -299,27 +486,45 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, int] = {"PluginId": plugin_id}
-        await self._call_api(api="MinecraftModule/BukGetRemovePlugin", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/BukGetRemovePlugin",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
     async def mc_buk_get_search(
-        self, query: str, page_number: int = 0, page_size: int = 10, format_data: Union[bool, None] = None,
-    ) -> list[BukkitPlugin] | ActionResultError:
+        self,
+        query: str,
+        page_number: int = 0,
+        page_size: int = 10,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[BukkitPlugin] | list[dict[str, Any]]:
         """|coro|
 
         Search for Bukkit plugins.
 
         Parameters
         ----------
-        query: :class:`str`
+        query : :class:`str`
             The search query.
-        page_number: :class:`int`
+        page_number : :class:`int`
             The page number, default is 1.
-        page_size: :class:`int`
+        page_size : :class:`int`
             The number of entries per page, default is 10.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -329,13 +534,28 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"Query": query, "PageNumber": page_number, "PageSize": page_size}
-        result: Any = await self._call_api(
-            api="MinecraftModule/BukGetSearch", parameters=parameters, format_data=format_data, format_=BukkitPlugin,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/BukGetSearch",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/BukGetSearch", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [BukkitPlugin(**item) for item in result]
         return result
 
     @mc_only
-    async def mc_ban_user_by_id(self, user_id: str) -> None:
+    async def mc_ban_user_by_id(
+        self,
+        user_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Ban the specified Minecraft UUID.
@@ -346,8 +566,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Minecraft Users UUID.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -356,11 +580,22 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"ID": user_id}
-        await self._call_api(api="MinecraftModule/BanUserByID", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/BanUserByID",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @mc_only
-    async def mc_clear_inventory_by_id(self, user_id: str) -> None:
+    async def mc_clear_inventory_by_id(
+        self,
+        user_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Clear a players inventory.
@@ -371,8 +606,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Minecraft Users UUID.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -381,14 +620,31 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"ID": user_id}
-        await self._call_api(api="MinecraftModule/ClearInventoryByID", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/ClearInventoryByID",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @mc_only
-    async def mc_get_failure_reason(self) -> str | ActionResultError:
+    async def mc_get_failure_reason(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> str:
         """|coro|
 
         Get the Server failure reason, if any.
+
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -397,11 +653,25 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="MinecraftModule/GetFailureReason")
-        return result
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/GetFailureReason",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, str):
+            return result
+        raise AMPAPITypeError(end_point="MinecraftModule/GetFailureReason", cur_type=result, expec_type=str)
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_get_head_by_uuid(self, user_id: str) -> str | ActionResultError:
+    async def mc_get_head_by_uuid(
+        self,
+        user_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> str:
         """|coro|
 
         Get a skin as a base64 string.
@@ -412,8 +682,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Minecraft Users UUID.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -423,19 +697,38 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"id": user_id}
-        result: Any = await self._call_api(api="MinecraftModule/GetHeadByUUID", parameters=parameters)
-        return result
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/GetHeadByUUID",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, str):
+            return result
+        raise AMPAPITypeError(end_point="MinecraftModule/GetHeadByUUID", cur_type=result, expec_type=str)
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_get_op_whitelist(self, format_data: Union[bool, None] = None) -> OPWhitelist | ActionResultError:
+    async def mc_get_op_whitelist(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> OPWhitelist | dict[str, Any]:
         """|coro|
 
         Get the OP whitelist.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -444,21 +737,41 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(
-            api="MinecraftModule/GetOPWhitelist", format_data=format_data, format_=OPWhitelist,
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/GetOPWhitelist",
+            request_params=request_params,
+            **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="MinecraftModule/GetOPWhitelist", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return OPWhitelist(**result)
         return result
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_get_whitelist(self, format_data: Union[bool, None] = None) -> list[MCUser] | ActionResultError:
+    async def mc_get_whitelist(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[MCUser] | list[dict[str, Any]]:
         """|coro|
 
         Get the whitelist.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
 
         Returns
@@ -468,11 +781,27 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="MinecraftModule/GetWhitelist", format_data=format_data, format_=MCUser)
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/GetWhitelist",
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/GetWhitelist", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [MCUser(**item) for item in result]
         return result
 
     @mc_only
-    async def mc_kick_user_by_id(self, user_id: str) -> None:
+    async def mc_kick_user_by_id(
+        self,
+        user_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Kick the specified Minecraft Users UUID.
@@ -483,8 +812,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Minecraft Users UUID.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -493,11 +826,22 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"ID": user_id}
-        await self._call_api(api="MinecraftModule/KickUserByID", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/KickUserByID",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @mc_only
-    async def mc_kill_by_id(self, user_id: str) -> None:
+    async def mc_kill_by_id(
+        self,
+        user_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Kill the Minecraft player.
@@ -508,8 +852,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Minecraft Users UUID.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -518,19 +866,36 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"ID": user_id}
-        await self._call_api(api="MinecraftModule/KillByID", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/KillByID",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_load_op_list(self, format_data: Union[bool, None] = None) -> list[OPList] | ActionResultError:
+    async def mc_load_op_list(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[OPList] | list[dict[str, Any]]:
         """|coro|
 
         Get the OP list.
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -539,14 +904,36 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        result: Any = await self._call_api(api="MinecraftModule/LoadOPList", format_data=format_data, format_=OPList)
+        result: ResponseAliasFull = await self._post(
+            url="MinecraftModule/LoadOPList",
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="MinecraftModule/LoadOPList", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [OPList(**item) for item in result]
         return result
 
     @mc_only
-    async def mc_reject_eula(self) -> None:
+    async def mc_reject_eula(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Reject the EULA agreement.
+
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -554,10 +941,23 @@ class MinecraftModule(Base):
 
         """
         await self._reauth()
-        await self._call_api(api="MinecraftModule/RejectEULA", _no_data=True)
+        return await self._post(
+            url="MinecraftModule/RejectEULA",
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_remove_op_entry(self, user: str) -> None:
+    async def mc_remove_op_entry(
+        self,
+        user: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Remove an entry from the OP list.
@@ -568,17 +968,34 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user: :class:`str`
+        user : :class:`str`
             The Minecraft UUID or Username.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         """
         await self._reauth()
         parameters: dict[str, str] = {"UserOrUUID": user}
-        await self._call_api(api="MinecraftModule/RemoveOPEntry", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/RemoveOPEntry",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
+    # TODO: Removed in AMP API 2.6.5.0
+    @deprecated("Removed in AMP API 2.6.5.0")
     @mc_only
-    async def mc_remove_whitelist_entry(self, user: str) -> None:
+    async def mc_remove_whitelist_entry(
+        self,
+        user: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Remove a user from the whitelist.
@@ -589,17 +1006,32 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user: :class:`str`
+        user : :class:`str`
             The Minecraft UUID or Username.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         """
         await self._reauth()
         parameters: dict[str, str] = {"UserOrUUID": user}
-        await self._call_api(api="MinecraftModule/RemoveWhitelistEntry", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/RemoveWhitelistEntry",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )
 
     @mc_only
-    async def mc_smite_by_id(self, user_id: str) -> None:
+    async def mc_smite_by_id(
+        self,
+        user_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
         """|coro|
 
         Strike a player with lightning
@@ -610,8 +1042,12 @@ class MinecraftModule(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Minecraft Users UUID.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
@@ -620,5 +1056,10 @@ class MinecraftModule(Base):
         """
         await self._reauth()
         parameters: dict[str, str] = {"ID": user_id}
-        await self._call_api(api="MinecraftModule/SmiteByID", parameters=parameters, _no_data=True)
-        return
+        return await self._post(
+            url="MinecraftModule/SmiteByID",
+            parameters=parameters,
+            no_data=True,
+            request_params=request_params,
+            **response_params,
+        )

@@ -22,8 +22,7 @@ _params = APIParams(url="http://192.168.13.130:8080", user="bot_username", passw
 
 
 async def Sample_API() -> None:
-    """
-    Example API Function to call Endpoints.
+    """Example API Function to call Endpoints.
     """
     # The API also supports the ability to have an existing `aiohttp.ClientSession`;
     # Simply supply your existing session to the AMPControllerInstance
@@ -100,7 +99,7 @@ async def Sample_API() -> None:
     mcinstance.status.metrics
 
     # Want to kick a random person? Here ya go~
-    players: Players | ActionResultError = await mcinstance.get_user_list()
+    players: Players  = await mcinstance.get_user_list()
     if isinstance(players, ActionResultError):
         logger.error("Failed to retrieve Players")
         return
@@ -109,7 +108,7 @@ async def Sample_API() -> None:
     # Analytics Introduction -
     # Simply call the below method.
     # By default it will use current day and time and go back 30 days into the past from now.
-    stats: AnalyticsSummary | ActionResultError = await mcinstance.get_analytics_summary()
+    stats: AnalyticsSummary  = await mcinstance.get_analytics_summary()
     if isinstance(stats, ActionResultError):
         logger.error("Failed to retrieve Stats")
         return
