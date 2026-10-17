@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING, Any, TypedDict, Union, Unpack
 
 from dataclass_wizard import fromdict
 
-from docs.samples.method_event_usage import example_note
-
 from ._types import ScheduleDataResponse
 
 # from .base import Base
@@ -80,6 +78,8 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
         The path to save the .rst file, by default None.
 
     """
+    from docs.samples.method_event_usage import example_note
+
     file_name: str = title.lower().replace(" ", "_")
     _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
     mode = "x"
