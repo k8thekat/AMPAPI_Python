@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from ._types import (
         AnalyticsGraphDataResponse,
         AnalyticsStatResponse,
-        AvailableMethodsResponse,
         AvailableTriggersResponse,
         ConfigResponse,
         ConsumeResponse,
@@ -2261,18 +2260,18 @@ class ScheduleData:
 
     Attributes
     ----------
-    available_methods: list[:class:`Methods` | :class:`AvailableMethodsResponse`]
+    available_methods : list[:class:`Methods`]
         The available methods.
-    available_triggers: list[:class:`Triggers`| :class:`AvailableTriggersResponse`]
+    available_triggers : list[:class:`Triggers`]
         The available triggers.
-    populated_triggers: list[:class:`Triggers` | :class:`AvailableTriggersResponse`]
+    populated_triggers : list[:class:`Triggers`]
         The populated triggers.
 
     """
 
-    available_methods: list[Methods | AvailableMethodsResponse]
-    available_triggers: list[Triggers | AvailableTriggersResponse]
-    populated_triggers: list[Triggers | AvailableTriggersResponse]
+    available_methods: list[Methods]
+    available_triggers: list[Triggers]
+    populated_triggers: list[Triggers]
 
     __slots__ = ("available_methods", "available_triggers", "populated_triggers")
 

@@ -787,7 +787,7 @@ class PermissionNode(TypedDict):
 
     description: :class:`str`
 
-    children: list[:class:`PermissionNode`]
+    children: Union[list[:class:`PermissionNode`], None]
 
     """
 
@@ -795,7 +795,7 @@ class PermissionNode(TypedDict):
     node: Required[str]
     display_name: Required[str]
     description: Optional[str]
-    children: Required[list[PermissionNode]]
+    children: Required[Union[list[PermissionNode], None]]
 
 
 class PlatformInfoResponse(TypedDict):

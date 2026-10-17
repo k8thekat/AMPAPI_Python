@@ -1,32 +1,27 @@
 from __future__ import annotations
 
 import ast
-import datetime
-import json
 import logging
 import re
 import traceback
-from datetime import timezone
-from json import JSONEncoder
+from dataclasses import asdict
 from logging import Logger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, Union, Unpack
-
-from dataclass_wizard import fromdict
+from typing import TYPE_CHECKING, Any, Union
 
 from ._types import ScheduleDataResponse
-
-# from .base import Base
+from .base import Base
+from .errors import AMPAPITypeError
 from .instance import MinecraftInstance
-from .modules import BuildInfo, Diagnostics, ScheduleData
+from .modules import Diagnostics, ScheduleData, SettingsSpecParent
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Mapping
     from io import TextIOWrapper
 
-    from ._types import APISpec, DiagnosticsInfoResponse, PermissionNode, ScheduleDataResponse
+    from ._types import DiagnosticsInfoResponse, PermissionNode, ScheduleDataResponse, SettingsSpecParentResponse
     from .instance import Controller, Instance
-    from .modules import Diagnostics, Methods, SettingSpec, SettingsSpecParent, Triggers
+    from .modules import Methods, SettingSpec, Triggers
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -120,11 +115,14 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
         used_ids.append(method.id)
         if len(method.consumes) > 0:
             file.write("Consumes these values:\n")
-            for entry in sorted(method.consumes):
+            # Methods.consumes holds the raw ConsumeResponse dicts unless a DCConsumes was handed in.
+            consumes: list[Mapping[str, Any]] = [x if isinstance(x, dict) else asdict(x) for x in method.consumes]
+            for entry in sorted(consumes, key=lambda x: x["name"]):
                 # print(entry, type(entry.enum_values), entry.enum_values)
-                file.write(f"\t* {entry.name}: type({entry.value_type})\n")
-                if isinstance(entry.enum_values, dict):
-                    for key, value in sorted(entry.enum_values.items()):
+                file.write(f"\t* {entry['name']}: type({entry['value_type']})\n")
+                enum_values: str | dict[str, str] | None = entry.get("enum_values")
+                if isinstance(enum_values, dict):
+                    for key, value in sorted(enum_values.items()):
                         file.write(f"\t\t* {key} - {value}\n")
 
     file.close()
@@ -142,16 +140,18 @@ async def _parse_get_api_spec_to_file(
 
     Parameters
     ----------
-    instance : Union[Core, AMPControllerInstance, AMPInstance, AMPMinecraftInstance]
-        The class of either :py:class:`Core:, :py:class:'AMPInstance`, :py:class:`AMPControllerInstance` and or :py:class:`AMPMinecraftInstance`.
+    instance : Union[Controller, Instance, MinecraftInstance]
+        The class of either :py:class:`Controller`, :py:class:`Instance` or :py:class:`MinecraftInstance`.
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance. Default is False.
 
     """
     _logger: Logger = logging.getLogger(__name__)
 
-    data: APISpec = await instance.get_api_spec(sanitize_json=sanitize_json)
-    diag_info: Diagnostics = await instance.get_diagnostics_info()
+    data: Mapping[str, Any] = await instance.get_api_spec(sanitize_json=sanitize_json)
+    diag_info: Diagnostics | DiagnosticsInfoResponse = await instance.get_diagnostics_info()
+    if not isinstance(diag_info, Diagnostics):
+        raise AMPAPITypeError(end_point="Core/GetDiagnosticsInfo", cur_type=diag_info, expec_type=Diagnostics)
     instance_type = instance.module
 
     _dir: Path = Path(__file__).parent.joinpath(f"../docs/api_spec_sheets/{diag_info.application_version}/{instance_type}_api_spec.md")
@@ -164,7 +164,7 @@ async def _parse_get_api_spec_to_file(
         diag_info.build_date,
         _dir,
     )
-    parents: list = []
+    parents: list[str] = []
     mode = "x"
     if _dir.exists():
         mode = "w"
@@ -180,10 +180,12 @@ async def _parse_get_api_spec_to_file(
                 file.write("____________________________________________________\n")
                 file.write(f"{parent}:\n")
             if isinstance(parent_value, dict):
-                for child, child_value in sorted(parent_value.items()):
+                children: dict[str, Any] = parent_value  # pyright: ignore[reportUnknownVariableType]
+                for child, child_value in sorted(children.items()):
                     file.write(f"\t{child}:\n")
                     if isinstance(child_value, dict):
-                        for key, value in sorted(child_value.items()):
+                        child_fields: dict[str, Any] = child_value  # pyright: ignore[reportUnknownVariableType]
+                        for key, value in sorted(child_fields.items()):
                             if key == "Parameters":
                                 file.write(f"\t\t{key}:\n")
                                 for entry in sorted(value):
@@ -379,7 +381,6 @@ def compare_api_spec_versions(
     file_a = _base / version_a / f"{instance_type}_api_spec.md"
     file_b = _base / version_b / f"{instance_type}_api_spec.md"
 
-    print("file_a path", file_a)
     for _file in (file_a, file_b):
         if not _file.exists():
             _logger.error("API spec file not found: %s", _file)
@@ -734,7 +735,7 @@ def _permission_node_parse(
 
     for entry in sorted(data, key=lambda x: x["name"]):
         # print(f"Currently on {index} -- checking {entry['name']} | not used?: {entry['name'] not in used_keys}")
-        if isinstance(entry, dict) and entry["name"] not in used_keys and index == 0:
+        if entry["name"] not in used_keys and index == 0:
             used_keys.append(entry["name"])
 
             # Our first headers.
@@ -759,10 +760,9 @@ def _permission_node_parse(
                 for children in entry["children"]:
                     # We cheaply ignore them since they always have a "-" in them.
                     if "-" in children["name"]:
-                        new_child: list[PermissionNode] | PermissionNode = children.get("children", [])
+                        new_child: list[PermissionNode] = children.get("children") or []
                         if len(new_child) > 0:
-                            new_child = new_child[0]
-                            for node in sorted(new_child["children"], key=lambda x: x["name"]):
+                            for node in sorted(new_child[0]["children"] or [], key=lambda x: x["name"]):
                                 # Handles formatting our nodes
                                 file.write(f"- Instances.`instance-id`.{node['name']}\n")
 
@@ -771,7 +771,7 @@ def _permission_node_parse(
             file.write(_parent_node_note % entry["name"] + "\n")
             # Handles formatting our nodes
             file.write(f"- {temp[-1]}.*\n")
-        if isinstance(entry, dict) and entry["name"] not in used_keys and index == 1:
+        if entry["name"] not in used_keys and index == 1:
             used_keys.append(entry["name"])
 
             # Our second headers.
@@ -803,7 +803,7 @@ def _permission_node_parse(
 
             # Handles formatting our nodes
             file.write(f"- {temp[-1]}.*\n")
-        if isinstance(entry, dict) and entry["name"] not in used_keys and index == 2:
+        if entry["name"] not in used_keys and index == 2:
             used_keys.append(entry["name"])
             header: str | Any = entry["name"] + " Nodes"
             if entry["node"].startswith("Settings.FileManagerPlugin."):
@@ -871,10 +871,10 @@ def _settings_node_parse(
         file.write(":raw-html:`<hr>`\n\n")
 
         data_key: list[SettingSpec] = getattr(data, key)
-        if isinstance(data_key, list):
+        if isinstance(data_key, list):  # pyright: ignore[reportUnnecessaryIsInstance]
             for entry in sorted(data_key):
                 file.write(f"\n**Name**: {entry.name}\n")
-                if entry.description is not None and len(entry.description) > 0:
+                if len(entry.description) > 0:
                     file.write(f"\t| Description: {str_sanitizer_sphinx(string=entry.description, special_chars=('*',))}\n")
                 file.write(f"\t| Node: `{entry.node}`\n")
     file.close()
@@ -947,7 +947,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
 
     Parameters
     ----------
-    instance : AMPControllerInstance
+    instance : :class:`Controller`
         Must be the Controller instance; as we are looking for the ADS and a Minecraft Instance.
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance.
@@ -988,29 +988,30 @@ def dict_merge(dict1: ScheduleDataResponse, dict2: ScheduleDataResponse) -> Sche
     """Merges dict2 into dict1 with key overlapp but combining data instead of replacing key data.
 
     .. note::
-        This was made for :class:`ScheduleDataData` specifically to merge the list of :class:`MethodsData` and :class:`TriggersData` under the same key.
+        This was made for `ScheduleDataResponse` specifically to merge the lists of available methods and triggers under the same key.
 
 
     Parameters
     ----------
-    dict1: :class:`ScheduleDataData`
+    dict1 : :class:`ScheduleDataResponse`
         The origin dict.
-    dict2: :class:`ScheduleDataData`
+    dict2 : :class:`ScheduleDataResponse`
         The dict to merge keys from.
 
     Returns
     -------
-    :class:`ScheduleDataData`
+    :class:`ScheduleDataResponse`
         Merged dictionary.
 
     """
     # _temp: defaultdict[str, list[MethodsData | TriggersData]] = defaultdict(list)
-    for key, value in dict2.items():
-        dict1[key].extend(value)
-    return dict1  # type: ignore
+    dict1["available_methods"].extend(dict2["available_methods"])
+    dict1["available_triggers"].extend(dict2["available_triggers"])
+    dict1["populated_triggers"].extend(dict2["populated_triggers"])
+    return dict1
 
 
-async def generate_docs_rst(instance: AMPControllerInstance) -> None:
+async def generate_docs_rst(instance: Controller) -> None:
     """|coro|
 
     This will generate the Sphinx ``.rst`` files we use for documentation. The files will be written to ``../docs/nodes/``
@@ -1021,12 +1022,14 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
 
     Parameters
     ----------
-    instance: AMPControllerInstance | AMPADSInstance
-        Must be of these types as the API endpoint :meth:`get_settingspec` is not available to all.
+    instance : :class:`Controller`
+        Must be the Controller instance, as the API endpoint :meth:`get_setting_spec` is not available to all.
 
     """
     logger: Logger = logging.getLogger(__name__)
-    spec: SettingsSpecParent = await instance.get_setting_spec()
+    spec: SettingsSpecParent | SettingsSpecParentResponse = await instance.get_setting_spec()
+    if not isinstance(spec, SettingsSpecParent):
+        raise AMPAPITypeError(end_point="Core/GetSettingSpec", cur_type=spec, expec_type=SettingsSpecParent)
 
     _path: Path = Path(__file__).parent.joinpath("../docs/nodes")
 
@@ -1050,26 +1053,34 @@ async def generate_docs_rst(instance: AMPControllerInstance) -> None:
     logger.info("Generating Triggers Events.rst and Method Events.rst...")
     await instance.get_instances()
     # data: ScheduleData = await instance.get_schedule_data(format_data=True)
-    data: ScheduleDataResponse = await instance.get_schedule_data(format_data=False)
+    data: ScheduleData | ScheduleDataResponse = await instance.get_schedule_data(format_data=False)
+    if not isinstance(data, dict):
+        raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=data, expec_type=dict)
     mc_: bool = False
     gen_: bool = False
     src_: bool = False
     for entry in instance.instances:
         # print(entry.running, entry.friendly_name, entry.module)
         if mc_ is False and entry.running and entry.module == "Minecraft":
-            mc_data: ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+            mc_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+            if not isinstance(mc_data, dict):
+                raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=mc_data, expec_type=dict)
             data = dict_merge(data, mc_data)
             mc_ = True
         if gen_ is False and entry.running and entry.module == "Generic":
-            generic_data: ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+            generic_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+            if not isinstance(generic_data, dict):
+                raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=generic_data, expec_type=dict)
             data = dict_merge(data, generic_data)
             gen_ = True
         if src_ is False and entry.running and entry.module == "srcds":
-            srcds_data: ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+            srcds_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+            if not isinstance(srcds_data, dict):
+                raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=srcds_data, expec_type=dict)
             data = dict_merge(data, srcds_data)
             src_ = True
 
-    _temp: ScheduleData = fromdict(ScheduleData, data)  # type: ignore
+    _temp: ScheduleData = ScheduleData(data=data)
     _trigger_event_parse(
         data=_temp.available_triggers,
         title="Trigger Events",
@@ -1111,7 +1122,7 @@ def repeat_to_length(string: str, repeat_char: str, length: int = 0) -> str:
     return repeat_char * length
 
 
-def str_sanitizer_sphinx(string: str, special_chars: tuple) -> str:
+def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
     """Sanitizes a string to prevent .rst typing errors.
 
     Parameters
