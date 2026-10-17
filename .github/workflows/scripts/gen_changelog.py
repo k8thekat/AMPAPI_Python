@@ -101,7 +101,9 @@ def gitHub_commit() -> None:
             continue
 
         if entry.startswith("#"):
-            file_name = entry[1:].strip()
+            # One `#` deeper than the commit line, so `# file.py` sits under the version and `## Sub` nests below it.
+            header_depth: int = len(entry) - len(entry.lstrip("#")) + 1
+            file_name = "#" * header_depth + " " + entry.lstrip("#").strip()
             if file_name not in files:
                 files[file_name] = []
 
@@ -109,7 +111,7 @@ def gitHub_commit() -> None:
             if entry.startswith("--"):
                 _entry = "\t-" + entry[2:]
             if file_name is None:
-                file_name = "Overall"
+                file_name = "## Overall"
                 files[file_name] = []
             files[file_name].append(_entry)
 
@@ -140,7 +142,9 @@ def gitHub_initial_commit() -> None:
             continue
 
         if entry.startswith("#"):
-            file_name = entry[1:].strip()
+            # One `#` deeper than the commit line, so `# file.py` sits under the version and `## Sub` nests below it.
+            header_depth: int = len(entry) - len(entry.lstrip("#")) + 1
+            file_name = "#" * header_depth + " " + entry.lstrip("#").strip()
             if file_name not in files:
                 files[file_name] = []
 
@@ -148,7 +152,7 @@ def gitHub_initial_commit() -> None:
             if entry.startswith("--"):
                 _entry = "\t-" + entry[2:]
             if file_name is None:
-                file_name = "Overall"
+                file_name = "## Overall"
                 files[file_name] = []
             files[file_name].append(_entry)
 
@@ -160,7 +164,7 @@ def update_changelog(version: str, new_commit: str, files: dict[str, list[str]])
     set_version = f"# Version - {version} - [{new_commit[:7]}]({repo_url}/commit/{new_commit})\n"
     data = set_version
     for file_name, file_changes in files.items():
-        data: str = data + "##" + file_name + "\n" + "\n".join(file_changes) + "\n\n"
+        data: str = data + file_name + "\n" + "\n".join(file_changes) + "\n\n"
 
     data = data + changelog_data
     with cl_file.open("r+", encoding="utf-8") as changelog:
