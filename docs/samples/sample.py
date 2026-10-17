@@ -89,7 +89,7 @@ async def Sample_API() -> None:
     try:
         players: Players = await mcinstance.get_user_list()
     except AMPAPIError:
-        logger.exception("Failed to retrieve Players")
+        logger.error("Failed to retrieve Players")
         return
     await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
 
@@ -99,7 +99,7 @@ async def Sample_API() -> None:
     try:
         stats: AnalyticsSummary = await mcinstance.get_analytics_summary()
     except AMPAPIError:
-        logger.exception("Failed to retrieve Stats")
+        logger.error("Failed to retrieve Stats")
         return
     pprint(stats)
 
