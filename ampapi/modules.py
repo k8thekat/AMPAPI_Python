@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeVar
 
     from ._types import (
+        AnalyticsGraphDataResponse,
+        AnalyticsStatResponse,
         AvailableMethodsResponse,
         AvailableTriggersResponse,
         ConfigResponse,
@@ -402,29 +404,31 @@ class AnalyticsSummary:
 
     Attributes
     ----------
-    busiest_time: dict[:class:`str`, Union[:class:`int`, :class:`str`]]
+    busiest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a list.
     country_data: list[:class:`AnalyticsCountryData`]
         The Country information for the summary, default is a list.
-    graph_data: list[dict[:class:`str`, Union[:class:`int`, :class:`str`]]]
+    graph_data : list[dict[:class:`str`, Union[:class:`int`, :class:`str`]]] | list[:class:`AnalyticsGraphDataResponse`]
         The Data displayed on the Web UI panel Analytics Menu, default is a list.
     is_demo: :class:`bool`
         UNK, default is False.
-    quietest_time: dict[str, Union[:class:`int`, :class:`str`]]
+    quietest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a dict.
-    stats: list[:class:`AnalyticsStats`]
+    stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatResponse`]
         The Analytics Stats of the summary, default is a list.
     top_players: list[:class:`AnalyticsTopPlayers`]
         The TOP players from the summary, default is a list.
 
     """
 
-    busiest_time: dict[str, Union[int, str]] = field(default_factory=dict[str, Union[int, str]])
+    busiest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
     country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
-    graph_data: list[dict[str, Union[int, str]]] = field(default_factory=list[dict[str, Union[int, str]]])
+    graph_data: list[dict[str, Union[int, str]]] | list[AnalyticsGraphDataResponse] = field(
+        default_factory=list[dict[str, Union[int, str]]],
+    )
     is_demo: bool = field(default=False)
-    quietest_time: dict[str, Union[int, str]] = field(default_factory=dict[str, Union[int, str]])
-    stats: list[AnalyticsStats] = field(default_factory=list[AnalyticsStats])
+    quietest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
+    stats: list[AnalyticsStats] | list[AnalyticsStatResponse] = field(default_factory=list[AnalyticsStats])
     top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
 
     def __repr__(self) -> str:  # noqa: D105

@@ -21,17 +21,16 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import UTC, datetime, timezone
-from typing import TYPE_CHECKING, Any, Optional, Union, Unpack, cast
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
+from ._types import ANALYTICS_SUMMARY_EXCLUDED_KEYS, ANALYTICS_SUMMARY_REQUIRED_KEYS, AnalyticsSummaryResponse, is_response_type
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
 from .modules import AnalyticsFilter, AnalyticsSummary
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
-
-    from ._types import AnalyticsSummaryResponse
 
 __all__ = ("AnalyticsPlugin",)
 
@@ -100,8 +99,8 @@ class AnalyticsPlugin(Base):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "stats" not in result:
+        if not is_response_type(result, AnalyticsSummaryResponse, ANALYTICS_SUMMARY_REQUIRED_KEYS, ANALYTICS_SUMMARY_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
         if format_data is True:
-            return AnalyticsSummary(**cast("dict[str, Any]", result))
+            return AnalyticsSummary(**result)
         return result

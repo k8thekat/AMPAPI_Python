@@ -51,6 +51,9 @@ ACTION_RESULT_REQUIRED_KEYS: tuple[str, ...] = ("status",)
 # "console_entries" excludes UpdatesResponse, "is_primary_task" excludes RunningTaskResponse; both carry a "status".
 ACTION_RESULT_EXCLUDED_KEYS: tuple[str, ...] = ("console_entries", "is_primary_task")
 
+ANALYTICS_SUMMARY_REQUIRED_KEYS: tuple[str, ...] = ("stats", "graph_data")
+ANALYTICS_SUMMARY_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 RUNNING_TASK_REQUIRED_KEYS: tuple[str, ...] = ("status", "is_primary_task")
 RUNNING_TASK_EXCLUDED_KEYS: tuple[str, ...] = ()
 
