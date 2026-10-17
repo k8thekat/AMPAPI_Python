@@ -45,7 +45,8 @@ with cl_file.open(encoding="utf-8") as changelog:
 
     ver_line: str | None = None
     for line in split_data:
-        if line.startswith("# Version -"):
+        # Entries before 5.0.0 were written as `## Version -`, newer ones as `# Version -`.
+        if line.lstrip("#").startswith(" Version -"):
             ver_line = line
             break
 
@@ -70,11 +71,12 @@ if _flag is False and (not version or cl_ver == version):
 
 def gitHub_commit() -> None:
     # Verify that the current branch is `project_branch`.
-    output: bytes = subprocess.check_output(["git", "branch"])
-    branch: str = output.decode("utf-8").strip("*").strip().split("\n")[0]
+    # `git branch` lists alphabetically, so its first line is not always the current branch.
+    output: bytes = subprocess.check_output(["git", "branch", "--show-current"])
+    branch: str = output.decode("utf-8").strip()
     if branch != project_branch:
         msg = "<%s> | Current branch is not `%s`: %s"
-        raise RuntimeError(msg, "Changelog Generator", project_branch, changelog)
+        raise RuntimeError(msg, "Changelog Generator", project_branch, branch)
 
     # Verify that there are new commits.
     output = subprocess.check_output(["git", "log"])
@@ -91,24 +93,22 @@ def gitHub_commit() -> None:
     cur_data = cur_data.split("\n")
     file_name = None
     for entry in cur_data:
-        _entry = entry
-        if len(entry) == 0 or len(entry) == 1:
+        # `--format="%B"` wraps each commit message in quotes, so strip them before checking the line.
+        _entry = entry.strip('"')
+        if len(_entry) == 0 or len(_entry) == 1:
             continue
-        if entry.startswith("$"):
+        if _entry.startswith("$"):
             # This should skip our auto generated changelog commit from Github Actions.
             continue
 
-        if entry.startswith('"'):
-            _entry = entry.strip('"')
-
-        elif entry.startswith("#"):
-            file_name = entry[1:].strip()
+        if _entry.startswith("#"):
+            file_name = _entry[1:].strip()
             if file_name not in files:
                 files[file_name] = []
 
         else:
-            if entry.startswith("--"):
-                _entry = "\t-" + entry[2:]
+            if _entry.startswith("--"):
+                _entry = "\t-" + _entry[2:]
             if file_name is None:
                 file_name = "Overall"
                 files[file_name] = []
@@ -133,24 +133,22 @@ def gitHub_initial_commit() -> None:
     cur_data = cur_data.split("\n")
     file_name = None
     for entry in cur_data:
-        _entry = entry
-        if len(entry) == 0 or len(entry) == 1:
+        # `--format="%B"` wraps each commit message in quotes, so strip them before checking the line.
+        _entry = entry.strip('"')
+        if len(_entry) == 0 or len(_entry) == 1:
             continue
-        if entry.startswith("$"):
+        if _entry.startswith("$"):
             # This should skip our auto generated changelog commit from Github Actions.
             continue
 
-        if entry.startswith('"'):
-            _entry = entry.strip('"')
-
-        elif entry.startswith("#"):
-            file_name = entry[1:].strip()
+        if _entry.startswith("#"):
+            file_name = _entry[1:].strip()
             if file_name not in files:
                 files[file_name] = []
 
         else:
-            if entry.startswith("--"):
-                _entry = "\t-" + entry[2:]
+            if _entry.startswith("--"):
+                _entry = "\t-" + _entry[2:]
             if file_name is None:
                 file_name = "Overall"
                 files[file_name] = []

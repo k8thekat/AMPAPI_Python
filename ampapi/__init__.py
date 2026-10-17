@@ -1,4 +1,4 @@
-#ruff: noqa
+# ruff: noqa
 """Copyright (C) 2021-2026 Katelynn Cadwallader.
 
 This file is part of AMPAPI_Python.
@@ -24,7 +24,7 @@ from __future__ import annotations
 __title__ = "AMPAPI Python"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "4.6.1"
+__version__ = "5.0.0"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
@@ -53,6 +53,6 @@ class VersionInfo(NamedTuple):
     releaseLevel: Literal["alpha", "beta", "pre-release", "release", "development"]
 
 
-version_info: VersionInfo = VersionInfo(Major=4, Minor=6, Revision=0, releaseLevel="development")
+version_info: VersionInfo = VersionInfo(Major=5, Minor=0, Revision=0, releaseLevel="release")
 
 del NamedTuple, Literal, VersionInfo

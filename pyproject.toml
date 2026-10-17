@@ -27,16 +27,19 @@ dependencies = [
     "aiohttp>=3.7.4.post0",
     "dataclass-wizard>=0.22.2",
     "pyotp>=2.6.0",
+    "typing_extensions>=4.12.0",
 ]
 
 [project.urls]
 GitHub = "https://github.com/k8thekat/AMPAPI_Python"
-Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/main/CHANGELOG.md"
 
 [tool.ruff]
 target-version = "py312"
 line-length = 140
 exclude = ["docs/extensions/*.py"]
+
+[tool.ruff.lint]
 select = ["ALL"]
 ignore = [
     "ANN401",
@@ -103,6 +106,9 @@ reportIncompatibleMethodOverride = false
 [tool.setuptools]
 packages = ["ampapi"]
 include-package-data = true
+
+[tool.setuptools.package-data]
+ampapi = ["py.typed"]
 
 [tool.setuptools.dynamic]
 version = { attr = "ampapi.__version__" }
