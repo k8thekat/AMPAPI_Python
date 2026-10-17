@@ -17,18 +17,8 @@ A small todo list local to the project.
 
 - `import ampapi` fails once installed: `util.py:17` imports `docs.samples.method_event_usage` at module level
   and `docs/` is not packaged. Same for the lazy imports at `util.py:711`, `842` and `907`.
-- `typing_extensions` is imported at runtime (`core.py:28`, `minecraft.py:6`) but is not in `dependencies`.
-- `gen_changelog.py` searches for `# Version -`, but every header in `CHANGELOG.md` is `## Version -`.
-  No match falls through to the initial-repo path, which writes the whole git log as one entry and force-pushes it.
-  - The per-file headers are also written as `"##" + file_name` with no space, which markdown does not render as a heading.
 - `Directory` / `DirectoryResponse` are missing `is_smart_excluded_from_backups`; newer AMP sends it and
   `Directory(**result)` raises `TypeError`. Fixed on `main` by PR #27 (`8d74bd9`), not carried into `Refactor`.
-- `__version__` is `4.6.1` and `version_info` is `4.6.0 development`; bump both together.
-- `_responses/login.json` is tracked (session id, username); untrack it before merging to `main`.
-- Docs build: `.readthedocs.yaml` installs a root `requirements.txt` that no longer exists, and an unpinned
-  `docs/requirements.txt` resolves Sphinx 9, which `enum_tools` fails to load under.
-- README, `docs/samples/sample.py`, `docs/index.rst`, `docs/instances.rst` and `docs/types.rst` still use the
-  pre-refactor names (`AMPControllerInstance`, `AMPInstance`, `ampapi.dataclass`, `ampapi.enums_`, `ampapi.types_`, ...).
 
 
 ## ampapi/adsmodule.py
@@ -105,9 +95,9 @@ A small todo list local to the project.
 
 ---
 
-- Add a short README to `docs/api_spec_sheets/` explaining the versions and the diff/missing tooling.
-- Fix the 5 duplicate-object Sphinx warnings with `:no-index:`, and add pages for `ResponseHandlerOptions`,
-  `ExponentialBackoff`, `errors` and `TargetADS`.
+- Add pages for `ResponseHandlerOptions`, `ExponentialBackoff`, `errors` and `TargetADS`.
+- `Base.session_ttl` / `instance_id`, `Core.triggers`, `Instance.app_state` and `Player.uuid` / `name` are documented
+  twice, in the class Attributes section and on the member. The rst `:exclude-members:` hides the member's own docstring.
 - Replace the remaining `AMP*Instance` names in docstrings (`instance.py`, `adsmodule.py`, `base.py`, `util.py`).
 - `bridge.py` docstring: `ap_params` typo, "Version 5.0" note, `Parameter` heading.
 
@@ -124,5 +114,4 @@ A small todo list local to the project.
 - Add API endpoints to the remaining function docstrings.
   - About 11 of 207 endpoint methods name their endpoint.
 - Update function returns and parameters since adding `bool` to `_post`.
-- Add a `py.typed` marker to match the `Typing :: Typed` classifier.
 - Store plugin (17 endpoints) and Webhook plugin (`trigger_webhook_event`) have no wrapper module.
