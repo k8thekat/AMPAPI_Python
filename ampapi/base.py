@@ -171,7 +171,7 @@ class Base:
     _cache_source: ClassVar[str] = "the API call that populates it"
     _cache_sources: ClassVar[dict[str, str]] = {}
     # Shared by every instance and built on the first `check_key_drift` call; it reads the wrapper source once.
-    _key_drift_check: ClassVar[Optional[KeyDriftCheck]] = None
+    _key_drift_check: ClassVar[Union[KeyDriftCheck, None]] = None
 
     # Error response strings.
     _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
@@ -653,7 +653,7 @@ class Base:
 
         Returns
         -------
-        :class:`LoginResponse` | None
+        Union[:class:`LoginResponse`, None]
             The raw response from ``API/Core/Login``, or None when the stored session is still valid.
 
         Raises

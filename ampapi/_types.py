@@ -625,7 +625,7 @@ class InstanceResponse(TypedDict):
     tags: Union[list[str], None]
     module_display_name: Union[str, None]
     # Keyed by metric name: cpu_usage, memory_usage, active_users (+ tps) on AMP 2.8.0.8; empty while stopped.
-    metrics: Optional[dict[str, MetricsKeyResponse]]
+    metrics: Union[dict[str, MetricsKeyResponse], None]
     display_image_source: Union[str, None]
     description: Union[str, None]
     # Confirmed against getinstances.json on 2.6.5.0; these were absent from the original definition.

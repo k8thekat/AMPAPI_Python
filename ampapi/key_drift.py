@@ -28,7 +28,7 @@ import re
 import types
 import typing
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NotRequired, Optional, Required, TypeGuard, Union
+from typing import TYPE_CHECKING, Any, NotRequired, Required, TypeGuard, Union
 
 from . import _types
 
@@ -57,7 +57,7 @@ def _is_json_array(value: object) -> TypeGuard[list[object]]:
     return isinstance(value, list)
 
 
-def _unwrap(hint: Any) -> tuple[Any, Optional[bool]]:
+def _unwrap(hint: Any) -> tuple[Any, Union[bool, None]]:
     """The hint inside `NotRequired[...]` / `Required[...]`, and which of the two it was (`None` for neither)."""
     origin = typing.get_origin(hint)
     if origin is NotRequired:
@@ -67,10 +67,10 @@ def _unwrap(hint: Any) -> tuple[Any, Optional[bool]]:
     return hint, None
 
 
-def _nested_shape(hint: Any) -> Optional[tuple[type, bool]]:
+def _nested_shape(hint: Any) -> Union[tuple[type, bool], None]:
     """The TypedDict a key holds, directly or in a list, and if it is a list. `None` for anything else."""
     origin = typing.get_origin(hint)
-    # Optional[X] and X | None
+    # Union[X, None] and X | None
     if origin is Union or origin is types.UnionType:
         for argument in typing.get_args(hint):
             if argument is not type(None):
@@ -168,7 +168,7 @@ def key_drift(shape: type, payloads: Iterable[Mapping[str, object]]) -> KeyDrift
     return {"missing": dict(sorted(missing.items())), "unexpected": dict(sorted(unexpected.items()))}
 
 
-def _annotation_names(node: Optional[ast.expr]) -> list[str]:
+def _annotation_names(node: Union[ast.expr, None]) -> list[str]:
     """Every plain name used in an annotation, eg. `list[Backup] | list[BackupResponse]` gives Backup, BackupResponse."""
     if node is None:
         return []
@@ -198,7 +198,7 @@ class KeyDriftCheck:
 
     __slots__ = ("shapes",)
 
-    def __init__(self, package: Optional[Path] = None) -> None:
+    def __init__(self, package: Union[Path, None] = None) -> None:
         """Read the endpoint shapes from the wrapper source.
 
         Parameters
@@ -257,7 +257,7 @@ class KeyDriftCheck:
                         shapes[url].add(shape)
         return {url: tuple(sorted(found, key=lambda shape: shape.__name__)) for url, found in sorted(shapes.items())}
 
-    def check(self, endpoint: str, data: object) -> Optional[tuple[type, KeyDrift]]:
+    def check(self, endpoint: str, data: object) -> Union[tuple[type, KeyDrift], None]:
         """Compare one sanitized endpoint response with the TypedDict it is expected to match.
 
         Parameters
@@ -269,7 +269,7 @@ class KeyDriftCheck:
 
         Returns
         -------
-        Optional[tuple[:class:`type`, :class:`KeyDrift`]]
+        Union[tuple[:class:`type`, :class:`KeyDrift`], None]
             The TypedDict that matched best and how the response differs from it, or None when the endpoint has
             no known shape or the response holds no JSON object. When an endpoint has several shapes, the one
             with the fewest differing keys is used.
@@ -285,7 +285,7 @@ class KeyDriftCheck:
         results: list[tuple[type, KeyDrift]] = [(shape, key_drift(shape, payloads)) for shape in shapes]
         return min(results, key=lambda result: len(result[1]["missing"]) + len(result[1]["unexpected"]))
 
-    def check_directory(self, path: Path, report: Optional[Path] = None) -> dict[str, tuple[str, type, KeyDrift]]:
+    def check_directory(self, path: Path, report: Union[Path, None] = None) -> dict[str, tuple[str, type, KeyDrift]]:
         """Compare every capture under `path` with its endpoint's TypedDict and write a Markdown report.
 
         A capture is matched to its endpoint by file name, the way `to_file` names it (`getstatus.json` is

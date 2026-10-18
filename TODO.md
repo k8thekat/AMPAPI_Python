@@ -50,7 +50,7 @@ A small todo list local to the project.
 - Add a `BackupResponse` TypedDict and narrow `get_backups` to it.
 - What does the `delete` parameter do on `filemanager.py:35`?
 - Missing wrappers from `2.8.0.8`: `download_folder_as_zip`, `dummy` (a no-op placeholder in the spec), `upload_folder` (file manager), `backup_will_stop_server` (backup).
-- Add TypedDicts for the 8 surviving Minecraft methods.
+- `mc_reject_eula` returns None, but AMP's spec says it returns a Boolean like `mc_accept_eula`.
 - The 16 deprecated Minecraft endpoints are absent from the `2.8.0.8` sheet too; decide when to remove them.
 
 ## ampapi/modules.py
