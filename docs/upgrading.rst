@@ -28,7 +28,12 @@ Renamed classes
 ``AMPADSInstance``              :class:`~ampapi.instance.TargetADS`
 ``AMPInstanceState``            :class:`~ampapi.InstanceState`
 ``Metric``                      :class:`~ampapi.modules.Metrics`
+``User``                        :class:`~ampapi.modules.UserInfo`
 ==============================  ==================================================
+
+Renamed attributes: ``Base.url`` -> ``endpoint_url``, ``FileChunk.base_64_data`` -> ``base64_data``,
+``InstanceDatastore.sanitized_name`` -> ``sanitised_name``, ``Module.end_point_ur`` -> ``endpoint_uri`` and
+``PortInfo.us_user_defined`` -> ``is_user_defined``.
 
 
 Moved modules
@@ -39,6 +44,19 @@ Everything public is still available straight from ``ampapi``.
 - ``ampapi.controller`` was removed; :class:`~ampapi.instance.Controller` lives in ``ampapi.instance``.
 - ``ampapi.enums_`` -> ``ampapi._enums``
 - ``ampapi.types_`` -> ``ampapi._types``
+
+
+Changed methods
+---------------
+
+- ``Base.dataclass_to_dict()`` and ``Base.json_to_dataclass()`` were removed. The dataclasses sent as API parameters
+  have their own ``to_dict()``.
+- :meth:`~ampapi.Core.login` renamed ``rememberME`` to ``remember_me``.
+- :meth:`~ampapi.Core.get_oidc_login_url` dropped its ``state`` parameter and returns the login URL; 4.x always returned None.
+- ``format_data`` was removed from methods whose response has no dataclass (eg. ``get_new_guid``, ``get_group``,
+  ``set_configs``); passing it now raises a :exc:`TypeError`.
+- ``Bridge.api_params`` was removed. :class:`~ampapi.Bridge` is an :class:`~ampapi.modules.APIParams` itself, so read
+  ``bridge.url``, ``bridge.user`` and the rest straight off it. ``Bridge(api_params=...)`` still works.
 
 
 Errors
