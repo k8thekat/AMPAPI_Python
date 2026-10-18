@@ -48,9 +48,9 @@ class Bridge(APIParams):
 
     Parameters
     ----------
-    api_params: :class:`APIParams`
+    api_params : :class:`APIParams`
         The prebuilt class to pass login credentials to <Bridge>.
-    singleton: :class:`bool`, optional
+    singleton : :class:`bool`, optional
         If ``True``, the :class:`Bridge` will be created as a singleton, by default False.
 
     """
@@ -60,9 +60,9 @@ class Bridge(APIParams):
 
         Parameters
         ----------
-        api_params: :class:`APIParams`
+        api_params : :class:`APIParams`
             The prebuilt class to handle login credentials.
-        singleton: :class:`bool`, optional
+        singleton : :class:`bool`, optional
             If ``True``, returns the existing shared instance if one exists, by default True.
 
         Returns
@@ -86,9 +86,9 @@ class Bridge(APIParams):
 
         Parameters
         ----------
-        api_params: :class:`APIParams`
+        api_params : :class:`APIParams`
             The prebuilt class to handle login credentials.
-        singleton: :class:`bool`, optional
+        singleton : :class:`bool`, optional
             If ``True``, prevents re-initialization of an existing singleton instance, by default True.
 
         """

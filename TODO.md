@@ -6,9 +6,6 @@ A small todo list local to the project.
 - Wrap the endpoints added by AMP API `2.8.0.8` (see `docs/api_spec_sheets/2.8.0.8/`).
 - `_responses/` needs a fresh non-Controller (ADS) pass; the 2.6.5.0 dumps were overwritten by the
   Controller run. Use `controller_dump.py -section LIVE -out ./_responses`.
-- Regenerate `docs/api_spec_sheets/missing_endpoints.md` against `2.8.0.8`.
-  - `find_missing_endpoints()` matches by method name, so renamed wrappers (`activate_amp_license`,
-    `get_setting_spec`, `resume_instance`, `suspend_instance`, ...) show as missing. Match on the `url=` literal instead.
 
 
 ## ampapi/adsmodule.py
@@ -60,7 +57,7 @@ A small todo list local to the project.
 - `BackupResponse` TypedDict is still missing; `getbackups.json` returned empty `[]` from the tested
   server. Needs a server with actual backups to dump the item structure.
 - What does the `delete` parameter do on `filemanager.py:35`?
-- Missing wrappers from `2.8.0.8`: `download_folder_as_zip`, `upload_folder` (file manager), `backup_will_stop_server` (backup).
+- Missing wrappers from `2.8.0.8`: `download_folder_as_zip`, `dummy` (a no-op placeholder in the spec), `upload_folder` (file manager), `backup_will_stop_server` (backup).
 - The 8 surviving Minecraft methods still need TypedDict work once response dumps are available.
 - The 16 deprecated Minecraft endpoints are absent from the `2.8.0.8` sheet too; decide when to remove them.
 

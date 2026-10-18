@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import logging
+import os
 import re
 import traceback
 from dataclasses import asdict
@@ -45,16 +46,8 @@ _SPEC_MODULE_MAP: dict[str, tuple[str, str]] = {
     "minecraft_module": ("minecraft.py", "mc_"),
 }
 
-# Spec endpoints that are deliberately reachable through a differently named method rather than
-# their own function. Maps each API spec section name -> {spec endpoint: encapsulating method}.
-_ENCAPSULATED_ENDPOINTS: dict[str, dict[str, str]] = {
-    "ads_module": {
-        # attach_ads() posts to AttachADSWithPairingCode when a "pairing_code" is provided.
-        "attach_ads_with_pairing_code": "attach_ads",
-    },
-}
-
-_METHOD_RE = re.compile(r"^\s+(?:async )?def (\w+)\s*\(")
+# Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" style endpoint urls.
+_ENDPOINT_URL_RE = re.compile(r"^(?:API/)?([A-Za-z]+)/([A-Za-z0-9]+)$")
 _PYTHON_ONLY_PARAMS: frozenset[str] = frozenset({"format_data"})
 
 
@@ -63,13 +56,13 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
 
     Parameters
     ----------
-    data: list[:class:`Methods`]
+    data : list[:class:`Methods`]
         The list of dataclass Methods to parse.
-    title: :class:`str`, optional
+    title : :class:`str`, optional
         The Title of the document header; used also as the filename, by default "".
-    title_body: :class:`str`, optional
+    title_body : :class:`str`, optional
         The body text under the document header, by default "".
-    path: :class:`None | str`, optional
+    path : :class:`None | str`, optional
         The path to save the .rst file, by default None.
 
     """
@@ -443,27 +436,54 @@ def compare_api_spec_versions(
     )
 
 
-def _get_implemented_methods(filepath: Path) -> set[str]:
-    """Return the set of method names defined in a Python source file.
+def _get_endpoint_urls(filepath: Path) -> set[str]:
+    """Return the normalized endpoint urls a Python source file posts to.
+
+    Collects every string literal passed as a ``url=`` or ``endpoint=`` keyword argument whose
+    value looks like ``Module/EndpointName`` (an optional leading ``API/`` is ignored).
 
     Parameters
     ----------
-    filepath: :class:`Path`
+    filepath : :class:`Path`
         The path to the Python source file to parse.
 
     Returns
     -------
     set[:class:`str`]
-        The set of method names found in the file.
+        The urls in :func:`_normalize_endpoint` form, eg. ``core/createtesttask``.
 
     """
-    methods: set[str] = set()
-    with filepath.open() as file:
-        for line in file:
-            match = _METHOD_RE.match(line)
+    urls: set[str] = set()
+    tree = ast.parse(filepath.read_text())
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        for keyword in node.keywords:
+            if keyword.arg not in ("url", "endpoint"):
+                continue
+            if not isinstance(keyword.value, ast.Constant) or not isinstance(keyword.value.value, str):
+                continue
+            match = _ENDPOINT_URL_RE.match(keyword.value.value)
             if match:
-                methods.add(match.group(1))
-    return methods
+                urls.add(f"{_normalize_endpoint(match.group(1))}/{_normalize_endpoint(match.group(2))}")
+    return urls
+
+
+def _normalize_endpoint(name: str) -> str:
+    """Lowercase a name and drop its underscores so ``snake_case`` and ``PascalCase`` names compare equal.
+
+    Parameters
+    ----------
+    name : :class:`str`
+        A spec section, a spec endpoint or a url part, eg. ``get_webauthn_credential_i_ds``.
+
+    Returns
+    -------
+    :class:`str`
+        The normalized name, eg. ``getwebauthncredentialids``.
+
+    """
+    return name.replace("_", "").lower()
 
 
 def _get_function_signatures(filepath: Path) -> dict[str, list[str]]:
@@ -471,7 +491,7 @@ def _get_function_signatures(filepath: Path) -> dict[str, list[str]]:
 
     Parameters
     ----------
-    filepath: :class:`Path`
+    filepath : :class:`Path`
         The path to the Python source file to parse.
 
     Returns
@@ -494,7 +514,7 @@ def find_missing_endpoints(
     spec_path: Path | None = None,
     ampapi_path: Path | None = None,
     output_path: Path | None = None,
-    suffix_aliases: list[str] | None = None,
+    suffix_aliases: list[str] | None = None,  # noqa: ARG001 # kept so existing callers still work, see the docstring
 ) -> None:
     """Compare all API spec sheets against their Python implementations and report missing endpoints.
 
@@ -503,9 +523,11 @@ def find_missing_endpoints(
     Results are written to a Markdown file and summarised via logging.
 
     .. note::
-        An endpoint implemented as a private method (eg. ``_create_test_task``) counts as implemented;
-        the ``DEV:`` endpoints in the spec sheets are intentionally kept private. Endpoints folded into a
-        differently named method are declared in :data:`_ENCAPSULATED_ENDPOINTS` and count as implemented too.
+        An endpoint counts as implemented when any module in ``ampapi_path`` posts to its url (eg.
+        ``url="Core/CreateTestTask"``), whatever the wrapper method is named. This covers renamed wrappers,
+        private ``DEV:`` wrappers and endpoints folded into another method. Spec and url names are compared
+        lowercased with underscores removed, and the spec section must match the url's module part
+        (``ads_module`` -> ``ADSModule/``).
 
     Parameters
     ----------
@@ -516,15 +538,13 @@ def find_missing_endpoints(
     output_path : Path | None, optional
         Path for the output report. Defaults to ``{spec_path}/missing_endpoints.md``.
     suffix_aliases : list[str] | None, optional
-        Additional suffixes to try when an exact match is not found. An endpoint is considered
-        implemented if ``prefix + endpoint + suffix`` exists for any suffix in the list.
-        Defaults to ``["_application"]`` to handle spec names like ``kill`` mapping to ``kill_application``.
+        Unused here since endpoints are matched on their url rather than the method name; still accepted so
+        existing calls keep working, by default None.
 
     """
     _logger: Logger = logging.getLogger(__name__)
     _spec_dir: Path = spec_path if spec_path is not None else Path(__file__).parent.parent.joinpath("docs/api_spec_sheets")
     _ampapi_dir: Path = ampapi_path if ampapi_path is not None else Path(__file__).parent
-    _aliases: list[str] = suffix_aliases if suffix_aliases is not None else ["_application"]
 
     # Merge endpoints from all spec files, keyed by section
     all_spec: dict[str, set[str]] = {}
@@ -546,18 +566,10 @@ def find_missing_endpoints(
 
     _out: Path = output_path if output_path is not None else _spec_dir / "missing_endpoints.md"
 
-    def _is_implemented(ep: str, prefix: str, py_methods: set[str], section: str) -> bool:
-        full = prefix + ep
-        # Endpoints marked "DEV:" in the spec sheets (eg. create_test_task, async_test) are implemented as
-        # private methods, so the underscore prefixed name counts as implemented too.
-        for name in (full, "_" + full):
-            if name in py_methods:
-                return True
-            if any((name + alias) in py_methods for alias in _aliases):
-                return True
-        # Fall back to the encapsulating method; it must exist, otherwise the endpoint is still missing.
-        encapsulator: str | None = _ENCAPSULATED_ENDPOINTS.get(section, {}).get(ep)
-        return encapsulator is not None and encapsulator in py_methods
+    # Every endpoint url any module posts to; "Core/Login" lives in base.py, so all of the modules are read.
+    implemented_urls: set[str] = set()
+    for module_path in sorted(_ampapi_dir.glob("*.py")):
+        implemented_urls |= _get_endpoint_urls(module_path)
 
     total_missing = 0
     with _out.open("w") as out_file:
@@ -572,11 +584,13 @@ def find_missing_endpoints(
                 out_file.write(f"## {section} -> `{py_file}` NOT FOUND\n\n")
                 continue
 
-            py_methods = _get_implemented_methods(py_path)
-            missing = sorted(ep for ep in spec_endpoints if not _is_implemented(ep, prefix, py_methods, section))
+            section_key: str = _normalize_endpoint(section)
+            missing = sorted(ep for ep in spec_endpoints if f"{section_key}/{_normalize_endpoint(ep)}" not in implemented_urls)
             total_missing += len(missing)
 
-            out_file.write(f"## {section} -> [{py_file}](ampapi/{py_file})\n\n")
+            # The link is relative to the report, wherever it is written to.
+            py_link: str = Path(os.path.relpath(py_path, _out.parent)).as_posix()
+            out_file.write(f"## {section} -> [{py_file}]({py_link})\n\n")
             out_file.write(f"- Spec endpoints : {len(spec_endpoints)}\n")
             out_file.write(f"- Implemented    : {len(spec_endpoints) - len(missing)}\n")
             out_file.write(f"- Missing        : {len(missing)}\n\n")
@@ -894,13 +908,13 @@ def _trigger_event_parse(
 
     Parameters
     ----------
-    data: list[:class:`Triggers`]
+    data : list[:class:`Triggers`]
         The list of dataclass Triggers.
-    title: :class:`str`, optional
+    title : :class:`str`, optional
         The Title of the document header; this is also used to set the filename, by default "".
-    title_body: :class:`str`, optional
+    title_body : :class:`str`, optional
         The body just under the document header, by default "".
-    path: :class:`None | str`, optional
+    path : :class:`None | str`, optional
         The path to save the .rst file., by default None.
 
     """
@@ -1104,11 +1118,11 @@ def repeat_to_length(string: str, repeat_char: str, length: int = 0) -> str:
 
     Parameters
     ----------
-    string: str
+    string : str
         The string to match the :meth:`len` of.
-    repeat_char: str
+    repeat_char : str
         The char to repeat to the length of the string or the ``length`` parameter.
-    length: int, optional
+    length : int, optional
         The length to repeat the char by, by default 0.
 
     Returns
@@ -1127,7 +1141,7 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
 
     Parameters
     ----------
-    string: :class:`str`
+    string : :class:`str`
         The string with the special_char.
 
     Returns

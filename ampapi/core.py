@@ -109,7 +109,7 @@ class Core(Base):
 
     Attributes
     ----------
-    triggers: :class:`TriggerID`
+    triggers : :class:`TriggerID`
         You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information.
 
     """
@@ -135,9 +135,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -160,9 +160,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -189,9 +189,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -217,15 +217,15 @@ class Core(Base):
 
         Parameters
         ----------
-        license_key: :class:`str`
+        license_key : :class:`str`
             Your AMP License key.
-        query_only: bool, optional
+        query_only : bool, optional
             UNK, by default False.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -273,13 +273,13 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The Trigger ID.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -332,17 +332,17 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: class:`str`
+        trigger_id : class:`str`
             The ID of the trigger to add.
-        method_id: class:`str`
+        method_id : class:`str`
             The Task method name. eg. ```Event.MinecraftModule.SendGlobalTitle``
-        parameter_mapping: :class:dict[:class:`str`, :class:`str`]
+        parameter_mapping : :class:dict[:class:`str`, :class:`str`]
             The parameters to be populated related to the trigger_id/method_id.\n
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -386,13 +386,13 @@ class Core(Base):
 
         Parameters
         ----------
-        task_id: :class:`str`
+        task_id : :class:`str`
             The ID of the Task.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -442,19 +442,19 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP user name.
-        old_password: :class:`str`
+        old_password : :class:`str`
             Current AMP user password.
-        new_password: :class:`str`
+        new_password : :class:`str`
              New AMP user password.
-        two_factor_pin: :class:`str`
+        two_factor_pin : :class:`str`
             Two Factor PIN, if enabled. Defaults to "".
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -505,17 +505,17 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The ID of the Trigger you want to change the order of a task.
-        task_id: :class:`str`
+        task_id : :class:`str`
             The ID of the task to modify. See :meth:`get_schedule_data` to get IDs
-        new_order: :class:`int`
+        new_order : :class:`int`
             The new task position.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -560,15 +560,15 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP User name to confirm 2FA setup.
-        two_factor_code: :class:`str`
+        two_factor_code : :class:`str`
             Two factor code.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -613,15 +613,15 @@ class Core(Base):
 
         Parameters
         ----------
-        role_name: :class:`str`
+        role_name : :class:`str`
             The name you want for the AMP role.
-        as_common_role: :class:`bool`, optional
+        as_common_role : :class:`bool`, optional
             A role that everyone has, defaults to False.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -665,13 +665,13 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP User name.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -720,11 +720,11 @@ class Core(Base):
 
         Parameters
         ----------
-        node: :class:`str`
+        node : :class:`str`
             The permission node to check for. eg ``Core.RoleManagement.DeleteRoles``. \n
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -759,13 +759,13 @@ class Core(Base):
 
         Parameters
         ----------
-        instance_id: :class:`str`
+        instance_id : :class:`str`
             The AMP Instance ID.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -809,13 +809,13 @@ class Core(Base):
 
         Parameters
         ----------
-        role_id: :class:`str`
+        role_id : :class:`str`
             The ID of the role to delete.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -861,15 +861,15 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The ID of the trigger to delete.
-        task_id: :class:`str`
+        task_id : :class:`str`
             The ID of the task to delete. See :meth:`get_schedule_data` and check the :class:`Tasks` class to get IDs.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -913,13 +913,13 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The ID of the trigger to delete.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -963,13 +963,13 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP User name.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1019,11 +1019,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1066,11 +1066,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1112,13 +1112,13 @@ class Core(Base):
 
         Parameters
         ----------
-        task_id: :class:`str`
+        task_id : :class:`str`
             The ID of the task to delete. See :meth:`get_schedule_data` and check the :class:`Tasks` class to get IDs.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1168,25 +1168,25 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The ID of the interval trigger to edit.
-        months: :class:`int`
+        months : :class:`int`
             The number of the month you want the trigger to run. Range 1 to 12.
-        days: :class:`int`
+        days : :class:`int`
             The days of the interval trigger to edit, the first day of the week is Monday. Range is 0 to 7.
-        hours: :class:`int`
+        hours : :class:`int`
             The hours of the interval trigger to edit. Range is 0 to 23.
-        minutes: :class:`int`
+        minutes : :class:`int`
             The minutes of the interval trigger to edit. Range is 0 to 59.
-        days_of_month: :class:`int`
+        days_of_month : :class:`int`
             The days of the month of the interval trigger to edit. Range is 1 to 31.
-        description: :class:`str`
+        description : :class:`str`
             The description of the interval trigger to edit.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default ``None``.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1256,17 +1256,17 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
              The ID of the trigger to edit.
-        task_id: :class:`str`
+        task_id : :class:`str`
             The ID of the task to edit. See :meth:`get_schedule_data` to get IDs.
-        parameter_mapping: dict[:class:`str`, :class:`str`]:
+        parameter_mapping : dict[:class:`str`, :class:`str`]:
             The parameters to be updated on the task.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1315,15 +1315,15 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP User name.
-        password: :class:`str`
+        password : :class:`str`
             The AMP Users password.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1371,11 +1371,11 @@ class Core(Base):
 
         Parameters
         ----------
-        session_id: :class:`str`
+        session_id : :class:`str`
             The AMP Session ID to close.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         """
@@ -1408,11 +1408,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1450,11 +1450,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1492,11 +1492,11 @@ class Core(Base):
 
         Parameters
         ----------
-        role_id: :class:`str`
+        role_id : :class:`str`
             The role ID. eg "5d6566e0-fae2-41d7-bfb6-d21033247f2e"
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1531,13 +1531,13 @@ class Core(Base):
 
         Parameters
         ----------
-        name: :class:`str`
+        name : :class:`str`
             The AMP User name.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1577,11 +1577,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1619,9 +1619,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1660,15 +1660,15 @@ class Core(Base):
 
         Parameters
         ----------
-        before: :class:`float`
+        before : :class:`float`
             A POSIX timestamp, defaults to datetime.now(tz=timezone.utc).timestamp().
-        count: :class:`int`
+        count : :class:`int`
             Number of entries to return, default is 10.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1706,11 +1706,11 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP username.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1749,13 +1749,13 @@ class Core(Base):
 
         Parameters
         ----------
-        node: :class:`str`
+        node : :class:`str`
             The AMP node to inspect. eg "ADSModule.Networking.BaseURL"
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1803,13 +1803,13 @@ class Core(Base):
 
         Parameters
         ----------
-        nodes: list[:class:`str`]
+        nodes : list[:class:`str`]
             The list of setting nodes to look at.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1847,11 +1847,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1893,11 +1893,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1934,9 +1934,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -1974,9 +1974,9 @@ class Core(Base):
         ----------
         redirect_uri : Union[:class:`str`, None], optional
             UNK, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         """
@@ -2006,11 +2006,11 @@ class Core(Base):
 
         Parameters
         ----------
-        redirect_uri: :class:`str | None`, optional
+        redirect_uri : :class:`str | None`, optional
             UNK, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2043,9 +2043,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2077,11 +2077,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2117,11 +2117,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2158,13 +2158,13 @@ class Core(Base):
 
         Parameters
         ----------
-        description: Union[:class:`str`, None], optional
+        description : Union[:class:`str`, None], optional
             You can set a description of what the token is for, defaults to None.
-        is_temporary: Union[:class:`bool`, None], optional
+        is_temporary : Union[:class:`bool`, None], optional
             If the token should be temporary, defaults to None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2199,13 +2199,13 @@ class Core(Base):
 
         Parameters
         ----------
-        role_id: :class:`str`
+        role_id : :class:`str`
             The role ID to get information for.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2245,11 +2245,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2284,9 +2284,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2320,11 +2320,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2366,11 +2366,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2418,11 +2418,11 @@ class Core(Base):
 
         Parameters
         ----------
-        setting_node: :class:`str`
+        setting_node : :class:`str`
             The setting node name.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2457,11 +2457,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2499,11 +2499,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2540,13 +2540,13 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The ID of the time interval trigger to get.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2613,11 +2613,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2656,11 +2656,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2700,9 +2700,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2736,13 +2736,13 @@ class Core(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             The Application User id. See :meth:`get_user_list`.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2787,11 +2787,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2828,11 +2828,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2873,11 +2873,11 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             Username.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2910,9 +2910,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2947,9 +2947,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -2983,9 +2983,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3012,9 +3012,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3047,18 +3047,18 @@ class Core(Base):
 
         Parameters
         ----------
-        amp_user: :class:`str`
+        amp_user : :class:`str`
             The username for logging into the AMP Control Panel.
-        amp_password: :class:`str`
+        amp_password : :class:`str`
             The password for logging into the AMP Control Panel.
-        token: :class:`str` , optional
+        token : :class:`str` , optional
             Your Two-Factor token string, defaults to "".
             - Uses :meth:`TOTP.now()` on the provided token.
-        remember_me: :class:`bool` , optional
+        remember_me : :class:`bool` , optional
             Remember me token, defaults to ``False``.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3093,9 +3093,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3119,9 +3119,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3144,9 +3144,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3175,15 +3175,15 @@ class Core(Base):
 
         Parameters
         ----------
-        code: :class:`str`
+        code : :class:`str`
             UNK.
-        redirect_uri: :class:`str`
+        redirect_uri : :class:`str`
             UNK.
-        instance_id: :class:`str`
+        instance_id : :class:`str`
             The Instance ID, see :attr:`~Instance.instance_id`
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3218,13 +3218,13 @@ class Core(Base):
 
         Parameters
         ----------
-        node: :class:`str`
+        node : :class:`str`
             The setting node name.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3267,11 +3267,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3314,15 +3314,15 @@ class Core(Base):
 
         Parameters
         ----------
-        role_id: :class:`str`
+        role_id : :class:`str`
             The ID of the role to rename.
-        new_name: :class:`str`
+        new_name : :class:`str`
             The new name for the role.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3369,11 +3369,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3405,9 +3405,9 @@ class Core(Base):
         ----------
         format_data : Union[bool, None], optional
             Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3448,15 +3448,15 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             Username.
-        new_password: :class:`str`
+        new_password : :class:`str`
             New password.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3500,13 +3500,13 @@ class Core(Base):
 
         Parameters
         ----------
-        auth_id: :class:`int`
+        auth_id : :class:`int`
             The Web auth ID.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3549,9 +3549,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3580,13 +3580,13 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
              The ID of the event trigger to run.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3632,17 +3632,17 @@ class Core(Base):
 
         Parameters
         ----------
-        user_id: :class:`str`
+        user_id : :class:`str`
             User ID to add to the role.
-        role_id: :class:`str`
+        role_id : :class:`str`
             Role ID to add the user to.
-        is_member: :class:`bool`
+        is_member : :class:`bool`
             "True" to add the user to the role, "False" to remove the user from the role.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3688,18 +3688,18 @@ class Core(Base):
 
         Parameters
         ----------
-        role_id: :class:`str`
+        role_id : :class:`str`
             Role ID to add the user to.
-        permission_node: :class:`str`
+        permission_node : :class:`str`
             AMP permission node. eg "Core.RoleManagement.DeleteRoles"
-        enabled: Union[None, :class:`bool`], optional
+        enabled : Union[None, :class:`bool`], optional
             Set a permission to "True", "False" or "None"; depending on the results you can disable or enable an
             entire tree node of permissions.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3744,15 +3744,15 @@ class Core(Base):
 
         Parameters
         ----------
-        trigger_id: :class:`str`
+        trigger_id : :class:`str`
             The ID of the trigger to edit.
-        enabled: :class:`bool`
+        enabled : :class:`bool`
             The enabled state of the trigger to edit.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3799,11 +3799,11 @@ class Core(Base):
 
         Parameters
         ----------
-        msg: :class:`str`
+        msg : :class:`str`
             The message or command to send to the Console.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3837,11 +3837,11 @@ class Core(Base):
 
         Parameters
         ----------
-        data: dict[:class:`str`, :class:`str`]
+        data : dict[:class:`str`, :class:`str`]
             Dictionary of Setting Nodes to set.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3877,15 +3877,15 @@ class Core(Base):
 
         Parameters
         ----------
-        node: :class:`str`
+        node : :class:`str`
             Setting node name.
-        value: :class:`str`
+        value : :class:`str`
             Config node value.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3928,11 +3928,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3972,9 +3972,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -3997,9 +3997,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4029,15 +4029,15 @@ class Core(Base):
 
         Parameters
         ----------
-        email_address: :class:`str`
+        email_address : :class:`str`
             The new Email address.
-        two_factor_pin: :class:`str`
+        two_factor_pin : :class:`str`
             Two factor PIN.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4083,9 +4083,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4112,9 +4112,9 @@ class Core(Base):
 
         Parameters
         ----------
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4139,11 +4139,11 @@ class Core(Base):
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4183,13 +4183,13 @@ class Core(Base):
 
         Parameters
         ----------
-        pub_key: :class:`str`
+        pub_key : :class:`str`
             The public key.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4238,23 +4238,23 @@ class Core(Base):
 
         Parameters
         ----------
-        username: :class:`str`
+        username : :class:`str`
             The AMP user to update.
-        disabled: :class:`bool`, optional
+        disabled : :class:`bool`, optional
             If the AMP user should be disabled, defaults to False.
-        password_expires: :class:`bool`, optional
+        password_expires : :class:`bool`, optional
             If the AMP user password should expire, defaults to False.
-        cannot_change_password: :class:`bool`, optional
+        cannot_change_password : :class:`bool`, optional
             The AMP user cannot change their password, defaults to False.
-        must_change_password: :class:`bool`, optional
+        must_change_password : :class:`bool`, optional
             The AMP user must change password upon next login, defaults to False.
-        email_address: :class:`str`, optional
+        email_address : :class:`str`, optional
             The email address to set for the AMP user, defaults to "".
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -4311,17 +4311,17 @@ class Core(Base):
 
         Parameters
         ----------
-        attestation_object: :class:`str`
+        attestation_object : :class:`str`
             Attestation object.
-        client_data_json: :class:`str`
+        client_data_json : :class:`str`
             Client data JSON.
-        description: :class:`str`
+        description : :class:`str`
             Description.
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns

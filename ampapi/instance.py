@@ -81,72 +81,72 @@ class Instance(
 
     Parameters
     ----------
-    data: Union[:class:`Instance`, None]
+    data : Union[:class:`Instance`, None]
         The Instance data to be unpacked and set as attributes of this class to execute API calls.
-    controller: Union[:class:`Controller`, None]
+    controller : Union[:class:`Controller`, None]
         The :class:`Controller` to be used to execute specific API calls.
 
     Attributes
     ----------
-    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
         The version of the AMP, default is None.
-    application_endpoints: list[dict[str, str]]
+    application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state: :class:`AMPInstanceState`
+    app_state : :class:`AMPInstanceState`
         The state of the application.
-    container_cpus: :class:`float`
+    container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
-    container_memory_mb: :class:`int`
+    container_memory_mb : :class:`int`
         The amount of memory allocated to the container in MB.
-    container_memory_policy: :class:`ContainerMemoryPolicyState`
+    container_memory_policy : :class:`ContainerMemoryPolicyState`
         The memory policy of the Instance.
-    daemon: :class:`bool`
+    daemon : :class:`bool`
         If the Instance is a daemon.
-    daemon_autostart: :class:`bool`
+    daemon_autostart : :class:`bool`
         If the Instance should be autostart on boot.
-    deployment_args: dict[:class:`str`, :class:`str`]
+    deployment_args : dict[:class:`str`, :class:`str`]
         The deployment arguments of the Instance.
-    description: :class:`str`
+    description : :class:`str`
         The description of the Instance, default is "".
-    disk_usage_mb: :class:`int`
+    disk_usage_mb : :class:`int`
         The disk usage of the Instance in MB.
-    display_image_source: :class:`str`
+    display_image_source : :class:`str`
         The source of the display image, default is "".
-    exclude_from_firewall: :class:`bool`
+    exclude_from_firewall : :class:`bool`
         If the Instance should be excluded from the firewall.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The friendly name of the Instance.
-    ip: :class:`str`
+    ip : :class:`str`
         The IP address of the Instance.
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance GUID.
-    instance_name: :class:`str`
+    instance_name : :class:`str`
         The Instance name.
-    is_container_instance: :class:`bool`
+    is_container_instance : :class:`bool`
         If the Instance is a container instance.
-    is_https: :class:`bool`
+    is_https : :class:`bool`
         If the Instance is using HTTPS.
-    management_mode: :class:`int`
+    management_mode : :class:`int`
         The management mode of the Instance.
-    metrics: Union[:class:`Metric`, None]
+    metrics : Union[:class:`Metric`, None]
         The metrics of the Instance, default is None.
-    module: :class:`str`
+    module : :class:`str`
         The module of the Instance.
-    module_display_name: :class:`str`
+    module_display_name : :class:`str`
         The display name of the module, default is "".
-    port: :class:`str`
+    port : :class:`str`
         The port of the Instance.
-    release_stream: :class:`int`
+    release_stream : :class:`int`
         The release stream of the Instance.
-    running: :class:`bool`
+    running : :class:`bool`
         If the Instance is running. *Not the application the instance is managing,* see :attr:`app_state`.
-    suspended: :class:`bool`
+    suspended : :class:`bool`
         If the Instance is suspended.
-    tags: Union[:class:`None`, :class:`list`]
+    tags : Union[:class:`None`, :class:`list`]
         The list of tags of the Instance, default is None.
-    target_id: :class:`str`
+    target_id : :class:`str`
         The target ID of the Instance.
-    url: :class:`str`
+    url : :class:`str`
         The API url.
 
     """
@@ -209,11 +209,11 @@ class Instance(
 
         Parameters
         ----------
-        data: :class:`InstanceResponse`
+        data : :class:`InstanceResponse`
             The Instance data to unpack onto this class.
-        controller: :class:`Controller` | None, optional
+        controller : :class:`Controller` | None, optional
             The Controller used to make ADSModule specific API calls, by default None.
-        **kwargs: Any
+        **kwargs : Any
             Keyword arguments forwarded to :meth:`Base.__init__`.
 
         """
@@ -249,7 +249,7 @@ class Instance(
 
         Parameters
         ----------
-        func: Callable[Concatenate[D, T], Coroutine[None, None, F]]
+        func : Callable[Concatenate[D, T], Coroutine[None, None, F]]
             The function the decorator is wrapping.
 
         Raises
@@ -328,7 +328,7 @@ class Instance(
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
 
         Raises
@@ -399,7 +399,7 @@ class Instance(
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, :class:`None`], optional
+        format_data : Union[:class:`bool`, :class:`None`], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if :class:`None`), by default :class:`None`
 
         Raises
@@ -434,7 +434,7 @@ class Instance(
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
 
         Raises
@@ -470,7 +470,7 @@ class Instance(
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
 
         Raises
@@ -506,7 +506,7 @@ class Instance(
 
         Parameters
         ----------
-        format_data: Union[bool, None], optional
+        format_data : Union[bool, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
 
         Raises
@@ -537,7 +537,7 @@ class Instance(
 
         Parameters
         ----------
-        format_data: Union[:class:`bool`, None], optional
+        format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
 
         Returns
@@ -555,65 +555,65 @@ class MinecraftInstance(MinecraftModule, Instance):
 
     Attributes
     ----------
-    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
         The version of the AMP, default is None.
-    application_endpoints: list[dict[str, str]]
+    application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state: :class:`AMPInstanceState`
+    app_state : :class:`AMPInstanceState`
         The state of the application.
-    container_cpus: :class:`float`
+    container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
-    container_memory_mb: :class:`int`
+    container_memory_mb : :class:`int`
         The amount of memory allocated to the container in MB.
-    container_memory_policy: :class:`ContainerMemoryPolicyState`
+    container_memory_policy : :class:`ContainerMemoryPolicyState`
         The memory policy of the Instance.
-    daemon: :class:`bool`
+    daemon : :class:`bool`
         If the Instance is a daemon.
-    daemon_autostart: :class:`bool`
+    daemon_autostart : :class:`bool`
         If the Instance should be autostart on boot.
-    deployment_args: dict[:class:`str`, :class:`str`]
+    deployment_args : dict[:class:`str`, :class:`str`]
         The deployment arguments of the Instance.
-    description: :class:`str`
+    description : :class:`str`
         The description of the Instance, default is "".
-    disk_usage_mb: :class:`int`
+    disk_usage_mb : :class:`int`
         The disk usage of the Instance in MB.
-    display_image_source: :class:`str`
+    display_image_source : :class:`str`
         The source of the display image, default is "".
-    exclude_from_firewall: :class:`bool`
+    exclude_from_firewall : :class:`bool`
         If the Instance should be excluded from the firewall.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The friendly name of the Instance.
-    ip: :class:`str`
+    ip : :class:`str`
         The IP address of the Instance.
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance GUID.
-    instance_name: :class:`str`
+    instance_name : :class:`str`
         The Instance name.
-    is_container_instance: :class:`bool`
+    is_container_instance : :class:`bool`
         If the Instance is a container instance.
-    is_https: :class:`bool`
+    is_https : :class:`bool`
         If the Instance is using HTTPS.
-    management_mode: :class:`int`
+    management_mode : :class:`int`
         The management mode of the Instance.
-    metrics: Union[:class:`Metric`, None]
+    metrics : Union[:class:`Metric`, None]
         The metrics of the Instance, default is None.
-    module: :class:`str`
+    module : :class:`str`
         The module of the Instance, default is "Minecraft".
-    module_display_name: :class:`str`
+    module_display_name : :class:`str`
         The display name of the module, default is "".
-    port: :class:`str`
+    port : :class:`str`
         The port of the Instance.
-    release_stream: :class:`int`
+    release_stream : :class:`int`
         The release stream of the Instance.
-    running: :class:`bool`
+    running : :class:`bool`
         If the Instance is running.
-    suspended: :class:`bool`
+    suspended : :class:`bool`
         If the Instance is suspended.
-    tags: Union[:class:`None`, :class:`list`]
+    tags : Union[:class:`None`, :class:`list`]
         The list of tags of the Instance, default is None.
-    target_id: :class:`str`
+    target_id : :class:`str`
         The target ID of the Instance.
-    url: :class:`str`
+    url : :class:`str`
         The API url.
 
     """
@@ -631,65 +631,65 @@ class TargetADS(Instance):
 
     Attributes
     ----------
-    amp_version: Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
         The version of the AMP, default is None.
-    application_endpoints: list[dict[str, str]]
+    application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state: :class:`AMPInstanceState`
+    app_state : :class:`AMPInstanceState`
         The state of the application.
-    container_cpus: :class:`float`
+    container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
-    container_memory_mb: :class:`int`
+    container_memory_mb : :class:`int`
         The amount of memory allocated to the container in MB.
-    container_memory_policy: :class:`ContainerMemoryPolicyState`
+    container_memory_policy : :class:`ContainerMemoryPolicyState`
         The memory policy of the Instance.
-    daemon: :class:`bool`
+    daemon : :class:`bool`
         If the Instance is a daemon.
-    daemon_autostart: :class:`bool`
+    daemon_autostart : :class:`bool`
         If the Instance should be autostart on boot.
-    deployment_args: dict[:class:`str`, :class:`str`]
+    deployment_args : dict[:class:`str`, :class:`str`]
         The deployment arguments of the Instance.
-    description: :class:`str`
+    description : :class:`str`
         The description of the Instance, default is "".
-    disk_usage_mb: :class:`int`
+    disk_usage_mb : :class:`int`
         The disk usage of the Instance in MB.
-    display_image_source: :class:`str`
+    display_image_source : :class:`str`
         The source of the display image, default is "".
-    exclude_from_firewall: :class:`bool`
+    exclude_from_firewall : :class:`bool`
         If the Instance should be excluded from the firewall.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The friendly name of the Instance.
-    ip: :class:`str`
+    ip : :class:`str`
         The IP address of the Instance.
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance GUID.
-    instance_name: :class:`str`
+    instance_name : :class:`str`
         The Instance name.
-    is_container_instance: :class:`bool`
+    is_container_instance : :class:`bool`
         If the Instance is a container instance.
-    is_https: :class:`bool`
+    is_https : :class:`bool`
         If the Instance is using HTTPS.
-    management_mode: :class:`int`
+    management_mode : :class:`int`
         The management mode of the Instance.
-    metrics: Union[:class:`Metric`, None]
+    metrics : Union[:class:`Metric`, None]
         The metrics of the Instance, default is None.
-    module: :class:`str`
+    module : :class:`str`
         The module of the Instance, default is "ADS".
-    module_display_name: :class:`str`
+    module_display_name : :class:`str`
         The display name of the module, default is "".
-    port: :class:`str`
+    port : :class:`str`
         The port of the Instance.
-    release_stream: :class:`int`
+    release_stream : :class:`int`
         The release stream of the Instance.
-    running: :class:`bool`
+    running : :class:`bool`
         If the Instance is running.
-    suspended: :class:`bool`
+    suspended : :class:`bool`
         If the Instance is suspended.
-    tags: Union[:class:`None`, :class:`list`]
+    tags : Union[:class:`None`, :class:`list`]
         The list of tags of the Instance, default is None.
-    target_id: :class:`str`
+    target_id : :class:`str`
         The target ID of the Instance.
-    url: :class:`str`
+    url : :class:`str`
         The API url.
 
     """

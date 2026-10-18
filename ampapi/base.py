@@ -131,14 +131,14 @@ class Base:
 
     Attributes
     ----------
-    api_url: :class:`str`
+    api_url : :class:`str`
         The URL to access the Web Panel. This comes from your :class:`APIParams`.
-    session_ttl: :class:`int`
+    session_ttl : :class:`int`
         How long before the session id expires in seconds, default is 240 seconds.
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance id is a string determined by AMP. \n
         This attribute will be set automatically after making a :meth:`login` request, default is "O".
-    session: :class:`aiohttp.ClientSession`
+    session : :class:`aiohttp.ClientSession`
         A static Session to use, otherwise the class will generate it's own as needed.
 
     """
@@ -348,13 +348,13 @@ class Base:
 
         Parameters
         ----------
-        url: :class:`str`
+        url : :class:`str`
             The API endpoint to POST to, excluding the base panel URL and ``/API/`` prefix, eg ``Core/GetModuleInfo``.
-        parameters: Union[None, dict[:class:`str`, Any]], optional
+        parameters : Union[None, dict[:class:`str`, Any]], optional
             The parameters to supply to the endpoint, by default None.
-        no_data: :class:`bool`, optional
+        no_data : :class:`bool`, optional
             Skip processing the :class:`ClientResponse` body when the endpoint returns no data, by default False.
-        request_params: :class:`AioHTTPRequestOptions` | None, optional
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded directly to :meth:`aiohttp.ClientSession.post`. The ``headers``
             and ``data`` keys are populated automatically when ``None``, by default None.
 
@@ -363,7 +363,7 @@ class Base:
                 headers = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
                 data = json.dumps(parameters)
 
-        **response_params: :class:`Unpack[ResponseHandlerOptions]`
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
@@ -489,13 +489,13 @@ class Base:
 
         Parameters
         ----------
-        response: :class:`aiohttp.ClientResponse`
+        response : :class:`aiohttp.ClientResponse`
             The raw HTTP response to process.
-        sanitize_json: :class:`bool`, optional
+        sanitize_json : :class:`bool`, optional
             Run the parsed JSON through :meth:`sanitize_json` before returning, by default True.
-        to_file: :class:`bool`, optional
+        to_file : :class:`bool`, optional
             Write the response JSON to a file at ``path``, by default False.
-        path: :class:`pathlib.Path` | None, optional
+        path : :class:`pathlib.Path` | None, optional
             Directory to write the response file to when ``to_file`` is ``True``, by default None.
 
         Returns
@@ -688,7 +688,7 @@ class Base:
 
         Parameters
         ----------
-        name: :class:`str`
+        name : :class:`str`
             The attribute being reported on.
 
         Returns
@@ -753,11 +753,11 @@ class Base:
 
         Parameters
         ----------
-        exc_type: type[:class:`BaseException`] | None
+        exc_type : type[:class:`BaseException`] | None
             The exception class, if one was raised inside the context.
-        exc_value: :class:`BaseException` | None
+        exc_value : :class:`BaseException` | None
             The exception instance, if one was raised inside the context.
-        traceback: :class:`TracebackType` | None
+        traceback : :class:`TracebackType` | None
             The traceback, if an exception was raised inside the context.
 
         """
@@ -821,7 +821,7 @@ class Base:
 
         Parameters
         ----------
-        data: :class:`str`
+        data : :class:`str`
             The string to be converted.
 
         Returns
@@ -846,7 +846,7 @@ class Base:
 
         Parameters
         ----------
-        data: dict[:class:`str`, Any]
+        data : dict[:class:`str`, Any]
             The dictionary to camel case.
 
         Returns
@@ -878,11 +878,11 @@ class Base:
 
         Parameters
         ----------
-        name: :class:`str`
+        name : :class:`str`
             The class name for the root :class:`TypedDict`.
-        data: dict[:class:`str`, Any]
+        data : dict[:class:`str`, Any]
             The JSON dict whose keys and values define the fields and their types.
-        include_imports: :class:`bool`
+        include_imports : :class:`bool`
             To include "from typing import Any\n\nfrom typing_extensions import TypedDict\n" at the top of the file.
 
         Returns
@@ -987,7 +987,7 @@ class Base:
 
         Parameters
         ----------
-        bridge: :class:`Bridge`
+        bridge : :class:`Bridge`
             The :class:`Bridge` object to parse.
 
         Raises
@@ -1042,7 +1042,7 @@ class Base:
 
         Parameters
         ----------
-        json: Any
+        json : Any
             The JSON response data to be sanitize.
 
         Returns
@@ -1101,7 +1101,7 @@ class Base:
 
         Parameters
         ----------
-        path: str
+        path : str
             The path to be sanitized.
 
         Raises
@@ -1135,7 +1135,7 @@ class Base:
 
         Parameters
         ----------
-        data: :class:`str`
+        data : :class:`str`
             The string to convert.
 
         Returns
@@ -1158,7 +1158,7 @@ class Base:
 
         Parameters
         ----------
-        version: :class:`VersionInfo`
+        version : :class:`VersionInfo`
             The version to compare against the application.
 
         Raises
@@ -1204,15 +1204,15 @@ class Base:
 
         Parameters
         ----------
-        path: :class:`Path`, optional
+        path : :class:`Path`, optional
             The Path to write the data, default's to `Path(__file__).parent`.
-        file_name: :class:`str`
+        file_name : :class:`str`
             The name of the file, include the file extension.
-        data: :class:`bytes | dict | str | list`
+        data : :class:`bytes | dict | str | list`
             The data to write out to the path and file_name provided.
-        mode: :class:`str`, optional
+        mode : :class:`str`, optional
             The mode to open the provided file path with using `<Path.open()>`.
-        **kwargs: :class:`Unpack[DumpParameters]`
+        **kwargs : :class:`Unpack[DumpParameters]`
             Any additional kwargs to be supplied to `<json.dumps()>`, if applicable.
 
         """
@@ -1243,7 +1243,7 @@ class Base:
 
         Parameters
         ----------
-        timestamp: :class:`str`
+        timestamp : :class:`str`
             The date string to convert.
 
         Returns
