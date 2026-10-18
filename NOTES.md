@@ -140,6 +140,10 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - With a Minecraft Instance on the Target, both sides return it as a `MinecraftInstance`, and formatted
   `get_status` / `get_updates` work through the Controller (vm1 -> vm2 -> Instance) once the auth chain is repaired.
   Row order is not fixed: the Target lists its Instance before its ADS row, the Controller after.
+- Nothing in an ADS's data names its role. The `GetInstance` ADS rows, the local `GetInstances` entry and
+  `GetTargetInfo` match field for field between the Controller and the Target, bar the IP lists. `deployment_args`
+  holds `core._login._use_auth_server` only in the Target's own view, and only once `RepairAuth` wrote it. The role
+  lives in `ADSModule.ADS.Mode` (`get_config`, an `ADSModeState`); from a Controller, `is_remote` True also marks a Target.
 
 The original two-VM build, for reference:
 

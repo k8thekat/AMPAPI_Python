@@ -24,7 +24,9 @@ A small todo list local to the project.
 
 ---
 
-- `Controller.get_instances(include_self=False)` leaves `self` unpopulated; decide to always send True or document it.
+- `Controller.get_instances(include_self=False)` leaves `self` unpopulated; document that the cached names then raise.
+- `Controller._initialized` is only set when built with `data`, so the cache guard (unpopulated message, stale warning)
+  never runs on a `Controller(bridge=...)`.
 - `Controller.get_instance` on the Controller's own ADS id returns a new `TargetADS`, not `self`.
 - Check `ForceIncludeSelf` False on a hybrid ADS with local game Instances.
 
@@ -32,6 +34,7 @@ A small todo list local to the project.
 
 ---
 
+- `sanitize_json` turns dotted keys into `ads_module._defaults._default_auth_server_url` (seen in `deployment_args`).
 - `version_validation` needs updating for the new data structure handling (`base.py:1155`).
 - Possibly get active AMP Sessions and close them during `clean_up()`?
 
