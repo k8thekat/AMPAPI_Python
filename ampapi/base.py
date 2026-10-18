@@ -584,10 +584,12 @@ class Base:
             # This will be our default catch all for any "invalid" Responses.
             raise AMPAPIResponseError(title=response_json["title"], url=str(response.url), reason=response_json.get("message", ""))
 
-        # TODO: See what can trigger this type of structured response.
+        # A failed ActionResult, eg. RegisterTargetWithCode against a Controller whose ADS mode is not set yet.
+        # AMP explains why in `reason`, so that is what gets raised.
         if isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
-            LOGGER.error("%s failed because of Status: %s", response.url, response_json["status"])
-            raise AMPAPIResponseError(title="None", url=str(response.url), reason="Status is False")
+            reason: str = str(response_json.get("reason") or "Status is False")
+            LOGGER.error("%s failed because of Status: %s | Reason: %s", response.url, response_json["status"], reason)
+            raise AMPAPIResponseError(title="Status False", url=str(response.url), reason=reason)
 
         # Error responses raised above, so only a real capture gets compared.
         if check_key_drift is True and to_file is True and path is not None:

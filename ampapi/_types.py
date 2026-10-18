@@ -198,6 +198,9 @@ class ActionResultResponse(TypedDict, total=False):
     status: Required[bool]
     reason: str
     result: str
+    # Added in AMP 2.8.
+    support_url: Union[str, None]
+    support_title: Union[str, None]
 
 
 class ActionSpec(TypedDict):

@@ -234,12 +234,19 @@ class ActionResult:
         If :attr:`~ActionResult.status` is ``False`` this will typically have a :class:`str` response.
     result : Union[str, None]
         If :attr:`~ActionResult.status` is ``True`` this will contain data related to the API call.
+    support_url : Union[str, None], optional
+        A link AMP offers for help with a failure, default is None.
+    support_title : Union[str, None], optional
+        The title to show for :attr:`~ActionResult.support_url`, default is None.
 
     """
 
     status: bool
     reason: Union[str, None] = field(default=None)
     result: Union[str, None] = field(default=None)
+    # Added in AMP 2.8 (confirmed against 2.8.0.8); defaulted so older responses still construct.
+    support_url: Union[str, None] = field(default=None)
+    support_title: Union[str, None] = field(default=None)
 
     def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
