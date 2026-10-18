@@ -629,7 +629,7 @@ class Base:
                     "rememberMe": True,
                 }
 
-                result = await self.call_end_point(endpoint="Core/Login", parameters=parameters)
+                result = await self._call_end_point(endpoint="Core/Login", parameters=parameters)
                 if isinstance(result, dict):
                     # This is our new sessions table to correlate InstanceID to a sessionID.
                     api_session = APISession(id=result.get("session_id", "0"), ttl=datetime.datetime.now(tz=datetime.UTC))
@@ -765,7 +765,7 @@ class Base:
 
     # TODO: See about supporting automatic login handling like other Endpoints.
     # See about re-writing the logic to allow setting the URL and other parameters.
-    async def call_end_point(
+    async def _call_end_point(
         self,
         endpoint: str,
         parameters: dict[str, Any] | None = None,
@@ -776,12 +776,14 @@ class Base:
     ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
-        Generic function for calling any API endpoint. Some API endpoints require the Instance module type to be ADS. \n
-        See `/api_spec_sheets/ADS_api_spec.md` or `/api_spec_sheets/Minecraft_api_spec.md` for full API endpoints and parameter information.
+        Generic function for calling any API endpoint; a dev tool for testing endpoints that have no wrapper yet.
+        Some API endpoints require the Instance module type to be ADS. \n
+        See `docs/api_spec_sheets/<AMP version>/ADS_api_spec.md` or `Minecraft_api_spec.md` for the full API endpoints
+        and parameter information.
 
 
         .. note::
-            Parameter key "SESSIONID" is handled for you.
+            The session is handled for you.
 
 
         .. warning::

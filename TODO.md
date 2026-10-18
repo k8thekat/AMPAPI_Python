@@ -23,7 +23,6 @@ A small todo list local to the project.
 
 ---
 
-- Remove `call_end_point`; its only caller is `_reauth` for `Core/Login`, and it just forwards to `_post`.
 - Fix the blind exception catch in `_reauth` (`base.py:639`).
 - `version_validation` needs updating for the new data structure handling (`base.py:1155`).
 - Possibly get active AMP Sessions and close them during `clean_up()`?

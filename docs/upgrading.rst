@@ -52,6 +52,7 @@ Changed methods
 - ``Base.dataclass_to_dict()`` and ``Base.json_to_dataclass()`` were removed. The dataclasses sent as API parameters
   have their own ``to_dict()``.
 - :meth:`~ampapi.Core.login` renamed ``rememberME`` to ``remember_me``.
+- ``Base.call_end_point()`` is now ``_call_end_point()``; it is a dev tool for testing endpoints that have no wrapper yet.
 - :meth:`~ampapi.Core.get_oidc_login_url` dropped its ``state`` parameter and returns the login URL; 4.x always returned None.
 - ``format_data`` was removed from methods whose response has no dataclass (eg. ``get_new_guid``, ``get_group``,
   ``set_configs``); passing it now raises a :exc:`TypeError`.
