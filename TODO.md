@@ -17,6 +17,14 @@ A small todo list local to the project.
 - Confirm `DeploymentTemplateResponse` / `ProvisionResponse` against a live payload.
 - Missing wrappers from `2.8.0.8`: `clone_instance`, `get_instance_live_settings`, `prepare_file_transfer`.
 
+## ampapi/instance.py
+
+---
+
+- `Controller.get_instances(include_self=False)` leaves `self` unpopulated; decide to always send True or document it.
+- `Controller.get_instance` on the Controller's own ADS id returns a new `TargetADS`, not `self`.
+- Check `ForceIncludeSelf` False on a hybrid ADS with local game Instances.
+
 ## ampapi/base.py
 
 ---
@@ -76,6 +84,7 @@ A small todo list local to the project.
   twice, in the class Attributes section and on the member. The rst `:exclude-members:` hides the member's own docstring.
 - `AMPInstanceState` is still named in docstrings (`instance.py` ~95, 562, 638, 742); the enum is `InstanceState`.
 - `Bridge` docstring says `singleton` defaults to False; the code defaults to True.
+- `Base.instance_id` docstring says the default is "O" (a letter) and that login sets it; it is "0" and a Controller keeps it.
 
 ## Issues
 
