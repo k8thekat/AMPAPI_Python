@@ -98,6 +98,15 @@ that raised `TypeError` on their own documented response because fields were mis
 
 ## Building VMs
 
+On Kat's rig the KVM test VMs are managed by `.scripts/vms.py` (gitignored, like `local.py`): `vm1` AMP2 Controller,
+`vm2` AMP2 Target, `vm3` AMP3 beta. `.venv/bin/python .scripts/vms.py status|start|stop|refresh-urls|...`; their AMP
+logins are the `[VM_*]` sections of `local.ini`. The host setup is in `.local_data/plans/headless_vms.md`.
+`getamp.sh` installs AMP unattended with `USE_ANSWERS=1`, but always pass `ANSWER_SYSPASSWORD`: left empty it stays
+empty and the install fails creating the `amp` user. A fresh ADS has no mode; set `ADSModule.ADS.Mode` to
+Controller before pairing a Target.
+
+The original two-VM build, for reference:
+
 ```bash
 #!/bin/bash
 # Dev-VMs
