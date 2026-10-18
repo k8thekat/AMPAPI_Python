@@ -39,6 +39,36 @@ An annotation that the runtime does not honour is worse than a loose one; severa
 claiming a nested dataclass that nothing ever built. Where the nested shape is still unconfirmed
 the field is left raw and tagged, rather than annotated aspirationally.
 
+AMP adds keys between versions, and `SomeDataclass(**result)` raises `TypeError` on any key the
+dataclass does not declare. AMP 2.8 added `ports` to the status, three keys to each port and five to
+each backup. New fields go in defaulted so older responses still construct.
+
+Some shapes differ by instance type. The ADS reports `physical_ram_usage` and `swap_usage` metrics,
+Minecraft instances do not, and some modded ones add `tps`; `Metrics` only requires the three every
+instance sends. A stopped instance reports its `metrics` as `{}`.
+
+
+## Captured responses
+
+`controller_dump.py -section LIVE -out ./_responses` captures responses from a live setup (it hits
+the server, so not unattended). The 2.6.5.0 ADS dumps in `_responses/` were overwritten by a
+Controller run, so a non-Controller pass is still owed.
+
+Shapes not yet confirmed against a live payload:
+
+- `DeploymentTemplateResponse` / `ProvisionResponse`, derived from the dataclasses and docs; both
+  endpoints returned empty on every setup dumped so far.
+- `TimedTriggerResponse` / `UserApplicationDataResponse`, derived from their dataclasses; there is no
+  dump for `Core/GetTimeIntervalTrigger` or `Core/GetUserInfo`.
+- `OPWhitelistResponse`, built from the `OPWhitelist` dataclass; `GetOPWhitelist` answers
+  "Missing Method" and is in no spec sheet.
+
+A failed login (wrong password or wrong 2FA code alike) answers `success: false`, `result: 40`, an
+empty `result_reason` and `session_id: None` on AMP 2.8.0.8, so AMP gives no reason to pass on.
+
+The doc generators in `util.py` import their notes from `docs/samples/`, which is not packaged, so
+they only run from a repo checkout.
+
 
 ## Verification
 

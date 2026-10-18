@@ -4,26 +4,24 @@ A small todo list local to the project.
 
 
 - Wrap the endpoints added by AMP API `2.8.0.8` (see `docs/api_spec_sheets/2.8.0.8/`).
-- `_responses/` needs a fresh non-Controller (ADS) pass; the 2.6.5.0 dumps were overwritten by the
-  Controller run. Use `controller_dump.py -section LIVE -out ./_responses`.
+- Refresh `_responses/` from a non-Controller (ADS) setup; see NOTES.md "Captured responses".
 
 
 ## ampapi/adsmodule.py
 
 ---
 
-- Build a dataclass/TypedDict for `get_group` and `servers` once their response shapes are confirmed.
-- Verify the conversion of the `new_datastore` parameter into a dict (`adsmodule.py:116`).
-- `RemoteTargetInfo.platform_info` / `.datastores` are assigned raw dicts; no `__post_init__` converts them.
-- `DeploymentTemplateResponse` / `ProvisionResponse` are derived from the dataclasses + docs, not a live
-  payload; both endpoints return empty on every setup dumped so far. See their `# TODO:` tags in `_types.py`.
+- Build a dataclass/TypedDict for `get_group` and `servers`.
+- `add_datastore` sends `new_datastore.__dict__`; switch it to `to_dict()` like `update_datastore`.
+- Convert `RemoteTargetInfo.platform_info` / `.datastores` in a `__post_init__`.
+- Confirm `DeploymentTemplateResponse` / `ProvisionResponse` against a live payload.
 - Missing wrappers from `2.8.0.8`: `clone_instance`, `get_instance_live_settings`, `prepare_file_transfer`.
 
 ## ampapi/base.py
 
 ---
 
-- Fix the blind exception catch in `_reauth` (`base.py:639`).
+- Fix the blind exception catch in `_reauth` and raise on a failed login.
 - `version_validation` needs updating for the new data structure handling (`base.py:1155`).
 - Possibly get active AMP Sessions and close them during `clean_up()`?
 
@@ -33,9 +31,8 @@ A small todo list local to the project.
 
 - Narrowing sites raise with `end_point="Core/ActionResult"` instead of the endpoint's own url.
 - `get_api_spec` is annotated `APISpec | dict[str, Any]` but always returns a plain `dict(result)`.
-- `TimedTriggerResponse` / `UserApplicationDataResponse` are derived from the `TimedTrigger` /
-  `UserApplicationData` definitions, not a live payload; there is no `_responses/` dump for
-  `Core/GetTimeIntervalTrigger` or `Core/GetUserInfo`. Their key sets are unverified.
+- Confirm `TimedTriggerResponse` / `UserApplicationDataResponse` against a live payload
+  (`Core/GetTimeIntervalTrigger`, `Core/GetUserInfo`).
 - Missing wrappers from `2.8.0.8`: `add_interval_trigger`, `convert_user_to_oidc`, `get_structured_diagnostics`,
   `revert_user_from_oidc`, `sleep`, `update_oidc_sub`, `update_tools`.
 
@@ -49,13 +46,11 @@ A small todo list local to the project.
 
 ---
 
-- `OPWhitelistResponse` is built from the `OPWhitelist` dataclass, not a live payload; `getopwhitelist.json`
-  is a "Missing Method" error and the endpoint is in no spec sheet.
-- `BackupResponse` TypedDict is still missing; the `Backup` shape is confirmed against AMP 2.8.0.8
-  (`_responses/live_20261018/getbackups.json`), so `get_backups` can narrow to it.
+- Drop `OPWhitelistResponse` along with `mc_get_op_whitelist`; AMP no longer has `GetOPWhitelist`.
+- Add a `BackupResponse` TypedDict and narrow `get_backups` to it.
 - What does the `delete` parameter do on `filemanager.py:35`?
 - Missing wrappers from `2.8.0.8`: `download_folder_as_zip`, `dummy` (a no-op placeholder in the spec), `upload_folder` (file manager), `backup_will_stop_server` (backup).
-- The 8 surviving Minecraft methods still need TypedDict work once response dumps are available.
+- Add TypedDicts for the 8 surviving Minecraft methods.
 - The 16 deprecated Minecraft endpoints are absent from the `2.8.0.8` sheet too; decide when to remove them.
 
 ## ampapi/modules.py
@@ -69,10 +64,8 @@ A small todo list local to the project.
 
 ---
 
-- The doc generators import their notes from `docs/samples/`, which is not packaged, so they only run from a repo checkout.
-- `ScheduleData` is no longer a dataclass, but `Methods.consumes` still has an open `# TODO:` to convert into `DCConsumes`.
-- `find_parameter_mismatches` still matches endpoints by method name (`suffix_aliases`) and writes `ampapi/x.py` links that
-  break from `docs/api_spec_sheets/`; move it to the url matching `find_missing_endpoints` uses.
+- Move `find_parameter_mismatches` to the url matching `find_missing_endpoints` uses, and fix its
+  `ampapi/x.py` links, which break from `docs/api_spec_sheets/`.
 
 ## Docs
 
