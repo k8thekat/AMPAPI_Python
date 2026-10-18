@@ -775,7 +775,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     description: str
     tags_list: Union[str, None]
 
-    _initialized: bool = False
     _instances: set[InstanceTypeAliases]
 
     __cached__ = (
@@ -852,7 +851,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         if data is not None:
             self._parse_controller_data(data=data)
-            self._initialized = True
 
     def __hash__(self) -> int:
         """Hash the Controller by its Instance ID."""
@@ -889,7 +887,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         """
         # Cheap frozenset test first so uncached names and every method call fall straight through.
-        if name in Controller._cached_names and object.__getattribute__(self, "_initialized"):
+        # `_is_cached` only flips in `_parse_controller_data`, so it alone says if our own data was applied.
+        if name in Controller._cached_names:
             cls: type[Controller] = type(self)
             if not object.__getattribute__(self, "_is_cached"):
                 raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
@@ -1087,7 +1086,11 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         and updates our ``self`` object with the Controller's data.
 
         .. note::
-            The Controller's own ADS row (eg. `ADS01`) is ``self``, so it is left out of the set.
+            The Controller's own ADS row (eg. `ADS01`) is `self`, so it is left out of the set.
+
+        .. note::
+            On a Controller, `include_self=False` makes AMP drop the Controller's own entry, so `self` is not
+            updated. Its cached attributes raise until a call with `include_self=True`.
 
         .. note::
             If ``format_data`` is False this will return the raw list of target dicts instead and nothing is updated.

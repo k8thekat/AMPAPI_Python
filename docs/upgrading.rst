@@ -77,3 +77,7 @@ Returned data
   :attr:`~ampapi.instance.Controller.instances`, since that row is the Controller; its data is copied onto the Controller.
   The ADS rows of remote Targets come back as :class:`~ampapi.instance.TargetADS`; 4.x returned an ``AMPADSInstance`` for
   every ADS row, the Controller's own included.
+- The Controller attributes copied from :meth:`~ampapi.instance.Controller.get_instances` (eg. ``friendly_name``,
+  ``state``) raise an ``AttributeError`` naming ``get_instances()`` until it has run, and log a warning on each read
+  once that data is older than 300 seconds. ``include_self=False`` leaves them unset, since AMP then drops the
+  Controller's own entry.

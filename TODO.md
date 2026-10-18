@@ -24,9 +24,6 @@ A small todo list local to the project.
 
 ---
 
-- `Controller.get_instances(include_self=False)` leaves `self` unpopulated; document that the cached names then raise.
-- `Controller._initialized` is only set when built with `data`, so the cache guard (unpopulated message, stale warning)
-  never runs on a `Controller(bridge=...)`.
 - `Controller.get_instance` on the Controller's own ADS id returns a new `TargetADS`, not `self`.
 - Check `ForceIncludeSelf` False on a hybrid ADS with local game Instances.
 
