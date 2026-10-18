@@ -16,9 +16,7 @@ __all__ = ("LocalFileBackupPlugin",)
 
 
 class LocalFileBackupPlugin(Base):
-    """Contains all functions for any ``/API/LocalFileBackupPlugin/`` API endpoints.
-
-    """
+    """Contains all functions for any ``/API/LocalFileBackupPlugin/`` API endpoints."""
 
     async def delete_from_s3(
         self,

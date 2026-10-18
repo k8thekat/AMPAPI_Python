@@ -131,6 +131,7 @@ class LoggingLevelState(Enum):
     event = 7
     audit = 8
 
+
 class Module(StrEnum):
     ADS = "ADS"
     Minecraft = "Minecraft"

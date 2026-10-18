@@ -1783,7 +1783,7 @@ class Core(Base):
                 return SettingSpec(**result)
             return result
 
-        raise AMPAPIKeyError("subcategory","Core/GetConfig", result)  # noqa: EM101
+        raise AMPAPIKeyError("subcategory", "Core/GetConfig", result)  # noqa: EM101
 
     async def get_configs(
         self,
@@ -2311,7 +2311,7 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetRoleIds", cur_type=result, expec_type=dict)
         # Not going to write a logic check for having "keys" of other responses. This returns unique ID keys to a user defined str mapping.
         #  Unable to type define properly.
-        return result # pyright: ignore[reportReturnType]
+        return result  # pyright: ignore[reportReturnType]
 
     async def get_schedule_data(
         self,

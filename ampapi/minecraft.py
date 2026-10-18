@@ -35,9 +35,7 @@ __all__ = ("MinecraftModule",)
 
 
 class MinecraftModule(Base):
-    """Contains all Endpoints for `/API/MinecraftModule/`.
-
-    """
+    """Contains all Endpoints for `/API/MinecraftModule/`."""
 
     @staticmethod
     def mc_only(
