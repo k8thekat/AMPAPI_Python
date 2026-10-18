@@ -63,13 +63,13 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
 
     Parameters
     ----------
-    data: list[:class:`Methods`]
+    data : list[:class:`Methods`]
         The list of dataclass Methods to parse.
-    title: :class:`str`, optional
+    title : :class:`str`, optional
         The Title of the document header; used also as the filename, by default "".
-    title_body: :class:`str`, optional
+    title_body : :class:`str`, optional
         The body text under the document header, by default "".
-    path: :class:`None | str`, optional
+    path : :class:`None | str`, optional
         The path to save the .rst file, by default None.
 
     """
@@ -448,7 +448,7 @@ def _get_implemented_methods(filepath: Path) -> set[str]:
 
     Parameters
     ----------
-    filepath: :class:`Path`
+    filepath : :class:`Path`
         The path to the Python source file to parse.
 
     Returns
@@ -471,7 +471,7 @@ def _get_function_signatures(filepath: Path) -> dict[str, list[str]]:
 
     Parameters
     ----------
-    filepath: :class:`Path`
+    filepath : :class:`Path`
         The path to the Python source file to parse.
 
     Returns
@@ -894,13 +894,13 @@ def _trigger_event_parse(
 
     Parameters
     ----------
-    data: list[:class:`Triggers`]
+    data : list[:class:`Triggers`]
         The list of dataclass Triggers.
-    title: :class:`str`, optional
+    title : :class:`str`, optional
         The Title of the document header; this is also used to set the filename, by default "".
-    title_body: :class:`str`, optional
+    title_body : :class:`str`, optional
         The body just under the document header, by default "".
-    path: :class:`None | str`, optional
+    path : :class:`None | str`, optional
         The path to save the .rst file., by default None.
 
     """
@@ -1104,11 +1104,11 @@ def repeat_to_length(string: str, repeat_char: str, length: int = 0) -> str:
 
     Parameters
     ----------
-    string: str
+    string : str
         The string to match the :meth:`len` of.
-    repeat_char: str
+    repeat_char : str
         The char to repeat to the length of the string or the ``length`` parameter.
-    length: int, optional
+    length : int, optional
         The length to repeat the char by, by default 0.
 
     Returns
@@ -1127,7 +1127,7 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
 
     Parameters
     ----------
-    string: :class:`str`
+    string : :class:`str`
         The string with the special_char.
 
     Returns

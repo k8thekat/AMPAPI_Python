@@ -174,13 +174,13 @@ def is_response_list[ResponseT](
 
     Parameters
     ----------
-    data: :class:`ResponseTypeAlias`
+    data : :class:`ResponseTypeAlias`
         The response data to validate.
-    response_type: type[:class:`ResponseT`]
+    response_type : type[:class:`ResponseT`]
         The TypedDict each entry narrows to when the key check passes. (eg. :class:`ApplicationResponse`)
-    required_keys: tuple[:class:`str`, ...], optional
+    required_keys : tuple[:class:`str`, ...], optional
         Every key each entry must contain, by default ().
-    excluded_keys: tuple[:class:`str`, ...], optional
+    excluded_keys : tuple[:class:`str`, ...], optional
         Any key that disqualifies an entry, by default ().
 
     Returns

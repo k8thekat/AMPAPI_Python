@@ -140,7 +140,7 @@ def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
 
     Parameters
     ----------
-    data: dict[:class:`str`, Any]
+    data : dict[:class:`str`, Any]
         The data or object to remove private attributes from as keys.
 
     Returns
@@ -175,7 +175,7 @@ def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
 
     Parameters
     ----------
-    dataclass_: Any
+    dataclass_ : Any
         The dataclass instance to deconstruct.
 
     Returns
@@ -209,7 +209,7 @@ def timestamp_converter(timestamp: str) -> datetime.datetime:
 
     Parameters
     ----------
-    timestamp: :class:`str`
+    timestamp : :class:`str`
         The date string to convert.
 
     Returns
@@ -242,11 +242,11 @@ class ActionResult:
 
     Attributes
     ----------
-    status: :class:`bool`
+    status : :class:`bool`
         If the API call was successful.
-    reason: Union[str, None]
+    reason : Union[str, None]
         If :attr:`~ActionResult.status` is ``False`` this will typically have a :class:`str` response.
-    result: Union[str, None]
+    result : Union[str, None]
         If :attr:`~ActionResult.status` is ``True`` this will contain data related to the API call.
 
     """
@@ -265,21 +265,21 @@ class AnalyticsCountryData:
 
     Attributes
     ----------
-    country: :class:`str`
+    country : :class:`str`
         The country code; similar to the ISO 3166-1 Alpha-2 format.
-    display_session_time: :class:`str`
+    display_session_time : :class:`str`
         The current display's session time per country.
-    session_count: :class:`int`
+    session_count : :class:`int`
         The current number of sessions per country.
-    session_time_percent: :class:`float`
+    session_time_percent : :class:`float`
         UNK
-    total_session_time: :class:`float`
+    total_session_time : :class:`float`
         The total session time per country.
-    unique_player_count: :class:`int`
+    unique_player_count : :class:`int`
         The unique player count per country.
-    unique_player_percent: :class:`int`
+    unique_player_percent : :class:`int`
         The unique player percent out of all countries.
-    session_percent: :class:`int`
+    session_percent : :class:`int`
         The percent of total sessions related to this country.
 
     """
@@ -308,15 +308,15 @@ class AnalyticsFilter:
 
     Attributes
     ----------
-    country: Union[:class:`str`, None]
+    country : Union[:class:`str`, None]
         The country to filter by, defaults to None.
-    first_session: Union[:class:`bool`, None]
+    first_session : Union[:class:`bool`, None]
         Whether or not to filter by first session only, defaults to None.
-    meta: Union[Any, None]
+    meta : Union[Any, None]
         UNK
-    username: Union[:class:`str` , None]
+    username : Union[:class:`str` , None]
         The username to filter by, defaults to None.
-    user_id: Union[str, None]
+    user_id : Union[str, None]
         The user_id to filter by, currently using the :attr:`username` attribute, defaults to None.
 
     """
@@ -373,18 +373,18 @@ class AnalyticsStats:
 
     Attributes
     ----------
-    name: :class:`str`
+    name : :class:`str`
         The Name of the current :class:`AnalyticsStats`
-    description: :class:`str`
+    description : :class:`str`
         The description of :attr:`AnalyticsStats.name` that is being tracked!
-    current: Union[:class:`int`, float]
+    current : Union[:class:`int`, float]
         Represents the actual value; similar to :attr:`display_value` but in a raw representation.
         - Could be seconds, minutes or a count value depending on the :attr:`description`.
-    display_value: Union[:class:`int`, :class:`str`, float]
+    display_value : Union[:class:`int`, :class:`str`, float]
         The value being displayed on the Analytics Summary Page after formatting.
-    difference: Union[:class:`int`, :class:`str`, float]
+    difference : Union[:class:`int`, :class:`str`, float]
         Has values such as "Infinity", 0, and 0.0.
-    previous: Union[:class:`int`, :class:`str`, float]
+    previous : Union[:class:`int`, :class:`str`, float]
         UNK
 
     """
@@ -405,17 +405,17 @@ class AnalyticsSummary:
     ----------
     busiest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a list.
-    country_data: list[:class:`AnalyticsCountryData`]
+    country_data : list[:class:`AnalyticsCountryData`]
         The Country information for the summary, default is a list.
     graph_data : list[dict[:class:`str`, Union[:class:`int`, :class:`str`]]] | list[:class:`AnalyticsGraphDataResponse`]
         The Data displayed on the Web UI panel Analytics Menu, default is a list.
-    is_demo: :class:`bool`
+    is_demo : :class:`bool`
         UNK, default is False.
     quietest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a dict.
     stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatResponse`]
         The Analytics Stats of the summary, default is a list.
-    top_players: list[:class:`AnalyticsTopPlayers`]
+    top_players : list[:class:`AnalyticsTopPlayers`]
         The TOP players from the summary, default is a list.
 
     """
@@ -440,13 +440,13 @@ class AnalyticsTopPlayers:
 
     Attributes
     ----------
-    display_session_time: :class:`str`
+    display_session_time : :class:`str`
         Display the session time.
-    percent: :class:`float`
+    percent : :class:`float`
         The percent of how much this value in comparison to :attr:`~AnalyticsTopPlayers.total_session_time`.
-    total_session_time: :class:`float`
+    total_session_time : :class:`float`
         The total amount of session time the user has for the day.
-    username: :class:`str`
+    username : :class:`str`
         The name of the session user. Like an IGN.
 
     """
@@ -471,15 +471,15 @@ class APIParams:
 
     Attributes
     ----------
-    url: :class:`str`
+    url : :class:`str`
         The URL to access the Web GUI panel home page/login page.
-    user: :class:`str`
+    user : :class:`str`
         The AMP User name to login to the Web Panel.
-    password: :class:`str`
+    password : :class:`str`
         The AMP User password to login to the Web Panel.
-    use_2fa: bool
+    use_2fa : bool
         To use :py:class:`TOTP` 2 Factor Authentication, default is False.
-    token: :class:`str`
+    token : :class:`str`
         The 2 Factor Authentication Token Code to generate a :class:`TOTP` code, default is ""
 
     """
@@ -498,9 +498,9 @@ class APISession:
 
     Attributes
     ----------
-    id: :class:`str`
+    id : :class:`str`
         The ``SESSIONID`` dict key from the JSON response of :meth:`Login`.
-    ttl: :class:`datetime`
+    ttl : :class:`datetime`
         The time to live of the :attr:`id`. This can be adjusted by ::class:`Base.session_ttl` value.
 
     """
@@ -522,31 +522,31 @@ class Application:
 
     Attributes
     ----------
-    author: :class:`str`
+    author : :class:`str`
         The author of the application/template.
-    container_reason: :class:`str`
+    container_reason : :class:`str`
         The reason the application is using a container, if any.
-    container_support: :class:`int`
+    container_support : :class:`int`
         UNK - Unsure what this value is for.
-    description: :class:`str`
+    description : :class:`str`
         A brief description of what the application is.
-    display_image_source: :class:`str`
+    display_image_source : :class:`str`
         The url for the application image. Typically what you see as the Instance Banner.
-    extra_setup_steps_uri: :class:`str`
+    extra_setup_steps_uri : :class:`str`
         UNK
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         A formatted version of the name.
-    id: :class:`str`
+    id : :class:`str`
         A unique ID for the application.
-    is_service_spec: :class:`bool`
+    is_service_spec : :class:`bool`
         UNK.
-    module_name: :class:`str`
+    module_name : :class:`str`
         The type of Module this application uses. (eg. "Minecraft", "Generic")
-    no_commercial_usage: :class:`bool`
+    no_commercial_usage : :class:`bool`
         As the attribute implies; if it's for commercial usage or not.
-    supported_platforms: :class:`int`
+    supported_platforms : :class:`int`
         UNK
-    settings: dict[:class:`str`, Any]
+    settings : dict[:class:`str`, Any]
         A dict of Instance specific settings to apply for this application.
 
     """
@@ -579,21 +579,21 @@ class AuditLogEntry:
 
     Attributes
     ----------
-    acknowledged: :class:`bool`
+    acknowledged : :class:`bool`
         UNK
-    category: :class:`str`
+    category : :class:`str`
         The type of log entry.
-    event_type: :class:`int`
+    event_type : :class:`int`
         The type of event that occurred.
-    id: :class:`int`
+    id : :class:`int`
         UNK
-    message: :class:`str`
+    message : :class:`str`
         The message tied to the log entry.
-    source: :class:`str`
+    source : :class:`str`
         UNK
-    user: :class:`str`
+    user : :class:`str`
         The AMP Username tied to the log entry.
-    timestamp: :class:`str` | :class:`datetime`
+    timestamp : :class:`str` | :class:`datetime`
         The timestamp comes in as  ISO format and :meth:`AuditLogEntry.__post_init__` converts it into a datetime object.
 
     """
@@ -621,29 +621,29 @@ class Backup:
 
     Attributes
     ----------
-    created_automatically: :class:`bool`
+    created_automatically : :class:`bool`
         If the backup was created by a Scheduled Task.
-    description: :class:`str`
+    description : :class:`str`
         The description for the backup, if any.
-    id: :class:`str`
+    id : :class:`str`
         The backup GUID.
-    module_name: :class:`str`
+    module_name : :class:`str`
         What type of Instance that created the backup. *eg. Minecraft, ADS, Generic*
-    name: :class:`str`
+    name : :class:`str`
         The name of the backup.
-    source_os: :class:`int`
+    source_os : :class:`int`
         Unsure. I believe there is an ENUM correlation for which int value is which type of OS
-    sticky: :class:`bool`
+    sticky : :class:`bool`
         If the Backup is Sticky.
-    stored_locally: :class:`bool`
+    stored_locally : :class:`bool`
         If the backup is local or not.
-    stored_remotely: :class:`bool`
+    stored_remotely : :class:`bool`
         If the backup is stored in S3/Cloud or similar.
-    taken_by: :class:`str`
+    taken_by : :class:`str`
         Who created the backup.
-    total_size_bytes: :class:`int`
+    total_size_bytes : :class:`int`
         The total size of the backup is bytes.
-    timestamp: :class:`datetime`
+    timestamp : :class:`datetime`
         The timestamp comes in as  ISO format and converts it into a datetime object.
 
     """
@@ -675,53 +675,53 @@ class BukkitPlugin:
 
     Attributes
     ----------
-    author: dict:class:`[`str, :class:`int`]
+    author : dict:class:`[`str, :class:`int`]
         The author's name and ID tied to the author as a dict key, value pair.
-    category: dict[:class:`str`, :class:`int`]
+    category : dict[:class:`str`, :class:`int`]
         The category name and ID tied to the category as a dict key, value pair.
-    downloads: :class:`int`
+    downloads : :class:`int`
         The number of downloads the plugin has had.
-    file: dict[:class:`str`, Union[:class:`str`, :class:`int`]]
+    file : dict[:class:`str`, Union[:class:`str`, :class:`int`]]
         UNK
-    id: :class:`int`
+    id : :class:`int`
         The ID of the plugin.
-    likes: :class:`int`
+    likes : :class:`int`
         The number of likes the plugin has had.
-    links: dict[:class:`str`, :class:`str`]
+    links : dict[:class:`str`, :class:`str`]
         The links related to the plugin. Unsure of data structure.
-    name: :class:`str`
+    name : :class:`str`
         The name of the plugin.
-    tag: :class:`str`
+    tag : :class:`str`
         The tag related to the plugin.
-    version: dict[:class:`str` , Union[:class:`int`, :class:`str`]]
+    version : dict[:class:`str` , Union[:class:`int`, :class:`str`]]
         The version information of the plugin.
-    icon: dict[:class:`str`, :class:`str`]
+    icon : dict[:class:`str`, :class:`str`]
         The icon name and url in a dict key, value pair.
-    tested_version: list[:class:`str`]
+    tested_version : list[:class:`str`]
         The tested versions of the plugin, default is a list
-    update_date: Union[:class:`int`, None]
+    update_date : Union[:class:`int`, None]
         The timestamp of when it was updated, default is None
-    release_date: Union[:class:`int`, None]
+    release_date : Union[:class:`int`, None]
         The timestamp of when it was released, default is None
-    rating: dict[:class:`str`, Union[float, :class:`int`]]
+    rating : dict[:class:`str`, Union[float, :class:`int`]]
         The rating, default is a dict.
-    external: Union[:class:`bool`, None]
+    external : Union[:class:`bool`, None]
         If the plugin is external or not, default is None
-    existence_status: Union[:class:`int`, None]
+    existence_status : Union[:class:`int`, None]
         UNK, default is None
-    installed_version: Union[:class:`int`, None]
+    installed_version : Union[:class:`int`, None]
         The plugin version currently installed, default is None.
-    versions: Union[list[:class:`int`], None]
+    versions : Union[list[:class:`int`], None]
         The plugins alternate versions, if any, default is None.
-    premium: Union[:class:`bool`, None]
+    premium : Union[:class:`bool`, None]
         If the plugin is premium or not, default is None.
-    source_code_link: :class:`str`
+    source_code_link : :class:`str`
         The URL to the source code, default is "".
-    supported_languages: :class:`str`
+    supported_languages : :class:`str`
         The languages this plugin supports, default is "".
-    contributors: :class:`str`
+    contributors : :class:`str`
         The contributors to the source code/plugin, default is "".
-    donation_link: :class:`str`
+    donation_link : :class:`str`
         The URL to donate/support the plugin, default is "".
 
     """
@@ -761,13 +761,13 @@ class ConsoleEntries:
 
     Attributes
     ----------
-    contents: :class:`str`
+    contents : :class:`str`
         The contents of the console entry.
-    source: :class:`str`
+    source : :class:`str`
         The source of the console entry. eg "Server thread/INFO, ..."
-    type: :class:`str`
+    type : :class:`str`
         The type of message. eg "Console, Chat, Error, ...
-    timestamp: :class:`str` | :class:`datetime`
+    timestamp : :class:`str` | :class:`datetime`
         The timestamp comes in as ISO format and :meth:`~ConsoleEntries.__post_init__` converts it into a datetime object.
 
     """
@@ -793,19 +793,19 @@ class CPUInfo:
 
     Attributes
     ----------
-    sockets: :class:`int`
+    sockets : :class:`int`
         The number of CPU sockets the AMP Instance has access to.
-    cores: :class:`int`
+    cores : :class:`int`
         The number of cores the AMP Instance has access to.
-    threads: :class:`int`
+    threads : :class:`int`
         The number of threads the AMP Instance has access to.
-    vendor: :class:`str`
+    vendor : :class:`str`
         The vendor of the CPU.
-    model_name: :class:`str`
+    model_name : :class:`str`
         The model name of the CPU.
-    total_cores: :class:`int`
+    total_cores : :class:`int`
         The number of total cores the AMP Instance has access to.
-    total_threads: :class:`int`
+    total_threads : :class:`int`
         The number of total threads the AMP Instance has access to.
 
     """
@@ -832,36 +832,36 @@ class CreateInstance:
 
     Attributes
     ----------
-    target_ads_instance: :class:`str`
+    target_ads_instance : :class:`str`
         The Target instance ID to tie this Instance to.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The Instance friendly name, this is what you see in the web GUI.
-    module: :class:`str`
+    module : :class:`str`
         The Instance module it will use.
-    new_instance_id: :class:`str`
+    new_instance_id : :class:`str`
         UNK
-    instance_name: :class:`str`
+    instance_name : :class:`str`
         The name for the Instance, similar to :attr:`friendly_name`.
-    ip_binding: :class:`str`
+    ip_binding : :class:`str`
         The IP to assign to the Instance. See :attr:`Controller.available_ips`.
-    port_number: :class:`int`
+    port_number : :class:`int`
         The Port to assign to the Instance.
-    admin_username: :class:`str`
+    admin_username : :class:`str`
         UNK
-    admin_password: :class:`str`
+    admin_password : :class:`str`
         The password for the :attr:`admin_username`.
-    provision_settings: dict[:class:`str`, :class:`str`]
+    provision_settings : dict[:class:`str`, :class:`str`]
         UNK
-    auto_configure: :class:`bool`
+    auto_configure : :class:`bool`
         When enabled, all settings other than the module, target and friendly_name are ignored and
         replaced with automatically generated values
-    post_create: :class:`PostCreateActionsState`
+    post_create : :class:`PostCreateActionsState`
         The action to take after creating the instance, defaults to :attr:`~PostCreateActionsState.do_nothing`
-    start_on_boot: :class:`bool`
+    start_on_boot : :class:`bool`
         If the instance starts on boot or not, default is False.
-    display_image_source: :class:`str`
+    display_image_source : :class:`str`
         If the instance has a banner to display, you can define it here, default is "".
-    target_datastore: :class:`int`
+    target_datastore : :class:`int`
         The Datastore ID to create this Instance on.
             * See :attr:`Controller.datastores` ID values.
 
@@ -927,15 +927,15 @@ class DCConsumes:
 
     Attributes
     ----------
-    description: :class:`str`
+    description : :class:`str`
         The description of the consumes method.
-    input_type: :class:`str`
+    input_type : :class:`str`
         The type of var that is provided by the User.
-    name: :class:`str`
+    name : :class:`str`
         The name of the method.
-    value_type: :class:`str`
+    value_type : :class:`str`
         The type of the value when provided.
-    enum_values: :class:`str` | dict, optional
+    enum_values : :class:`str` | dict, optional
         The values to be used for "input_type" if Any, default is "".
 
     """
@@ -963,13 +963,13 @@ class DCParameterMapping:
 
     Attributes
     ----------
-    user: :class:`str`
+    user : :class:`str`
         UNK, default is "".
-    reason: :class:`str`
+    reason : :class:`str`
         UNK, default is "".
-    title: :class:`str`
+    title : :class:`str`
         UNK, default is "".
-    subtitle: :class:`str`
+    subtitle : :class:`str`
         UNK, default is "".
 
     """
@@ -989,31 +989,31 @@ class DeploymentTemplate:
 
     Attributes
     ----------
-    clone_role_into_user: :class:`bool`
+    clone_role_into_user : :class:`bool`
         Clone the :attr:`template_role` to the users of this template.
-    description: :class:`str`
+    description : :class:`str`
         The description of the deployment template.
-    id: :class:`int`
+    id : :class:`int`
         The ID of the deployment template.
-    module: :class:`str`
+    module : :class:`str`
         The AMP Instance module type. eg. "Generic", "Minecraft"
-    name: :class:`str`
+    name : :class:`str`
         The deployment template name.
-    template_base_app: :class:`str`
+    template_base_app : :class:`str`
         The application that is template is used for.
-    template_instance: Any
+    template_instance : Any
         UNK
-    template_role: :class:`str`
+    template_role : :class:`str`
         The template role name, similar to the AMP User Roles.
-    match_datastore_tags: :class:`bool`
+    match_datastore_tags : :class:`bool`
         To force match the datastore tags; if any.
-    settings_mappings: dict[:class:`str`, :class:`str`]
+    settings_mappings : dict[:class:`str`, :class:`str`]
         A dictionary of setting mappings.
-    start_on_boot: :class:`bool`
+    start_on_boot : :class:`bool`
         If the Instance should start on ADS01/Controller boot or not, default is False.
-    tags: list[:class:`str`]
+    tags : list[:class:`str`]
         The list of tags to assign to the template or that belong to the template.
-    zip_overlay_path: :class:`bool`
+    zip_overlay_path : :class:`bool`
         To zip the overlay path.
 
     """
@@ -1086,43 +1086,43 @@ class Diagnostics:
 
     Attributes
     ----------
-    application_name: :class:`str`
+    application_name : :class:`str`
         The Instance application name.
-    application_version: :class:`str`
+    application_version : :class:`str`
         The Instance application version.
-    build_date: :class:`str`
+    build_date : :class:`str`
         The date of the AMP Instance build.
-    build_spec: :class:`str`
+    build_spec : :class:`str`
         Similar to :attr:`Diagnostics.release_stream`.
-    cpu_layout: :class:`str`
+    cpu_layout : :class:`str`
         Number of Sockets, Cores and Threads *eg 1S/2C/10T*
-    cpu_model: :class:`str`
+    cpu_model : :class:`str`
         The name of the CPU.
-    codename: :class:`str`
+    codename : :class:`str`
         The release/build code name.
-    installed_ram: :class:`str`
+    installed_ram : :class:`str`
         The amount of installed ram on the system.
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance GUID
-    last_arguments: :class:`str`
+    last_arguments : :class:`str`
         The last used arguments when running the Instance.
-    last_executable: :class:`str`
+    last_executable : :class:`str`
         The last used file executable for the Instance.
-    last_process_id: :class:`int`
+    last_process_id : :class:`int`
         The last used process ID.
-    loaded_plugins: :class:`str`
+    loaded_plugins : :class:`str`
         The AMP loaded plugin's for the Instance.
-    module: :class:`str`
+    module : :class:`str`
         The Instance module. *eg ADSModule, Minecraft, Generic*
-    module_application: :class:`str`
+    module_application : :class:`str`
         The Instance application.
-    network_mode: Any
+    network_mode : Any
         UNK
-    platform: :class:`str`
+    platform : :class:`str`
         The machine full name of the Operating System.
-    release_stream: :class:`str`
+    release_stream : :class:`str`
         Mainline, Developer, etc
-    system_type: :class:`str`
+    system_type : :class:`str`
         The bit type of the Instance Operating System.
     server_jar : :class:`str`
         The .jar file to rune a Minecraft application Instance.
@@ -1130,11 +1130,11 @@ class Diagnostics:
         The 'type' of server. eg. Forge, Fabric, etc...
     java_version : :class:`str`
         The path to the java lib.
-    tools_version: :class:`str`
+    tools_version : :class:`str`
         The version of the build tools for the Instance.
-    virtualization: :class:`str`
+    virtualization : :class:`str`
         If the system is using a VM or not. *eg VMware*
-    os: :class:`str`
+    os : :class:`str`
         The machine Operating System.
 
     """
@@ -1181,25 +1181,25 @@ class Directory:
 
     Attributes
     ----------
-    is_directory: :class:`bool`
+    is_directory : :class:`bool`
         If the path is a directory.
-    is_virtual_directory: :class:`bool`
+    is_virtual_directory : :class:`bool`
         If the path is a virtual directory.
-    filename: :class:`str`
+    filename : :class:`str`
         The name of the file or directory.
-    size_bytes: :class:`int`
+    size_bytes : :class:`int`
         The size of the file/directory in bytes.
-    is_downloadable: :class:`bool`
+    is_downloadable : :class:`bool`
         If the file can be downloaded.
-    is_editable: :class:`bool`
+    is_editable : :class:`bool`
         If the file can be edited.
-    is_archive: :class:`bool`
+    is_archive : :class:`bool`
         If the file is an archive.
-    is_excluded_from_backups: :class:`bool`
+    is_excluded_from_backups : :class:`bool`
         If the file is excluded from backups.
-    created: :class:`str` | :class:`datetime`
+    created : :class:`str` | :class:`datetime`
         The time the file/directory was created.
-    modified: :class:`str` | :class:`datetime`
+    modified : :class:`str` | :class:`datetime`
         The time the file/directory was last modified.
     is_smart_excluded_from_backups : :class:`bool`
         If the file is smart excluded from backups.
@@ -1231,11 +1231,11 @@ class Endpoints:
 
     Attributes
     ----------
-    display_name: :class:`str`
+    display_name : :class:`str`
         The name of the endpoint.
-    endpoint: :class:`str`
+    endpoint : :class:`str`
         The name of the endpoint.
-    uri: :class:`str`
+    uri : :class:`str`
         The URI of the endpoint.
 
     """
@@ -1253,7 +1253,7 @@ class FileChunk:
     ----------
     base64_data : :class:`str`
         The base64 encoded string of the file chunk.
-    bytes_length: :class:`int`
+    bytes_length : :class:`int`
         The length of the file chunk in bytes.
 
     """
@@ -1268,28 +1268,28 @@ class Fitness:
 
     Attributes
     ----------
-    available: :class:`bool`
+    available : :class:`bool`
         If the Instance is available to create more services or not.
-    total_services: :class:`int`
+    total_services : :class:`int`
         The total number of services running on the Instance.
-    free_ram_mb: :class:`int`
+    free_ram_mb : :class:`int`
         The amount of free RAM on the Instance.
-    free_disk_mb: :class:`int`
+    free_disk_mb : :class:`int`
         The amount of free disk space on the Instance.
-    cpu_service_ratio: :class:`float`
+    cpu_service_ratio : :class:`float`
         The ratio of CPU usage to the number of services running on the Instance.
-    thread_queue_length: :class:`int`
+    thread_queue_length : :class:`int`
         The length of the thread queue on the Instance.
-    load_avg: :class:`float`
+    load_avg : :class:`float`
         The load average on the Instance.
-    remaining_instance_slots: :class:`int`
+    remaining_instance_slots : :class:`int`
         The number of remaining Instance slots on the License.
-    score: :class:`float`
+    score : :class:`float`
         The score of the Instance.
-    score_description: :class:`str`
+    score_description : :class:`str`
         A summary of the "remaining slots" aka the number of Instances you have left to create.
         * Includes the amount of "Free Ram" and "CPU Ratio".
-    score_zero_factors: list[Any]
+    score_zero_factors : list[Any]
         A list of factors that determine the score of the Instance.
 
     """
@@ -1322,31 +1322,31 @@ class InstanceDatastore:
 
     Parameters
     ----------
-    id: :class:`int`
+    id : :class:`int`
         The ID of the datastore.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The friendly name of the datastore.
-    description: :class:`str`
+    description : :class:`str`
         The description of the datastore.
-    directory: :class:`str`
+    directory : :class:`str`
         The on-disk location where instances will be stored. Changing this will not affect existing instances, only newly created ones.
-    soft_limit_mb: :class:`int`
+    soft_limit_mb : :class:`int`
         Datastores that reach or exceed this limit in total size will not be considered as deployment
         targets. This is only a soft limit and does not prevent instances on this datastore from using
         more space.
-    priority: :class:`int`
+    priority : :class:`int`
         Instances with a lower priority number are preferred over those with a higher number, all other factors being equal.
-    tags: list[:class:`str`]
+    tags : list[:class:`str`]
         A list of tags to apply to the datastore.
-    is_internal: :class:`bool`
+    is_internal : :class:`bool`
         If the datastore is internal.
     instance_limit:
         The maximum number of instances that can be provisioned on this datastore, defaults to 0 for unlimited.
     active:
         Deactivating a datastore prevents new instances from being provisioned to it, defaults to True.
-    current_usage_mb: :class:`int`
+    current_usage_mb : :class:`int`
         The current usage of the datastore in megabytes, defaults to -1.
-    sanitised_name: :class:`str`
+    sanitised_name : :class:`str`
         The sanitised name of the datastore, defaults to "None".
 
     """
@@ -1383,29 +1383,29 @@ class InstanceInfo:
 
     Attributes
     ----------
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance GUID.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The friendly name of the Instance.
-    description: :class:`str`
+    description : :class:`str`
         The description of the Instance.
-    suspended: :class:`bool`
+    suspended : :class:`bool`
         If the Instance is suspended.
-    exclude_from_firewall: :class:`bool`
+    exclude_from_firewall : :class:`bool`
         If the Instance should be excluded from the firewall.
-    run_in_container: :class:`bool`
+    run_in_container : :class:`bool`
         If the Instance should be run in a container.
-    container_memory: :class:`int`
+    container_memory : :class:`int`
         The amount of memory allocated to the container in MB.
-    container_max_cpu: :class:`str`
+    container_max_cpu : :class:`str`
         The maximum amount of CPU cores allocated to the container.
-    container_image: :class:`str`
+    container_image : :class:`str`
         The container/docker image to use.
-    memory_policy: :class:`ContainerMemoryPolicyState`
+    memory_policy : :class:`ContainerMemoryPolicyState`
         The memory policy of the Instance, default is :attr:`ContainerMemoryPolicyState.reserve`.
-    start_on_boot: :class:`bool`
+    start_on_boot : :class:`bool`
         If the Instance should start on boot, default is False.
-    welcome_message: :class:`str`
+    welcome_message : :class:`str`
         The welcome message of the Instance, default is None.
 
     """
@@ -1441,9 +1441,9 @@ class InstanceStatus:
 
     Attributes
     ----------
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The Instance ID.
-    running: :class:`bool`
+    running : :class:`bool`
         Whether the Instance is running.
 
     """
@@ -1458,19 +1458,19 @@ class LoginResults:
 
     Attributes
     ----------
-    success: :class:`bool`
+    success : :class:`bool`
         Whether the login was successful.
-    result: :class:`int`
+    result : :class:`int`
         The result code.
-    permissions: list[:class:`str`], optional
+    permissions : list[:class:`str`], optional
         A list of permissions, defaults to [].
-    result_reason: :class:`str`, optional
+    result_reason : :class:`str`, optional
         The result reason, defaults to "".
-    session_id: :class:`str`, optional
+    session_id : :class:`str`, optional
         The session ID, defaults to "".
-    remember_me_token: :class:`str`, optional
+    remember_me_token : :class:`str`, optional
         The remember me token, defaults to "".
-    user_info: :class:`LoginUserInfo`, optional
+    user_info : :class:`LoginUserInfo`, optional
         The user information, defaults to None.
 
     """
@@ -1497,21 +1497,21 @@ class LoginUserInfo:
 
     Attributes
     ----------
-    id: :class:`str`
+    id : :class:`str`
         The user ID.
-    username: :class:`str`
+    username : :class:`str`
         The username.
-    is_two_factor_enabled: :class:`bool`
+    is_two_factor_enabled : :class:`bool`
         If the user has 2FA enabled.
-    disabled: :class:`bool`
+    disabled : :class:`bool`
         If the user is disabled.
-    gravatar_hash: :class:`str`
+    gravatar_hash : :class:`str`
         The gravatar hash.
-    is_ldap_user: :class:`bool`
+    is_ldap_user : :class:`bool`
         If the user is a LDAP user.
-    last_login: :class:`datetime`
+    last_login : :class:`datetime`
         The last login date.
-    email_address: :class:`str`, optional
+    email_address : :class:`str`, optional
         The email address, defaults to "" if not set.
 
     """
@@ -1539,9 +1539,9 @@ class MCUser:
 
     Attributes
     ----------
-    name: :class:`str`
+    name : :class:`str`
         The username.
-    uuid: :class:`str`
+    uuid : :class:`str`
         The Minecraft UUID.
 
     """
@@ -1556,15 +1556,15 @@ class Messages:
 
     Attributes
     ----------
-    age_minutes: :class:`int`
+    age_minutes : :class:`int`
         The age of the message in minutes.
-    expired: :class:`bool`
+    expired : :class:`bool`
         Whether the message has expired.
-    id: :class:`str`
+    id : :class:`str`
         The message ID.
-    message: :class:`str`
+    message : :class:`str`
         The message.
-    source: :class:`str`
+    source : :class:`str`
         The source of the message.
 
     """
@@ -1584,17 +1584,17 @@ class Methods:
 
     Attributes
     ----------
-    id: :class:`str`
+    id : :class:`str`
         The method ID.
-    name: :class:`str`
+    name : :class:`str`
         The method name.
-    description: :class:`str`
+    description : :class:`str`
         The method description.
-    category: :class:`str`
+    category : :class:`str`
         The category the method appears under in the Schedule UI, default is "".
-    display_format: Union[:class:`str`, None]
+    display_format : Union[:class:`str`, None]
         How the Schedule UI renders the method, default is None.
-    consumes: list[:class:`DCConsumes` | :class:`ConsumeResponse`]
+    consumes : list[:class:`DCConsumes` | :class:`ConsumeResponse`]
         A list of parameters the method consumes.
 
     """
@@ -1626,11 +1626,11 @@ class Metric:
 
     Attributes
     ----------
-    active_users: Union[:class:`MetricsData`, None]
+    active_users : Union[:class:`MetricsData`, None]
         The active users data.
-    cpu_usage: Union[:class:`MetricsData`, None]
+    cpu_usage : Union[:class:`MetricsData`, None]
         The cpu usage data.
-    memory_usage: Union[:class:`MetricsData`, None]
+    memory_usage : Union[:class:`MetricsData`, None]
         The memory usage data.
 
     """
@@ -1646,21 +1646,21 @@ class MetricsData:
 
     Attributes
     ----------
-    raw_value: :class:`int`
+    raw_value : :class:`int`
         The raw value, or the current value of the field.
-    max_value: :class:`int`
+    max_value : :class:`int`
         The max value the field can have.
-    percent: :class:`int`
+    percent : :class:`int`
         The percent of usage in relation to the ``max_value``.
-    units: :class:`str`
+    units : :class:`str`
         The unit of measurement for the field.
-    color: Union[None, :class:`str`]
+    color : Union[None, :class:`str`]
         Color number 1 if applicable..
-    color2: Union[None, :class:`str`]
+    color2 : Union[None, :class:`str`]
         Color number 2 if applicable.
-    color3: Union[None, :class:`str`]
+    color3 : Union[None, :class:`str`]
         Color number 3 if applicable.
-    short_name: Union[None, :class:`str`], optional
+    short_name : Union[None, :class:`str`], optional
         The short label AMP displays on the metric tile (eg "CPU", "RAM"), default is None.
 
     """
@@ -1682,63 +1682,63 @@ class Module:
 
     Attributes
     ----------
-    amp_build: :class:`str`
+    amp_build : :class:`str`
         The AMP build.
-    amp_version: :class:`str`
+    amp_version : :class:`str`
         The AMP version.
-    api_version: :class:`str`
+    api_version : :class:`str`
         The API version.
-    allow_remember_me: :class:`bool`
+    allow_remember_me : :class:`bool`
         Whether remember me is allowed.
-    analytics: :class:`bool`
+    analytics : :class:`bool`
         Whether analytics is enabled.
-    analytics_tag: :class:`str`
+    analytics_tag : :class:`str`
         The analytics tag.
-    app_name: :class:`str`
+    app_name : :class:`str`
         The app name.
-    author: :class:`str`
+    author : :class:`str`
         The author.
-    base_port: :class:`int`
+    base_port : :class:`int`
         The base port.
-    branding: :class:`dict[str, Any]`
+    branding : :class:`dict[str, Any]`
         The branding data.
-    build_spec: :class:`str`
+    build_spec : :class:`str`
         The build spec.
-    display_base_uri: :class:`str`
+    display_base_uri : :class:`str`
         The display base URI.
-    endpoint_uri: :class:`str`
+    endpoint_uri : :class:`str`
         The endpoint URI.
-    feature_set: :class:`list[Any]`
+    feature_set : :class:`list[Any]`
         The feature set.
-    friendly_name: :class:`str`
+    friendly_name : :class:`str`
         The friendly name.
-    instance_id: :class:`str`
+    instance_id : :class:`str`
         The instance ID.
-    instance_name: :class:`str`
+    instance_name : :class:`str`
         The instance name.
-    is_oidc_enabled: :class:`bool`
+    is_oidc_enabled : :class:`bool`
         Whether OIDC login is enabled.
-    is_remote_instance: :class:`bool`
+    is_remote_instance : :class:`bool`
         Whether the instance is remote.
-    loaded_plugins: :class:`list[str]`
+    loaded_plugins : :class:`list[str]`
         A list of loaded plugins.
-    module_name: :class:`str`
+    module_name : :class:`str`
         The module name.
-    name: :class:`str`
+    name : :class:`str`
         The full name.
-    oidc_provider_friendly_name: :class:`str`
+    oidc_provider_friendly_name : :class:`str`
         The OIDC provider friendly name.
-    primary_endpoint: :class:`str`
+    primary_endpoint : :class:`str`
         The primary endpoint.
-    requires_full_load: :class:`bool`
+    requires_full_load : :class:`bool`
         Whether the instance requires full load.
-    supports_sleep: :class:`bool`
+    supports_sleep : :class:`bool`
         Whether the instance supports sleep.
-    timestamp: :class:`str`
+    timestamp : :class:`str`
         The current timestamp.
-    tools_version: :class:`str`
+    tools_version : :class:`str`
         The tools version.
-    version_codename: :class:`str`
+    version_codename : :class:`str`
         The version codename.
 
     """
@@ -1780,11 +1780,11 @@ class OPList:
 
     Attributes
     ----------
-    level: :class:`int`
+    level : :class:`int`
         The level of the operator user.
-    name: :class:`str`
+    name : :class:`str`
         The name of the user.
-    uuid: :class:`str`
+    uuid : :class:`str`
         The UUID of the user.
 
     """
@@ -1800,9 +1800,9 @@ class OPWhitelist:
 
     Attributes
     ----------
-    op_list: list[:class:`MCUserData`]
+    op_list : list[:class:`MCUserData`]
         The list of operator users.
-    whitelist: list[:class:`MCUserData`]
+    whitelist : list[:class:`MCUserData`]
         The list of whitelisted users.
 
     """
@@ -1817,31 +1817,31 @@ class PlatformInfo:
 
     Attributes
     ----------
-    cpu_info: :class:`CPUInfo`
+    cpu_info : :class:`CPUInfo`
         The CPU information.
-    installed_ram_mb: :class:`int`
+    installed_ram_mb : :class:`int`
         The installed RAM in MB of the system.
-    os: :class:`int`
+    os : :class:`int`
         The system operating system.
-    platform_name: :class:`str`
+    platform_name : :class:`str`
         The platform name.
-    system_type: :class:`int`
+    system_type : :class:`int`
         The system type.
-    virtualization: :class:`int`
+    virtualization : :class:`int`
         The virtualization.
-    is_shared_setup: :class:`bool`
+    is_shared_setup : :class:`bool`
         Whether the instance is shared setup.
-    admin_rights: :class:`int`
+    admin_rights : :class:`int`
         The admin rights level.
-    hardware_platform_name: :class:`str`
+    hardware_platform_name : :class:`str`
         The hardware platform name.
-    installed_glibc_version: :class:`str`
+    installed_glibc_version : :class:`str`
         The installed glibc version.
-    docker_network_is_host_mode: :class:`bool`
+    docker_network_is_host_mode : :class:`bool`
         If the target's Docker network runs in host mode, defaults to False.
-    has_memory_limit: :class:`bool`
+    has_memory_limit : :class:`bool`
         If the target has a memory limit applied, defaults to False.
-    max_swap_mb: :class:`int`
+    max_swap_mb : :class:`int`
         The maximum swap in MB available to the target, defaults to 0.
 
     """
@@ -1868,9 +1868,9 @@ class Player(NamedTuple):
 
     Attributes
     ----------
-    uuid: :class:`str`
+    uuid : :class:`str`
         The UUID of the player.
-    name: :class:`str`
+    name : :class:`str`
         The name of the player.
 
     """
@@ -1898,7 +1898,7 @@ class Players:
 
     Attributes
     ----------
-    sorted: list[:class:`Player`]
+    sorted : list[:class:`Player`]
         A sorted list of :class:`Player` objects by name.
 
     """
@@ -1922,7 +1922,7 @@ class Players:
 
         Parameters
         ----------
-        name_or_uuid: :class:`str`
+        name_or_uuid : :class:`str`
             The players name or UUID.
 
         Returns
@@ -1941,17 +1941,17 @@ class Port:
 
     Attributes
     ----------
-    listening: :class:`bool`
+    listening : :class:`bool`
         Whether the port is listening.
-    name: :class:`str`
+    name : :class:`str`
         The name of the port.
-    port: :class:`int`
+    port : :class:`int`
         The port number.
-    protocol: :class:`int`
+    protocol : :class:`int`
         The protocol number.
-    required: :class:`bool`
+    required : :class:`bool`
         Whether the port is required.
-    is_delayed_open: :class:`bool`
+    is_delayed_open : :class:`bool`
         Whether the port is delayed open.
 
     """
@@ -1970,23 +1970,23 @@ class Provision:
 
     Attributes
     ----------
-    available: :class:`bool`
+    available : :class:`bool`
         Whether the instance is available.
-    cpu_service_ratio: :class:`float`
+    cpu_service_ratio : :class:`float`
         The CPU service ratio.
-    free_disk_mb: :class:`int`
+    free_disk_mb : :class:`int`
         The free disk in MB.
-    free_ram_mb: :class:`int`
+    free_ram_mb : :class:`int`
         The free RAM in MB.
-    load_avg: :class:`float`
+    load_avg : :class:`float`
         The load average.
-    remaining_instance_slots: :class:`int`
+    remaining_instance_slots : :class:`int`
         The remaining instance slots.
-    score: :class:`float`
+    score : :class:`float`
         The score.
-    thread_queue_length: :class:`int`
+    thread_queue_length : :class:`int`
         The thread queue length.
-    total_services: :class:`int`
+    total_services : :class:`int`
         The total services.
 
     """
@@ -2008,23 +2008,23 @@ class ProvisionSettingInfo:
 
     Attributes
     ----------
-    default_value: Union[:class:`str`, :class:`int`, None]
+    default_value : Union[:class:`str`, :class:`int`, None]
         The default value.
-    description: :class:`str`
+    description : :class:`str`
         The description.
-    endpoint_name: :class:`str`
+    endpoint_name : :class:`str`
         The endpoint name.
-    node: :class:`str`
+    node : :class:`str`
         The node.
-    type: :class:`str`
+    type : :class:`str`
         The type.
-    value_range: Union[:class:`int`, :class:`str`]
+    value_range : Union[:class:`int`, :class:`str`]
         The value range.
-    custom_field_type: Union[:class:`str`, None]
+    custom_field_type : Union[:class:`str`, None]
         The custom field type, if the setting uses one. (eg. "TCPUDPPort") Defaults to None.
-    related_setting: Union[:class:`str`, None]
+    related_setting : Union[:class:`str`, None]
         The node of a setting this one is tied to, otherwise None.
-    endpoint_format: Union[:class:`str`, None]
+    endpoint_format : Union[:class:`str`, None]
         The format string used to render the endpoint, otherwise None.
 
     """
@@ -2049,26 +2049,26 @@ class PortInfo:
 
     Attributes
     ----------
-    description: :class:`str`
+    description : :class:`str`
         The description.
-    is_user_defined: :class:`bool`
+    is_user_defined : :class:`bool`
         Whether the port is user defined.
-    port_number: :class:`int`
+    port_number : :class:`int`
         The port number.
-    protocol: :class:`int`
+    protocol : :class:`int`
         The protocol number.
         ```
         0 = TCP
         1 = UDP
         2 = TCP & UDP
         ```
-    provision_node_name: :class:`str`
+    provision_node_name : :class:`str`
         The provision node name.
-    range: :class:`int`
+    range : :class:`int`
         The range.
-    verified: :class:`bool`
+    verified : :class:`bool`
         Whether the port is verified.
-    is_firewall_target: :class:`bool`
+    is_firewall_target : :class:`bool`
         Whether the port is targeted by a firewall rule, defaults to False.
 
     """
@@ -2100,13 +2100,13 @@ class RemoteTargetInfo:
 
     Attributes
     ----------
-    ip_address_list: :class:`list[str]`
+    ip_address_list : :class:`list[str]`
         The IP address list.
-    platform_info: :class:`PlatformInfoResponse`
+    platform_info : :class:`PlatformInfoResponse`
         The platform info; left as the raw response dict, see the note above.
-    datastores: list[:class:`TargetDatastoreResponse`]
+    datastores : list[:class:`TargetDatastoreResponse`]
         The datastores, carrying only an ``id`` and ``friendly_name``.
-    deploys_in_containers: :class:`bool`
+    deploys_in_containers : :class:`bool`
         If the target deploys instances inside containers.
 
     """
@@ -2127,25 +2127,25 @@ class Role:
 
     Attributes
     ----------
-    id: :class:`str`
+    id : :class:`str`
         The ID of the AMP role.
-    is_default: :class:`bool`
+    is_default : :class:`bool`
         If the AMP role is the default role or not.
-    name: :class:`str`
+    name : :class:`str`
         The name of the AMP role.
-    description: :class:`str`
+    description : :class:`str`
         The description of the AMP role.
-    hidden: :class:`bool`
+    hidden : :class:`bool`
         If the AMP role is hidden or not.
-    permissions: :class:`list[str]`
+    permissions : :class:`list[str]`
         The list of permissions the AMP role has.
-    members: :class:`list[str]`
+    members : :class:`list[str]`
         The list of AMP users who have the role.
-    is_instance_specific: :class:`bool`
+    is_instance_specific : :class:`bool`
         If the AMP role is only for a specific instance or not.
-    is_common_role: :class:`bool`
+    is_common_role : :class:`bool`
         If the AMP role is common or not.
-    disable_edits: :class:`bool`
+    disable_edits : :class:`bool`
         If the AMP role can be edited by users with the role or not.
 
     """
@@ -2168,51 +2168,51 @@ class RunningTask:
 
     Attributes
     ----------
-    is_primary_task: :class:`bool`
+    is_primary_task : :class:`bool`
         If the task is the primary task or not.
-    start_time: :class:`str` | :class:`datetime.datetime`
+    start_time : :class:`str` | :class:`datetime.datetime`
         The start time of the task; converted to a :class:`datetime` object.
-    id: :class:`str`
+    id : :class:`str`
         The ID of the task.
-    remote_instance_id: :class:`str` | None
+    remote_instance_id : :class:`str` | None
         The GUID of the Instance the task belongs to, otherwise None when the task is local.
-    parent_task_id: :class:`str` | None
+    parent_task_id : :class:`str` | None
         The ID of the task that spawned this one, otherwise None when it has no parent.
-    name: :class:`str`
+    name : :class:`str`
         The name of the task.
-    description: :class:`str`
+    description : :class:`str`
         The description of the task.
-    hide_from_ui: :class:`bool`
+    hide_from_ui : :class:`bool`
         If the task is hidden from the UI or not.
-    fast_dismiss: :class:`bool`
+    fast_dismiss : :class:`bool`
         If the task is fast dismiss or not.
-    last_update_pushed: :class:`str` | :class:`datetime.datetime`
+    last_update_pushed : :class:`str` | :class:`datetime.datetime`
         The last update pushed of the task; converted to a :class:`datetime` object.
-    progress_percent: :class:`float`
+    progress_percent : :class:`float`
         The progress percent of the task.
-    speed: :class:`str` | None
+    speed : :class:`str` | None
         UNK - The task's throughput, if it reports one. Has only ever been observed as None.
-    is_cancellable: :class:`bool`
+    is_cancellable : :class:`bool`
         If the task is cancellable or not.
-    origin: :class:`str`
+    origin : :class:`str`
         The origin of the task. (eg. "Core.CreateTestTask")
-    dont_propagate: :class:`bool`
+    dont_propagate : :class:`bool`
         If the task is withheld from being pushed up to the ADS or not.
-    is_indeterminate: :class:`bool`
+    is_indeterminate : :class:`bool`
         If the task is indeterminate or not.
-    state: :class:`int`
+    state : :class:`int`
         The state of the task.
-    state_message: :class:`str` | None
+    state_message : :class:`str` | None
         The message tied to the current state, otherwise None.
-    end_time: :class:`str` | :class:`datetime.datetime` | None
+    end_time : :class:`str` | :class:`datetime.datetime` | None
         The end time of the task; converted to a :class:`datetime` object. None while the task is still running.
-    status: :class:`bool`
+    status : :class:`bool`
         The status of the task.
-    reason: :class:`str` | None
+    reason : :class:`str` | None
         The reason for the task's status, otherwise None.
-    support_url: :class:`str` | None
+    support_url : :class:`str` | None
         A URL pointing to related support information, otherwise None.
-    support_title: :class:`str` | None
+    support_title : :class:`str` | None
         The title to display for the :attr:`support_url`, otherwise None.
 
     """
@@ -2296,17 +2296,17 @@ class Session:
 
     Attributes
     ----------
-    source: :class:`str`
+    source : :class:`str`
         The source of the session.
-    session_id: :class:`str`
+    session_id : :class:`str`
         The ID of the session.
-    username: :class:`str`
+    username : :class:`str`
         The username the session belongs to.
-    session_type: :class:`str`
+    session_type : :class:`str`
         The type of the session.
-    start_time: :class:`datetime`
+    start_time : :class:`datetime`
         The start time of the session.
-    last_activity: :class:`datetime`
+    last_activity : :class:`datetime`
         The last time the session was active.
 
     """
@@ -2333,59 +2333,59 @@ class SettingSpec:
 
     Attributes
     ----------
-    category: :class:`str`
+    category : :class:`str`
         Which category the setting will appear under in the Instance configuration UI.
-    actions: list[:class:`SettingSpecAction`]
+    actions : list[:class:`SettingSpecAction`]
         The list of actions related to the setting, defaults to an empty list.
-    always_allow_read: :class:`bool`
+    always_allow_read : :class:`bool`
         If the setting should always allow read or not.
-    attributes: :class:`SettingsSpecAttribute`, optional
+    attributes : :class:`SettingsSpecAttribute`, optional
         The attributes that are set/prompted for when changing this setting.
-    current_value: Union[:class:`list`, :class:`str`, :class:`bool`, :class:`int`, :class:`dict`, :class:`SettingSpecTableAliases`]
+    current_value : Union[:class:`list`, :class:`str`, :class:`bool`, :class:`int`, :class:`dict`, :class:`SettingSpecTableAliases`]
         The current value of the setting, default is "".
-    description: :class:`str`, optional
+    description : :class:`str`, optional
         The text description below the setting name in the UI, default is "".
-    enum_values: :class:`dict`, optional
+    enum_values : :class:`dict`, optional
         A dictionary representing the possible enum values for the setting, default is None.
-    enum_values_are_deferred: :class:`bool`
+    enum_values_are_deferred : :class:`bool`
         UNK, default is False.
-    input_type: :class:`str`, optional
+    input_type : :class:`str`, optional
         The type of input to expect for the setting field, default is None.
-    is_provision_spec: :class:`bool`
+    is_provision_spec : :class:`bool`
         if the setting is also a provision spec, default is False.
-    keywords: :class:`str`
+    keywords : :class:`str`
         UNK, default is "".
-    max_length: :class:`int`
+    max_length : :class:`int`
         UNK, all fields are 0 in data, default is 0.
-    min_value: None
+    min_value : None
         UNK, all fields are null in data, default is None.
-    meta: :class:`str`
+    meta : :class:`str`
         UNK, all fields are "", default is "".
-    name: :class:`str`
+    name : :class:`str`
         The name of the setting.
-    node: :class:`str`
+    node : :class:`str`
         The node required to have to edit this setting, default is "".
-    order: :class:`int`
+    order : :class:`int`
         The order in which this setting will appear in the UI, default is 1.
-    placeholder: :class:`str`
+    placeholder : :class:`str`
         The placeholder text for the setting field, default is "".
-    read_only: :class:`bool`
+    read_only : :class:`bool`
         If the setting is read only or not, default is False.
-    read_only_provision: :class:`bool`
+    read_only_provision : :class:`bool`
         UNK, all fields are False in data, default is False.
-    required: :class:`bool`
+    required : :class:`bool`
         If the setting is required or not, default is False.
-    requires_restart: :class:`bool`
+    requires_restart : :class:`bool`
         If the setting requires the Instance or Server to be restarted, default is False.
-    selection_source: Union[:class:`SettingSpecSelectionSource`, None]
+    selection_source : Union[:class:`SettingSpecSelectionSource`, None]
         UNK, most fields are null in data, default is None.
-    subcategory: :class:`str`
+    subcategory : :class:`str`
         The subcategory the setting will appear under in the Instance configuration UI, default is "".
-    suffix: :class:`str`
+    suffix : :class:`str`
         The suffix applied to the string current_value, default is "".
-    tag: :class:`str`
+    tag : :class:`str`
         What the setting is related to, similar to a Server Config property or file, default is "".
-    val_type: :class:`str`
+    val_type : :class:`str`
         What the type is of the current_value, default is "".
 
     """
@@ -2442,17 +2442,17 @@ class SettingSpecAction:
 
     Attributes
     ----------
-    argument: :class:`str`
+    argument : :class:`str`
         The argument of the action.
-    caption: :class:`str`
+    caption : :class:`str`
         The caption of the action.
-    is_client_side: :class:`bool`
+    is_client_side : :class:`bool`
         If the action is client side or not.
-    method: :class:`str`
+    method : :class:`str`
         The method of the action, these relate to API Endpoints when combined with the module.
-    module: :class:`str`
+    module : :class:`str`
         The module the action belongs to.
-    type_id: :class:`str`
+    type_id : :class:`str`
         The type id of the action.
 
     """
@@ -2471,17 +2471,17 @@ class SettingsSpecAttribute:
 
     Attributes
     ----------
-    key_name: :class:`str`
+    key_name : :class:`str`
         The name of the key.
-    key_placeholder: :class:`str`
+    key_placeholder : :class:`str`
         The placeholder text for the key.
-    type_id: :class:`str`
+    type_id : :class:`str`
         The type id of the key.
-    value_name: :class:`str`
+    value_name : :class:`str`
         The name of the value.
-    value_placeholder: :class:`str`
+    value_placeholder : :class:`str`
         The placeholder text for the value.
-    read_only_keys: :class:`bool`
+    read_only_keys : :class:`bool`
         If the key is read only or not.
 
     """
@@ -2500,21 +2500,21 @@ class SettingsSpecParent:
 
     Attributes
     ----------
-    branding: list[:class:`SettingSpec`]
+    branding : list[:class:`SettingSpec`]
         The list of branding settings in the UI, default is an empty list.
-    external_services: list[:class:`SettingSpec`]
+    external_services : list[:class:`SettingSpec`]
         The list of external services settings in the UI, default is an empty list.
-    file_manager: list[:class:`SettingSpec`]
+    file_manager : list[:class:`SettingSpec`]
         The list of file manager settings in the UI, default is an empty list.
-    instance_deployment: list[:class:`SettingSpec`]
+    instance_deployment : list[:class:`SettingSpec`]
         The list of instance deployment settings in the UI, default is an empty list.
-    login: list[:class:`SettingSpec`]
+    login : list[:class:`SettingSpec`]
         The list of login settings in the UI, default is an empty list.
-    security_and_privacy: list[:class:`SettingSpec`]
+    security_and_privacy : list[:class:`SettingSpec`]
         The list of security and privacy settings in the UI, default is an empty list.
-    system_settings: list[:class:`SettingSpec`]
+    system_settings : list[:class:`SettingSpec`]
         The list of system settings in the UI, default is an empty list.
-    updates: list[:class:`SettingSpec`]
+    updates : list[:class:`SettingSpec`]
         The list of update settings in the UI, default is an empty list.
 
     """
@@ -2544,11 +2544,11 @@ class SettingSpecSelectionSource:
 
     Attributes
     ----------
-    deferred: :class:`bool`
+    deferred : :class:`bool`
         If the selection source is deferred or not.
-    must_validate: :class:`bool`
+    must_validate : :class:`bool`
         If the selection source must validate or not.
-    type_id: :class:`str`
+    type_id : :class:`str`
         The type id of the selection source.
 
     """
@@ -2583,11 +2583,11 @@ class Status:
 
     Attributes
     ----------
-    state: :class:`InstanceState`
+    state : :class:`InstanceState`
         The state of the AMP Instance.
-    uptime: :class:`str`
+    uptime : :class:`str`
         The up time of the Instance, in Days, Hours, Minutes, Seconds format. 00:00:00:00
-    metrics: dict[:class:`str`, :class:`MetricsData`], optional
+    metrics : dict[:class:`str`, :class:`MetricsData`], optional
         The Metrics data related to the Instance keyed by metric name, default is an empty dict.
 
     """
@@ -2625,13 +2625,13 @@ class Template:
     new_username : Union[:class:`str`, None] , optional
         If specified, AMP will create a new user with this name for this instance. Default is None.
         * Must be unique, If this user already exists, this will be ignored but the new instance will be assigned to this user.
-    new_password: Union[:class:`str`, None] , optional
+    new_password : Union[:class:`str`, None] , optional
         If :attr:`new_username` is specified and the user doesn't already exist, the password will be
         assigned to this user. Default is None.
     new_email : Union[:class:`str`, None] , optional
         If :attr:`new_username` is specified and the user doesn't already exist, the email address will
         be assigned to this user. Default is None.
-    required_tags: Union[list[:class:`str`], None] , optional
+    required_tags : Union[list[:class:`str`], None] , optional
         If specified, AMP will only deploy this template to targets that have every single 'tag'
         specified in their target configuration. You can adjust this via the controller by clicking
         'Edit' on the target settings. Default is None.
@@ -2639,14 +2639,14 @@ class Template:
         Unrelated to required_tags. This is to uniquely identify this instance to your own systems. It
         may be something like an order ID or service ID so you can find the associated instance again
         at a later time. Default is None.
-    friendly_name: Union[:class:`str`, None] , optional
+    friendly_name : Union[:class:`str`, None] , optional
         A friendly name for this instance. If left blank, AMP will generate one for you. Defaults is None.
     secret : Union[:class:`str`, None] , optional
         Must be a non-empty strong in order to get a callback on deployment state change. This secret
         will be passed back to you in the callback so you can verify the request. Default is None.
-    post_create: :class:`PostCreateActionState`, optional
+    post_create : :class:`PostCreateActionState`, optional
         The action to take after the Instance is created, default is :attr:`PostCreateActionState.do_nothing`.
-    extra_provision_settings: Union[dict[:class:`str`, :class:`str`], None]
+    extra_provision_settings : Union[dict[:class:`str`, :class:`str`], None]
         A dictionary of setting nodes and values to create the new instance with. Identical in function
         to the provisioning arguments in the template itself. Default is None.
 
@@ -2686,27 +2686,27 @@ class TimedTrigger:
 
     Attributes
     ----------
-    description: :class:`str`
+    description : :class:`str`
         The description of the trigger, this is shown in the UI.
-    enabled_state: :class:`bool`
+    enabled_state : :class:`bool`
         If the Timed Trigger is enabled or not.
-    id: :class:`str`
+    id : :class:`str`
         The ID of the Timed Trigger, these are unique per Instance.
-    match_days: list[:class:`int`]
+    match_days : list[:class:`int`]
         The days of the week to match, starting at 0 for Monday.
-    match_days_of_month: list[:class:`int`]
+    match_days_of_month : list[:class:`int`]
         The days of the month to match.
-    match_hours: list[:class:`int`]
+    match_hours : list[:class:`int`]
         The hours of the day to match.
-    match_minutes: list[:class:`int`]
+    match_minutes : list[:class:`int`]
         The minutes of the hour to match.
-    match_months: list[:class:`int`]
+    match_months : list[:class:`int`]
         The months to match.
-    name: :class:`str`
+    name : :class:`str`
         The name of the Timed Trigger, this is shown in the UI.
-    order: :class:`int`
+    order : :class:`int`
         The order in which this trigger will appear in the Event list.
-    tasks: :class:`list[TriggerTasks]`
+    tasks : :class:`list[TriggerTasks]`
         The list of tasks associated with this Timed Trigger.
 
     """
@@ -2786,25 +2786,25 @@ class Triggers:
 
     Attributes
     ----------
-    enabled_state: :class:`int`
+    enabled_state : :class:`int`
         If the trigger is enabled or not.
-    tasks: :class:`list[TriggerTasks]`, optional
+    tasks : :class:`list[TriggerTasks]`, optional
         The list of tasks associated with this trigger, default is an empty list.
-    id: :class:`str`
+    id : :class:`str`
         The ID of the trigger, these are unique per Instance.
-    type: :class:`str`
+    type : :class:`str`
         The type of trigger, typically a TimeIntervalTrigger or EventTrigger.
-    description: :class:`str`
+    description : :class:`str`
         The description of the trigger.
-    trigger_type: :class:`str`
+    trigger_type : :class:`str`
         The same as :attr:`Triggers.type`.
-    emits: :class:`list[str]`, optional
+    emits : :class:`list[str]`, optional
         The parameters the trigger emits to the Event allowing usage in the trigger, default is an empty list.
-    last_execute_error: :class:`bool`, optional
+    last_execute_error : :class:`bool`, optional
         If the last execution of the trigger resulted in an error or not, default is False.
-    last_error_reason: :class:`str`, optional
+    last_error_reason : :class:`str`, optional
         The reason the last execution of the trigger resulted in an error, default is "".
-    last_run: Union[:class:`str`, None], optional
+    last_run : Union[:class:`str`, None], optional
         When the trigger last fired, default is None.
 
     """
@@ -2842,19 +2842,19 @@ class TriggerTasks:
 
     Attributes
     ----------
-    id: :class:`str`
+    id : :class:`str`
         The ID of the task, these are unique per Instance.
-    task_method_name: :class:`str`
+    task_method_name : :class:`str`
         The name of the task method.
-    parameter_mapping: :class:`DCParameterMapping` | :class:`ParameterMapping`
+    parameter_mapping : :class:`DCParameterMapping` | :class:`ParameterMapping`
         The parameter mapping for the task; still assigned as the raw response dict.
-    enabled_state: :class:`int`
+    enabled_state : :class:`int`
         If the task is enabled or not.
-    locked: :class:`bool`
+    locked : :class:`bool`
         If the task is locked or not.
-    created_by: :class:`str`
+    created_by : :class:`str`
         The user that created the task.
-    order: :class:`int`
+    order : :class:`int`
         The order in which this task will appear in the list of tasks.
 
     """
@@ -2877,17 +2877,17 @@ class UpdateInfo:
 
     Attributes
     ----------
-    update_available: :class:`bool`
+    update_available : :class:`bool`
         If an update is available or not.
-    release_notes_url: :class:`str`
+    release_notes_url : :class:`str`
         The URL to the release notes for the update.
-    build: :class:`str`
+    build : :class:`str`
         The build of the update.
-    version: :class:`str`
+    version : :class:`str`
         The version of the update.
-    tools_version: :class:`str`
+    tools_version : :class:`str`
         The tools version of the update, default is None.
-    patch_only: :class:`bool`
+    patch_only : :class:`bool`
         If the update is a patch only update or not, default is None
 
     """
@@ -2906,15 +2906,15 @@ class Updates:
 
     Attributes
     ----------
-    console_entries: :class:`list[ConsoleEntries]`
+    console_entries : :class:`list[ConsoleEntries]`
         The list of entries in the console.
-    status: :class:`Status`
+    status : :class:`Status`
         The status of the Server.
-    messages: :class:`list[Messages]`
+    messages : :class:`list[Messages]`
         The list of messages the Instance or Server has.
-    ports: :class:`list[Port]`, optional
+    ports : :class:`list[Port]`, optional
         The list of ports the Server is listening/using, default is an empty list.
-    tasks: :class:`list[RunningTask]` , optional
+    tasks : :class:`list[RunningTask]` , optional
         The list of tasks the Server is running, default is an empty list.
 
     """
@@ -2942,33 +2942,33 @@ class UserInfo:
 
     Attributes
     ----------
-    cannot_change_password: :class:`bool`
+    cannot_change_password : :class:`bool`
         If the user cannot change their password or not.
-    disable: :class:`bool`
+    disable : :class:`bool`
         If the user is disabled or not.
-    gravatar_hash: :class:`str`
+    gravatar_hash : :class:`str`
         The gravatar hash of the user.
-    id: :class:`str`
+    id : :class:`str`
         The ID of the user.
-    is_ldap_user: :class:`bool`
+    is_ldap_user : :class:`bool`
         If the user is an LDAP user or not.
-    is_super_user: :class:`bool`
+    is_super_user : :class:`bool`
         If the user has the Super User role or not.
-    is_two_factor_enabled: :class:`bool`
+    is_two_factor_enabled : :class:`bool`
         If the user has 2FA enabled or not.
-    must_change_password: :class:`bool`
+    must_change_password : :class:`bool`
         If the user must change their password or not when they log in next.
-    name: :class:`str`
+    name : :class:`str`
         The name of the user.
-    password_expires: :class:`bool`
+    password_expires : :class:`bool`
         If the user password expires or not when they log in next.
-    permissions: :class:`list[str]`
+    permissions : :class:`list[str]`
         The list of permissions the user has.
-    roles: :class:`list[str]`
+    roles : :class:`list[str]`
         The list of AMP roles the user has.
-    email_address: :class:`str`
+    email_address : :class:`str`
         The email address of the user.
-    last_login: :class:`datetime`
+    last_login : :class:`datetime`
         The last login date of the user.
 
     """
@@ -3060,15 +3060,15 @@ class BuildInfo:
 
     Attributes
     ----------
-    major: :class:`int`
+    major : :class:`int`
         The major version number of the AMP build.
-    minor: :class:`int`
+    minor : :class:`int`
         The minor version number of the AMP build.
-    revision: :class:`int`
+    revision : :class:`int`
         The revision number of the AMP build.
-    minor_revision: :class:`int`
+    minor_revision : :class:`int`
         The minor revision number of the AMP build.
-    build: Union[:class:`int`, None]
+    build : Union[:class:`int`, None]
         The build number, defaults to None.
 
     """
@@ -3090,9 +3090,9 @@ class BuildInfo:
 
         Parameters
         ----------
-        data: :class:`str`
+        data : :class:`str`
             The string type of the Version to parse.
-        sep: :class:`str`
+        sep : :class:`str`
             The separator to split the string by.
 
         Returns
