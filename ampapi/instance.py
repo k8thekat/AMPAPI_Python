@@ -701,8 +701,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     """Represents an AMP Controller Instance.
 
     .. note::
-        See :meth:`~ADSModule.get_instances` `(include_self = True)` making the first instance "typically" the Controller Instance.
-            - aka `ADS01`.
+        :meth:`~Controller.get_instances` copies this Controller's own data onto ``self`` and leaves its `ADS01` row
+        out of :attr:`Controller.instances`; the ADS rows of remote Targets come back as :class:`TargetADS`.
 
 
     .. note::
@@ -945,7 +945,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
                 conv_instances.add(self.instance_conversion(instances=entry))
             return conv_instances
 
-        # The ADS rows are Targets, not Controllers. We hand them ourselves so they can still reach ADSModule endpoints.
+        # get_instances leaves our own ADS row out, so an ADS row here is a remote Target.
+        # We hand them ourselves so they can still reach ADSModule endpoints.
         if instances["module"] == "ADS":
             return TargetADS(data=instances, controller=self, bridge=self._bridge, session=self.session)
 
@@ -1086,6 +1087,9 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         and updates our ``self`` object with the Controller's data.
 
         .. note::
+            The Controller's own ADS row (eg. `ADS01`) is ``self``, so it is left out of the set.
+
+        .. note::
             If ``format_data`` is False this will return the raw list of target dicts instead and nothing is updated.
 
 
@@ -1164,17 +1168,21 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         # and every target's Instances get converted and placed under us.
         conv_instances: set[InstanceTypeAliases] = set()
         for entry in result:
+            rows: list[InstanceResponse] = entry["available_instances"]
             if entry["is_remote"] is False:
                 self._parse_controller_data(data=entry)
+                # Each entry lists its own ADS row, the one whose instance_id matches the entry's. In the local entry
+                # that row is us, so it stays out of instances; a remote entry's own row is a TargetADS.
+                rows = [row for row in rows if row["instance_id"] != entry["instance_id"]]
             LOGGER.debug(
                 "<%s.%s> | Target: %s | Remote: %s | Instances: %s",
                 __class__.__name__,
                 "get_instances",
                 entry["friendly_name"],
                 entry["is_remote"],
-                len(entry["available_instances"]),
+                len(rows),
             )
-            conv_instances.update(self.instance_conversion(instances=entry["available_instances"]))
+            conv_instances.update(self.instance_conversion(instances=rows))
 
         self._instances = conv_instances
         return self._instances

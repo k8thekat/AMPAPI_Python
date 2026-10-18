@@ -73,3 +73,7 @@ Returned data
   :class:`~ampapi.modules.Updates` with dataclasses (``ConsoleEntries``, ``Messages``, ``Port`` and ``RunningTask``);
   4.x left them as dicts.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
+- :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS row (eg. ``ADS01``) out of
+  :attr:`~ampapi.instance.Controller.instances`, since that row is the Controller; its data is copied onto the Controller.
+  The ADS rows of remote Targets come back as :class:`~ampapi.instance.TargetADS`; 4.x returned an ``AMPADSInstance`` for
+  every ADS row, the Controller's own included.

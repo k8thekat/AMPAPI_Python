@@ -1398,7 +1398,7 @@ class ADSModule(Base):
         Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.
 
         .. note::
-            If ``include_self`` is False the Controller/ADS entry is excluded from results.
+            AMP sends this as ``ForceIncludeSelf``. On a standalone ADS (AMP 2.8.0.8) the ADS row is returned either way.
 
 
         Parameters
