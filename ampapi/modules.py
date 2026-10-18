@@ -40,12 +40,16 @@ if TYPE_CHECKING:
         AnalyticsStatResponse,
         AvailableTriggersResponse,
         ConfigResponse,
+        ConsoleEntriesResponse,
         ConsumeResponse,
         LoginUserInfoResponse,
         MCUserData,
+        MessagesResponse,
         MetricsResponse,
         ParameterMapping,
         PlatformInfoResponse,
+        PortResponse,
+        RunningTaskResponse,
         ScheduleDataResponse,
         StatusResponse,
         TargetDatastoreResponse,
@@ -749,6 +753,8 @@ class ConsoleEntries:
         The type of message. eg "Console, Chat, Error, ...
     timestamp : :class:`str` | :class:`datetime`
         The timestamp comes in as ISO format and :meth:`~ConsoleEntries.__post_init__` converts it into a datetime object.
+    source_id : Union[:class:`str`, None], optional
+        The ID of the console entry's source, default is None.
 
     """
 
@@ -756,6 +762,8 @@ class ConsoleEntries:
     source: str
     type: str
     timestamp: str | datetime.datetime
+    # Confirmed against getupdates.json; only ever seen as None, defaulted so older responses still construct.
+    source_id: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.timestamp, str):
@@ -1542,6 +1550,9 @@ class Messages:
         The message.
     source : :class:`str`
         The source of the message.
+    parameters : Union[dict[:class:`str`, Any], None], optional
+        Extra data for the message, default is None.
+        A "metrics" message carries the ``instance_id``, ``metrics``, ``state`` and ``uptime`` of an Instance.
 
     """
 
@@ -1550,6 +1561,9 @@ class Messages:
     id: str
     message: str
     source: str
+    # Confirmed against getupdates.json; defaulted so older responses still construct.
+    # Left as a dict, the metrics in it carry a different key set than Metrics.
+    parameters: Union[dict[str, Any], None] = field(default=None)
 
 
 @dataclass
@@ -2899,21 +2913,25 @@ class Updates:
 
     """
 
-    console_entries: list[ConsoleEntries]
-    # AMP sends this raw; __post_init__ converts it so the Status annotation holds true.
+    # AMP sends all of these raw; __post_init__ converts them so the first annotation of each holds true.
+    # Spelled as a union of lists rather than list[ConsoleEntries | ConsoleEntriesResponse]; list is invariant
+    # in its element type, so the raw response would not be assignable to the combined form.
+    console_entries: list[ConsoleEntries] | list[ConsoleEntriesResponse]
     status: Status | StatusResponse
-    messages: list[Messages]
-    ports: list[Port] = field(default_factory=list[Port])
-    tasks: list[RunningTask] = field(default_factory=list[RunningTask])
+    messages: list[Messages] | list[MessagesResponse]
+    ports: list[Port] | list[PortResponse] = field(default_factory=list[Port])
+    tasks: list[RunningTask] | list[RunningTaskResponse] = field(default_factory=list[RunningTask])
 
     def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
     def __post_init__(self) -> None:  # noqa: D105
-        # TODO: Convert console_entries, messages, ports and tasks; they are still left as raw dicts.
-        # Needs their nested shapes pinned down the same way StatusResponse now is.
         if isinstance(self.status, dict):
             self.status = Status(**self.status)
+        self.console_entries = [ConsoleEntries(**entry) if isinstance(entry, dict) else entry for entry in self.console_entries]
+        self.messages = [Messages(**entry) if isinstance(entry, dict) else entry for entry in self.messages]
+        self.ports = [Port(**entry) if isinstance(entry, dict) else entry for entry in self.ports]
+        self.tasks = [RunningTask(**entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
 @dataclass

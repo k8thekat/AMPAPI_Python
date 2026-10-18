@@ -483,6 +483,17 @@ class ConfigResponse(TypedDict):
     order: int
 
 
+class ConsoleEntriesResponse(TypedDict):
+    """Represents the JSON response data for each entry of :attr:`UpdatesResponse.console_entries`."""
+
+    timestamp: str
+    source: str
+    # Confirmed against getupdates.json; only ever seen as None.
+    source_id: Union[str, None]
+    type: str
+    contents: str
+
+
 class ConsumeResponse(TypedDict):
     name: str
     display_name: None
@@ -689,6 +700,18 @@ class MCUserData(TypedDict):
 
     name: str
     uuid: str
+
+
+class MessagesResponse(TypedDict):
+    """Represents the JSON response data for each entry of :attr:`UpdatesResponse.messages`."""
+
+    # Depends on the message; a "metrics" message carries instance_id, metrics, state and uptime.
+    parameters: Union[dict[str, Any], None]
+    id: str
+    expired: bool
+    source: str
+    message: str
+    age_minutes: int
 
 
 class MethodsData(TypedDict):
@@ -1091,10 +1114,10 @@ class UpdateInfoResponse(TypedDict):
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
 class UpdatesResponse(TypedDict):
     status: StatusResponse
-    console_entries: list[Any]
-    messages: list[Any]
-    tasks: list[Any]
-    ports: list[Any]
+    console_entries: list[ConsoleEntriesResponse]
+    messages: list[MessagesResponse]
+    tasks: list[RunningTaskResponse]
+    ports: list[PortResponse]
 
 
 class UserApplicationDataResponse(TypedDict):

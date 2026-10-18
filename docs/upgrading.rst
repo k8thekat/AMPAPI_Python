@@ -45,3 +45,12 @@ Errors
 ------
 
 API errors are now raised (see ``ampapi.errors``) instead of an ``ActionResultError`` being returned.
+
+
+Returned data
+-------------
+
+- :meth:`~ampapi.Core.get_updates` fills the ``console_entries``, ``messages``, ``ports`` and ``tasks`` of
+  :class:`~ampapi.modules.Updates` with dataclasses (``ConsoleEntries``, ``Messages``, ``Port`` and ``RunningTask``);
+  4.x left them as dicts.
+- :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
