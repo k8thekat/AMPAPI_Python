@@ -237,24 +237,11 @@ await arkinstance.get_role_data(format_data=True)
 
 # Contributing to the Project
 
-#### Git Commit message format
-
-```
-    # file_name.py
-    - Change 1
-    - Change 2
-    -- Change 2 sub-change 1
-
-    $ Only this line is omitted from the changelog, because it starts with `$`
-    $ A line after it is kept unless it also starts with `$`, so prefix every line to hide
-```
-
-#### AMP Version Bump
-
-If the AMP version has changed, please generate new API spec sheets and upload them with any function changes.
-
-- Run `await amp_api_update(instance=controller_here, sanitize_json=True)` from `ampapi.util`, where `controller_here` is your `Controller`.
+See [CONTRIBUTING.md] for setup, the checks to run, the commit message format, and the dev tools.
+Those tools cover calling endpoints that have no wrapper yet, capturing responses, checking captures for key drift
+with `KeyDriftCheck`, and regenerating the spec sheets when AMP updates~
 
 [Issues]: https://github.com/k8thekat/AMPAPI_Python/issues
 [Changelog]: https://github.com/k8thekat/AMPAPI_Python/blob/main/CHANGELOG.md
 [Upgrading from 4.x]: https://ampapi-python.readthedocs.io/en/latest/upgrading.html
+[CONTRIBUTING.md]: https://github.com/k8thekat/AMPAPI_Python/blob/main/CONTRIBUTING.md

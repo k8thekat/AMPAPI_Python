@@ -43,6 +43,11 @@ AMP adds keys between versions, and `SomeDataclass(**result)` raises `TypeError`
 dataclass does not declare. AMP 2.8 added `ports` to the status, three keys to each port and five to
 each backup. New fields go in defaulted so older responses still construct.
 
+`Base.sanitize_json` is not safe to run twice on keys: a second pass strips the underscores
+(`active_users` -> `activeusers`). The library sanitizes each response once, in `_response_handler`, and
+`controller_dump.py` sanitizes its own raw fetches once; `Core.get_triggers` only runs it on strings, which
+come out the same. Don't sanitize a capture or a `format_data=False` result again.
+
 Some shapes differ by instance type. The ADS reports `physical_ram_usage` and `swap_usage` metrics,
 Minecraft instances do not, and some modded ones add `tps`; `Metrics` only requires the three every
 instance sends. A stopped instance reports its `metrics` as `{}`.
@@ -63,18 +68,9 @@ Shapes not yet confirmed against a live payload:
 - `OPWhitelistResponse`, built from the `OPWhitelist` dataclass; `GetOPWhitelist` answers
   "Missing Method" and is in no spec sheet.
 
-`ampapi/key_drift.py` notices AMP changing its keys. `KeyDriftCheck` reads which TypedDict each
-endpoint narrows to straight from the wrapper source, so nothing is registered by hand:
-
-```python
-from ampapi.key_drift import KeyDriftCheck
-KeyDriftCheck().check_directory(Path("_responses"))   # writes _responses/key_drift.md
-await core.get_status(to_file=True, path=Path("_responses"), check_key_drift=True)  # warns + writes getstatus.key_drift.json
-```
-
-Captures are matched by the file name `to_file` gives them, so a renamed capture shows under "No known
-shape", as does an endpoint whose wrapper names no TypedDict. `key_drift()` / `declared_keys()` are
-the same functions as Minerva's and Python_Template's copies; keep them in step.
+`ampapi/key_drift.py` notices AMP changing its keys; usage is in CONTRIBUTING.md ("Checking for key
+drift"). `key_drift()` / `declared_keys()` are the same functions as Minerva's and Python_Template's
+copies, so keep them in step.
 
 A failed login (wrong password or wrong 2FA code alike) answers `success: false`, `result: 40`, an
 empty `result_reason` and `session_id: None` on AMP 2.8.0.8, so AMP gives no reason to pass on.
