@@ -51,8 +51,8 @@ A small todo list local to the project.
 
 - `OPWhitelistResponse` is built from the `OPWhitelist` dataclass, not a live payload; `getopwhitelist.json`
   is a "Missing Method" error and the endpoint is in no spec sheet.
-- `BackupResponse` TypedDict is still missing; `getbackups.json` returned empty `[]` from the tested
-  server. Needs a server with actual backups to dump the item structure.
+- `BackupResponse` TypedDict is still missing; the `Backup` shape is confirmed against AMP 2.8.0.8
+  (`_responses/live_20261018/getbackups.json`), so `get_backups` can narrow to it.
 - What does the `delete` parameter do on `filemanager.py:35`?
 - Missing wrappers from `2.8.0.8`: `download_folder_as_zip`, `dummy` (a no-op placeholder in the spec), `upload_folder` (file manager), `backup_will_stop_server` (backup).
 - The 8 surviving Minecraft methods still need TypedDict work once response dumps are available.
@@ -64,7 +64,6 @@ A small todo list local to the project.
 
 - Nested shapes still assigned as raw dicts with no `__post_init__` conversion; see the in-file
   `# TODO:` tags on `Methods.consumes`, `Triggers.tasks` and `TriggerTasks.parameter_mapping`.
-- `InstanceResponse.metrics` keys are unconfirmed; `getinstances.json` sent an empty dict, so `Instance.metrics` stays a raw dict.
 
 ## ampapi/util.py
 

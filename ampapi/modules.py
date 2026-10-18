@@ -601,7 +601,7 @@ class AuditLogEntry:
 
 @dataclass
 class Backup:
-    """Represents the JSON response data from :meth:`ADSModule.get_backups`.
+    """Represents the JSON response data from :meth:`LocalFileBackupPlugin.get_backups`.
 
     Attributes
     ----------
@@ -629,6 +629,16 @@ class Backup:
         The total size of the backup is bytes.
     timestamp : :class:`datetime`
         The timestamp comes in as  ISO format and converts it into a datetime object.
+    compressed_size_bytes : Union[:class:`int`, None], optional
+        The size of the backup once compressed, in bytes, default is None.
+    hash_sha1 : Union[:class:`str`, None], optional
+        The SHA1 hash of the backup, default is None.
+    meta : Any, optional
+        UNK - only ever seen as None, default is None.
+    parent_manifest : Union[:class:`str`, None], optional
+        UNK - only ever seen as None, default is None.
+    remote_store_id : Union[:class:`str`, None], optional
+        The ID of the remote store holding the backup, if any, default is None.
 
     """
 
@@ -644,6 +654,12 @@ class Backup:
     taken_by: str
     total_size_bytes: int
     timestamp: str | datetime.datetime
+    # Confirmed against AMP 2.8.0.8 (FretsServer01); defaulted so older responses still construct.
+    compressed_size_bytes: Union[int, None] = field(default=None)
+    hash_sha1: Union[str, None] = field(default=None)
+    meta: Any = field(default=None)
+    parent_manifest: Union[str, None] = field(default=None)
+    remote_store_id: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.timestamp, str):
@@ -1622,18 +1638,22 @@ class Metrics:
         The cpu usage data.
     memory_usage : :class:`MetricsData`
         The memory usage data.
-    physical_ram_usage : :class:`MetricsData`
-        The physical ram usage data.
-    swap_usage : :class:`MetricsData`
-        The swap usage data.
+    physical_ram_usage : Union[:class:`MetricsData`, None], optional
+        The physical ram usage data, only sent by the ADS, default is None.
+    swap_usage : Union[:class:`MetricsData`, None], optional
+        The swap usage data, only sent by the ADS, default is None.
+    tps : Union[:class:`MetricsData`, None], optional
+        The ticks per second, only sent by some Minecraft instances (eg. modded), default is None.
 
     """
 
     active_users: MetricsData
     cpu_usage: MetricsData
     memory_usage: MetricsData
-    physical_ram_usage: MetricsData
-    swap_usage: MetricsData
+    # Confirmed against AMP 2.8.0.8; which of these are sent depends on the instance type.
+    physical_ram_usage: Union[MetricsData, None] = field(default=None)
+    swap_usage: Union[MetricsData, None] = field(default=None)
+    tps: Union[MetricsData, None] = field(default=None)
 
 
 @dataclass
@@ -1956,6 +1976,10 @@ class Port:
     protocol: int
     required: Union[bool, None] = field(default=None)
     is_delayed_open: Union[bool, None] = field(default=None)
+    # Added in AMP 2.8; defaulted so older responses still construct.
+    listening_count: Union[int, None] = field(default=None)
+    range: Union[int, None] = field(default=None)
+    min_listening: Union[int, None] = field(default=None)
 
 
 @dataclass
@@ -2581,13 +2605,17 @@ class Status:
         The up time of the Instance, in Days, Hours, Minutes, Seconds format. 00:00:00:00
     metrics : :class:`Metrics` | :class:`MetricsResponse`
         The Metrics data related to the Instance.
+    ports : list[:class:`Port`], optional
+        The ports of the Instance, default is an empty list.
 
     """
 
-    # AMP sends both of these raw; __post_init__ converts them so the first annotation of each holds true.
+    # AMP sends these raw; __post_init__ converts them so the first annotation of each holds true.
     state: InstanceState | int
     uptime: str
     metrics: Metrics | MetricsResponse
+    # Added in AMP 2.8; defaulted so older responses still construct.
+    ports: list[Port] | list[PortResponse] = field(default_factory=list[Port])
 
     def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
@@ -2597,15 +2625,21 @@ class Status:
             self.state = InstanceState(self.state)
         # Each key is named, so pyright knows every value is a MetricsKeyResponse.
         # Looping `.items()` types the values as `object`, which `**` cannot unpack.
+        # Any metric AMP sends beyond these is ignored.
         if isinstance(self.metrics, dict):
             metrics: MetricsResponse = self.metrics
+            physical_ram_usage = metrics.get("physical_ram_usage")
+            swap_usage = metrics.get("swap_usage")
+            tps = metrics.get("tps")
             self.metrics = Metrics(
                 active_users=MetricsData(**metrics["active_users"]),
                 cpu_usage=MetricsData(**metrics["cpu_usage"]),
                 memory_usage=MetricsData(**metrics["memory_usage"]),
-                physical_ram_usage=MetricsData(**metrics["physical_ram_usage"]),
-                swap_usage=MetricsData(**metrics["swap_usage"]),
+                physical_ram_usage=MetricsData(**physical_ram_usage) if physical_ram_usage is not None else None,
+                swap_usage=MetricsData(**swap_usage) if swap_usage is not None else None,
+                tps=MetricsData(**tps) if tps is not None else None,
             )
+        self.ports = [Port(**entry) if isinstance(entry, dict) else entry for entry in self.ports]
 
 
 @dataclass

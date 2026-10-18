@@ -624,7 +624,7 @@ class InstanceResponse(TypedDict):
     container_cpus: float
     tags: Union[list[str], None]
     module_display_name: Union[str, None]
-    # Keyed by metric name; getinstances.json sent an empty dict, so the keys are unconfirmed.
+    # Keyed by metric name: cpu_usage, memory_usage, active_users (+ tps) on AMP 2.8.0.8; empty while stopped.
     metrics: Optional[dict[str, MetricsKeyResponse]]
     display_image_source: Union[str, None]
     description: Union[str, None]
@@ -737,8 +737,10 @@ class MetricsResponse(TypedDict):
     cpu_usage: MetricsKeyResponse
     memory_usage: MetricsKeyResponse
     active_users: MetricsKeyResponse
-    physical_ram_usage: MetricsKeyResponse
-    swap_usage: MetricsKeyResponse
+    # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft instances send tps.
+    physical_ram_usage: NotRequired[MetricsKeyResponse]
+    swap_usage: NotRequired[MetricsKeyResponse]
+    tps: NotRequired[MetricsKeyResponse]
 
 
 class MetricsKeyResponse(TypedDict):
@@ -885,6 +887,10 @@ class PortResponse(TypedDict):
     name: str
     is_delayed_open: bool
     required: bool
+    # Added in AMP 2.8.
+    listening_count: NotRequired[int]
+    range: NotRequired[int]
+    min_listening: NotRequired[int]
 
 
 class ProvisionSettingInfoResponse(TypedDict):
@@ -1013,6 +1019,8 @@ class StatusResponse(TypedDict):
     state: int
     uptime: str
     metrics: MetricsResponse
+    # Added in AMP 2.8.
+    ports: NotRequired[list[PortResponse]]
 
 
 class TargetDatastoreResponse(TypedDict):
