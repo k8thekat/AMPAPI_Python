@@ -5,12 +5,15 @@ A small todo list local to the project.
 
 - Wrap the endpoints added by AMP API `2.8.0.8` (see `docs/api_spec_sheets/2.8.0.8/`).
 - Refresh `_responses/` from a non-Controller (ADS) setup; see NOTES.md "Captured responses".
+- `.scripts/vms.py`: set the ADS role at install time like the web setup does (`ampinstmgr --RepairAuth`), not after pairing.
 
 
 ## ampapi/adsmodule.py
 
 ---
 
+- `create_instance` raises `AMPAPIKeyError` on success: AMP 2.8 answers with a RunningTask (ActionResult keys merged in).
+- `CreateInstance` defaults AMP rejects: `new_instance_id` "" (needs a Guid) and `admin_username` "" (null fails too).
 - Build a dataclass/TypedDict for `get_group` and `servers`.
 - `add_datastore` sends `new_datastore.__dict__`; switch it to `to_dict()` like `update_datastore`.
 - Convert `RemoteTargetInfo.platform_info` / `.datastores` in a `__post_init__`.

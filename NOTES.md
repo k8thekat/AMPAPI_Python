@@ -110,7 +110,19 @@ entry lists no Instances. The Controller logs in to the Target with a token from
 Target has to check logins with the Controller (`Core.Login.UseAuthServer` True, `Core.Login.AuthServerURL` the
 Controller's url), and the Controller has to answer them (`Core.Security.EnablePassthruAuth` True, else "Passthru
 Disabled"). Restart both ADSs after. From then on the Target takes the Controller's logins, not its own.
-`vms.py pair` does all of this.
+`vms.py pair` does this by setting each config node.
+
+The Target's Instances need the same: an Instance created on the Target authenticates with the Target's ADS
+(`Login.AuthServerURL=http://localhost:8080/`), and that hop fails even with passthru on. AMP's own fix is
+`ampinstmgr --RepairAuth <mode> <controller url>` (alias `-magic`, run as `amp` with ADS stopped): it points the ADS
+and every Instance at the Controller, and sets `Defaults.DefaultAuthServerURL` so new Instances start that way. It
+asks the same two questions as the role choice in the web setup (standalone / controller / target / hybrid, and the
+Controller's url). Run on vm2 as `target`, it fixed `MCTest01`; not yet run on a Controller.
+
+Creating an Instance needs a licence key in `ADSModule.Defaults.NewInstanceKey` on the ADS that runs it, the Target
+when creating from the Controller; `vms.py activate` sets it. AMP accepts the `CreateInstance` call and queues it as a
+task, and only the Controller's log says it failed for want of a key. `CreateInstance` also needs a Guid in
+`NewInstanceId` (all zeros lets AMP pick) and a non-empty `AdminUsername`, even with `AutoConfigure`.
 
 ## Controller and Target data
 
@@ -125,6 +137,9 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - `GetInstance` on an id AMP doesn't know returns JSON `null`, which `_response_handler` raises as
   "JSON returned <None>".
 - `Controller.instance_id` stays "0" after `get_instances()`. That is the Controller's session key, not a missing value.
+- With a Minecraft Instance on the Target, both sides return it as a `MinecraftInstance`, and formatted
+  `get_status` / `get_updates` work through the Controller (vm1 -> vm2 -> Instance) once the auth chain is repaired.
+  Row order is not fixed: the Target lists its Instance before its ADS row, the Controller after.
 
 The original two-VM build, for reference:
 
