@@ -30,6 +30,9 @@ To install run the below command in a Terminal.
     # Linux/macOS/Windows
     pip install cc-ampapi
 
+.. note::
+    5.0.0 breaks backwards compatibility with 4.x; see :doc:`upgrading` for what changed.
+
 
 
 Basic Usage
@@ -42,6 +45,12 @@ Basic Usage
 
 .. _Quick Example: https://github.com/k8thekat/AMPAPI_Python/blob/main/docs/samples/sample.py
 
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Upgrading:
+
+    upgrading
 
 .. toctree::
     :maxdepth: 3
