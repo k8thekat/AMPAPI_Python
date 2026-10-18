@@ -75,6 +75,8 @@ A small todo list local to the project.
 
 - The doc generators import their notes from `docs/samples/`, which is not packaged, so they only run from a repo checkout.
 - `ScheduleData` is no longer a dataclass, but `Methods.consumes` still has an open `# TODO:` to convert into `DCConsumes`.
+- `find_parameter_mismatches` still matches endpoints by method name (`suffix_aliases`) and writes `ampapi/x.py` links that
+  break from `docs/api_spec_sheets/`; move it to the url matching `find_missing_endpoints` uses.
 
 ## Docs
 
