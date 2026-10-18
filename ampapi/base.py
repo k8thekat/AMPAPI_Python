@@ -863,7 +863,7 @@ class Base:
 
     @staticmethod
     def json_to_typeddict(name: str, data: dict[str, Any], *, include_imports: bool = False) -> str:
-        """Generate the source code for a :class:`TypedDict` class from a JSON dict.
+        r"""Generate the source code for a :class:`TypedDict` class from a JSON dict.
 
         Recursively infers types from values. Nested :class:`dict` entries produce their own
         named :class:`TypedDict` class using a PascalCase derivation of the parent key,
@@ -882,8 +882,8 @@ class Base:
             The class name for the root :class:`TypedDict`.
         data : dict[:class:`str`, Any]
             The JSON dict whose keys and values define the fields and their types.
-        include_imports : :class:`bool`
-            To include "from typing import Any\n\nfrom typing_extensions import TypedDict\n" at the top of the file.
+        include_imports : :class:`bool`, optional
+            To include "from typing import Any\n\nfrom typing_extensions import TypedDict\n" at the top of the file, by default False.
 
         Returns
         -------
