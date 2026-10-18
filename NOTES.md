@@ -144,6 +144,20 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   `GetTargetInfo` match field for field between the Controller and the Target, bar the IP lists. `deployment_args`
   holds `core._login._use_auth_server` only in the Target's own view, and only once `RepairAuth` wrote it. The role
   lives in `ADSModule.ADS.Mode` (`get_config`, an `ADSModeState`); from a Controller, `is_remote` True also marks a Target.
+- `Core/GetModuleInfo` gives the logged-in ADS's own id (`instance_id`) and `is_remote_instance`: True on a Target,
+  False on a Controller and on a standalone ADS (Kat's live capture), so it tells a Target apart but nothing else.
+
+## Non-admin users
+
+Tested with a user holding no roles, then a role with `Instances.<id>` nodes (AMP 2.8.0.8, Professional licence):
+- On the ADS it logs in to, it can call `GetModuleInfo`, `GetConfig` (`ADSModule.ADS.Mode` included), `GetInstances`
+  and `GetInstance`. `GetTargetInfo` needs `ADS.InstanceManagement.CreateInstance`. The spec's empty
+  `required_permissions` lists are no guide: `SetConfig` is empty too.
+- It cannot reach a Target's ADS or a Target's Instance, directly or through the Controller: the login fails with
+  result 5 (`NoInstanceAccess`), even with `Instances.<id>` granted on the Controller, and the Controller's
+  `GetInstances` leaves the Target out. Shared roles, which carry permissions to Targets, are refused on Professional
+  ("Common/shared roles are not available on this edition of AMP").
+- `Settings.<Module>.<Category>.<Name>` nodes decide who may change a setting, per the permissions spec.
 
 The original two-VM build, for reference:
 
