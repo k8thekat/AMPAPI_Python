@@ -63,6 +63,19 @@ Shapes not yet confirmed against a live payload:
 - `OPWhitelistResponse`, built from the `OPWhitelist` dataclass; `GetOPWhitelist` answers
   "Missing Method" and is in no spec sheet.
 
+`ampapi/key_drift.py` notices AMP changing its keys. `KeyDriftCheck` reads which TypedDict each
+endpoint narrows to straight from the wrapper source, so nothing is registered by hand:
+
+```python
+from ampapi.key_drift import KeyDriftCheck
+KeyDriftCheck().check_directory(Path("_responses"))   # writes _responses/key_drift.md
+await core.get_status(to_file=True, path=Path("_responses"), check_key_drift=True)  # warns + writes getstatus.key_drift.json
+```
+
+Captures are matched by the file name `to_file` gives them, so a renamed capture shows under "No known
+shape", as does an endpoint whose wrapper names no TypedDict. `key_drift()` / `declared_keys()` are
+the same functions as Minerva's and Python_Template's copies; keep them in step.
+
 A failed login (wrong password or wrong 2FA code alike) answers `success: false`, `result: 40`, an
 empty `result_reason` and `session_id: None` on AMP 2.8.0.8, so AMP gives no reason to pass on.
 

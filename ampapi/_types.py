@@ -666,6 +666,15 @@ class InstanceStatusResponse(TypedDict):
     running: bool
 
 
+class KeyDrift(TypedDict):
+    """How captured payloads differ from the TypedDict that declares them, from :func:`key_drift.key_drift`."""
+
+    missing: dict[str, int]
+    "Each required key some payloads lacked, with how many lacked it. A nested key is dotted (`metrics.tps`)."
+    unexpected: dict[str, int]
+    "Each key the shape does not declare, with how many payloads carried it."
+
+
 class LoginResponse(TypedDict):
     # A failed login sends None for these four (confirmed against AMP 2.8.0.8).
     permissions: Union[list[str], None]

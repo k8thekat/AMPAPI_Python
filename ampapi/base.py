@@ -54,6 +54,7 @@ from ._types import (
 from .backoff import ExponentialBackoff
 from .bridge import Bridge
 from .errors import AMPAPINetworkError, AMPAPIResponseError
+from .key_drift import KeyDriftCheck
 from .modules import APISession, BuildInfo, Status, timestamp_converter
 
 if TYPE_CHECKING:
@@ -86,18 +87,21 @@ class ResponseHandlerOptions(TypedDict, total=False):
 
     Options:
     --------
-    sanitize_json: :class:`bool`
+    sanitize_json : :class:`bool`
         ...
-    to_file: :class:`bool`
+    to_file : :class:`bool`
         ...
-    path: :class:`pathlib.Path`
+    path : :class:`pathlib.Path`
         ...
+    check_key_drift : :class:`bool`
+        Dev check, only with `to_file`: compare the capture with the TypedDict its endpoint narrows to.
 
     """
 
     sanitize_json: bool
     to_file: bool
     path: pathlib.Path
+    check_key_drift: bool
 
 
 class DumpParameters(TypedDict, total=False):
@@ -166,6 +170,8 @@ class Base:
     # ones populated by a different endpoint.
     _cache_source: ClassVar[str] = "the API call that populates it"
     _cache_sources: ClassVar[dict[str, str]] = {}
+    # Shared by every instance and built on the first `check_key_drift` call; it reads the wrapper source once.
+    _key_drift_check: ClassVar[Optional[KeyDriftCheck]] = None
 
     # Error response strings.
     _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
@@ -478,6 +484,7 @@ class Base:
         sanitize_json: bool = True,
         to_file: bool = False,
         path: Optional[pathlib.Path] = None,
+        check_key_drift: bool = False,
     ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
@@ -498,6 +505,9 @@ class Base:
             Write the response JSON to a file at ``path``, by default False.
         path : :class:`pathlib.Path` | None, optional
             Directory to write the response file to when ``to_file`` is ``True``, by default None.
+        check_key_drift : :class:`bool`, optional
+            A dev check that runs with `to_file`: compare the response with the TypedDict its endpoint narrows to,
+            log a warning and write ``<endpoint>.key_drift.json`` beside the capture when the keys differ, by default False.
 
         Returns
         -------
@@ -579,7 +589,58 @@ class Base:
             LOGGER.error("%s failed because of Status: %s", response.url, response_json["status"])
             raise AMPAPIResponseError(title="None", url=str(response.url), reason="Status is False")
 
+        # Error responses raised above, so only a real capture gets compared.
+        if check_key_drift is True and to_file is True and path is not None:
+            self._check_key_drift(response=response, data=response_json, path=path, sanitized=sanitize_json)
+
         return response_json
+
+    def _check_key_drift(self, response: ClientResponse, data: object, path: pathlib.Path, *, sanitized: bool) -> None:
+        """Dev check: compare a captured response with the TypedDict its endpoint narrows to.
+
+        On drift, logs a warning and writes ``<endpoint>.key_drift.json`` beside the capture.
+        See :class:`~ampapi.key_drift.KeyDriftCheck` for how an endpoint's TypedDict is found.
+
+        Parameters
+        ----------
+        response : :class:`aiohttp.ClientResponse`
+            The response the capture came from; its url names the endpoint.
+        data : :class:`object`
+            The captured JSON response.
+        path : :class:`pathlib.Path`
+            The directory the capture was written to.
+        sanitized : :class:`bool`
+            If the JSON was sanitized; the TypedDicts use the sanitized `snake_case` keys.
+
+        """
+        # The url ends in the endpoint, after any ADSModule/Servers/<id>/ proxy prefix.
+        match = re.search(r"API/([A-Za-z]+/[A-Za-z0-9]+)$", response.url.path)
+        if match is None:
+            return
+        endpoint: str = match.group(1)
+        if sanitized is False:
+            LOGGER.warning("<%s.%s> | Skipped %s; the TypedDicts use the sanitized keys.", __class__.__name__, "_check_key_drift", endpoint)
+            return
+        if Base._key_drift_check is None:
+            Base._key_drift_check = KeyDriftCheck()
+        found = Base._key_drift_check.check(endpoint=endpoint, data=data)
+        if found is None:
+            LOGGER.debug("<%s.%s> | No TypedDict is known for %s.", __class__.__name__, "_check_key_drift", endpoint)
+            return
+        shape, drift = found
+        if not drift["missing"] and not drift["unexpected"]:
+            return
+        LOGGER.warning(
+            "<%s.%s> | %s differs from %s | Missing: %s | Unexpected: %s",
+            __class__.__name__,
+            "_check_key_drift",
+            endpoint,
+            shape.__name__,
+            drift["missing"],
+            drift["unexpected"],
+        )
+        report: dict[str, object] = {"endpoint": endpoint, "shape": shape.__name__, **drift}
+        path.joinpath(response.url.name.lower() + ".key_drift.json").write_text(json.dumps(report, indent=4))
 
     async def _reauth(self) -> Any:
         """|coro|

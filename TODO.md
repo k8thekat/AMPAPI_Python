@@ -29,6 +29,7 @@ A small todo list local to the project.
 ---
 
 - Narrowing sites raise with `end_point="Core/ActionResult"` instead of the endpoint's own url.
+- `get_tasks` returns `list[RunningTask] | list[Any]`; name `RunningTaskResponse` so `KeyDriftCheck` can check it.
 - `get_api_spec` is annotated `APISpec | dict[str, Any]` but always returns a plain `dict(result)`.
 - Confirm `TimedTriggerResponse` / `UserApplicationDataResponse` against a live payload
   (`Core/GetTimeIntervalTrigger`, `Core/GetUserInfo`).
