@@ -32,8 +32,6 @@ A small todo list local to the project.
 
 ---
 
-- `get_oidc_login_url` posts with `no_data=True` and returns `None`, but the spec says it returns the login URL
-  as a String. `get_oidc_logout_url` already returns its `str`; match it.
 - Narrowing sites raise with `end_point="Core/ActionResult"` instead of the endpoint's own url.
 - `get_api_spec` is annotated `APISpec | dict[str, Any]` but always returns a plain `dict(result)`.
 - `TimedTriggerResponse` / `UserApplicationDataResponse` are derived from the `TimedTrigger` /

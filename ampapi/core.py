@@ -1955,14 +1955,13 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetNewGuid", cur_type=result, expec_type=str)
         return result
 
-    # TODO: Need to finish validation.
     async def get_oidc_login_url(
         self,
         redirect_uri: Union[str, None] = None,
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> str:
         """|coro|
 
         Interacts with OIDC credentials.
@@ -1979,16 +1978,23 @@ class Core(Base):
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
+        Returns
+        -------
+        :class:`str`
+            The OIDC login URL.
+
         """
         await self._reauth()
         parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
-        return await self._post(
+        result: ResponseAliasFull = await self._post(
             url="Core/GetOIDCLoginURL",
             parameters=parameters,
-            no_data=True,
             request_params=request_params,
             **response_params,
         )
+        if not isinstance(result, str):
+            raise AMPAPITypeError(end_point="Core/GetOIDCLoginURL", cur_type=result, expec_type=str)
+        return result
 
     async def get_oidc_logout_url(
         self,
