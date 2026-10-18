@@ -79,6 +79,7 @@ ignore = [
     "FIX002", # Ignore TODO's telling you to "fix them".
     "FBT001", # Ignore "bool" type arguments and limited functionality statement.
     "FBT002", # Ignore "bool" type arguments and limited functionality statement.
+    "FURB122", # Keep `for ... file.write()` loops instead of `file.writelines()`.
 ]
 
 [tool.ruff.lint.isort]
