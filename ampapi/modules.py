@@ -1463,14 +1463,14 @@ class LoginResults:
         Whether the login was successful.
     result : :class:`int`
         The result code.
-    permissions : list[:class:`str`], optional
-        A list of permissions, defaults to [].
+    permissions : Union[list[:class:`str`], None], optional
+        A list of permissions, None when the login failed, defaults to [].
     result_reason : :class:`str`, optional
         The result reason, defaults to "".
-    session_id : :class:`str`, optional
-        The session ID, defaults to "".
-    remember_me_token : :class:`str`, optional
-        The remember me token, defaults to "".
+    session_id : Union[:class:`str`, None], optional
+        The session ID, None when the login failed, defaults to "".
+    remember_me_token : Union[:class:`str`, None], optional
+        The remember me token, None when the login failed, defaults to "".
     user_info : :class:`LoginUserInfo`, optional
         The user information, defaults to None.
 
@@ -1478,10 +1478,11 @@ class LoginResults:
 
     success: bool
     result: int
-    permissions: list[str] = field(default_factory=list[str])
+    # A failed login sends None for these three (confirmed against AMP 2.8.0.8).
+    permissions: Union[list[str], None] = field(default_factory=list[str])
     result_reason: str = ""
-    session_id: str = ""
-    remember_me_token: str = ""
+    session_id: Union[str, None] = ""
+    remember_me_token: Union[str, None] = ""
     # LoginUserInfoResponse, not UserInfoResponse; only the login shape carries the username.
     user_info: Union[LoginUserInfo | LoginUserInfoResponse, None] = field(default=None)
 

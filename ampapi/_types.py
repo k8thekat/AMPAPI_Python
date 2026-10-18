@@ -667,15 +667,16 @@ class InstanceStatusResponse(TypedDict):
 
 
 class LoginResponse(TypedDict):
-    permissions: list[str]
-    remember_me_token: str
+    # A failed login sends None for these four (confirmed against AMP 2.8.0.8).
+    permissions: Union[list[str], None]
+    remember_me_token: Union[str, None]
     result: int
     result_reason: str
-    session_id: str
+    session_id: Union[str, None]
     success: bool
     # Confirmed against login.json; this carries a username, so it is the LoginUserInfo shape and not
     # the AMP User shape UserInfoResponse.
-    user_info: LoginUserInfoResponse
+    user_info: Union[LoginUserInfoResponse, None]
 
 
 # Not total=False, so pyright can narrow the response union to this shape by its keys.

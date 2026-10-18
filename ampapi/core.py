@@ -3072,7 +3072,7 @@ class Core(Base):
             On success returns a :class:`LoginResults` dataclass.
 
         """
-        # Guard TOTP: an empty token would make TOTP("").now() raise; send an empty code instead.
+        # No token means no 2FA, so send an empty code rather than one generated from an empty secret.
         code: str = TOTP(token).now() if token else ""
         parameters: dict[str, str | bool] = {"username": amp_user, "password": amp_password, "token": code, "rememberMe": remember_me}
         result: ResponseAliasFull = await self._post(

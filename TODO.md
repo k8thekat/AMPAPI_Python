@@ -21,7 +21,6 @@ A small todo list local to the project.
 
 ---
 
-- Fix the blind exception catch in `_reauth` and raise on a failed login.
 - `version_validation` needs updating for the new data structure handling (`base.py:1155`).
 - Possibly get active AMP Sessions and close them during `clean_up()`?
 

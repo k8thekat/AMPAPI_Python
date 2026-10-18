@@ -176,6 +176,7 @@ class Base:
     _no_data: ClassVar[str] = "Failed to receive any data from post request."
     _unauthorized_access: ClassVar[str] = "The user does not have the required permissions to interact with this instance."
     _instance_offline: ClassVar[str] = "The requested Instance is not available at this time. | URL: %s"
+    _login_failed: ClassVar[str] = "Failed to login to AMP as '%s' (AMP result %s); check the user, password and 2FA token."
     _no_cache: ClassVar[str] = "'%s.%s' has not been populated yet. You must call <%s>.%s first."
     _stale_cache: ClassVar[str] = (
         "'%s.%s' was cached %s seconds ago and the timeout is %s seconds; the value may be stale. Call <%s>.%s to refresh it."
@@ -586,19 +587,23 @@ class Base:
 
         .. note::
             If Applicable handles your 2FA using :class:`TOTP` \n
-            Stores the ``SESSIONID`` via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
+            Stores the session ID via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
 
 
         Returns
         -------
-        :class:`LoginResults` | None
-            The results from ``API/Core/Login`` as a dataclass.
+        :class:`LoginResponse` | None
+            The raw response from ``API/Core/Login``, or None when the stored session is still valid.
 
         Raises
         ------
         :exc:`ValueError`
             If the 2 Factor Authentication code is not a formatted properly.
             - *aka* the :attr:`~Bridge.token` when making the :class:`Bridge` object.
+        :exc:`AMPAPIResponseError`
+            If AMP refused the login, or answered it with an error.
+        :exc:`AMPAPINetworkError`
+            If the login request itself failed.
 
         """
         code: Union[str, TOTP] = ""
@@ -618,34 +623,31 @@ class Base:
                     # Handles time based 2Factory Auth Key/Code
                     code = TOTP(self._bridge.token).now()
 
-                except AttributeError:
+                # pyotp raises binascii.Error, a ValueError, for a token that is not valid base32.
+                except ValueError as error:
                     msg = "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
-                    raise ValueError(msg) from AttributeError
-            try:
-                parameters: dict[str, Any] = {
-                    "username": self._bridge.user,
-                    "password": self._bridge.password,
-                    "token": code,
-                    "rememberMe": True,
-                }
+                    raise ValueError(msg) from error
 
-                result = await self._call_end_point(endpoint="Core/Login", parameters=parameters)
-                if isinstance(result, dict):
-                    # This is our new sessions table to correlate InstanceID to a sessionID.
-                    api_session = APISession(id=result.get("session_id", "0"), ttl=datetime.datetime.now(tz=datetime.UTC))
-                    self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
-                    return result
+            parameters: dict[str, Any] = {
+                "username": self._bridge.user,
+                "password": self._bridge.password,
+                "token": code,
+                "rememberMe": True,
+            }
+            # Network and response errors raise straight through; their URL already names Core/Login.
+            result = await self._call_end_point(endpoint="Core/Login", parameters=parameters)
+            if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
+                # AMP sends no reason; a wrong password and a wrong 2FA code both answer `result: 40`.
+                amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
+                reason: str = self._login_failed % (self._bridge.user, amp_result)
+                LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
+                raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
 
-            # TODO: Fix blind exception catching.
-            except Exception as e:
-                LOGGER.warning("Core/Login Exception:", exc_info=e)
-                # print(e)
-
-            else:
-                LOGGER.warning("Failed response from '%s' in %s.%s", "Core/Login", __class__.__name__, "_reauth")
-                return result
-        else:
-            return None
+            # This is our new sessions table to correlate InstanceID to a sessionID.
+            api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
+            self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+            return result
+        return None
 
     @property
     def cache_age(self) -> Optional[float]:
