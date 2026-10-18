@@ -1638,7 +1638,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetAPISpec", cur_type=result, expec_type=dict)
-        # NARROW-REFACTOR: unmodeled dict shape (not a ResponseTypeAlias member) — return a plain dict[str, Any].
+        # No TypedDict models this response, so it comes back as a plain dict.
         return dict(result)
 
     async def get_audit_log_entries(
@@ -2441,7 +2441,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetSettingValues", cur_type=result, expec_type=dict)
-        # NARROW-REFACTOR: unmodeled dict shape (not a ResponseTypeAlias member) — return a plain dict[str, Any].
+        # No TypedDict models this response, so it comes back as a plain dict.
         return dict(result)
 
     async def get_status(
@@ -2679,9 +2679,8 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetUpdates", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        # NARROW-REFACTOR: UpdatesResponse shares the 'status' key with ActionResultResponse, so it cannot be
-        # discriminated on 'status'. Its unique 'console_entries' key isolates it here — and the ActionResult
-        # endpoints exclude it via `"console_entries" not in result`.
+        # UpdatesResponse shares the 'status' key with ActionResultResponse, so 'console_entries' tells them apart;
+        # the ActionResult endpoints exclude it with `"console_entries" not in result`.
         if "console_entries" not in result:
             raise AMPAPITypeError(end_point="Core/GetUpdates", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -2719,7 +2718,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetUserActionsSpec", cur_type=result, expec_type=dict)
-        # NARROW-REFACTOR: unmodeled dict shape (not a ResponseTypeAlias member) — return a plain dict[str, Any].
+        # No TypedDict models this response, so it comes back as a plain dict.
         return dict(result)
 
     async def get_user_info(
@@ -2810,7 +2809,7 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetUserList", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        # NARROW-REFACTOR: unmodeled uuid->name map (not a ResponseTypeAlias member); Players takes a positional dict.
+        # A uuid -> name map that no TypedDict models; Players takes it as a plain dict.
         if format_data is True:
             return Players(data=dict(result))
         return dict(result)

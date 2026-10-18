@@ -32,12 +32,9 @@ ResponseTypeAlias = Union[
     "UpdatesResponse",
     "UserInfoResponse",
     "ConfigResponse",
-    # NARROW-REFACTOR: collapsed the six list[...Response] members to a single list[Any]. pyright cannot narrow a
-    # list[A] | list[B] container by element inspection, and list[Any] unpacks/returns cleanly into the precise
-    # per-endpoint list return annotations (e.g. -> list[Session] | list[SessionResponse]).
-    # (revert: replace list[Any] with the six list["AuditLogEntryResponse"], list["LoginUserInfoResponse"],
-    #  list["PortResponse"], list["RoleResponse"], list["SessionResponse"], list["UserInfoResponse"] members.)
-    # list["ScheduleDataResponse"],
+    # One list[Any] covers the list responses (AuditLogEntry, LoginUserInfo, Port, Role, Session and UserInfo).
+    # pyright cannot narrow list[A] | list[B] by inspecting the elements, so each endpoint's own return
+    # annotation carries the precise list type instead (eg. -> list[Session] | list[SessionResponse]).
     list[Any],
 ]
 
@@ -616,7 +613,8 @@ class InstanceResponse(TypedDict):
     container_cpus: float
     tags: Union[list[str], None]
     module_display_name: Union[str, None]
-    metrics: Optional[MetricsResponse]
+    # Keyed by metric name; getinstances.json sent an empty dict, so the keys are unconfirmed.
+    metrics: Optional[dict[str, MetricsKeyResponse]]
     display_image_source: Union[str, None]
     description: Union[str, None]
     # Confirmed against getinstances.json on 2.6.5.0; these were absent from the original definition.
@@ -669,7 +667,7 @@ class LoginResponse(TypedDict):
     user_info: LoginUserInfoResponse
 
 
-# NARROW-REFACTOR: dropped total=False for union narrowing (revert: re-add ", total=False" + Required[] on the non-optional keys).
+# Not total=False, so pyright can narrow the response union to this shape by its keys.
 class LoginUserInfoResponse(TypedDict):
     id: str
     username: str
@@ -711,6 +709,16 @@ class MethodsData(TypedDict):
 
 
 class MetricsResponse(TypedDict):
+    """Represents the data inside the JSON key `metrics` for :meth:`get_status()`."""
+
+    cpu_usage: MetricsKeyResponse
+    memory_usage: MetricsKeyResponse
+    active_users: MetricsKeyResponse
+    physical_ram_usage: MetricsKeyResponse
+    swap_usage: MetricsKeyResponse
+
+
+class MetricsKeyResponse(TypedDict):
     """Represents the JSON response data for each of the attributes of :class:`Metrics`."""
 
     raw_value: int
@@ -977,13 +985,11 @@ class SettingsSpecParentResponse(TypedDict):
     updates: list[ConfigResponse]
 
 
-# NARROW-REFACTOR: dropped total=False for union narrowing (revert: re-add ", total=False" + Required[] on state/uptime).
+# Not total=False, so pyright can narrow the response union to this shape by its keys.
 class StatusResponse(TypedDict):
     state: int
     uptime: str
-    # Keyed by metric name; getstatus.json carries five (cpu_usage, memory_usage, active_users,
-    # physical_ram_usage, swap_usage), so this cannot be a fixed-key shape.
-    metrics: dict[str, MetricsResponse]
+    metrics: MetricsResponse
 
 
 class TargetDatastoreResponse(TypedDict):
@@ -1072,7 +1078,7 @@ class TriggersTasksResponse(TypedDict):
     order: int
 
 
-# NARROW-REFACTOR: dropped total=False for union narrowing (revert: re-add ", total=False" + Required[] on the first four keys).
+# Not total=False, so pyright can narrow the response union to this shape by its keys.
 class UpdateInfoResponse(TypedDict):
     update_available: bool
     version: str
@@ -1082,7 +1088,7 @@ class UpdateInfoResponse(TypedDict):
     patch_only: bool
 
 
-# NARROW-REFACTOR: dropped total=False for union narrowing (revert: re-add ", total=False" + Required[] on status/console_entries/messages).
+# Not total=False, so pyright can narrow the response union to this shape by its keys.
 class UpdatesResponse(TypedDict):
     status: StatusResponse
     console_entries: list[Any]

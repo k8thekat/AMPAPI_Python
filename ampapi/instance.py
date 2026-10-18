@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     T = ParamSpec("T")
     F = TypeVar("F")
 
-__all__ = ("Controller", "Instance", "MinecraftInstance")
+__all__ = ("Controller", "Instance", "MinecraftInstance", "TargetADS")
 
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -128,8 +128,8 @@ class Instance(
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[:class:`Metric`, None]
-        The metrics of the Instance, default is None.
+    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+        The metrics of the Instance keyed by metric name, default is None.
     module : :class:`str`
         The module of the Instance.
     module_display_name : :class:`str`
@@ -595,8 +595,8 @@ class MinecraftInstance(MinecraftModule, Instance):
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[:class:`Metric`, None]
-        The metrics of the Instance, default is None.
+    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+        The metrics of the Instance keyed by metric name, default is None.
     module : :class:`str`
         The module of the Instance, default is "Minecraft".
     module_display_name : :class:`str`
@@ -671,8 +671,8 @@ class TargetADS(Instance):
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[:class:`Metric`, None]
-        The metrics of the Instance, default is None.
+    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+        The metrics of the Instance keyed by metric name, default is None.
     module : :class:`str`
         The module of the Instance, default is "ADS".
     module_display_name : :class:`str`
@@ -938,28 +938,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             The set of converted Instance objects or a single converted object.
 
         """
-        # conv_instances: set[Union[Instance, MinecraftInstance, Controller]] = set()
-        # if isinstance(instances, list) and len(instances) > 0:
-        #     instances = sorted(instances)
-        #     for entry in instances:
-        #         if entry.module == "ADS":
-        #             conv_instances.add(Controller(data=entry, controller=self, session=self.session))
-
-        #         elif entry.module == "Minecraft":
-        #             conv_instances.add(MinecraftInstance(data=entry, controller=self, session=self.session))
-
-        #         else:
-        #             conv_instances.add(Instance(data=entry, controller=self, session=self.session))
-
-        # elif isinstance(instances, Instance):
-        #     if instances.module == "ADS":
-        #         return Controller(data=instances, controller=self, session=self.session)
-
-        #     if instances.module == "Minecraft":
-        #         return MinecraftInstance(data=instances, controller=self, session=self.session)
-
-        #     return Instance(data=instances, controller=self, session=self.session)
-        # return conv_instances
+        # We essentially call ourselves in a loop via a list check.
         if isinstance(instances, list):
             conv_instances: set[InstanceTypeAliases] = set()
             for entry in instances:

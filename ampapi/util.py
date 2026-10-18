@@ -66,7 +66,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
         The path to save the .rst file, by default None.
 
     """
-    from docs.samples.method_event_usage import example_note
+    from docs.samples.method_event_usage import example_note  # noqa: PLC0415
 
     file_name: str = title.lower().replace(" ", "_")
     _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")

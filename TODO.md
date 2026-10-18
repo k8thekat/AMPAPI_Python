@@ -67,7 +67,7 @@ A small todo list local to the project.
 
 - Nested shapes still assigned as raw dicts with no `__post_init__` conversion; see the in-file
   `# TODO:` tags on `Methods.consumes`, `Triggers.tasks`, `TriggerTasks.parameter_mapping` and `Updates.console_entries`.
-- `Metric` is only referenced in docstrings now; `Status.metrics` converts to `MetricsData` per key.
+- `InstanceResponse.metrics` keys are unconfirmed; `getinstances.json` sent an empty dict, so `Instance.metrics` stays a raw dict.
 
 ## ampapi/util.py
 

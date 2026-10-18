@@ -27,6 +27,7 @@ Renamed classes
 ``AMPMinecraftInstance``        :class:`~ampapi.instance.MinecraftInstance`
 ``AMPADSInstance``              :class:`~ampapi.instance.TargetADS`
 ``AMPInstanceState``            :class:`~ampapi.InstanceState`
+``Metric``                      :class:`~ampapi.modules.Metrics`
 ==============================  ==================================================
 
 
