@@ -18,6 +18,13 @@ All Modules/Plugins inherit from this class.
    :members:
    :exclude-members: session_ttl, instance_id
 
+Response Handler Options
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The keyword arguments every endpoint forwards to its response handler through ``**response_params``.
+
+.. autoclass:: ResponseHandlerOptions
+   :members:
+
 
 ADS Module
 ~~~~~~~~~~~
@@ -59,5 +66,22 @@ Local File Backup Module
 Minecraft Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: MinecraftModule
+   :members:
+   :show-inheritance:
+
+
+Exponential Backoff
+~~~~~~~~~~~~~~~~~~~~
+Calculates the delay between retries, growing exponentially with each attempt.
+
+.. autoclass:: ExponentialBackoff
+   :members:
+
+
+Error Classes
+~~~~~~~~~~~~~
+Every error the library raises inherits from :class:`~ampapi.errors.AMPAPIError`, and all of them are importable from ``ampapi``.
+
+.. automodule:: ampapi.errors
    :members:
    :show-inheritance:
