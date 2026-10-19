@@ -1059,7 +1059,6 @@ class TargetADS(ADSModule, Instance):
     @overload
     async def get_instances(
         self,
-        include_self: bool = ...,
         *,
         format_data: Literal[True],
         request_params: Optional[AioHTTPRequestOptions] = ...,
@@ -1069,7 +1068,6 @@ class TargetADS(ADSModule, Instance):
     @overload
     async def get_instances(
         self,
-        include_self: bool = ...,
         *,
         format_data: Literal[False],
         request_params: Optional[AioHTTPRequestOptions] = ...,
@@ -1080,7 +1078,6 @@ class TargetADS(ADSModule, Instance):
     @overload
     async def get_instances(
         self,
-        include_self: bool = ...,
         *,
         format_data: None = ...,
         request_params: Optional[AioHTTPRequestOptions] = ...,
@@ -1090,7 +1087,6 @@ class TargetADS(ADSModule, Instance):
     @override
     async def get_instances(
         self,
-        include_self: bool = True,
         *,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
@@ -1110,8 +1106,6 @@ class TargetADS(ADSModule, Instance):
 
         Parameters
         ----------
-        include_self : :class:`bool`, optional
-            Force include this Target ADS Instance in the results, by default True.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
@@ -1132,7 +1126,6 @@ class TargetADS(ADSModule, Instance):
         """
         result: list[ControllerResponse] = await ADSModule.get_instances(
             self,
-            include_self=include_self,
             request_params=request_params,
             **response_params,
         )
@@ -1623,7 +1616,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     @overload
     async def get_instances(
         self,
-        include_self: bool = ...,
         *,
         format_data: Literal[True],
         request_params: Optional[AioHTTPRequestOptions] = ...,
@@ -1633,7 +1625,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     @overload
     async def get_instances(
         self,
-        include_self: bool = ...,
         *,
         format_data: Literal[False],
         request_params: Optional[AioHTTPRequestOptions] = ...,
@@ -1644,7 +1635,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     @overload
     async def get_instances(
         self,
-        include_self: bool = ...,
         *,
         format_data: None = ...,
         request_params: Optional[AioHTTPRequestOptions] = ...,
@@ -1653,7 +1643,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
     async def get_instances(
         self,
-        include_self: bool = True,
         *,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
@@ -1675,11 +1664,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             :attr:`TargetADS.instances`. A Target whose own ADS Instance is missing from the reply is skipped.
 
         .. note::
-            On a Controller, `include_self=False` makes AMP drop the local Target only when it holds nothing but the
-            Controller's own ADS Instance, so `self` is not updated. When the local Target holds other Instances AMP sends
-            it anyway. Its cached attributes raise until a call that returns the local Target.
-
-        .. note::
             If ``format_data`` is False this will return the raw list of Target dicts instead and nothing is updated.
 
 
@@ -1689,8 +1673,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         Parameters
         ----------
-        include_self : :class:`bool`, optional
-            Force include the Controller or Target ADS Instance in the results, by default True.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
@@ -1747,7 +1729,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         # return result
         result: list[ControllerResponse] = await super().get_instances(
-            include_self=include_self,
             request_params=request_params,
             **response_params,
         )

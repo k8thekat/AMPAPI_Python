@@ -153,7 +153,8 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - `GetInstances` sends one Target per ADS. The local Target's `friendly_name` is "Local Instances", and each Target
   lists its own ADS Instance, the one whose `instance_id` matches the Target's.
 - `ForceIncludeSelf` False on a Controller drops the whole local Target only when it holds nothing but the
-  Controller's own ADS, and then `Controller.get_instances(include_self=False)` leaves `self`'s cached data unset.
+  Controller's own ADS, which would leave the Controller's cached data unset. So the library always sends True and
+  `get_instances` has no `include_self` (2026-10-19).
   With local game Instances (2026-10-19, vm1 with six) the local Target is sent anyway, ADS01 included, in controller
   mode and in hybrid mode alike. On a Target or a standalone ADS it changes nothing.
 - `GetInstance` on the Controller's own ADS ID, or on a Target's ADS ID, returns that ADS Instance. Nothing in it
@@ -237,7 +238,7 @@ Surveyed 2026-10-19 on TF2, Valheim, ET: Legacy, Custom Application and CS:Sourc
 
 `find_parameter_mismatches(spec_path=docs/api_spec_sheets/2.8.0.8)`, 2026-10-19. Leave out `spec_path` and it merges
 every version with "first file seen wins", so 2.6.2.0 shadows 2.8.0.8. It also lists `request_params` everywhere.
-Renames like `file_path`, `instance_id` and `include_self` are on purpose. The real gaps:
+Renames like `file_path` and `instance_id` are on purpose (`ForceIncludeSelf` is always True). The real gaps:
 - core: `create_user` (IsOIDCUser, OIDCSub), `disable_two_factor` (Password, TwoFactorCode), `get_setting_values`
   (WithRefresh), `oidc_login` (state, serverId).
 - ads_module: `apply_template` (NewFriendlyName, Secret, RestartIfPreviouslyRunning), `upgrade_instance`

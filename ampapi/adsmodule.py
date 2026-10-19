@@ -1512,7 +1512,6 @@ class ADSModule(Base):
     @Base.ads_only
     async def get_instances(
         self,
-        include_self: bool = True,
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -1522,14 +1521,13 @@ class ADSModule(Base):
         Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.
 
         .. note::
-            AMP sends this as ``ForceIncludeSelf``. On a standalone ADS (AMP 2.8.0.8) its own ADS Instance is returned
-            either way.
+            AMP's `ForceIncludeSelf` is always sent as True, so the ADS's own Target is in the list. False only ever made
+            AMP drop a Controller's local Target when it held nothing but its own ADS, which left the Controller's
+            data unset.
 
 
         Parameters
         ----------
-        include_self : :class:`bool`, optional
-            Force include the Controller or Target ADS Instance in the results, by default True.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1542,7 +1540,7 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, bool] = {"ForceIncludeSelf": include_self}
+        parameters: dict[str, bool] = {"ForceIncludeSelf": True}
         result: ResponseAliasFull = await self._post(
             url="ADSModule/GetInstances",
             parameters=parameters,
