@@ -3146,7 +3146,8 @@ class BuildInfo:
         try:
             temp: Self = cls(*[int(entry) for entry in new_data])
 
-        except (UnboundLocalError, MissingFields) as e:
+        # ValueError for a part that isn't a number, TypeError for too many or too few parts.
+        except (UnboundLocalError, MissingFields, ValueError, TypeError) as e:
             _logger = logging.getLogger(__name__)
             _logger.error("Unable to convert the data %s | Error: %s", data, e)
             return data
@@ -3165,12 +3166,12 @@ class BuildInfo:
         )
 
     def __lt__(self, other: object) -> bool:  # noqa: D105
-        return (
-            isinstance(other, self.__class__)
-            and self.major < other.major
-            and self.minor < other.minor
-            and self.revision < other.revision
-            and self.minor_revision < other.minor_revision
+        # Compared part by part like any version number, so 2.5.0.0 is older than 2.6.0.0.
+        return isinstance(other, self.__class__) and (self.major, self.minor, self.revision, self.minor_revision) < (
+            other.major,
+            other.minor,
+            other.revision,
+            other.minor_revision,
         )
 
     def __repr__(self) -> str:  # noqa: D105

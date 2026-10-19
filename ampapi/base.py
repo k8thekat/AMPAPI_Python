@@ -1235,21 +1235,20 @@ class Base:
             fmt.append(character)
         return "".join(fmt)
 
-    # TODO: Needs to be updated for new data structure handling.
     async def version_validation(self, version: BuildInfo, endpoint: str) -> None:
-        """Compares the Version of the application/Instance against the version that is passed in.
+        """Checks the AMP version against the version an endpoint was removed in.
 
         Parameters
         ----------
-        version : :class:`VersionInfo`
-            The version to compare against the application.
+        version : :class:`BuildInfo`
+            The AMP version the endpoint was removed in.
         endpoint : :class:`str`
             The endpoint being guarded, named in the error. (eg. `"Core/GetWebserverMetrics"`)
 
         Raises
         ------
         :exc:`RuntimeError`
-            The application version no longer supports this API call.
+            The AMP version is `version` or newer, so it no longer has the endpoint.
 
         """
         result: ResponseAliasFull = await self._post(
@@ -1273,8 +1272,9 @@ class Base:
                 "`Core/GetDiagnosticsInfo`",
             )
             return
-        if _version < version:
-            raise RuntimeError(self._version_unavailable, f"`{endpoint}`", _version)
+        # The endpoint only exists before the version it was removed in.
+        if not _version < version:
+            raise RuntimeError(self._version_unavailable % (f"`{endpoint}`", _version))
 
     def write_data_to_file(
         self,

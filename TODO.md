@@ -35,7 +35,6 @@ A small todo list local to the project.
 
 - `_reauth`'s login error gives AMP's result number only; name the known ones (eg. 5 is `NoInstanceAccess`).
 - `sanitize_json` turns dotted keys into `ads_module._defaults._default_auth_server_url` (seen in `deployment_args`).
-- `version_validation` needs updating for the new data structure handling (`base.py:1155`).
 - Possibly get active AMP Sessions and close them during `clean_up()`?
 
 ## ampapi/core.py
