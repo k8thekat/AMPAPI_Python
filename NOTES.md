@@ -192,6 +192,9 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - A Target whose ADS is stopped is still listed by the Controller's `GetInstances` (from its copy, `state` 20, with its
   Instances). Its `TargetADS.get_instances()` fails at once with "Instance Unavailable", so `Controller.get_instances()`
   logs a warning, keeps that `TargetADS` with empty `instances`, and returns as normal.
+- AMP sends some Instance fields as null (on the VMs: `description` on all 8 Instances, `module_display_name` on 4,
+  `display_image_source` on 1), and never sends `url` for an Instance. `_parse_instance_data` sets them to their
+  documented default (`""` for those three, None otherwise), so no Instance field raises AttributeError.
 - A `TargetADS` keeps its Target's data flat like the Controller (2026-10-19). It first gets the Controller's copy of
   the Target entry, then the Target's own view from its own `GetInstances`. The own view is fresher, but three fields
   depend on who is asking: from the Target itself `url` is `http://localhost:8080`, `is_remote` is False and `id` is

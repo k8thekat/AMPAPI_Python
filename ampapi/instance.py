@@ -162,8 +162,8 @@ class Instance(
         The list of tags of the Instance, default is None.
     target_id : :class:`str`
         The target ID of the Instance.
-    url : :class:`str`
-        The API URL.
+    url : Union[:class:`str`, None]
+        The URL of the Instance. AMP doesn't send one for an Instance, so it is None, by default None.
 
     """
 
@@ -199,10 +199,13 @@ class Instance(
         "target_id",
     )
 
-    amp_version: dict[str, int] | str | BuildInfo
+    amp_version: dict[str, int] | str | BuildInfo | None
     _app_state: InstanceState | int
-    url: str
+    # AMP doesn't send a URL for an Instance, a TargetADS gets its Target's.
+    url: Union[str, None] = None
     _controller: Union[Controller, None]
+    # What a field holds when AMP sends null for it, as documented above. Every other field falls back to None.
+    _null_defaults: ClassVar[dict[str, str]] = {"description": "", "display_image_source": "", "module_display_name": ""}
     _ads: Union[Controller, TargetADS, None] = None
 
     @property
@@ -335,10 +338,11 @@ class Instance(
         return wrapper_online
 
     def _parse_instance_data(self, data: InstanceResponse) -> None:
+        # Every field gets set, even when AMP sends null, so reading one never raises an AttributeError.
         for key in self.__slots__:
             value = data.get(key)
             if value is None:
-                continue
+                value = self._null_defaults.get(key)
             setattr(self, key, value)
 
         # This is only used for older versions of AMP v ``>2.6.0.0``  and earlier.
@@ -682,8 +686,8 @@ class MinecraftInstance(MinecraftModule, Instance):
         The list of tags of the Instance, default is None.
     target_id : :class:`str`
         The target ID of the Instance.
-    url : :class:`str`
-        The API URL.
+    url : Union[:class:`str`, None]
+        The URL of the Instance. AMP doesn't send one for an Instance, so it is None, by default None.
 
     """
 
@@ -710,7 +714,7 @@ class TargetData(Base):
     can_create: bool
     available_instances: list[InstanceResponse]
     available_ips: list[str]
-    url: str
+    url: Union[str, None]
     last_updated: datetime.datetime | str
     state: InstanceState
     fitness: Union[dict[str, Any], None]
@@ -1287,7 +1291,8 @@ class TargetADS(TargetData, ADSModule, Instance):
                 # is False and `id` is its own numbering, so we keep the Controller's for those once we have them.
                 own_view: ControllerResponse = target.copy()
                 if object.__getattribute__(self, "_is_cached") is True:
-                    own_view["url"] = self.url
+                    if self.url is not None:
+                        own_view["url"] = self.url
                     own_view["is_remote"] = self.is_remote
                     own_view["id"] = self.id
                 self._parse_target_data(data=own_view)
