@@ -92,9 +92,9 @@ Target ADS
   :meth:`~ampapi.instance.TargetADS.restart_instance` now take an ``instance_name`` and act on an Instance on that
   Target. In 4.6.0 they took no argument and went through the Controller by name, so for an ADS named like the
   Controller's (eg. ``ADS01``) they acted on the Controller's own ADS.
-- :meth:`~ampapi.instance.Controller.get_instance` on the Controller's own ADS id (and
-  :meth:`~ampapi.instance.TargetADS.get_instance` on a ``TargetADS``'s own id) returns that object itself. The
-  Controller learns its own ADS id from :meth:`~ampapi.instance.Controller.get_instances`, or from the new
+- :meth:`~ampapi.instance.Controller.get_instance` on the Controller's own ADS ID (and
+  :meth:`~ampapi.instance.TargetADS.get_instance` on a ``TargetADS``'s own ID) returns that object itself. The
+  Controller learns its own ADS ID from :meth:`~ampapi.instance.Controller.get_instances`, or from the new
   ``auto_detect=True`` argument. Without either, an ADS Instance logs a warning and comes back as a ``TargetADS``.
 - :meth:`~ampapi.instance.TargetADS.get_instances` returns the Instances on that Target, leaving out the Target's own
   ADS Instance, and keeps them on ``TargetADS.instances``.

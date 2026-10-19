@@ -794,7 +794,7 @@ class ADSModule(Base):
         Parameters
         ----------
         template_id : :class:`int`
-            The Template id.
+            The Template ID.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -1419,7 +1419,7 @@ class ADSModule(Base):
         Returns
         -------
         list[:class:`ControllerResponse`]
-            On success returns a raw list of target dicts.
+            On success returns a raw list of Target dicts.
 
         """
         await self._reauth()
@@ -1576,7 +1576,7 @@ class ADSModule(Base):
     ) -> ADSModeState:
         """|coro|
 
-        Gets the role of the ADS this object logs in to (Controller, Target, hybrid or stand alone).
+        Gets the role of the ADS this object logs in to (Controller, Target, hybrid or standalone).
 
         .. note::
             This reads the `ADSModule.ADS.Mode` setting, so any logged in user can read it on the ADS they log in to.

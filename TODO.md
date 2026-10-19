@@ -13,7 +13,7 @@ A small todo list local to the project.
 ---
 
 - `create_instance` raises `AMPAPIKeyError` on success: AMP 2.8 answers with a RunningTask (ActionResult keys merged in).
-- `CreateInstance` defaults AMP rejects: `new_instance_id` "" (needs a Guid) and `admin_username` "" (null fails too).
+- `CreateInstance` defaults AMP rejects: `new_instance_id` "" (needs a GUID) and `admin_username` "" (null fails too).
 - Build a dataclass/TypedDict for `get_group` and `servers`.
 - `add_datastore` sends `new_datastore.__dict__`; switch it to `to_dict()` like `update_datastore`.
 - Convert `RemoteTargetInfo.platform_info` / `.datastores` in a `__post_init__`.

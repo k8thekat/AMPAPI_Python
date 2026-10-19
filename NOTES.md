@@ -48,9 +48,9 @@ each backup. New fields go in defaulted so older responses still construct.
 `controller_dump.py` sanitizes its own raw fetches once; `Core.get_triggers` only runs it on strings, which
 come out the same. Don't sanitize a capture or a `format_data=False` result again.
 
-Some shapes differ by instance type. The ADS reports `physical_ram_usage` and `swap_usage` metrics,
-Minecraft instances do not, and some modded ones add `tps`; `Metrics` only requires the three every
-instance sends. A stopped instance reports its `metrics` as `{}`.
+Some shapes differ by Instance type. The ADS reports `physical_ram_usage` and `swap_usage` metrics,
+Minecraft Instances do not, and some modded ones add `tps`; `Metrics` only requires the three every
+Instance sends. A stopped Instance reports its `metrics` as `{}`.
 
 
 ## Captured responses
@@ -116,12 +116,12 @@ The Target's Instances need the same: an Instance created on the Target authenti
 (`Login.AuthServerURL=http://localhost:8080/`), and that hop fails even with passthru on. AMP's own fix is
 `ampinstmgr --RepairAuth <mode> <controller url>` (alias `-magic`, run as `amp` with ADS stopped): it points the ADS
 and every Instance at the Controller, and sets `Defaults.DefaultAuthServerURL` so new Instances start that way. It
-asks the same two questions as the role choice in the web setup (standalone / controller / target / hybrid, and the
+asks the same two questions as the role choice in the web setup (`standalone` / `controller` / `target` / `hybrid`, and the
 Controller's url). Run on vm2 as `target`, it fixed `MCTest01`; not yet run on a Controller.
 
 Creating an Instance needs a licence key in `ADSModule.Defaults.NewInstanceKey` on the ADS that runs it, the Target
 when creating from the Controller; `vms.py activate` sets it. AMP accepts the `CreateInstance` call and queues it as a
-task, and only the Controller's log says it failed for want of a key. `CreateInstance` also needs a Guid in
+task, and only the Controller's log says it failed for want of a key. `CreateInstance` also needs a GUID in
 `NewInstanceId` (all zeros lets AMP pick) and a non-empty `AdminUsername`, even with `AutoConfigure`.
 
 ## Controller and Target data
@@ -132,10 +132,10 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - `ForceIncludeSelf` False on a Controller drops the whole local Target, not just its ADS Instance, so
   `Controller.get_instances(include_self=False)` leaves `self`'s cached data unset. On a Target or a standalone ADS it
   changes nothing. Unchecked: whether it also drops local game Instances on a hybrid ADS.
-- `GetInstance` on the Controller's own ADS id, or on a Target's ADS id, returns that ADS Instance. Nothing in it
-  says which. `Controller.get_instance` returns `self` for its own id once it knows that id (from `get_instances()` or
-  `auto_detect=True`), and a `TargetADS` otherwise. A `TargetADS` for either id proxies fine (`get_updates`).
-- `GetInstance` on an id AMP doesn't know returns JSON `null`, which `_response_handler` raises as
+- `GetInstance` on the Controller's own ADS ID, or on a Target's ADS ID, returns that ADS Instance. Nothing in it
+  says which. `Controller.get_instance` returns `self` for its own ID once it knows that ID (from `get_instances()` or
+  `auto_detect=True`), and a `TargetADS` otherwise. A `TargetADS` for either ID proxies fine (`get_updates`).
+- `GetInstance` on an ID AMP doesn't know returns JSON `null`, which `_response_handler` raises as
   "JSON returned <None>".
 - `Controller.instance_id` stays "0" after `get_instances()`. That is the Controller's session key, not a missing value.
 - With a Minecraft Instance on the Target, both sides return it as a `MinecraftInstance`, and formatted
@@ -145,7 +145,7 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   `GetTargetInfo` match field for field between the Controller and the Target, bar the IP lists. `deployment_args`
   holds `core._login._use_auth_server` only in the Target's own view, and only once `RepairAuth` wrote it. The role
   lives in `ADSModule.ADS.Mode` (`get_config`, an `ADSModeState`); from a Controller, `is_remote` True also marks a Target.
-- `Core/GetModuleInfo` gives the logged-in ADS's own id (`instance_id`) and `is_remote_instance`: True on a Target,
+- `Core/GetModuleInfo` gives the logged-in ADS's own ID (`instance_id`) and `is_remote_instance`: True on a Target,
   False on a Controller and on a standalone ADS (Kat's live capture), so it tells a Target apart but nothing else.
 
 - `ADSModule/StartInstance` and its siblings pick the Instance by name, on the ADS the call is sent to. Sent to the

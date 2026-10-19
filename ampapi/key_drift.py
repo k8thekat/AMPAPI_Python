@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 __all__ = ("KeyDriftCheck", "declared_keys", "key_drift")
 
 # Matches a `url=` literal such as "Core/GetStatus", with or without a leading "API/".
-_ENDPOINT_URL_RE = re.compile(r"^(?:API/)?([A-Za-z]+/[A-Za-z0-9]+)$")
+_ENDPOINT_URL_PATTERN = re.compile(r"^(?:API/)?([A-Za-z]+/[A-Za-z0-9]+)$")
 # The helpers each wrapper narrows its response with; their second argument is the TypedDict.
 _NARROWING_CALLS = ("is_response_type", "is_response_list")
 
@@ -242,7 +242,7 @@ class KeyDriftCheck:
                         continue
                     for keyword in node.keywords:
                         if keyword.arg == "url" and isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
-                            match = _ENDPOINT_URL_RE.match(keyword.value.value)
+                            match = _ENDPOINT_URL_PATTERN.match(keyword.value.value)
                             if match:
                                 urls.add(match.group(1))
                     if isinstance(node.func, ast.Name) and node.func.id in _NARROWING_CALLS and len(node.args) > 1:
@@ -335,8 +335,8 @@ class KeyDriftCheck:
             if drift["missing"] or drift["unexpected"]:
                 drifted[name] = (endpoint, shape, drift)
 
-        out: Path = report if report is not None else path / "key_drift.md"
-        with out.open("w") as file:
+        report_path: Path = report if report is not None else path / "key_drift.md"
+        with report_path.open("w") as file:
             file.write("# Key Drift Report\n\n")
             file.write(f"- Captures checked : {checked}\n- Drifted          : {len(drifted)}\n")
             file.write(f"- Empty            : {len(empty)}\n- No known shape   : {len(unmatched)}\n\n")
@@ -350,5 +350,5 @@ class KeyDriftCheck:
                 file.write("## Empty\n\n" + "".join(f"- `{name}`\n" for name in empty) + "\n")
             if unmatched:
                 file.write("## No known shape\n\n" + "".join(f"- `{name}`\n" for name in unmatched))
-        LOGGER.info("Key drift report written to %s | Checked: %d | Drifted: %d", out, checked, len(drifted))
+        LOGGER.info("Key drift report written to %s | Checked: %d | Drifted: %d", report_path, checked, len(drifted))
         return drifted

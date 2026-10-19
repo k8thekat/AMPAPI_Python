@@ -1651,14 +1651,14 @@ class Metrics:
     swap_usage : Union[:class:`MetricsData`, None], optional
         The swap usage data, only sent by the ADS, default is None.
     tps : Union[:class:`MetricsData`, None], optional
-        The ticks per second, only sent by some Minecraft instances (eg. modded), default is None.
+        The ticks per second, only sent by some Minecraft Instances (eg. modded), default is None.
 
     """
 
     active_users: MetricsData
     cpu_usage: MetricsData
     memory_usage: MetricsData
-    # Confirmed against AMP 2.8.0.8; which of these are sent depends on the instance type.
+    # Confirmed against AMP 2.8.0.8; which of these are sent depends on the Instance type.
     physical_ram_usage: Union[MetricsData, None] = field(default=None)
     swap_usage: Union[MetricsData, None] = field(default=None)
     tps: Union[MetricsData, None] = field(default=None)
@@ -2477,7 +2477,7 @@ class SettingSpecAction:
     module : :class:`str`
         The module the action belongs to.
     type_id : :class:`str`
-        The type id of the action.
+        The type ID of the action.
 
     """
 
@@ -2500,7 +2500,7 @@ class SettingsSpecAttribute:
     key_placeholder : :class:`str`
         The placeholder text for the key.
     type_id : :class:`str`
-        The type id of the key.
+        The type ID of the key.
     value_name : :class:`str`
         The name of the value.
     value_placeholder : :class:`str`
@@ -2573,7 +2573,7 @@ class SettingSpecSelectionSource:
     must_validate : :class:`bool`
         If the selection source must validate or not.
     type_id : :class:`str`
-        The type id of the selection source.
+        The type ID of the selection source.
 
     """
 
@@ -2801,7 +2801,7 @@ class TriggerID:
     the_server_wakes_up_from_sleep_mode_due_to_player_connect: str
 
     # Core.get_triggers feeds this from ScheduleData.available_triggers, which is the reduced
-    # AvailableTriggersResponse shape; only description and id are read, and both shapes carry them.
+    # AvailableTriggersResponse shape; only `description` and `id` are read, and both shapes carry them.
     def __init__(self, data: list[TriggersResponse] | list[AvailableTriggersResponse]) -> None:  # noqa: D107
         for entry in data:
             setattr(self, entry["description"], entry["id"])

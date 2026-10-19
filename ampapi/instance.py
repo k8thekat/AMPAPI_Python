@@ -945,7 +945,7 @@ class TargetADS(ADSModule, Instance):
         Retrieve a single Instance of this Target by ID and convert the Instance.
 
         .. note::
-            This Target's own ADS id returns `self`. AMP answers null for an id that is not on this Target.
+            This Target's own ADS ID returns `self`. AMP answers null for an ID that is not on this Target.
 
         Parameters
         ----------
@@ -1038,7 +1038,7 @@ class TargetADS(ADSModule, Instance):
             response is not copied onto `self`.
 
         .. note::
-            If `format_data` is False this will return the raw list of target dicts instead and nothing is stored.
+            If `format_data` is False this will return the raw list of Target dicts instead and nothing is stored.
 
         Parameters
         ----------
@@ -1059,7 +1059,7 @@ class TargetADS(ADSModule, Instance):
         Returns
         -------
         Union[set[Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`]], list[:class:`ControllerResponse`]]
-            On success returns the set of converted Instances, or the raw list of target dicts if `format_data` is False.
+            On success returns the set of converted Instances, or the raw list of Target dicts if `format_data` is False.
 
         """
         result: list[ControllerResponse] = await ADSModule.get_instances(
@@ -1168,7 +1168,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     tags_list: Union[str, None]
 
     _instances: set[InstanceTypeAliases]
-    # The Controller's own ADS id. `instance_id` is the session key, so AMP's real id lives here until known.
+    # The Controller's own ADS ID. `instance_id` is the session key, so AMP's real ID lives here until known.
     _ads_instance_id: Union[str, None]
 
     __cached__ = (
@@ -1340,7 +1340,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             return conv_instances
 
         # An ADS Instance here is a remote Target's. Our own is left out by get_instances, and get_instance returns
-        # self for it once our ADS id is known. We hand them ourselves so they can still reach ADSModule endpoints.
+        # self for it once our ADS ID is known. We hand them ourselves so they can still reach ADSModule endpoints.
         if instances["module"] == "ADS":
             return TargetADS(data=instances, controller=self, bridge=self._bridge, session=self.session)
 
@@ -1434,7 +1434,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         if format_data is False:
             return result
 
-        # Only an ADS Instance can be us, so every other module skips the id question.
+        # Only an ADS Instance can be us, so every other module skips the ID question.
         if result["module"] == "ADS":
             if self._ads_instance_id is None and auto_detect:
                 module_info = await self.get_module_info(
@@ -1447,7 +1447,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
             if self._ads_instance_id is None:
                 LOGGER.warning(
-                    "<%s.%s> | Cannot tell if the ADS Instance %s is this Controller, as its own ADS id is unknown. "
+                    "<%s.%s> | Cannot tell if the ADS Instance %s is this Controller, as its own ADS ID is unknown. "
                     "Call `get_instances()` first or pass `auto_detect=True`. | Returning a TargetADS",
                     __class__.__name__,
                     "get_instance",
@@ -1516,14 +1516,14 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         .. note::
             The Controller's own ADS Instance (eg. `ADS01`) is `self`, so it is left out of the set.
-            The local Target's `instance_id` is also kept as the Controller's own ADS id, for :meth:`get_instance`.
+            The local Target's `instance_id` is also kept as the Controller's own ADS ID, for :meth:`get_instance`.
 
         .. note::
             On a Controller, `include_self=False` makes AMP drop the local Target, so `self` is not updated. Its
             cached attributes raise until a call with `include_self=True`.
 
         .. note::
-            If ``format_data`` is False this will return the raw list of target dicts instead and nothing is updated.
+            If ``format_data`` is False this will return the raw list of Target dicts instead and nothing is updated.
 
 
         .. warning::
@@ -1544,7 +1544,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         Returns
         -------
         Union[set[Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`]], list[:class:`ControllerResponse`]]
-            On success returns the set of converted Instances, or the raw list of target dicts if ``format_data`` is False.
+            On success returns the set of converted Instances, or the raw list of Target dicts if ``format_data`` is False.
 
         """
         # result: list[Union[Controller, Instance]] = await super().get_instances(
@@ -1592,7 +1592,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             request_params=request_params,
             **response_params,
         )
-        # The local Target's id is our own ADS id. Stored before the raw return so that path learns it too.
+        # The local Target's ID is our own ADS ID. Stored before the raw return so that path learns it too.
         for target in result:
             if target["is_remote"] is False:
                 self._ads_instance_id = target["instance_id"]
@@ -1610,7 +1610,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             if target["is_remote"] is False:
                 self._parse_controller_data(data=target)
                 # Each Target lists its own ADS Instance, the one whose instance_id matches the Target's. In the local
-                # Target that Instance is us, so it stays out of instances. A remote Target's own one is a TargetADS.
+                # Target that Instance is us, so it stays out of `instances`. A remote Target's own one is a TargetADS.
                 available_instances = [instance for instance in available_instances if instance["instance_id"] != target["instance_id"]]
             LOGGER.debug(
                 "<%s.%s> | Target: %s | Remote: %s | Instances: %s",

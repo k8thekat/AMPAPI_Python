@@ -138,9 +138,9 @@ class Base:
     api_url : :class:`str`
         The URL to access the Web Panel. This comes from your :class:`APIParams`.
     session_ttl : :class:`int`
-        How long before the session id expires in seconds, default is 240 seconds.
+        How long before the session ID expires in seconds, default is 240 seconds.
     instance_id : :class:`str`
-        The Instance id is a string determined by AMP. \n
+        The Instance ID is a string determined by AMP. \n
         This attribute will be set automatically after making a :meth:`login` request, default is "O".
     session : :class:`aiohttp.ClientSession`
         A static Session to use, otherwise the class will generate it's own as needed.
@@ -240,7 +240,7 @@ class Base:
 
     @property
     def session_ttl(self) -> int:
-        """How long before the session id expires in seconds, default is 240 seconds."""
+        """How long before the session ID expires in seconds, default is 240 seconds."""
         return Base._session_ttl
 
     @session_ttl.setter
@@ -1065,7 +1065,7 @@ class Base:
 
         """
         # We use this later on in _connect to update `_session_id`;
-        # so all connections will use the same session id (if possible)
+        # so all connections will use the same session ID (if possible)
         self._bridge = bridge
         self._endpoint_url = bridge.url
         if bridge.use_2fa is True:

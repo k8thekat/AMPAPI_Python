@@ -167,7 +167,7 @@ Run these from a repo checkout, with a `Controller` logged in to the new AMP ver
 ```python
 from ampapi import util
 
-# 1. Write the new spec sheets to docs/api_spec_sheets/<version>/. A running Minecraft instance adds its endpoints.
+# 1. Write the new spec sheets to docs/api_spec_sheets/<version>/. A running Minecraft Instance adds its endpoints.
 await util.amp_api_update(instance=controller, sanitize_json=True)
 
 # 2. See what changed between two versions (writes docs/api_spec_sheets/diffs/).

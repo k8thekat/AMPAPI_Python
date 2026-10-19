@@ -1502,7 +1502,7 @@ class Core(Base):
         Returns
         -------
         list[:class:`str`]:
-            On success returns a list of strings containing all the permission nodes for the provided role id.
+            On success returns a list of strings containing all the permission nodes for the provided role ID.
 
         """
         await self._reauth()
@@ -2742,7 +2742,7 @@ class Core(Base):
         Parameters
         ----------
         user_id : :class:`str`
-            The Application User id. See :meth:`get_user_list`.
+            The Application User ID. See :meth:`get_user_list`.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2815,7 +2815,7 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetUserList", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        # A uuid -> name map that no TypedDict models; Players takes it as a plain dict.
+        # A UUID -> name map that no TypedDict models; Players takes it as a plain dict.
         if format_data is True:
             return Players(data=dict(result))
         return dict(result)

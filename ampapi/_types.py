@@ -750,7 +750,7 @@ class MetricsResponse(TypedDict):
     cpu_usage: MetricsKeyResponse
     memory_usage: MetricsKeyResponse
     active_users: MetricsKeyResponse
-    # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft instances send tps.
+    # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft Instances send tps.
     physical_ram_usage: NotRequired[MetricsKeyResponse]
     swap_usage: NotRequired[MetricsKeyResponse]
     tps: NotRequired[MetricsKeyResponse]
