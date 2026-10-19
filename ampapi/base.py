@@ -140,8 +140,8 @@ class Base:
     session_ttl : :class:`int`
         How long before the session ID expires in seconds, default is 240 seconds.
     instance_id : :class:`str`
-        The Instance ID is a string determined by AMP. \n
-        This attribute will be set automatically after making a :meth:`login` request, default is "O".
+        The Instance ID is a string determined by AMP, default is "0" (zero). \n
+        This is not set by a login. A Controller keeps "0", since it is the key its session is stored under.
     session : :class:`aiohttp.ClientSession`
         A static Session to use, otherwise the class will generate it's own as needed.
 
@@ -183,6 +183,8 @@ class Base:
     _unauthorized_access: ClassVar[str] = "The user does not have the required permissions to interact with this instance."
     _instance_offline: ClassVar[str] = "The requested Instance is not available at this time. | URL: %s"
     _login_failed: ClassVar[str] = "Failed to login to AMP as '%s' (AMP result %s); check the user, password and 2FA token."
+    # Login result codes confirmed in AMP's own logs. Any other code is reported as its number only.
+    _login_result_names: ClassVar[dict[int, str]] = {0: "Failure", 5: "NoInstanceAccess", 100: "PassthruDisabled"}
     _no_cache: ClassVar[str] = "'%s.%s' has not been populated yet. You must call <%s>.%s first."
     _stale_cache: ClassVar[str] = (
         "'%s.%s' was cached %s seconds ago and the timeout is %s seconds; the value may be stale. Call <%s>.%s to refresh it."
@@ -702,6 +704,8 @@ class Base:
             if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
                 # AMP sends no reason; a wrong password and a wrong 2FA code both answer `result: 40`.
                 amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
+                if isinstance(amp_result, int) and not isinstance(amp_result, bool) and amp_result in self._login_result_names:
+                    amp_result = f"{amp_result}, {self._login_result_names[amp_result]}"
                 reason: str = self._login_failed % (self._bridge.user, amp_result)
                 LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
                 raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
@@ -770,7 +774,7 @@ class Base:
         self._cached_at = datetime.datetime.now(tz=datetime.UTC)
         self._cached_monotonic = time.monotonic()
 
-    async def clean_up(self) -> None:
+    async def clean_up(self, *, logout: bool = False) -> None:
         """|coro|
 
         Close any open :class:`aiohttp.ClientSession` belonging to this class.
@@ -778,7 +782,19 @@ class Base:
         .. note::
             Safe to call more than once; the session is cleared once closed.
 
+
+        Parameters
+        ----------
+        logout : :class:`bool`, optional
+            Call `Core/Logout` first, so AMP ends the login session instead of leaving it to expire, by default False.
+            A failed logout is logged as a warning and the session is still closed.
+
         """
+        if logout is True:
+            try:
+                await self._post(url="Core/Logout", no_data=True)
+            except Exception:
+                LOGGER.warning("<%s.%s> | `Core/Logout` failed, closing the session anyway", __class__.__name__, "clean_up", exc_info=True)
         LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
         if self.session is not None:
             await self.session.close()

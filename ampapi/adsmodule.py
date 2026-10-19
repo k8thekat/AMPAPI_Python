@@ -118,7 +118,6 @@ class ADSModule(Base):
 
     _module = "ADS"
 
-    # TODO: Verify the conversion of the new_datastore parameter into a dict.
     @Base.ads_only
     async def add_datastore(
         self,
@@ -151,7 +150,7 @@ class ADSModule(Base):
         """
         await self._reauth()
 
-        data: dict[Any, Any] = new_datastore.__dict__
+        data: dict[str, Any] = new_datastore.to_dict()
 
         parameters: dict[str, Any] = {"newDatastore": data}
         result: ResponseAliasFull = await self._post(
