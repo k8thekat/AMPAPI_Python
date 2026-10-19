@@ -141,7 +141,7 @@ BACKUP_REQUIRED_KEYS: tuple[str, ...] = ("id", "stored_locally", "stored_remotel
 BACKUP_EXCLUDED_KEYS: tuple[str, ...] = ()
 
 # Confirmed against a live ImportConfig reply (AMP 2.8.0.8, a missing file). Every list was empty.
-IMPORT_CONFIG_REQUIRED_KEYS: tuple[str, ...] = ("imported", "not_imported", "unrecognised", "rejected")
+IMPORT_CONFIG_REQUIRED_KEYS: tuple[str, ...] = ("settings", "imported", "not_imported", "unrecognised", "rejected")
 IMPORT_CONFIG_EXCLUDED_KEYS: tuple[str, ...] = ()
 
 # TODO: Confirm these keys against a live GetOPWhitelist response.

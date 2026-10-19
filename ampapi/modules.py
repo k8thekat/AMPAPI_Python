@@ -1345,11 +1345,11 @@ class ImportConfig:
 
     # TODO: Confirm the element types against a real import.
     # Only empty lists were seen, so they are typed as Any for now.
-    settings: dict[str, Any] = field(default_factory=dict["str", "Any"])
-    imported: list[Any] = field(default_factory=list["Any"])
-    not_imported: list[Any] = field(default_factory=list["Any"])
-    unrecognised: list[Any] = field(default_factory=list["Any"])
-    rejected: list[Any] = field(default_factory=list["Any"])
+    settings: dict[str, Any] = field(default_factory=dict[str, Any])
+    imported: list[Any] = field(default_factory=list[Any])
+    not_imported: list[Any] = field(default_factory=list[Any])
+    unrecognised: list[Any] = field(default_factory=list[Any])
+    rejected: list[Any] = field(default_factory=list[Any])
 
 
 @dataclass

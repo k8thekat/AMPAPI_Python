@@ -184,6 +184,30 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - For a few seconds after `restart_instance`, calls to that Instance fail with "Instance Unavailable" ("The requested
   instance is not available at this time"), and so does the library's re-login.
 
+## Generic Instances
+
+Surveyed 2026-10-19 on TF2, Valheim, ET: Legacy, Custom Application and CS:Source (AMP 2.8.0.8):
+- Every game template reports `module` "GenericModule", a Custom Application reports "Generic". Both become
+  `GenericInstance`. AMP 2.8 has no `srcds` module.
+- Every one serves the same extra API sections, Steam or not: `GenericModule` (5), `steamcmdplugin` (3) and
+  `RCONPlugin` (`Dummy`, a placeholder). The SteamCMD URL is lowercase `steamcmdplugin/...`.
+- The Void endpoints answer JSON null. `RefreshRemoteOptions` / `RefreshToolDiscovery` need a setting that has a
+  remote option source / tool discovery, otherwise status False ("No remote option source found for ''").
+- `GetDiagnosticsInfo` adds `config_version` on the game templates (TF2 "7", CS:Source "3"), not on Custom Application.
+
+## Wrapper parameter gaps
+
+`find_parameter_mismatches(spec_path=docs/api_spec_sheets/2.8.0.8)`, 2026-10-19. Leave out `spec_path` and it merges
+every version with "first file seen wins", so 2.6.2.0 shadows 2.8.0.8. It also lists `request_params` everywhere.
+Renames like `file_path`, `instance_id` and `include_self` are on purpose. The real gaps:
+- core: `create_user` (IsOIDCUser, OIDCSub), `disable_two_factor` (Password, TwoFactorCode), `get_setting_values`
+  (WithRefresh), `oidc_login` (state, serverId).
+- ads_module: `apply_template` (NewFriendlyName, Secret, RestartIfPreviouslyRunning), `upgrade_instance`
+  (RestartIfRunning), `set_instance_suspended` (SuspendReason), `set_instance_network_info` (AdvertisedAddress,
+  AdvertisedAddressIncludesPort). `create_instance_from_spec` types `target_datastore` as str, the spec says Int32.
+- `get_analytics_summary` (PlayerCount), `take_backup` (BackupWhileRunning, DirtyOnly, WasCreatedAutomatically, and
+  Title vs `name`), `write_file_chunk` (FinalChunk), `create_archive` (OverwriteExisting).
+
 ## Non-admin users
 
 Tested with a user holding no roles, then a role with `Instances.<id>` nodes (AMP 2.8.0.8, Professional licence):

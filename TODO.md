@@ -81,5 +81,4 @@ A small todo list local to the project.
   - About 11 of 207 endpoint methods name their endpoint.
 - Update function returns and parameters since adding `bool` to `_post`.
 - Store plugin (17 endpoints) and Webhook plugin (`trigger_webhook_event`) have no wrapper module.
-- GenericModule (5 endpoints, eg. `request_server_info`) and SteamCMDPlugin (3, Steam Guard and login) have no
-  wrapper module or Instance class, see `docs/api_spec_sheets/2.8.0.8/GenericModule_api_spec.md`.
+- Add the spec parameters our wrappers lack (list in NOTES.md, "Wrapper parameter gaps").
