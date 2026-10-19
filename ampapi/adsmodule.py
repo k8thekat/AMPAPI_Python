@@ -133,6 +133,8 @@ class ADSModule(Base):
 
         Add a new datastore.
 
+        Endpoint: `ADSModule/AddDatastore`
+
         Parameters
         ----------
         new_datastore : :class:`InstanceDatastore`
@@ -185,6 +187,8 @@ class ADSModule(Base):
         """|coro|
 
         Apply settings to an Instance's own configuration, through the ADS that holds it.
+
+        Endpoint: `ADSModule/ApplyInstanceConfiguration`
 
         .. note::
             `args` takes setting nodes, eg. `{"Core.Login.UseAuthServer": "True", "Core.Login.AuthServerURL": url}`
@@ -249,6 +253,8 @@ class ADSModule(Base):
 
         Overlays an existing template on an existing Instance, used to perform package reconfigurations.
 
+        Endpoint: `ADSModule/ApplyTemplate`
+
         .. warning::
             Do not use this to "transform" an existing application into another.
             The Instance should be deleted and re-created in that situation.
@@ -312,6 +318,8 @@ class ADSModule(Base):
         """|coro|
 
         Attach an AMP Instance to the ADS calling the API endpoint with the passed in parameters using either a pairing code or not.
+
+        Endpoints: `ADSModule/AttachADSWithPairingCode`, `ADSModule/AttachADS`
 
         .. note::
             This Endpoint is also encapsulating `AttachADSWithPairingCode`;
@@ -396,6 +404,8 @@ class ADSModule(Base):
 
         Cancel an ongoing ADS Pairing session.
 
+        Endpoint: `ADSModule/CancelPairing`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -448,6 +458,8 @@ class ADSModule(Base):
         """|coro|
 
         Clone an Instance onto a Target.
+
+        Endpoint: `ADSModule/CloneInstance`
 
         .. note::
             Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
@@ -542,6 +554,8 @@ class ADSModule(Base):
 
         Clone an existing AMP Deployment Template.
 
+        Endpoint: `ADSModule/CloneTemplate`
+
         .. note::
             If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and
             access the :attr:`DeploymentTemplate.id` attribute.
@@ -599,6 +613,8 @@ class ADSModule(Base):
 
         Create a new Deployment Template. Typically used in conjunction with :meth:`update_deployment_template`.
 
+        Endpoint: `ADSModule/CreateDeploymentTemplate`
+
         Parameters
         ----------
         template_name : :class:`str`
@@ -648,6 +664,8 @@ class ADSModule(Base):
         """|coro|
 
         Create an AMP Instance.
+
+        Endpoint: `ADSModule/CreateInstance`
 
         .. note::
             See the :class:`CreateInstance` for more details on how to configure the Instance when creating.
@@ -711,6 +729,8 @@ class ADSModule(Base):
         """|coro|
 
         Create an Instance based upon the Spec ID provided.
+
+        Endpoint: `ADSModule/CreateInstanceFromSpec`
 
         Parameters
         ----------
@@ -789,6 +809,8 @@ class ADSModule(Base):
         Create a local AMP Instance, similar to :meth:`create_instance`.
         Use case could be on a remote Target ADS Instance instead of letting AMP decide where to create the Instance.
 
+        Endpoint: `ADSModule/CreateLocalInstance`
+
         .. deprecated:: 5.0.0
             AMP 2.8.0.8 answers a null reference to every `Instance` shape sent. It wants a `LocalAMPInstance`, which
             AMP's API spec doesn't describe, and AMP's own panel never calls this endpoint. Use :meth:`create_instance`
@@ -853,6 +875,8 @@ class ADSModule(Base):
 
         Delete the specified Datastore by ID.
 
+        Endpoint: `ADSModule/DeleteDatastore`
+
         .. note::
             You will need to know the Datastore ID you want to delete. See :meth:`get_datastores` as a means to get the IDs.
 
@@ -907,6 +931,8 @@ class ADSModule(Base):
         """|coro|
 
         Delete an existing Deployment Template.
+
+        Endpoint: `ADSModule/DeleteDeploymentTemplate`
 
         .. note::
             If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and
@@ -963,6 +989,8 @@ class ADSModule(Base):
 
         Delete an Instance.
 
+        Endpoint: `ADSModule/DeleteInstance`
+
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
@@ -1017,6 +1045,8 @@ class ADSModule(Base):
 
         Delete all Users from an Instance.
 
+        Endpoint: `ADSModule/DeleteInstanceUsers`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -1064,6 +1094,8 @@ class ADSModule(Base):
         """|coro|
 
         Deploy an Instance template.
+
+        Endpoint: `ADSModule/DeployTemplate`
 
         Parameters
         ----------
@@ -1114,6 +1146,8 @@ class ADSModule(Base):
 
         De-tach an Instance from the ADS.
 
+        Endpoint: `ADSModule/DetachTarget`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -1161,6 +1195,8 @@ class ADSModule(Base):
         """|coro|
 
         Extracts everything from an archive.
+
+        Endpoint: `ADSModule/ExtractEverywhere`
 
         .. note::
             The parameter ``source_archive`` will be sanitized. See :meth:`~Base.sanitize_path`.
@@ -1214,6 +1250,8 @@ class ADSModule(Base):
 
         Get the application endpoints for the specified Instance.
 
+        Endpoint: `ADSModule/GetApplicationEndpoints`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -1261,6 +1299,8 @@ class ADSModule(Base):
         """|coro|
 
         Get the information for the specified datastore.
+
+        Endpoint: `ADSModule/GetDatastore`
 
         .. note::
             You will need to know the Datastore ID you want to retrieve. See :meth:`get_datastores` as a means to get the IDs.
@@ -1313,6 +1353,8 @@ class ADSModule(Base):
 
         Get a list of Datastores.
 
+        Endpoint: `ADSModule/GetDatastores`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1351,6 +1393,8 @@ class ADSModule(Base):
         """|coro|
 
         Get a list of Instances tied to the specified datastore.
+
+        Endpoint: `ADSModule/GetDatastoreInstances`
 
         .. note::
             You will need to know the Datastore ID you want to query. See :meth:`get_datastores` as a means to get the IDs.
@@ -1397,6 +1441,8 @@ class ADSModule(Base):
 
         Gets a list of Deployment Templates.
 
+        Endpoint: `ADSModule/GetDeploymentTemplates`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1439,6 +1485,8 @@ class ADSModule(Base):
         """|coro|
 
         Get the specified group.
+
+        Endpoint: `ADSModule/GetGroup`
 
         .. note::
             AMP answers with the Target item for the ID, the same shape as one entry of :meth:`get_instances`.
@@ -1491,6 +1539,8 @@ class ADSModule(Base):
 
         Returns the Instance information for the provided Instance ID.
 
+        Endpoint: `ADSModule/GetInstance`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -1530,6 +1580,8 @@ class ADSModule(Base):
         """|coro|
 
         Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.
+
+        Endpoint: `ADSModule/GetInstances`
 
         .. note::
             AMP's `ForceIncludeSelf` is always sent as True, so the ADS's own Target is in the list. False only ever made
@@ -1576,6 +1628,8 @@ class ADSModule(Base):
 
         Get the live settings of an Instance, keyed by setting node name.
 
+        Endpoint: `ADSModule/GetInstanceLiveSettings`
+
         .. note::
             Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
 
@@ -1620,6 +1674,8 @@ class ADSModule(Base):
         """|coro|
 
         Get the Port and or Network information of an Instance.
+
+        Endpoint: `ADSModule/GetInstanceNetworkInfo`
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
@@ -1672,6 +1728,8 @@ class ADSModule(Base):
 
         Returns a list of the AMP Instance statuses.
 
+        Endpoint: `ADSModule/GetInstanceStatuses`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1714,6 +1772,8 @@ class ADSModule(Base):
 
         Gets the local Instances related to the ADS or Controller.
 
+        Endpoint: `ADSModule/GetLocalInstances`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -1749,6 +1809,8 @@ class ADSModule(Base):
         """|coro|
 
         Gets the role of the ADS this object logs in to (Controller, Target, hybrid or standalone).
+
+        Endpoint: `Core/GetConfig`
 
         .. note::
             This reads the `ADSModule.ADS.Mode` setting, so any logged in user can read it on the ADS they log in to.
@@ -1810,6 +1872,8 @@ class ADSModule(Base):
 
         Get Provision Arguments.
 
+        Endpoint: `ADSModule/GetProvisionArguments`
+
         Parameters
         ----------
         module_name : :class:`str`
@@ -1862,6 +1926,8 @@ class ADSModule(Base):
 
         Get the provision fitness of the ADS or Controller.
 
+        Endpoint: `ADSModule/GetProvisionFitness`
+
         .. note::
             AMP answers with JSON null when it has no fitness data (AMP 2.8.0.8 did on a Controller with one Target).
             This method returns None for that, through the `allow_null` response option. Every other error is raised as normal.
@@ -1913,6 +1979,8 @@ class ADSModule(Base):
 
         Get a condensed summary of every application that can be deployed. See :meth:`get_supported_applications` for the full entries.
 
+        Endpoint: `ADSModule/GetSupportedAppSummaries`
+
         .. note::
             The API returns these entries as untyped JSON objects, so no dataclass conversion
             is performed; hence no ``format_data`` parameter.
@@ -1954,6 +2022,8 @@ class ADSModule(Base):
         """|coro|
 
         Get supported applications, such as :class:`Template` information and the list of :class:`Application` when creating an Instance.
+
+        Endpoint: `ADSModule/GetSupportedApplications`
 
         Parameters
         ----------
@@ -1998,6 +2068,8 @@ class ADSModule(Base):
 
         Get target info.
 
+        Endpoint: `ADSModule/GetTargetInfo`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -2040,6 +2112,8 @@ class ADSModule(Base):
         """|coro|
 
         Get the ADS/Target pairing code. Used with :meth:`attach_ads` using the "pairing_code" parameter.
+
+        Endpoint: `ADSModule/GetTargetPairingCode`
 
         Parameters
         ----------
@@ -2086,6 +2160,8 @@ class ADSModule(Base):
         """|coro|
 
         Handout Instance Configuration.
+
+        Endpoint: `ADSModule/HandoutInstanceConfigs`
 
         Parameters
         ----------
@@ -2138,6 +2214,8 @@ class ADSModule(Base):
         """|coro|
 
         Manage the specified Instance.
+
+        Endpoint: `ADSModule/ManageInstance`
 
         .. note::
             Actual usage unknown, may be used for AMP Instance management via the web interface.
@@ -2195,6 +2273,8 @@ class ADSModule(Base):
         """|coro|
 
         Modify the Firewall Rule of the specified Instance.
+
+        Endpoint: `ADSModule/ModifyCustomFirewallRule`
 
         Parameters
         ----------
@@ -2262,6 +2342,8 @@ class ADSModule(Base):
 
         Move an Instance to a different Datastore.
 
+        Endpoint: `ADSModule/MoveInstanceDatastore`
+
         .. note::
             You will need to know the Datastore ID you want to move the Instance to. See :meth:`get_datastores` as a means to get the IDs.
 
@@ -2316,6 +2398,8 @@ class ADSModule(Base):
 
         Prepare an Instance for a file transfer.
 
+        Endpoint: `ADSModule/PrepareFileTransfer`
+
         .. note::
             Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
 
@@ -2367,6 +2451,8 @@ class ADSModule(Base):
 
         Reactivate a specific Instance.
 
+        Endpoint: `ADSModule/ReactivateInstance`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -2414,6 +2500,8 @@ class ADSModule(Base):
 
         Reactivate local Instances.
 
+        Endpoint: `ADSModule/ReactivateLocalInstances`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -2456,6 +2544,8 @@ class ADSModule(Base):
 
         Refresh the application cache.
 
+        Endpoint: `ADSModule/RefreshAppCache`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2488,6 +2578,8 @@ class ADSModule(Base):
         """|coro|
 
         Refresh the specified group.
+
+        Endpoint: `ADSModule/RefreshGroup`
 
         Parameters
         ----------
@@ -2537,6 +2629,8 @@ class ADSModule(Base):
 
         Refresh an Instance Configuration.
 
+        Endpoint: `ADSModule/RefreshInstanceConfig`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -2584,6 +2678,8 @@ class ADSModule(Base):
 
         Refresh remote config stores.
 
+        Endpoint: `ADSModule/RefreshRemoteConfigStores`
+
         Parameters
         ----------
         force : :class:`bool`, optional
@@ -2625,6 +2721,8 @@ class ADSModule(Base):
         """|coro|
 
         Registers a Target to a Controller.
+
+        Endpoint: `ADSModule/RegisterTarget`
 
         Parameters
         ----------
@@ -2694,6 +2792,8 @@ class ADSModule(Base):
 
         Registers an Instance to a Controller/Target with pairing code.
 
+        Endpoint: `ADSModule/RegisterTargetWithCode`
+
         Parameters
         ----------
         controller_url : :class:`str`
@@ -2753,6 +2853,8 @@ class ADSModule(Base):
 
         Repair the specified datastore.
 
+        Endpoint: `ADSModule/RepairDatastore`
+
         .. note::
             You will need to know the Datastore ID you want to repair. See :meth:`get_datastores` as a means to get the IDs.
 
@@ -2805,6 +2907,8 @@ class ADSModule(Base):
 
         Request a calculation of the size of the specified Datastore.
 
+        Endpoint: `ADSModule/RequestDatastoreSizeCalculation`
+
         .. note::
             You will need to know the Datastore ID you want to query. See :meth:`get_datastores` as a means to get the IDs.
 
@@ -2856,6 +2960,8 @@ class ADSModule(Base):
         """|coro|
 
         Restart an Instance.
+
+        Endpoint: `ADSModule/RestartInstance`
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
@@ -2910,6 +3016,8 @@ class ADSModule(Base):
 
         Used for proxy authentication.
 
+        Endpoint: `ADSModule/Servers`
+
         .. warning::
             This Endpoint has not been fully tested, multiple parameters are unknown, or functionality is unknown.
 
@@ -2959,6 +3067,8 @@ class ADSModule(Base):
         """|coro|
 
         Set an :class:`Instance` Setting Node setting.
+
+        Endpoint: `ADSModule/SetInstanceConfig`
 
         .. note::
             See :ref:`Setting Nodes <Documentation>` for possible ``setting_node`` values.
@@ -3023,6 +3133,8 @@ class ADSModule(Base):
 
         Set the Port mappings for an Instance.
 
+        Endpoint: `ADSModule/SetInstanceNetworkInfo`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -3082,6 +3194,8 @@ class ADSModule(Base):
 
         Set an Instance's suspended state.
 
+        Endpoint: `ADSModule/SetInstanceSuspended`
+
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
@@ -3136,6 +3250,8 @@ class ADSModule(Base):
 
         Start all Instances.
 
+        Endpoint: `ADSModule/StartAllInstances`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -3183,6 +3299,8 @@ class ADSModule(Base):
         """|coro|
 
         Start an Instance.
+
+        Endpoint: `ADSModule/StartInstance`
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
@@ -3236,6 +3354,8 @@ class ADSModule(Base):
 
         Stop all Instances.
 
+        Endpoint: `ADSModule/StopAllInstances`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -3283,6 +3403,8 @@ class ADSModule(Base):
         """|coro|
 
         Stop an Instance.
+
+        Endpoint: `ADSModule/StopInstance`
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
@@ -3336,6 +3458,8 @@ class ADSModule(Base):
 
         Update an existing datastore.
 
+        Endpoint: `ADSModule/UpdateDatastore`
+
         Parameters
         ----------
         updated_datastore : :class:`InstanceDatastore`
@@ -3386,6 +3510,8 @@ class ADSModule(Base):
 
         Update an existing Deployment Template.
 
+        Endpoint: `ADSModule/UpdateDeploymentTemplate`
+
         Parameters
         ----------
         template_to_update : :class:`DeploymentTemplate`
@@ -3435,6 +3561,8 @@ class ADSModule(Base):
 
         Update an Instance's info.
 
+        Endpoint: `ADSModule/UpdateInstanceInfo`
+
         Parameters
         ----------
         instance_info : :class:`InstanceInfo`
@@ -3482,6 +3610,8 @@ class ADSModule(Base):
 
         Update Target ADS Instance.
 
+        Endpoint: `ADSModule/UpdateTarget`
+
         .. note::
             Typically this will be used on Instances with the :attr:`~Instance.module` == "ADS".
 
@@ -3526,6 +3656,8 @@ class ADSModule(Base):
         """|coro|
 
         Update a target Instance information.
+
+        Endpoint: `ADSModule/UpdateTargetInfo`
 
         Parameters
         ----------
@@ -3590,6 +3722,8 @@ class ADSModule(Base):
 
         Upgrade all Instances.
 
+        Endpoint: `ADSModule/UpgradeAllInstances`
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -3639,6 +3773,8 @@ class ADSModule(Base):
         """|coro|
 
         Update or Upgrade the Instance.
+
+        Endpoint: `ADSModule/UpgradeInstance`
 
         .. note::
             The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
