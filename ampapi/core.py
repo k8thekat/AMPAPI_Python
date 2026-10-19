@@ -311,6 +311,83 @@ class Core(Base):
             return ActionResult(**result)
         return result
 
+    async def add_interval_trigger(
+        self,
+        months: list[int],
+        days: list[int],
+        hours: list[int],
+        minutes: list[int],
+        days_of_month: list[int],
+        description: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Add an Interval Trigger to an Instance.
+
+        .. note::
+            Requires the ``Core.Scheduler.CreateTrigger`` permission.
+            See :meth:`edit_interval_trigger` for the same fields on an existing trigger.
+
+
+        Parameters
+        ----------
+        months : list[:class:`int`]
+            The months of the year the trigger runs in. Range 1 to 12.
+        days : list[:class:`int`]
+            The days of the week the trigger runs on, the first day of the week is Monday. Range is 0 to 7.
+        hours : list[:class:`int`]
+            The hours of the day the trigger runs at. Range is 0 to 23.
+        minutes : list[:class:`int`]
+            The minutes of the hour the trigger runs at. Range is 0 to 59.
+        days_of_month : list[:class:`int`]
+            The days of the month the trigger runs on. Range is 1 to 31.
+        description : :class:`str`
+            The description of the Interval Trigger.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, Any] = {
+            "months": months,
+            "days": days,
+            "hours": hours,
+            "minutes": minutes,
+            "daysOfMonth": days_of_month,
+            "description": description,
+        }
+        result: ResponseAliasFull = await self._post(
+            url="Core/AddIntervalTrigger",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/AddIntervalTrigger", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/AddIntervalTrigger", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
     async def add_task(
         self,
         trigger_id: str,
@@ -596,6 +673,65 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ConfirmTwoFactorSetup", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
+    async def convert_user_to_oidc(
+        self,
+        username: str,
+        oidc_sub: Union[str, None] = None,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Convert an AMP User to sign in through OIDC.
+
+        .. note::
+            Requires the ``Core.UserManagement.UpdateUserInfo`` permission.
+
+
+        Parameters
+        ----------
+        username : :class:`str`
+            The AMP User name.
+        oidc_sub : Union[:class:`str`, None], optional
+            The OIDC subject to link to the AMP User, by default None.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, Any] = {"Username": username}
+        if oidc_sub is not None:
+            parameters["OIDCSub"] = oidc_sub
+        result: ResponseAliasFull = await self._post(
+            url="Core/ConvertUserToOIDC",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/ConvertUserToOIDC", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/ConvertUserToOIDC", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -2495,6 +2631,45 @@ class Core(Base):
             return Status(**result)
         return result
 
+    async def get_structured_diagnostics(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> dict[str, Any]:
+        """|coro|
+
+        Retrieves the structured diagnostics of the Instance.
+
+        .. note::
+            Requires the ``Core.Special.Diagnostics`` permission.
+
+
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        dict[:class:`str`, Any]
+            On success returns the raw dictionary of diagnostic sections.
+
+        """
+        await self._reauth()
+        result: ResponseAliasFull = await self._post(
+            url="Core/GetStructuredDiagnostics",
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/GetStructuredDiagnostics", cur_type=result, expec_type=dict)
+        # TODO: Confirm the shape of the response against a live payload.
+        # AMP documents it as Dictionary<String, Object>; no TypedDict until the sections are seen.
+        return result  # pyright: ignore[reportReturnType]
+
     async def get_tasks(
         self,
         *,
@@ -3509,6 +3684,60 @@ class Core(Base):
             return ActionResult(**result)
         return result
 
+    async def revert_user_from_oidc(
+        self,
+        username: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Revert an AMP User from OIDC back to a local sign in.
+
+        .. note::
+            Requires the ``Core.UserManagement.UpdateUserInfo`` permission.
+
+
+        Parameters
+        ----------
+        username : :class:`str`
+            The AMP User name.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, Any] = {"Username": username}
+        result: ResponseAliasFull = await self._post(
+            url="Core/RevertUserFromOIDC",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/RevertUserFromOIDC", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/RevertUserFromOIDC", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
     async def revoke_webauthn_credential(
         self,
         auth_id: int,
@@ -3938,6 +4167,51 @@ class Core(Base):
             return ActionResult(**result)
         return result
 
+    async def sleep(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Put the application to sleep.
+
+        .. note::
+            Requires the ``Core.AppManagement.StopApplication`` permission.
+
+
+        Parameters
+        ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        result: ResponseAliasFull = await self._post(url="Core/Sleep", request_params=request_params, **response_params)
+
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/Sleep", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/Sleep", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
     async def start_application(
         self,
         *,
@@ -4194,6 +4468,65 @@ class Core(Base):
             return ActionResult(**result)
         return result
 
+    async def update_oidc_sub(
+        self,
+        username: str,
+        oidc_sub: Union[str, None] = None,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Update the OIDC subject linked to an AMP User.
+
+        .. note::
+            Requires the ``Core.UserManagement.UpdateUserInfo`` permission.
+
+
+        Parameters
+        ----------
+        username : :class:`str`
+            The AMP User name.
+        oidc_sub : Union[:class:`str`, None], optional
+            The OIDC subject to link to the AMP User, by default None.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, Any] = {"Username": username}
+        if oidc_sub is not None:
+            parameters["OIDCSub"] = oidc_sub
+        result: ResponseAliasFull = await self._post(
+            url="Core/UpdateOIDCSub",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/UpdateOIDCSub", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/UpdateOIDCSub", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
     async def update_public_key(
         self,
         pub_key: str,
@@ -4238,6 +4571,51 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdatePublicKey", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
+    async def update_tools(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Update the AMP system tools (ampinstmgr) to the latest release.
+
+        .. note::
+            Requires the ``Core.Special.UpgradeAMP`` permission.
+
+
+        Parameters
+        ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        result: ResponseAliasFull = await self._post(url="Core/UpdateTools", request_params=request_params, **response_params)
+
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/UpdateTools", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/UpdateTools", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
