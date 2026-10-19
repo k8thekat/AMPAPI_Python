@@ -768,7 +768,7 @@ class TargetADS(ADSModule, Instance):
             The name of the Instance on this Target.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
@@ -806,7 +806,7 @@ class TargetADS(ADSModule, Instance):
             The name of the Instance on this Target.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
@@ -844,7 +844,7 @@ class TargetADS(ADSModule, Instance):
             The name of the Instance on this Target.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
@@ -882,7 +882,7 @@ class TargetADS(ADSModule, Instance):
             The ID of the Instance on this Target.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
@@ -1444,7 +1444,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
             if self._ads_instance_id is None:
                 LOGGER.warning(
-                    "<%s.%s> | Cannot tell if the ADS row %s is this Controller, its own ADS id is unknown. "
+                    "<%s.%s> | Cannot tell if the ADS row %s is this Controller, as its own ADS id is unknown. "
                     "Call `get_instances()` first or pass `auto_detect=True`. | Returning a TargetADS",
                     __class__.__name__,
                     "get_instance",

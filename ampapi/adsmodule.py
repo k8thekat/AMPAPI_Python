@@ -1579,11 +1579,11 @@ class ADSModule(Base):
 
         .. note::
             This reads the `ADSModule.ADS.Mode` setting, so any logged in user can read it on the ADS they log in to.
-            On a :class:`TargetADS` the Target must accept the login. On AMP Professional that means an admin, a plain
-            user gets result 5 (NoInstanceAccess).
+            On a :class:`TargetADS` the Target must accept the login. On AMP Professional that means an admin, as a
+            plain user gets result 5 (NoInstanceAccess).
 
         .. note::
-            The mode is not cached, every call asks AMP.
+            The mode is not cached, so every call asks AMP.
 
         Parameters
         ----------
@@ -1611,11 +1611,10 @@ class ADSModule(Base):
         if "subcategory" not in result:
             raise AMPAPIKeyError("subcategory", "Core/GetConfig", result)  # noqa: EM101
 
-        mode_value: Any = result["current_value"]
-        # A value that is not an int, or that the enum lacks, falls through to the warning below.
-        if isinstance(mode_value, int):
-            with contextlib.suppress(ValueError):
-                return ADSModeState(mode_value)
+        mode_value = result["current_value"]
+        # A value the enum lacks raises ValueError, whether an unknown number or not a number at all.
+        with contextlib.suppress(ValueError):
+            return ADSModeState(mode_value)
 
         LOGGER.warning(
             "<%s.%s> | Unknown ADSModule.ADS.Mode value: %r | Returning ADSModeState.not_set",
