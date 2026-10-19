@@ -30,6 +30,8 @@ from typing_extensions import deprecated
 from ._types import (
     ACTION_RESULT_EXCLUDED_KEYS,
     ACTION_RESULT_REQUIRED_KEYS,
+    RUNNING_TASK_EXCLUDED_KEYS,
+    RUNNING_TASK_REQUIRED_KEYS,
     SCHEDULE_DATA_EXCLUDED_KEYS,
     SCHEDULE_DATA_REQUIRED_KEYS,
     SETTINGS_SPEC_PARENT_EXCLUDED_KEYS,
@@ -41,6 +43,7 @@ from ._types import (
     USER_APPLICATION_DATA_EXCLUDED_KEYS,
     USER_APPLICATION_DATA_REQUIRED_KEYS,
     ActionResultResponse,
+    RunningTaskResponse,
     ScheduleDataResponse,
     SettingsSpecParentResponse,
     StatusResponse,
@@ -80,7 +83,6 @@ if TYPE_CHECKING:
 
     from ._types import (
         ActionSpec,
-        APISpec,
         AuditLogEntryResponse,
         AvailableTriggersResponse,
         ConfigResponse,
@@ -1609,7 +1611,7 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> APISpec | dict[str, Any]:
+    ) -> dict[str, Any]:
         """|coro|
 
         Get's all the API specs for the Instance.
@@ -1626,8 +1628,9 @@ class Core(Base):
 
         Returns
         -------
-        :class:`APISpec`
+        dict[:class:`str`, Any]
             On success returns a dictionary with all of the API specs, their parameters and return types for the Instance.
+            Each key is a plugin name, shaped like :class:`APISpec`.
 
         """
         await self._reauth()
@@ -2498,7 +2501,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[RunningTask] | list[Any]:
+    ) -> list[RunningTask] | list[RunningTaskResponse]:
         """|coro|
 
         Get a list of running tasks on the Instance.
@@ -2514,8 +2517,13 @@ class Core(Base):
 
         Returns
         -------
-        list[:class:`RunningTask`]
-            On success returns a list of :class:`RunningTask` dataclasses.
+        list[:class:`RunningTask`] | list[:class:`RunningTaskResponse`]
+            On success returns a list of :class:`RunningTask` dataclasses, or the raw dictionaries when `format_data` is False.
+
+        Raises
+        ------
+        :exc:`AMPAPITypeError`
+            If AMP did not answer with a list of tasks.
 
         """
         await self._reauth()
@@ -2528,9 +2536,14 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetTasks", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
+        tasks: list[RunningTaskResponse] = []
+        for item in result:
+            if not is_response_type(item, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+                raise AMPAPITypeError(end_point="Core/GetTasks", cur_type=item, expec_type=dict)
+            tasks.append(item)
         if format_data is True:
-            return [RunningTask(**item) for item in result]
-        return result
+            return [RunningTask(**task) for task in tasks]
+        return tasks
 
     async def get_time_interval_trigger(
         self,

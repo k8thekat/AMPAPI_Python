@@ -535,7 +535,7 @@ class ADSModule(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Create an AMP Instance.
@@ -557,8 +557,9 @@ class ADSModule(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns a :class:`RunningTask` dataclass, or the raw dictionary when `format_data` is False.
+            AMP 2.8 answers with a running task that also carries the :class:`ActionResult` keys.
 
         """
         await self._reauth()
@@ -577,11 +578,11 @@ class ADSModule(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return RunningTask(**result)
             return result
-        raise AMPAPIKeyError("status", "ADSModule/CreateInstance", result)  # noqa: EM101
+        raise AMPAPITypeError(end_point="ADSModule/CreateInstance", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def create_instance_from_spec(
