@@ -551,22 +551,22 @@ class ConsumeResponse(TypedDict):
     input_type: str
 
 
-# TODO: Verify these keys against a live response.
-# Derived from the `DeploymentTemplate` slots and docs; every dump of the endpoint has been an empty array.
+# Confirmed live on AMP 2.8.0.8: AMP spells the mapping key `setting_mappings`, and sends null for
+# `description`, `module`, `template_instance`, `template_role` and `template_base_app` on a bare template.
 class DeploymentTemplateResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_deployment_templates`."""
 
     id: int
     name: str
-    description: str
-    module: str
+    description: Union[str, None]
+    module: Union[str, None]
     template_instance: Any
-    template_role: str
-    template_base_app: str
+    template_role: Union[str, None]
+    template_base_app: Union[str, None]
     clone_role_into_user: bool
     zip_overlay_path: str
     match_datastore_tags: bool
-    settings_mappings: dict[str, str]
+    setting_mappings: dict[str, str]
     tags: list[str]
     start_on_boot: bool
 
@@ -1105,6 +1105,8 @@ class TimedTriggerResponse(TypedDict):
     name: str
     order: int
     tasks: list[TriggersTasksResponse]
+    # Confirmed live on AMP 2.8.0.8; an ISO timestamp once the trigger has fired, null before.
+    last_executed: NotRequired[Union[str, None]]
 
 
 class TriggersResponse(TypedDict):
@@ -1126,6 +1128,8 @@ class TriggersResponse(TypedDict):
 
     last_error_reason : NotRequired[:class:`str`]
 
+    last_run : NotRequired[Union[:class:`str`, None]]
+
     """
 
     id: str
@@ -1137,6 +1141,7 @@ class TriggersResponse(TypedDict):
     trigger_type: str
     last_execute_error: NotRequired[bool]
     last_error_reason: NotRequired[str]
+    last_run: NotRequired[Union[str, None]]
 
 
 class TriggersTasksResponse(TypedDict):

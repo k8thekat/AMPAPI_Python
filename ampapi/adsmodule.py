@@ -71,7 +71,7 @@ from ._types import (
     is_response_type,
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
-from .errors import AMPAPIKeyError, AMPAPITypeError
+from .errors import AMPAPIKeyError, AMPAPIResponseError, AMPAPITypeError
 from .modules import (
     ActionResult,
     ADSModeState,
@@ -1690,6 +1690,11 @@ class ADSModule(Base):
 
         Get the provision fitness of the ADS or Controller.
 
+        .. note::
+            AMP answers with JSON null when it has no fitness data (eg. a Controller with no Targets).
+            :meth:`_response_handler` raises :exc:`AMPAPIResponseError` for null, so that one case is caught here
+            and returned as None. Every other error is raised as normal.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1701,16 +1706,23 @@ class ADSModule(Base):
 
         Returns
         -------
-        :class:`Provision`
-            On success returns a :class:`Provision` dataclass.
+        :class:`Provision` | None
+            On success returns a :class:`Provision` dataclass, or None when AMP answers with JSON null.
 
         """
         await self._reauth()
-        result: ResponseAliasFull = await self._post(
-            url="ADSModule/GetProvisionFitness",
-            request_params=request_params,
-            **response_params,
-        )
+        try:
+            result: ResponseAliasFull = await self._post(
+                url="ADSModule/GetProvisionFitness",
+                request_params=request_params,
+                **response_params,
+            )
+        except AMPAPIResponseError as error:
+            # ?SUGGESTION: Match on a dedicated null error once `_response_handler` raises one.
+            # The null case carries no attribute to test, only the "JSON returned <None>" reason text.
+            if "JSON returned <None>" in str(error):
+                return None
+            raise
         if result is None:
             return None
 
