@@ -25,15 +25,15 @@ from __future__ import annotations
 
 import random
 import time
-from collections.abc import Callable
-from typing import Generic, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Literal, Union, overload
 
-T = TypeVar("T", bool, Literal[True], Literal[False])
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 __all__ = ("ExponentialBackoff",)
 
 
-class ExponentialBackoff(Generic[T]):
+class ExponentialBackoff[T: (bool, Literal[True], Literal[False])]:
     """An implementation of the exponential backoff algorithm
 
     Provides a convenient interface to implement an exponential backoff
@@ -57,6 +57,7 @@ class ExponentialBackoff(Generic[T]):
     """
 
     def __init__(self, base: int = 1, *, integral: T = False) -> None:
+        """Store the base delay and build the random function used for the jitter."""
         self._base: int = base
 
         self._exp: int = 0
@@ -65,7 +66,7 @@ class ExponentialBackoff(Generic[T]):
         self._last_invocation: float = time.monotonic()
 
         # Use our own random instance to avoid messing with global one
-        rand = random.Random()
+        rand = random.Random()  # noqa: S311 # Delay jitter only, never used for anything cryptographic.
         rand.seed()
 
         self._randfunc: Callable[..., Union[int, float]] = rand.randrange if integral else rand.uniform
