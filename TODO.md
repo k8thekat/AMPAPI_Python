@@ -25,7 +25,6 @@ A small todo list local to the project.
 
 ---
 
-- `sanitize_path` refuses any `_` in a path, so the file wrappers can't reach eg. `AMP_Logs/`. AMP takes them fine.
 
 ## ampapi/core.py
 

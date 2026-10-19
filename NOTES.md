@@ -217,7 +217,9 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   one WriteFileChunk made, and `Delete` True leaves it alone. The panel never calls it.
 - `AnalyticsPlugin/GetUserDetails` and `ADSModule/GetProvisionFitness`: JSON null on the VMs (no player data, no
   fitness data), so their shapes are still unknown.
-- `Base.sanitize_path` refuses any `_` in a path, while AMP takes them fine (`AMP_Logs` is in every Instance).
+- File paths: AMP's file manager takes `\`, `//`, `./`, `../` (it stays inside the Instance), `_` and dot-folders
+  like `.trash` as given. Only a bare `/` fails ("Index was outside the bounds of the array"), so
+  `Base.sanitize_path` just drops leading slashes.
 
 ## Generic Instances
 

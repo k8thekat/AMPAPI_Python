@@ -100,6 +100,9 @@ Changed methods
 - :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk` renamed ``append`` to ``final_chunk``. It was always
   sent as AMP's ``FinalChunk``, which marks the last chunk of the file, not an append.
 - ``APIParams`` (and so :class:`~ampapi.Bridge`) strips a trailing ``/`` from ``url``.
+- ``Base.sanitize_path`` (used by every file method) only drops leading ``/`` now. 4.x refused any ``_`` (so
+  ``AMP_Logs`` was out of reach), turned ``..`` into ``.`` and stripped a leading ``.`` (so ``.trash`` became
+  ``trash``). AMP takes all of those as given.
 - ``DeploymentTemplate.settings_mappings`` is now ``setting_mappings``, AMP's own key; its ``description``, ``module``,
   ``template_role`` and ``template_base_app`` can be None. With templates present, 4.x could not build the class at all.
 - ``Base.version_validation()`` checked the wrong way round and never fired; it now raises once AMP is at or past the

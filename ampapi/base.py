@@ -1232,35 +1232,36 @@ class Base:
             Example `await Instance.copyFile("eula.txt", "test")` would move `./eula.txt` to `./test/eula.txt`
 
 
+        .. note::
+            AMP takes the path as given (`\\`, `//`, `./` and `../` all work, and `../` stays inside the Instance).
+            Only a bare `/` fails, so leading slashes are dropped and `/` means the Instance root. A typo gets AMP's
+            own error.
+
+
         Parameters
         ----------
         path : str
             The path to be sanitized.
 
-        Raises
-        ------
-        :exc:`ValueError`
-            If the path string contains a underscore.
-
         Returns
         -------
         :class:`str`
-            Return the sanitized path string.
+            Return the path without its leading slashes.
 
         """
-        if "_" in path:
-            msg = "You cannot use '_' in path strings."
-            raise ValueError(msg)
+        # if "_" in path:
+        #     msg = "You cannot use '_' in path strings."
+        #     raise ValueError(msg)
 
-        path = path.replace("//", "/")
-        path = path.replace("\\", "/")
-        path = path.replace("..", ".")
+        # path = path.replace("//", "/")
+        # path = path.replace("\\", "/")
+        # path = path.replace("..", ".")
 
-        # Remove starting periods as they are un-needed when being passed into an API
-        path = path.removeprefix(".")
+        # # Remove starting periods as they are un-needed when being passed into an API
+        # path = path.removeprefix(".")
 
         # Remove starting slashes, all paths start relative to Instance root.
-        return path.removeprefix("/")
+        return path.lstrip("/")
 
     @staticmethod
     def to_snake_case(data: str, /) -> str:
