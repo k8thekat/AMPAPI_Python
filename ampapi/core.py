@@ -250,7 +250,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -304,7 +304,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/AddEventTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -367,7 +367,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/AddTask", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -417,7 +417,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/CancelTask", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -484,7 +484,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/ChangeUserPassword", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -540,7 +540,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/ChangeTaskOrder", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -593,7 +593,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/ConfirmTwoFactorSetup", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -646,7 +646,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/CreateRole", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -696,7 +696,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/CreateUser", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -790,7 +790,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DeleteInstanceUsers", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -840,7 +840,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DeleteRole", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -894,7 +894,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DeleteTask", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -944,7 +944,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DeleteTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -994,7 +994,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DeleteUser", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -1048,7 +1048,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DisableTwoFactor", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -1093,7 +1093,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DismissAllTasks", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -1143,7 +1143,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/DismissTask", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -1235,7 +1235,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/EditIntervalTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -1291,7 +1291,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/EditTask", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -1348,7 +1348,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/EnableTwoFactor", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -2860,7 +2860,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/GetWebauthnChallenge", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3254,7 +3254,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/RefreshSettingValueList", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3299,7 +3299,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/RefreshSettingsSourceCache", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3352,7 +3352,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/RenameRole", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3435,7 +3435,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/Restart", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3486,7 +3486,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/ResetUserPassword", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3536,7 +3536,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/RevokeWebauthnCredential", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3616,7 +3616,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/RunEventTriggerImmediately", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3672,7 +3672,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/SetAMPUserRoleMembership", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3729,7 +3729,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/SetAMPRolePermission", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3782,7 +3782,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/SetTriggerEnabled", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3915,7 +3915,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/SetConfig", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -3960,7 +3960,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/Start", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -4067,7 +4067,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/UpdateAccountInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -4171,7 +4171,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/UpdateApplication", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -4219,7 +4219,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/UpdatePublicKey", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -4291,7 +4291,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/UpdateUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
@@ -4355,7 +4355,7 @@ class Core(Base):
             format_data = self.format_data
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/ActionResult", cur_type=result, expec_type=dict)
+            raise AMPAPITypeError(end_point="Core/WebauthnRegister", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result
