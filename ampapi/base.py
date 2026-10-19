@@ -1121,6 +1121,9 @@ class Base:
 
         Replaces spaces and underscores in the JSON response dict keys while also formatting keys to ``snake_case``.
 
+        Keys containing a ``.`` are AMP setting nodes (eg. ``ADSModule.Defaults.DefaultAuthServerURL``) and are
+        left exactly as sent. Their values are still sanitized.
+
         Also supports a single string and will replace any of these chars ``_ ' ( )`` with nothing.
 
         Parameters
@@ -1151,6 +1154,11 @@ class Base:
             new_map: dict[str, Any] = copy.copy(x=source_map)
             for old_key, old_value in source_map.items():
                 new_map.pop(old_key)
+                # AMP setting nodes (eg. `ADSModule.Defaults.DefaultAuthServerURL`) are the only dotted keys AMP sends.
+                # None of the captured responses has a dotted field name, so a dotted key is kept exactly as sent.
+                if "." in old_key:
+                    new_map[old_key] = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+                    continue
                 # To handle keys with spaces and to remove underscores that exist already.
                 new_key: str = old_key.replace(" ", "").replace("_", "")
                 if new_key in cls.json_key_mapping:
