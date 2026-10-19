@@ -34,8 +34,10 @@ from .core import Core
 from .emailsender import EmailSenderPlugin
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
+from .generic import GenericModule
 from .minecraft import MinecraftModule
 from .modules import ActionResult, BuildInfo, InstanceState, Status, Updates
+from .steamcmd import SteamCMDPlugin
 
 if TYPE_CHECKING:
     import datetime
@@ -62,11 +64,11 @@ if TYPE_CHECKING:
     T = ParamSpec("T")
     F = TypeVar("F")
 
-__all__ = ("Controller", "Instance", "MinecraftInstance", "TargetADS")
+__all__ = ("Controller", "GenericInstance", "Instance", "MinecraftInstance", "TargetADS")
 
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
-InstanceTypeAliases = Union["Instance", "MinecraftInstance", "TargetADS"]
+InstanceTypeAliases = Union["Instance", "GenericInstance", "MinecraftInstance", "TargetADS"]
 
 
 class Instance(
@@ -679,6 +681,76 @@ class MinecraftInstance(MinecraftModule, Instance):
     """
 
     module: str = "Minecraft"
+
+
+class GenericInstance(GenericModule, SteamCMDPlugin, Instance):
+    """Represents a Generic Instance from AMP (a game template or a Custom Application) containing the
+    :class:`GenericModule` and :class:`SteamCMDPlugin` API Endpoints.
+
+    Attributes
+    ----------
+    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints : list[dict[str, str]]
+        The list of application endpoints for the Instance.
+    container_cpus : :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb : :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy : :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon : :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart : :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args : dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description : :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb : :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source : :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall : :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name : :class:`str`
+        The friendly name of the Instance.
+    ip : :class:`str`
+        The IP address of the Instance.
+    instance_id : :class:`str`
+        The Instance GUID.
+    instance_name : :class:`str`
+        The Instance name.
+    is_container_instance : :class:`bool`
+        If the Instance is a container Instance.
+    is_https : :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode : :class:`int`
+        The management mode of the Instance.
+    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+        The metrics of the Instance keyed by metric name, default is None.
+    module : :class:`str`
+        The module of the Instance, default is "GenericModule".
+    module_display_name : :class:`str`
+        The display name of the module, default is "".
+    port : :class:`str`
+        The port of the Instance.
+    release_stream : :class:`int`
+        The release stream of the Instance.
+    running : :class:`bool`
+        If the Instance is running.
+    suspended : :class:`bool`
+        If the Instance is suspended.
+    tags : Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id : :class:`str`
+        The target ID of the Instance.
+    url : :class:`str`
+        The API URL.
+
+    """
+
+    module: str = "GenericModule"
 
 
 class TargetADS(ADSModule, Instance):
@@ -1403,8 +1475,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         instances: Union[list[InstanceResponse], InstanceResponse],
         ads: Optional[Union[Controller, TargetADS]] = None,
     ) -> Union[set[InstanceTypeAliases], InstanceTypeAliases]:
-        """Takes the raw Instance data and turns it into :class:`Instance`, :class:`MinecraftInstance` and or
-        :class:`TargetADS` respectively to facilitate API function accessibility.
+        """Takes the raw Instance data and turns it into :class:`Instance`, :class:`MinecraftInstance`,
+        :class:`GenericInstance` and or :class:`TargetADS` respectively to facilitate API function accessibility.
 
         Parameters
         ----------
@@ -1433,6 +1505,10 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         if instances["module"] == "Minecraft":
             return MinecraftInstance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
+
+        # Every Generic template reports "GenericModule", and a Custom Application reports "Generic".
+        if instances["module"] in ("GenericModule", "Generic"):
+            return GenericInstance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
 
         return Instance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
 

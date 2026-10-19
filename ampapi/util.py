@@ -42,8 +42,10 @@ _SPEC_MODULE_MAP: dict[str, tuple[str, str]] = {
     "core": ("core.py", ""),
     "email_sender_plugin": ("emailsender.py", ""),
     "file_manager_plugin": ("filemanager.py", ""),
+    "generic_module": ("generic.py", ""),
     "local_file_backup_plugin": ("filebackup.py", ""),
     "minecraft_module": ("minecraft.py", "mc_"),
+    "steamcmdplugin": ("steamcmd.py", ""),
 }
 
 # Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" style endpoint URLs.

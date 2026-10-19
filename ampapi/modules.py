@@ -111,6 +111,7 @@ __all__ = (
     "Directory",
     "FileChunk",
     "Fitness",
+    "ImportConfig",
     "InstanceDatastore",
     "MCUser",
     "Messages",
@@ -1318,6 +1319,37 @@ class Fitness:
     score: float
     score_description: str
     score_zero_factors: list[Any]
+
+
+@dataclass
+class ImportConfig:
+    """Represents the JSON response data from :meth:`GenericModule.import_config`.
+
+    .. note::
+        Only empty lists have been observed, so the element types are unconfirmed.
+
+    Attributes
+    ----------
+    settings : dict[:class:`str`, Any]
+        The settings read from the file.
+    imported : list[Any]
+        The settings that were imported.
+    not_imported : list[Any]
+        The settings that were not imported.
+    unrecognised : list[Any]
+        The settings AMP did not recognise.
+    rejected : list[Any]
+        The settings AMP rejected.
+
+    """
+
+    # TODO: Confirm the element types against a real import.
+    # Only empty lists were seen, so they are typed as Any for now.
+    settings: dict[str, Any] = field(default_factory=dict["str", "Any"])
+    imported: list[Any] = field(default_factory=list["Any"])
+    not_imported: list[Any] = field(default_factory=list["Any"])
+    unrecognised: list[Any] = field(default_factory=list["Any"])
+    rejected: list[Any] = field(default_factory=list["Any"])
 
 
 @dataclass
