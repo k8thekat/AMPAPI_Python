@@ -611,6 +611,7 @@ class DiagnosticsInfoResponse(TypedDict):
     server_type: NotRequired[str]
     server_jar: NotRequired[str]
     java_version: NotRequired[str]
+    config_version: NotRequired[str]
 
 
 class EndpointsResponse(TypedDict):

@@ -8,6 +8,8 @@ These are the API endpoints AMP reports for each version, saved as plain text so
 
 - `2.6.2.0`, `2.6.5.0` and `2.8.0.8` are AMP application versions.
 - Each one holds `ADS_api_spec.md` and `Minecraft_api_spec.md`, one for the Controller/ADS and one for a Minecraft Instance.
+- `2.8.0.8` also holds `GenericModule_api_spec.md`, from a Counter-Strike: Source Instance. AMP 2.8 has no `srcds`
+  module, every Source game is a GenericModule template, so this sheet covers them.
 - A new directory is made for you when `amp_api_update` runs against an AMP version we have not seen yet.
 
 ### Making new sheets
@@ -20,7 +22,7 @@ These are the API endpoints AMP reports for each version, saved as plain text so
 
 - `diffs/` is gitignored, it is made locally and never committed.
 - `compare_api_spec_versions(version_a, version_b, instance_type)` in `ampapi/util.py` writes `diffs/{instance_type}_{version_a}_to_{version_b}.md`.
-  - `instance_type` is `"ADS"` or `"Minecraft"`.
+  - `instance_type` is `"ADS"`, `"Minecraft"` or `"GenericModule"`.
 
 ### Checking our code against the sheets
 

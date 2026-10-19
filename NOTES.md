@@ -119,6 +119,12 @@ and every Instance at the Controller, and sets `Defaults.DefaultAuthServerURL` s
 asks the same two questions as the role choice in the web setup (`standalone` / `controller` / `target` / `hybrid`, and the
 Controller's URL). Run on vm2 as `target`, it fixed `MCTest01`; not yet run on a Controller.
 
+`CreateInstanceFromSpec` (2026-10-19, CS:Source on vm2) left the new Instance on `Login.AuthServerURL=http://localhost:8080/`
+even with the Target's `Defaults.DefaultAuthServerURL` pointing at the Controller, so its login through vm1 failed
+(result 0). `RepairAuth target <vm1 url>` fixed it, and stopped vm2's Instances, which need starting again after.
+A GenericModule Instance's `GetDiagnosticsInfo` adds `config_version` (eg. "3"), like Minecraft adds `server_type`,
+`server_jar` and `java_version`.
+
 Creating an Instance needs a licence key in `ADSModule.Defaults.NewInstanceKey` on the ADS that runs it, the Target
 when creating from the Controller; `vms.py activate` sets it. AMP accepts the `CreateInstance` call and queues it as a
 task, and only the Controller's log says it failed for want of a key. `CreateInstance` also needs a GUID in

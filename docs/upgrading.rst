@@ -61,8 +61,9 @@ Changed methods
   ``set_configs``); passing it now raises a :exc:`TypeError`.
 - ``Bridge.api_params`` was removed. :class:`~ampapi.Bridge` is an :class:`~ampapi.modules.APIParams` itself, so read
   ``bridge.url``, ``bridge.user`` and the rest straight off it. ``Bridge(api_params=...)`` still works.
-- :meth:`~ampapi.adsmodule.ADSModule.create_instance` returns a :class:`~ampapi.modules.RunningTask`, which is what AMP
-  sends; 4.x returned an ``ActionResult``.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance` and :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`
+  return a :class:`~ampapi.modules.RunningTask`, which is what AMP sends; 4.x returned an ``ActionResult``, and
+  ``create_instance_from_spec`` raised on AMP 2.8's reply.
 - :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like ``mc_accept_eula``; 4.x returned None.
 - ``PostCreateActionsState`` was removed; it never matched AMP's ``PostCreateAppActions`` (eg. its ``start_instance``
   was AMP's ``update_once``, and ``every_time`` = 16 doesn't exist). :class:`~ampapi.CreateInstance`,

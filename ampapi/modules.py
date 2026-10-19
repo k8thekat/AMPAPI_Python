@@ -1139,6 +1139,8 @@ class Diagnostics:
         The 'type' of server. eg. Forge, Fabric, etc...
     java_version : :class:`str`
         The path to the java lib.
+    config_version : :class:`str`
+        The version of the application template a Generic Instance runs, "" for every other module.
     tools_version : :class:`str`
         The version of the build tools for the Instance.
     virtualization : :class:`str`
@@ -1175,6 +1177,8 @@ class Diagnostics:
     server_jar: str = ""
     server_type: str = ""
     java_version: str = ""
+    # Generic Instances (GenericModule) only, eg. a Counter-Strike: Source server sends "3".
+    config_version: str = ""
 
     def __repr__(self) -> str:
         return pformat(vars(self))
