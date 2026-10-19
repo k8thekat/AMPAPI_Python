@@ -150,9 +150,13 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 
 - `ADSModule/StartInstance` and its siblings pick the Instance by name, on the ADS the call is sent to. Sent to the
   Controller, `"ADS01"` is the Controller's own ADS even when the caller means a Target's `ADS01` (vm1 logged the
-  request, vm2 nothing). `Instance.start_instance()` / `stop_instance()` / `restart_instance()` go through the
-  Controller by name, so on a `TargetADS` they act on the Controller's ADS, and any Instance whose name repeats on
-  another ADS can hit the wrong one.
+  request, vm2 nothing). `Instance.start_instance()` / `stop_instance()` / `restart_instance()` pick the ADS with
+  `_routed_ads()`, which reads `target_id`, unless `route_by_target` is False (on the Instance or its Controller).
+- A Target's game Instances carry the wrong `target_id` when read through the Controller (2026-10-19). vm2 lists
+  MCTest01 with `target_id` = vm2's ADS ID, but vm1's `GetInstances` and `GetInstance` relay it with vm1's own ADS ID,
+  while the Target's ADS Instance keeps its own ID. So `_routed_ads()` sends MCTest01 to the Controller by name. The
+  2026-10-18 live check reached vm2 only because the name is unique. The Target item that lists the Instance is the
+  reliable source.
 
 ## Non-admin users
 

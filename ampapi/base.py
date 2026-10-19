@@ -151,6 +151,8 @@ class Base:
     _module: str
     _format_data: ClassVar[bool] = True
     _route_by_target: ClassVar[bool] = True
+    # Set per object by the `route_by_target` setter; None falls back to `_route_by_target`.
+    _route_override: Union[bool, None] = None
     _endpoint_url: str
     _instance_id: str
     _session_ttl: ClassVar[int] = 240
@@ -242,29 +244,32 @@ class Base:
     @property
     def route_by_target(self) -> bool:
         """Controls whether an Instance's start, stop and restart go through the Target that holds the Instance.\n
-        Default is ``True``.
+        Default is `True`.
 
         AMP looks the Instance name up on whichever ADS receives the call, so names that repeat across Targets
-        (every ADS is ``ADS01``) only resolve correctly when the call is sent to the right Target.
+        (every ADS is `ADS01`) only resolve correctly when the call is sent to the right Target.
 
         .. note::
-            ``True`` = send the call to the Target that holds the Instance \n
-            ``False`` = always send the call to the :class:`Controller`
+            `True` = send the call to the Target that holds the Instance \n
+            `False` = always send the call to the :class:`Controller`
 
-        Setting this changes the global for every object, like :attr:`format_data`.
+        Setting this only changes this object. An :class:`Instance` that was not set uses its :class:`Controller`'s
+        value, so setting it on the Controller covers every Instance it holds.
 
 
         Returns
         -------
         :class:`bool`
-            Returns ``True`` or ``False``.
+            Returns `True` or `False`.
 
         """
+        if self._route_override is not None:
+            return self._route_override
         return Base._route_by_target
 
     @route_by_target.setter
     def route_by_target(self, value: bool) -> None:
-        Base._route_by_target = value
+        self._route_override = value
 
     @property
     def session_ttl(self) -> int:

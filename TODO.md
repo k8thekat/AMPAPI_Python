@@ -19,6 +19,7 @@ A small todo list local to the project.
 ---
 
 - Plan what else `TargetADS` should mirror from `Controller` (eg. its Target data on `self`, the cache guard).
+- Route by the Target that lists the Instance, not its `target_id` (wrong when relayed by the Controller, see NOTES.md).
 - Check `ForceIncludeSelf` False on a hybrid ADS with local game Instances.
 
 ## ampapi/base.py

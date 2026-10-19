@@ -75,8 +75,9 @@ Changed methods
 - ``Base.clean_up()`` takes a keyword-only ``logout`` (default False) to call ``Core/Logout`` before closing the session.
 - :meth:`~ampapi.instance.Instance.start_instance`, ``stop_instance`` and ``restart_instance`` go through the Target that
   holds the Instance, so the name is looked up on the right ADS. 4.x sent them to the Controller, which acts on its own
-  Instance when two ADSs share a name (every ADS is ``ADS01``). Pass ``route_by_target=False``, or set the global
-  ``route_by_target`` to False, for the 4.x path. The first routed call may make one ``get_module_info`` call.
+  Instance when two ADSs share a name (every ADS is ``ADS01``). For the 4.x path, set ``route_by_target`` to False on
+  the :class:`~ampapi.instance.Controller` (every Instance it holds follows it) or on one Instance. The first routed
+  call may make one ``get_module_info`` call.
 - :meth:`~ampapi.adsmodule.ADSModule.get_provision_fitness` returns None when AMP has no fitness data (JSON null),
   instead of raising.
 - ``DeploymentTemplate.settings_mappings`` is now ``setting_mappings``, AMP's own key; its ``description``, ``module``,
