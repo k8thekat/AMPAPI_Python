@@ -162,6 +162,16 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   with `is_remote_instance` True, and `get_mode()` gives `target`. `TargetADS.get_instances()` and
   `TargetADS.get_instance()` return MCTest01 with `target_id` = vm2's ID, and that object routes to the `TargetADS`.
   `Controller.get_instance(<Target ADS ID>)` builds a new `TargetADS`, not the one in `Controller.instances`.
+- The library only ever talks to the Controller's URL. A `TargetADS` calls `ADSModule/Servers/<Target ADS ID>/API/...`
+  and an Instance calls `ADSModule/Servers/<Instance ID>/API/...`, both on the Controller, which passes them on.
+- `ADSModule.Network.AccessMode` (`AccessModeState`, set on the Controller) is how the Controller reaches a remote
+  Instance: 0 "Via Target" (the Target relays, the default), 10 "Direct from Controller" (the Controller connects to the
+  Instance's port), 20 "Bypass Controller" (the browser talks to the Target's ADS, which needs HTTPS and CORS). See
+  https://discourse.cubecoders.com/t/2268. On the VM pair (2026-10-19) every mode left the library's calls working:
+  `TargetADS` `get_module_info` / `get_instances` / `restart_instance`, MCTest01's own `get_module_info` / `get_status`,
+  and `Controller.restart_instance` by name. Nothing in the settings spec stops a Target managing its own Instances.
+- For a few seconds after `restart_instance`, calls to that Instance fail with "Instance Unavailable" ("The requested
+  instance is not available at this time"), and so does the library's re-login.
 
 ## Non-admin users
 
