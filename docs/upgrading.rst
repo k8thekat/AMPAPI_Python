@@ -73,14 +73,14 @@ Returned data
   :class:`~ampapi.modules.Updates` with dataclasses (``ConsoleEntries``, ``Messages``, ``Port`` and ``RunningTask``);
   4.x left them as dicts.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
-- :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS row (eg. ``ADS01``) out of
-  :attr:`~ampapi.instance.Controller.instances`, since that row is the Controller; its data is copied onto the Controller.
-  The ADS rows of remote Targets come back as :class:`~ampapi.instance.TargetADS`; 4.x returned an ``AMPADSInstance`` for
-  every ADS row, the Controller's own included.
+- :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. ``ADS01``) out of
+  :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the
+  Controller. The ADS Instances of remote Targets come back as :class:`~ampapi.instance.TargetADS`; 4.x returned an
+  ``AMPADSInstance`` for every ADS Instance, the Controller's own included.
 - The Controller attributes copied from :meth:`~ampapi.instance.Controller.get_instances` (eg. ``friendly_name``,
   ``state``) raise an ``AttributeError`` naming ``get_instances()`` until it has run, and log a warning on each read
   once that data is older than 300 seconds. ``include_self=False`` leaves them unset, since AMP then drops the
-  Controller's own entry.
+  local Target.
 
 
 Target ADS
@@ -95,6 +95,6 @@ Target ADS
 - :meth:`~ampapi.instance.Controller.get_instance` on the Controller's own ADS id (and
   :meth:`~ampapi.instance.TargetADS.get_instance` on a ``TargetADS``'s own id) returns that object itself. The
   Controller learns its own ADS id from :meth:`~ampapi.instance.Controller.get_instances`, or from the new
-  ``auto_detect=True`` argument. Without either, an ADS row logs a warning and comes back as a ``TargetADS``.
+  ``auto_detect=True`` argument. Without either, an ADS Instance logs a warning and comes back as a ``TargetADS``.
 - :meth:`~ampapi.instance.TargetADS.get_instances` returns the Instances on that Target, leaving out the Target's own
-  ADS row, and keeps them on ``TargetADS.instances``.
+  ADS Instance, and keeps them on ``TargetADS.instances``.

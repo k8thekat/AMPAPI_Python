@@ -106,7 +106,7 @@ empty and the install fails creating the `amp` user. A fresh ADS has no mode; se
 Controller before pairing a Target.
 
 A pairing code alone is not enough (AMP 2.8.0.8): the Controller's polls fail with "Token Rejected", and the remote
-entry lists no Instances. The Controller logs in to the Target with a token from its own `AMP_SYSTEM` user, so the
+Target lists no Instances. The Controller logs in to the Target with a token from its own `AMP_SYSTEM` user, so the
 Target has to check logins with the Controller (`Core.Login.UseAuthServer` True, `Core.Login.AuthServerURL` the
 Controller's url), and the Controller has to answer them (`Core.Security.EnablePassthruAuth` True, else "Passthru
 Disabled"). Restart both ADSs after. From then on the Target takes the Controller's logins, not its own.
@@ -127,20 +127,21 @@ task, and only the Controller's log says it failed for want of a key. `CreateIns
 ## Controller and Target data
 
 Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Target with only its ADS:
-- `GetInstances` sends one entry per ADS. The local entry's `friendly_name` is "Local Instances", and each entry
-  lists its own ADS as a row whose `instance_id` matches the entry's.
-- `ForceIncludeSelf` False on a Controller drops the whole local entry, not just its ADS row, so
+- `GetInstances` sends one Target per ADS. The local Target's `friendly_name` is "Local Instances", and each Target
+  lists its own ADS Instance, the one whose `instance_id` matches the Target's.
+- `ForceIncludeSelf` False on a Controller drops the whole local Target, not just its ADS Instance, so
   `Controller.get_instances(include_self=False)` leaves `self`'s cached data unset. On a Target or a standalone ADS it
   changes nothing. Unchecked: whether it also drops local game Instances on a hybrid ADS.
-- `GetInstance` on the Controller's own ADS id, or on a Target's ADS id, returns that ADS row, so
-  `Controller.get_instance` builds a new `TargetADS` for either. Calls through both proxy fine (`get_updates`).
+- `GetInstance` on the Controller's own ADS id, or on a Target's ADS id, returns that ADS Instance. Nothing in it
+  says which. `Controller.get_instance` returns `self` for its own id once it knows that id (from `get_instances()` or
+  `auto_detect=True`), and a `TargetADS` otherwise. A `TargetADS` for either id proxies fine (`get_updates`).
 - `GetInstance` on an id AMP doesn't know returns JSON `null`, which `_response_handler` raises as
   "JSON returned <None>".
 - `Controller.instance_id` stays "0" after `get_instances()`. That is the Controller's session key, not a missing value.
 - With a Minecraft Instance on the Target, both sides return it as a `MinecraftInstance`, and formatted
   `get_status` / `get_updates` work through the Controller (vm1 -> vm2 -> Instance) once the auth chain is repaired.
-  Row order is not fixed: the Target lists its Instance before its ADS row, the Controller after.
-- Nothing in an ADS's data names its role. The `GetInstance` ADS rows, the local `GetInstances` entry and
+  Instance order is not fixed: the Target lists its Minecraft Instance before its ADS Instance, the Controller after.
+- Nothing in an ADS's data names its role. The `GetInstance` ADS Instances, the local `GetInstances` Target and
   `GetTargetInfo` match field for field between the Controller and the Target, bar the IP lists. `deployment_args`
   holds `core._login._use_auth_server` only in the Target's own view, and only once `RepairAuth` wrote it. The role
   lives in `ADSModule.ADS.Mode` (`get_config`, an `ADSModeState`); from a Controller, `is_remote` True also marks a Target.

@@ -1403,7 +1403,8 @@ class ADSModule(Base):
         Returns a list of all Instances the Target ADS or Controller and AMP User has permission to access.
 
         .. note::
-            AMP sends this as ``ForceIncludeSelf``. On a standalone ADS (AMP 2.8.0.8) the ADS row is returned either way.
+            AMP sends this as ``ForceIncludeSelf``. On a standalone ADS (AMP 2.8.0.8) its own ADS Instance is returned
+            either way.
 
 
         Parameters
