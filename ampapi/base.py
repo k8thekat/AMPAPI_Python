@@ -95,6 +95,8 @@ class ResponseHandlerOptions(TypedDict, total=False):
         ...
     check_key_drift : :class:`bool`
         Dev check, only with `to_file`: compare the capture with the TypedDict its endpoint narrows to.
+    allow_null : :class:`bool`
+        Return None when AMP answers JSON null, instead of raising.
 
     """
 
@@ -102,6 +104,7 @@ class ResponseHandlerOptions(TypedDict, total=False):
     to_file: bool
     path: pathlib.Path
     check_key_drift: bool
+    allow_null: bool
 
 
 class DumpParameters(TypedDict, total=False):
@@ -515,13 +518,14 @@ class Base:
         to_file: bool = False,
         path: Optional[pathlib.Path] = None,
         check_key_drift: bool = False,
+        allow_null: bool = False,
     ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
         Processes a :class:`aiohttp.ClientResponse` into a parsed response object.
 
         .. warning::
-            Will raise :exc:`AMPAPIResponseError` if the response JSON is ``None``,
+            Will raise :exc:`AMPAPIResponseError` if the response JSON is ``None`` (unless `allow_null` is True),
             indicates ``"Unauthorized Access"``, ``"Instance Unavailable"``, or has ``status`` of ``False``.
 
 
@@ -538,6 +542,8 @@ class Base:
         check_key_drift : :class:`bool`, optional
             A dev check that runs with `to_file`: compare the response with the TypedDict its endpoint narrows to,
             log a warning and write ``<endpoint>.key_drift.json`` beside the capture when the keys differ, by default False.
+        allow_null : :class:`bool`, optional
+            Return None when AMP answers JSON null, for endpoints where null means "nothing to report", by default False.
 
         Returns
         -------
@@ -581,6 +587,8 @@ class Base:
         LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", response_json)
 
         if response_json is None:
+            if allow_null is True:
+                return None
             raise AMPAPIResponseError(title="None", url=str(response.url), reason="<ClientResponse> JSON returned <None>.")
 
         if sanitize_json is True:

@@ -71,7 +71,7 @@ from ._types import (
     is_response_type,
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
-from .errors import AMPAPIKeyError, AMPAPIResponseError, AMPAPITypeError
+from .errors import AMPAPIKeyError, AMPAPITypeError
 from .modules import (
     ActionResult,
     ADSModeState,
@@ -1838,9 +1838,8 @@ class ADSModule(Base):
         Get the provision fitness of the ADS or Controller.
 
         .. note::
-            AMP answers with JSON null when it has no fitness data (eg. a Controller with no Targets).
-            :meth:`_response_handler` raises :exc:`AMPAPIResponseError` for null, so that one case is caught here
-            and returned as None. Every other error is raised as normal.
+            AMP answers with JSON null when it has no fitness data (AMP 2.8.0.8 did on a Controller with one Target).
+            This method returns None for that, through the `allow_null` response option. Every other error is raised as normal.
 
         Parameters
         ----------
@@ -1858,18 +1857,13 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        try:
-            result: ResponseAliasFull = await self._post(
-                url="ADSModule/GetProvisionFitness",
-                request_params=request_params,
-                **response_params,
-            )
-        except AMPAPIResponseError as error:
-            # ?SUGGESTION: Match on a dedicated null error once `_response_handler` raises one.
-            # The null case carries no attribute to test, only the "JSON returned <None>" reason text.
-            if "JSON returned <None>" in str(error):
-                return None
-            raise
+        # AMP answers JSON null when it has no fitness data, which is not an error here.
+        response_params["allow_null"] = True
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetProvisionFitness",
+            request_params=request_params,
+            **response_params,
+        )
         if result is None:
             return None
 

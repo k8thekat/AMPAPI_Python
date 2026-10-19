@@ -69,6 +69,16 @@ Changed methods
 - ``Base.version_validation()`` takes the ``endpoint`` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
 - ``Base.clean_up()`` takes a keyword-only ``logout`` (default False) to call ``Core/Logout`` before closing the session.
+- :meth:`~ampapi.instance.Instance.start_instance`, ``stop_instance`` and ``restart_instance`` go through the Target that
+  holds the Instance, so the name is looked up on the right ADS. 4.x sent them to the Controller, which acts on its own
+  Instance when two ADSs share a name (every ADS is ``ADS01``). Pass ``route_by_target=False``, or set the global
+  ``route_by_target`` to False, for the 4.x path. The first routed call may make one ``get_module_info`` call.
+- :meth:`~ampapi.adsmodule.ADSModule.get_provision_fitness` returns None when AMP has no fitness data (JSON null),
+  instead of raising.
+- ``DeploymentTemplate.settings_mappings`` is now ``setting_mappings``, AMP's own key; its ``description``, ``module``,
+  ``template_role`` and ``template_base_app`` can be None. With templates present, 4.x could not build the class at all.
+- ``Base.version_validation()`` checked the wrong way round and never fired; it now raises once AMP is at or past the
+  version the endpoint was removed in.
 
 
 Errors
@@ -93,6 +103,9 @@ Returned data
   ``state``) raise an ``AttributeError`` naming ``get_instances()`` until it has run, and log a warning on each read
   once that data is older than 300 seconds. ``include_self=False`` leaves them unset, since AMP then drops the
   local Target.
+- Keys holding a dot are AMP setting nodes and keep AMP's spelling (eg. ``deployment_args`` keeps
+  ``ADSModule.Defaults.DefaultAuthServerURL``); 4.x rewrote them like field names
+  (``ads_module._defaults._default_auth_server_url``).
 
 
 Target ADS

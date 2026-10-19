@@ -1339,10 +1339,10 @@ class Core(Base):
             raise ValueError(msg)
         if days < 0 or days > 7:
             msg = "Days must be between 0 and 7."
-            raise ValueError
+            raise ValueError(msg)
         if hours < 0 or hours > 23:
             msg = "Hours must be between 0 and 23."
-            raise ValueError
+            raise ValueError(msg)
         if minutes < 0 or minutes > 59:
             msg = "Minutes must be between 0 and 59."
             raise ValueError(msg)

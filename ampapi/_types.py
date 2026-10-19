@@ -136,8 +136,7 @@ TIMED_TRIGGER_EXCLUDED_KEYS: tuple[str, ...] = ()
 USER_APPLICATION_DATA_REQUIRED_KEYS: tuple[str, ...] = ("user_session_id", "join_time")
 USER_APPLICATION_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# TODO: Confirm these keys against a live GetBackups response.
-# The captured response is an empty list, so they come from the `Backup` dataclass.
+# Confirmed against a live GetBackups response (AMP 2.8.0.8, a Minecraft Instance backup).
 BACKUP_REQUIRED_KEYS: tuple[str, ...] = ("id", "stored_locally", "stored_remotely")
 BACKUP_EXCLUDED_KEYS: tuple[str, ...] = ()
 
