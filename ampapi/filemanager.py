@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 from ._types import ACTION_RESULT_EXCLUDED_KEYS, ACTION_RESULT_REQUIRED_KEYS, ActionResultResponse, is_response_type
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import ActionResult, Directory, FileChunk
+from .modules import ActionResult, Directory, FileChunk, FolderUploadFile
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
@@ -70,6 +70,11 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Append data to a file.
+
+        .. warning::
+            On AMP 2.8.0.8 this call has no visible effect. It creates no file, does not append to a file made by
+            :meth:`write_file_chunk`, and `delete` set to True leaves the file alone. The panel never calls it,
+            use :meth:`write_file_chunk` instead.
 
         Parameters
         ----------
@@ -969,7 +974,7 @@ class FileManagerPlugin(Base):
         file_path: str,
         data: str,
         offset: int,
-        append: bool = False,
+        final_chunk: bool = False,
         *,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
@@ -984,11 +989,11 @@ class FileManagerPlugin(Base):
         file_path : :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         data : :class:`str`
-            The binary data to be written.
+            The base64 encoding of the bytes to be written.
         offset : :class:`int`
             The position offset from start of file.
-        append : :class:`bool`
-            Appends the data to the end of the file, default is False.
+        final_chunk : :class:`bool`, optional
+            Marks this as the last chunk of the file, so send `True` only on the last chunk, by default False.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -1007,7 +1012,7 @@ class FileManagerPlugin(Base):
             "Filename": self.sanitize_path(path=file_path),
             "Data": data,
             "Offset": offset,
-            "FinalChunk": append,
+            "FinalChunk": final_chunk,
         }
         result: ResponseAliasFull = await self._post(
             url="FileManagerPlugin/WriteFileChunk",
@@ -1028,7 +1033,7 @@ class FileManagerPlugin(Base):
     async def upload_folder(
         self,
         target_directory: str,
-        files: list[dict[str, Any]],
+        files: list[FolderUploadFile],
         *,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
@@ -1039,6 +1044,11 @@ class FileManagerPlugin(Base):
         Upload an entire folder as a set of files with relative paths.
 
         .. note::
+            The `target_directory` must already exist, AMP answers "The specified directory does not exist" otherwise.
+            Subfolders in a file's `relative_path` are created.
+
+
+        .. note::
             Requires the ``FileManager.FileManager.UploadFiles`` permission.
 
 
@@ -1046,8 +1056,8 @@ class FileManagerPlugin(Base):
         ----------
         target_directory : :class:`str`
             Path to the folder the files are uploaded into; relative to the Instance root. eg ``./InstanceName/``.
-        files : list[dict[:class:`str`, Any]]
-            The files to upload, each one a ``FolderUploadFile`` as AMP defines it.
+        files : list[:class:`FolderUploadFile`]
+            The files to upload, each one's content is sent as base64.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -1062,9 +1072,10 @@ class FileManagerPlugin(Base):
 
         """
         await self._reauth()
-        # TODO: Confirm the keys of a FolderUploadFile against a live payload.
-        # The spec only names the type, so `files` is passed through as given.
-        parameters: dict[str, Any] = {"TargetDirectory": self.sanitize_path(target_directory), "Files": files}
+        parameters: dict[str, Any] = {
+            "TargetDirectory": self.sanitize_path(target_directory),
+            "Files": [file.to_dict() for file in files],
+        }
         result: ResponseAliasFull = await self._post(
             url="FileManagerPlugin/UploadFolder",
             parameters=parameters,

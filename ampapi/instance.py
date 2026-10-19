@@ -1675,8 +1675,9 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             :attr:`TargetADS.instances`. A Target whose own ADS Instance is missing from the reply is skipped.
 
         .. note::
-            On a Controller, `include_self=False` makes AMP drop the local Target, so `self` is not updated. Its
-            cached attributes raise until a call with `include_self=True`.
+            On a Controller, `include_self=False` makes AMP drop the local Target only when it holds nothing but the
+            Controller's own ADS Instance, so `self` is not updated. When the local Target holds other Instances AMP sends
+            it anyway. Its cached attributes raise until a call that returns the local Target.
 
         .. note::
             If ``format_data`` is False this will return the raw list of Target dicts instead and nothing is updated.

@@ -1417,7 +1417,6 @@ class ADSModule(Base):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetDeploymentTemplates", cur_type=result, expec_type=list)
 
-    # TODO: Build a dataclass and TypedDict for this response; the endpoint's shape is still unknown.
     @Base.ads_only
     async def get_group(
         self,
@@ -1425,19 +1424,21 @@ class ADSModule(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> dict[str, Any]:
+    ) -> Union[ControllerResponse, None]:
         """|coro|
 
         Get the specified group.
 
         .. note::
-            Unsure what this is used for or does. May return ADS information/Instances related to it.
+            AMP answers with the Target item for the ID, the same shape as one entry of :meth:`get_instances`.
+            The panel calls this to refresh a single Target and treats JSON null as the Target being gone.
+            This method returns None for that, through the `allow_null` response option.
 
 
         Parameters
         ----------
         group_id : :class:`str`
-            The Group ID.
+            The ID of the Target, as in :attr:`ControllerResponse.id`.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1445,21 +1446,28 @@ class ADSModule(Base):
 
         Returns
         -------
-        dict[:class:`str`, Any]
-            On success returns a dictionary.
+        Union[:class:`ControllerResponse`, None]
+            On success returns the Target dictionary, or None when AMP answers with JSON null.
 
         """
         await self._reauth()
+        # AMP answers JSON null when the Target is gone, which is not an error here.
+        response_params["allow_null"] = True
         parameters: dict[str, str] = {"groupId": group_id}
-        result: Any = await self._post(
+        result: ResponseAliasFull = await self._post(
             url="ADSModule/GetGroup",
             parameters=parameters,
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if result is None:
+            return None
+
+        if isinstance(result, (str, bool)):
             raise AMPAPITypeError(end_point="ADSModule/GetGroup", cur_type=result, expec_type=dict)
-        return result
+        if is_response_type(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/GetGroup", cur_type=result, expec_type=dict)
 
     async def get_instance(
         self,
@@ -2895,6 +2903,11 @@ class ADSModule(Base):
 
         .. warning::
             This Endpoint has not been fully tested, multiple parameters are unknown, or functionality is unknown.
+
+
+        .. warning::
+            ``ADSModule/Servers`` is AMP's proxy route, the one the library uses as a URL path in ``ADSModule/Servers/<ID>/API/...``.
+            Calling it as an endpoint fails, AMP 2.8.0.8 answers "Index was outside the bounds of the array".
 
 
         Parameters

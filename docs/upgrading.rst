@@ -95,6 +95,11 @@ Changed methods
   :meth:`~ampapi.instance.TargetADS.get_instance` for it. A Target's ADS ID returns the cached ``TargetADS``.
 - :meth:`~ampapi.adsmodule.ADSModule.get_provision_fitness` returns None when AMP has no fitness data (JSON null),
   instead of raising.
+- :meth:`~ampapi.adsmodule.ADSModule.get_group` returns the Target dictionary (the shape of one
+  :meth:`~ampapi.adsmodule.ADSModule.get_instances` entry), or None when AMP answers JSON null.
+- :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk` renamed ``append`` to ``final_chunk``. It was always
+  sent as AMP's ``FinalChunk``, which marks the last chunk of the file, not an append.
+- ``APIParams`` (and so :class:`~ampapi.Bridge`) strips a trailing ``/`` from ``url``.
 - ``DeploymentTemplate.settings_mappings`` is now ``setting_mappings``, AMP's own key; its ``description``, ``module``,
   ``template_role`` and ``template_base_app`` can be None. With templates present, 4.x could not build the class at all.
 - ``Base.version_validation()`` checked the wrong way round and never fired; it now raises once AMP is at or past the
