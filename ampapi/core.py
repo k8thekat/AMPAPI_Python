@@ -2975,12 +2975,17 @@ class Core(Base):
         Any
             UNK data returned by the API.
 
+        Raises
+        ------
+        :exc:`RuntimeError`
+            The AMP version no longer has this endpoint. (AMP 2.6.0.0 and newer)
+
         """
         await self._reauth()
-        try:
-            await self.version_validation(version=BuildInfo(major=2, minor=6, revision=0, minor_revision=0))
-        except RuntimeError as e:
-            return e
+        await self.version_validation(
+            version=BuildInfo(major=2, minor=6, revision=0, minor_revision=0),
+            endpoint="Core/GetWebserverMetrics",
+        )
 
         result: ResponseAliasFull = await self._post(
             url="Core/GetWebserverMetrics",
