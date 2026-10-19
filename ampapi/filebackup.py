@@ -22,7 +22,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
-from ._types import ACTION_RESULT_EXCLUDED_KEYS, ACTION_RESULT_REQUIRED_KEYS, ActionResultResponse, is_response_type
+from ._types import (
+    ACTION_RESULT_EXCLUDED_KEYS,
+    ACTION_RESULT_REQUIRED_KEYS,
+    BACKUP_EXCLUDED_KEYS,
+    BACKUP_REQUIRED_KEYS,
+    ActionResultResponse,
+    BackupResponse,
+    is_response_type,
+)
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
 from .modules import ActionResult, Backup, RunningTask
@@ -174,7 +182,7 @@ class LocalFileBackupPlugin(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[Backup] | list[dict[str, Any]]:
+    ) -> list[Backup] | list[BackupResponse]:
         """|coro|
 
         Get a list of Backups.
@@ -190,8 +198,13 @@ class LocalFileBackupPlugin(Base):
 
         Returns
         -------
-        list[:class:`Backup`]
-            On success returns a list of :class:`Backup` dataclasses.
+        list[:class:`Backup`] | list[:class:`BackupResponse`]
+            On success returns a list of :class:`Backup` dataclasses, or the raw dictionaries when `format_data` is False.
+
+        Raises
+        ------
+        :exc:`AMPAPITypeError`
+            If AMP did not answer with a list of Backups.
 
         """
         await self._reauth()
@@ -204,9 +217,14 @@ class LocalFileBackupPlugin(Base):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/GetBackups", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
+        backups: list[BackupResponse] = []
+        for item in result:
+            if not is_response_type(item, BackupResponse, BACKUP_REQUIRED_KEYS, BACKUP_EXCLUDED_KEYS):
+                raise AMPAPITypeError(end_point="LocalFileBackupPlugin/GetBackups", cur_type=item, expec_type=dict)
+            backups.append(item)
         if format_data is True:
-            return [Backup(**item) for item in result]
-        return result
+            return [Backup(**backup) for backup in backups]
+        return backups
 
     async def refresh_backup_list(
         self,

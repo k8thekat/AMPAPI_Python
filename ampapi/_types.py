@@ -136,6 +136,11 @@ TIMED_TRIGGER_EXCLUDED_KEYS: tuple[str, ...] = ()
 USER_APPLICATION_DATA_REQUIRED_KEYS: tuple[str, ...] = ("user_session_id", "join_time")
 USER_APPLICATION_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
+# TODO: Confirm these keys against a live GetBackups response.
+# The captured response is an empty list, so they come from the `Backup` dataclass.
+BACKUP_REQUIRED_KEYS: tuple[str, ...] = ("id", "stored_locally", "stored_remotely")
+BACKUP_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 # TODO: Confirm these keys against a live GetOPWhitelist response.
 # The captured response is a "Missing Method" error, so they come from the `OPWhitelist` dataclass.
 OP_WHITELIST_REQUIRED_KEYS: tuple[str, ...] = ("op_list", "whitelist")
@@ -406,6 +411,26 @@ class AvailableTriggersResponse(TypedDict):
     trigger_type: str
     enabled_state: int
     last_run: None
+
+
+class BackupResponse(TypedDict):
+    created_automatically: bool
+    description: str
+    id: str
+    module_name: str
+    name: str
+    source_os: int
+    sticky: bool
+    stored_locally: bool
+    stored_remotely: bool
+    taken_by: str
+    total_size_bytes: int
+    timestamp: str
+    compressed_size_bytes: NotRequired[Union[int, None]]
+    hash_sha1: NotRequired[Union[str, None]]
+    meta: NotRequired[Any]
+    parent_manifest: NotRequired[Union[str, None]]
+    remote_store_id: NotRequired[Union[str, None]]
 
 
 class BukkitCategories(TypedDict):
