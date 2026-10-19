@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import secrets
 from dataclasses import dataclass, field, fields, is_dataclass
 from enum import Enum
 from operator import attrgetter
@@ -850,7 +851,7 @@ class CreateInstance:
     module : :class:`str`
         The Instance module it will use.
     new_instance_id : :class:`str`
-        UNK
+        The ID for the new Instance, default is the zero GUID ("00000000-0000-0000-0000-000000000000"), which lets AMP pick the ID.
     instance_name : :class:`str`
         The name for the Instance, similar to :attr:`friendly_name`.
     ip_binding : :class:`str`
@@ -858,9 +859,10 @@ class CreateInstance:
     port_number : :class:`int`
         The Port to assign to the Instance.
     admin_username : :class:`str`
-        UNK
+        The username of the Instance's admin user, default is "admin". AMP rejects an empty username.
     admin_password : :class:`str`
-        The password for the :attr:`admin_username`.
+        The password for the :attr:`admin_username`, default is a generated `secrets.token_urlsafe(18)` value.
+        AMP rejects an empty password, and the generated one is ignored when :attr:`auto_configure` is True.
     provision_settings : dict[:class:`str`, :class:`str`]
         UNK
     auto_configure : :class:`bool`
@@ -881,12 +883,12 @@ class CreateInstance:
     target_ads_instance: str  # Tied to Auto Configure
     friendly_name: str  # Tied to Auto Configure
     module: str  # Tied to Auto Configure
-    new_instance_id: str = field(default="")
+    new_instance_id: str = field(default="00000000-0000-0000-0000-000000000000")
     instance_name: str = field(default="")
     ip_binding: str = field(default="192.168.0.1")
     port_number: int = field(default=8001)
-    admin_username: str = field(default="")
-    admin_password: str = field(default="")
+    admin_username: str = field(default="admin")
+    admin_password: str = field(default_factory=lambda: secrets.token_urlsafe(18))
     provision_settings: dict[str, str] = field(default_factory=dict[str, str])
     auto_configure: bool = field(default=False)
     post_create: PostCreateActionsState = field(default=PostCreateActionsState.do_nothing)
