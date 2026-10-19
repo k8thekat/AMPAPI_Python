@@ -157,6 +157,11 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   while the Target's ADS Instance keeps its own ID. So `_routed_ads()` sends MCTest01 to the Controller by name. The
   2026-10-18 live check reached vm2 only because the name is unique. The Target item that lists the Instance is the
   reliable source.
+- Through the Target's own ADS the data is right. `Controller.get_instances()` builds a `TargetADS` for a Target's ADS
+  Instance (endpoint `ADSModule/Servers/<Target ADS ID>`), and vm2 answers its calls: `get_module_info` gives vm2's ID
+  with `is_remote_instance` True, and `get_mode()` gives `target`. `TargetADS.get_instances()` and
+  `TargetADS.get_instance()` return MCTest01 with `target_id` = vm2's ID, and that object routes to the `TargetADS`.
+  `Controller.get_instance(<Target ADS ID>)` builds a new `TargetADS`, not the one in `Controller.instances`.
 
 ## Non-admin users
 
