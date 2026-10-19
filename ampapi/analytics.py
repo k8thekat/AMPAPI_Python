@@ -104,3 +104,47 @@ class AnalyticsPlugin(Base):
         if format_data is True:
             return AnalyticsSummary(**result)
         return result
+
+    async def get_user_details(
+        self,
+        username: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> dict[str, Any]:
+        """|coro|
+
+        Retrieves the Analytics details of a user.
+
+        .. note::
+            Requires the ``Analytics.Analytics.AccessUserDetails`` permission.
+
+
+        Parameters
+        ----------
+        username : :class:`str`
+            The user name to retrieve the details of.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        dict[:class:`str`, Any]
+            On success returns the raw dictionary of the user's details.
+
+        """
+        await self._reauth()
+        parameters: dict[str, str] = {"Username": username}
+        result: ResponseAliasFull = await self._post(
+            url="AnalyticsPlugin/GetUserDetails",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="AnalyticsPlugin/GetUserDetails", cur_type=result, expec_type=dict)
+        # TODO: Confirm the shape of the response against a live payload.
+        # AMP documents it as Object; no TypedDict until the keys are seen.
+        return result  # pyright: ignore[reportReturnType]

@@ -1001,23 +1001,23 @@ class DeploymentTemplate:
     ----------
     clone_role_into_user : :class:`bool`
         Clone the :attr:`template_role` to the users of this template.
-    description : :class:`str`
+    description : Union[:class:`str`, None]
         The description of the deployment template.
     id : :class:`int`
         The ID of the deployment template.
-    module : :class:`str`
+    module : Union[:class:`str`, None]
         The AMP Instance module type. eg. "Generic", "Minecraft"
     name : :class:`str`
         The deployment template name.
-    template_base_app : :class:`str`
+    template_base_app : Union[:class:`str`, None]
         The application that is template is used for.
     template_instance : Any
         UNK
-    template_role : :class:`str`
+    template_role : Union[:class:`str`, None]
         The template role name, similar to the AMP User Roles.
     match_datastore_tags : :class:`bool`
         To force match the datastore tags; if any.
-    settings_mappings : dict[:class:`str`, :class:`str`]
+    setting_mappings : dict[:class:`str`, :class:`str`]
         A dictionary of setting mappings.
     start_on_boot : :class:`bool`
         If the Instance should start on ADS01/Controller boot or not, default is False.
@@ -1035,7 +1035,7 @@ class DeploymentTemplate:
         "match_datastore_tags",
         "module",
         "name",
-        "settings_mappings",
+        "setting_mappings",
         "start_on_boot",
         "tags",
         "template_base_app",
@@ -1048,29 +1048,29 @@ class DeploymentTemplate:
         self,
         id: int,  # noqa: A002 # This is due to id overshadowing Python built-ins.
         name: str,
-        description: str,
-        module: str,
+        description: Union[str, None],
+        module: Union[str, None],
         template_instance: Any,
-        template_role: str,
-        template_base_app: str,
+        template_role: Union[str, None],
+        template_base_app: Union[str, None],
         clone_role_into_user: bool,
         zip_overlay_path: str,
         match_datastore_tags: bool,
-        settings_mappings: dict[str, str],
+        setting_mappings: dict[str, str],
         tags: list[str],
         start_on_boot: bool = False,
     ) -> None:
         self.id: int = id
         self.name: str = name
-        self.description: str = description
-        self.module: str = module
+        self.description: Union[str, None] = description
+        self.module: Union[str, None] = module
         self.template_instance = template_instance
-        self.template_role: str = template_role
-        self.template_base_app: str = template_base_app
+        self.template_role: Union[str, None] = template_role
+        self.template_base_app: Union[str, None] = template_base_app
         self.clone_role_into_user: bool = clone_role_into_user
         self.zip_overlay_path: str = zip_overlay_path
         self.match_datastore_tags: bool = match_datastore_tags
-        self.settings_mappings: dict[str, str] = settings_mappings
+        self.setting_mappings: dict[str, str] = setting_mappings
         self.tags: list[str] = tags
         self.start_on_boot: bool = start_on_boot
 
@@ -2747,6 +2747,8 @@ class TimedTrigger:
         The order in which this trigger will appear in the Event list.
     tasks : :class:`list[TriggerTasks]`
         The list of tasks associated with this Timed Trigger.
+    last_executed : Union[:class:`str`, None], optional
+        When the Timed Trigger last fired, None if it never has, by default None.
 
     """
 
@@ -2764,6 +2766,8 @@ class TimedTrigger:
     # Spelled as a union of lists rather than list[TriggerTasks | TriggersTasksResponse]; list is invariant
     # in its element type, so the raw response would not be assignable to the combined form.
     tasks: list[TriggerTasks] | list[TriggersTasksResponse] = field(default_factory=list["TriggerTasks"])
+    # Confirmed live on AMP 2.8.0.8.
+    last_executed: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:
         self.tasks = [TriggerTasks(**entry) if isinstance(entry, dict) else entry for entry in self.tasks]

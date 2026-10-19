@@ -1,3 +1,23 @@
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
+
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
@@ -19,21 +39,25 @@ class FileManagerPlugin(Base):
     """Contains all functions for any ``/API/FileManagerPlugin/`` API endpoints.
 
     .. note::
-        All file_path fields must include the path to the file and the file name. All paths are relative to the Server/Instance root that is making the API call.
+        All file_path fields must include the path to the file and the file name.
+        All paths are relative to the Server/Instance root that is making the API call.
 
 
     .. note::
-        You do not need to include the "/" at the start of the path. All file_path fields are sanitized prior to making the API call. See :meth:`~Base.sanitize_path`
+        You do not need to include the "/" at the start of the path.
+        All file_path fields are sanitized prior to making the API call. See :meth:`~Base.sanitize_path`
 
 
     .. note::
-        "await Instance.copyFile("eula.txt", "test")" would move "./InstanceName/eula.txt" to "./InstanceName/test/eula.txt"
+        "await Instance.copyFile("eula.txt", "test")" would move "./InstanceName/eula.txt"
+        to "./InstanceName/test/eula.txt"
 
 
 
     """
 
-    # TODO - What does the delete parameter on this function do?
+    # TODO: Confirm what the delete parameter does.
+    # The 2.8.0.8 spec lists `Delete` as a required Boolean with no description.
     async def append_file_chunk(
         self,
         file_path: str,
@@ -54,7 +78,7 @@ class FileManagerPlugin(Base):
         data : :class:`str`
             Binary data to be written.
         delete : :class:`bool`
-            UNK
+            AMP's required ``Delete`` flag. The 2.8.0.8 spec gives no description, so its effect is unconfirmed.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -373,6 +397,57 @@ class FileManagerPlugin(Base):
             return ActionResult(**result)
         return result
 
+    async def download_folder_as_zip(
+        self,
+        directory_path: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Download an entire folder as a zip archive.
+
+        .. note::
+            Requires the ``FileManager.FileManager.DownloadFiles`` permission.
+
+
+        Parameters
+        ----------
+        directory_path : :class:`str`
+            Path to the folder; relative to the Instance root. eg ``./InstanceName/``.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, str] = {"DirectoryPath": self.sanitize_path(directory_path)}
+        result: ResponseAliasFull = await self._post(
+            url="FileManagerPlugin/DownloadFolderAsZip",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="FileManagerPlugin/DownloadFolderAsZip", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="FileManagerPlugin/DownloadFolderAsZip", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
     async def empty_trash(
         self,
         file_path: str,
@@ -636,7 +711,7 @@ class FileManagerPlugin(Base):
             return ActionResult(**result)
         return result
 
-    # TODO - Test functionality or get clarification on use/action.
+    # TODO: Test functionality or get clarification on use/action.
     async def release_file_upload_lock(
         self,
         file_path: str,
@@ -946,6 +1021,62 @@ class FileManagerPlugin(Base):
             format_data = self.format_data
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/WriteFileChunk", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return ActionResult(**result)
+        return result
+
+    async def upload_folder(
+        self,
+        target_directory: str,
+        files: list[dict[str, Any]],
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Upload an entire folder as a set of files with relative paths.
+
+        .. note::
+            Requires the ``FileManager.FileManager.UploadFiles`` permission.
+
+
+        Parameters
+        ----------
+        target_directory : :class:`str`
+            Path to the folder the files are uploaded into; relative to the Instance root. eg ``./InstanceName/``.
+        files : list[dict[:class:`str`, Any]]
+            The files to upload, each one a ``FolderUploadFile`` as AMP defines it.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        # TODO: Confirm the keys of a FolderUploadFile against a live payload.
+        # The spec only names the type, so `files` is passed through as given.
+        parameters: dict[str, Any] = {"TargetDirectory": self.sanitize_path(target_directory), "Files": files}
+        result: ResponseAliasFull = await self._post(
+            url="FileManagerPlugin/UploadFolder",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="FileManagerPlugin/UploadFolder", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="FileManagerPlugin/UploadFolder", cur_type=result, expec_type=dict)
         if format_data is True:
             return ActionResult(**result)
         return result

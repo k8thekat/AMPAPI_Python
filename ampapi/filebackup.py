@@ -46,6 +46,43 @@ __all__ = ("LocalFileBackupPlugin",)
 class LocalFileBackupPlugin(Base):
     """Contains all functions for any ``/API/LocalFileBackupPlugin/`` API endpoints."""
 
+    async def backup_will_stop_server(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> bool:
+        """|coro|
+
+        Check if taking a backup will stop the Instance.
+
+        .. note::
+            Requires the ``LocalFileBackup.Backup.ViewBackupsList`` permission.
+
+
+        Parameters
+        ----------
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`bool`
+            On success returns True if a backup will stop the Instance, otherwise False.
+
+        """
+        await self._reauth()
+        result: ResponseAliasFull = await self._post(
+            url="LocalFileBackupPlugin/BackupWillStopServer",
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, bool):
+            return result
+        raise AMPAPITypeError(end_point="LocalFileBackupPlugin/BackupWillStopServer", cur_type=result, expec_type=bool)
+
     async def delete_from_s3(
         self,
         backup_id: str,
