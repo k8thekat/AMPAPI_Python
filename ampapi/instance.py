@@ -24,7 +24,7 @@ import functools
 import logging
 import time
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, overload, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Self, Union, overload, override
 
 from .adsmodule import ADSModule
 from .analytics import AnalyticsPlugin
@@ -710,6 +710,45 @@ class TargetADS(ADSModule, Instance):
 
     module: str = "ADS"
 
+    _instances: set[InstanceTypeAliases]
+
+    @property
+    def instances(self) -> set[InstanceTypeAliases]:
+        """The Instances this Target holds, set by :meth:`get_instances`.
+
+        .. note::
+            This Target's own ADS row is left out, since that row is this object.
+
+
+        Returns
+        -------
+        set[Union[:class:`InstanceTypeAliases`]]
+            The converted Instances from the last :meth:`get_instances` call, empty until it has run.
+
+        """
+        return self._instances
+
+    def __init__(
+        self,
+        data: InstanceResponse,
+        controller: Optional[Controller] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Build a Target ADS, unpacking an API response onto its attributes.
+
+        Parameters
+        ----------
+        data : :class:`InstanceResponse`
+            The Instance data to unpack onto this class.
+        controller : Union[:class:`Controller`, None], optional
+            The Controller that holds this Target, used to convert the Instances this Target returns, by default None.
+        **kwargs : Any
+            Keyword arguments forwarded to :meth:`Instance.__init__`.
+
+        """
+        super().__init__(data=data, controller=controller, **kwargs)
+        self._instances = set()
+
     @override
     async def start_instance(
         self,
@@ -862,6 +901,190 @@ class TargetADS(ADSModule, Instance):
             **response_params,
         )
 
+    @overload
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: Literal[True],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[InstanceTypeAliases, Self]: ...
+    @overload
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: Literal[False],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> InstanceResponse: ...
+
+    # None falls back to the global `format_data`, which we can't know until runtime.
+    @overload
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: None = ...,
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]: ...
+
+    @override
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]:
+        """|coro|
+
+        Retrieve a single Instance of this Target by ID and convert the Instance.
+
+        .. note::
+            This Target's own ADS id returns `self`. AMP answers null for an id that is not on this Target.
+
+        Parameters
+        ----------
+        instance_id : :class:`str`
+            The Instance ID to retrieve.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If the row needs converting and the :attr:`_controller` attribute has not been set.
+
+        Returns
+        -------
+        Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`, :class:`InstanceResponse`]
+            On success returns the converted Instance, `self` for this Target's own ADS, or the raw Instance dict
+            if `format_data` is False.
+
+        """
+        result: InstanceResponse = await ADSModule.get_instance(
+            self,
+            instance_id=instance_id,
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is False:
+            return result
+        if result["instance_id"] == self.instance_id:
+            return self
+
+        # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
+        if self._controller is None:
+            raise RuntimeError(self._no_controller)
+        return self._controller.instance_conversion(instances=result)
+
+    @overload
+    async def get_instances(
+        self,
+        include_self: bool = ...,
+        *,
+        format_data: Literal[True],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> set[InstanceTypeAliases]: ...
+
+    @overload
+    async def get_instances(
+        self,
+        include_self: bool = ...,
+        *,
+        format_data: Literal[False],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[ControllerResponse]: ...
+
+    # None falls back to the global `format_data`, which we can't know until runtime.
+    @overload
+    async def get_instances(
+        self,
+        include_self: bool = ...,
+        *,
+        format_data: None = ...,
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]: ...
+
+    @override
+    async def get_instances(
+        self,
+        include_self: bool = True,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]:
+        """|coro|
+
+        Returns the Instances this Target holds as a set of converted :class:`Instance`, :class:`MinecraftInstance`
+        and :class:`TargetADS` objects, and keeps them on :attr:`instances`.
+
+        .. note::
+            This Target's own ADS row is `self`, so it is left out of the set. The data of the Target's entry is not
+            copied onto `self`.
+
+        .. note::
+            If `format_data` is False this will return the raw list of target dicts instead and nothing is stored.
+
+        Parameters
+        ----------
+        include_self : :class:`bool`, optional
+            Force include this Target ADS Instance in the results, by default True.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If `format_data` is True and the :attr:`_controller` attribute has not been set.
+
+        Returns
+        -------
+        Union[set[Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`]], list[:class:`ControllerResponse`]]
+            On success returns the set of converted Instances, or the raw list of target dicts if `format_data` is False.
+
+        """
+        result: list[ControllerResponse] = await ADSModule.get_instances(
+            self,
+            include_self=include_self,
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is False:
+            return result
+
+        # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
+        if self._controller is None:
+            raise RuntimeError(self._no_controller)
+
+        converted_instances: set[InstanceTypeAliases] = set()
+        for entry in result:
+            rows: list[InstanceResponse] = [row for row in entry["available_instances"] if row["instance_id"] != self.instance_id]
+            converted_instances.update(self._controller.instance_conversion(instances=rows))
+
+        self._instances = converted_instances
+        return self._instances
+
 
 class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     """Represents an AMP Controller Instance.
@@ -942,6 +1165,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     tags_list: Union[str, None]
 
     _instances: set[InstanceTypeAliases]
+    # The Controller's own ADS id. `instance_id` is the session key, so AMP's real id lives here until known.
+    _ads_instance_id: Union[str, None]
 
     __cached__ = (
         "available_instances",
@@ -1014,6 +1239,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         super().__init__(bridge=bridge, session=session)
         self._module = "ADS"
         self._instances = set()
+        self._ads_instance_id = None
 
         if data is not None:
             self._parse_controller_data(data=data)
@@ -1126,15 +1352,17 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         instance_id: str,
         *,
         format_data: Literal[True],
+        auto_detect: bool = ...,
         request_params: Optional[AioHTTPRequestOptions] = ...,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> InstanceTypeAliases: ...
+    ) -> Union[InstanceTypeAliases, Self]: ...
     @overload
     async def get_instance(
         self,
         instance_id: str,
         *,
         format_data: Literal[False],
+        auto_detect: bool = ...,
         request_params: Optional[AioHTTPRequestOptions] = ...,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> InstanceResponse: ...
@@ -1146,21 +1374,31 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         instance_id: str,
         *,
         format_data: None = ...,
+        auto_detect: bool = ...,
         request_params: Optional[AioHTTPRequestOptions] = ...,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[InstanceTypeAliases, InstanceResponse]: ...
+    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]: ...
 
     async def get_instance(
         self,
         instance_id: str,
         *,
         format_data: Union[bool, None] = None,
+        auto_detect: bool = False,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[InstanceTypeAliases, InstanceResponse]:
+    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]:
         """|coro|
 
         Retrieve a single Instance by ID and convert the Instance.
+
+        .. note::
+            An ADS row that is this Controller's own ADS comes back as `self`. The Controller only knows its own ADS id
+            once :meth:`get_instances` has run, or when `auto_detect` is True.
+
+        .. note::
+            With the id unknown and `auto_detect` False, an ADS row logs a warning and comes back as a
+            :class:`TargetADS`. Rows that are not ADS never need the id, and `format_data=False` never looks it up.
 
         Parameters
         ----------
@@ -1168,6 +1406,9 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             The Instance ID to retrieve.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
+        auto_detect : :class:`bool`, optional
+            Look up this Controller's own ADS id with one extra API call when it is unknown and the row is an ADS,
+            by default False.
         request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1175,14 +1416,11 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         Returns
         -------
-        Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`, :class:`InstanceResponse`]
-            On success returns the converted Instance, or the raw Instance dict if ``format_data`` is False.
+        Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`, :class:`Controller`, :class:`InstanceResponse`]
+            On success returns the converted Instance, `self` for this Controller's own ADS, or the raw Instance dict
+            if `format_data` is False.
 
         """
-        # result: Instance = await super().get_instance(instance_id=instance_id, format_data=format_data)
-        # if isinstance(result, dict):
-        #     return result
-        # return self.instance_conversion(instances=result)
         result: InstanceResponse = await super().get_instance(
             instance_id=instance_id,
             request_params=request_params,
@@ -1192,6 +1430,28 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             format_data = self.format_data
         if format_data is False:
             return result
+
+        # Only an ADS row can be us, so every other module skips the id question.
+        if result["module"] == "ADS":
+            if self._ads_instance_id is None and auto_detect:
+                module_info = await self.get_module_info(
+                    format_data=False,
+                    request_params=request_params,
+                    **response_params,
+                )
+                if isinstance(module_info, dict):
+                    self._ads_instance_id = module_info["instance_id"]
+
+            if self._ads_instance_id is None:
+                LOGGER.warning(
+                    "<%s.%s> | Cannot tell if the ADS row %s is this Controller, its own ADS id is unknown. "
+                    "Call `get_instances()` first or pass `auto_detect=True`. | Returning a TargetADS",
+                    __class__.__name__,
+                    "get_instance",
+                    result["instance_id"],
+                )
+            elif result["instance_id"] == self._ads_instance_id:
+                return self
         return self.instance_conversion(instances=result)
 
     def _parse_controller_data(self, data: ControllerResponse) -> None:
@@ -1253,6 +1513,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         .. note::
             The Controller's own ADS row (eg. `ADS01`) is `self`, so it is left out of the set.
+            The local entry's `instance_id` is also kept as the Controller's own ADS id, for :meth:`get_instance`.
 
         .. note::
             On a Controller, `include_self=False` makes AMP drop the Controller's own entry, so `self` is not
@@ -1328,6 +1589,11 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             request_params=request_params,
             **response_params,
         )
+        # The local entry's id is our own ADS id. Stored before the raw return so that path learns it too.
+        for entry in result:
+            if entry["is_remote"] is False:
+                self._ads_instance_id = entry["instance_id"]
+
         if format_data is None:
             format_data = self.format_data
         if format_data is False:
