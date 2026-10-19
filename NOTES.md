@@ -192,6 +192,11 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - A Target whose ADS is stopped is still listed by the Controller's `GetInstances` (from its copy, `state` 20, with its
   Instances). Its `TargetADS.get_instances()` fails at once with "Instance Unavailable", so `Controller.get_instances()`
   logs a warning, keeps that `TargetADS` with empty `instances`, and returns as normal.
+- A `TargetADS` keeps its Target's data flat like the Controller (2026-10-19). It first gets the Controller's copy of
+  the Target entry, then the Target's own view from its own `GetInstances`. The own view is fresher, but three fields
+  depend on who is asking: from the Target itself `url` is `http://localhost:8080`, `is_remote` is False and `id` is
+  its own numbering. So those three stay the Controller's. `friendly_name`, `description` and `tags` stay the ADS
+  Instance's (ADS01), not the Target's (amp-target).
 - The library only ever talks to the Controller's URL. A `TargetADS` calls `ADSModule/Servers/<Target ADS ID>/API/...`
   and an Instance calls `ADSModule/Servers/<Instance ID>/API/...`, both on the Controller, which passes them on.
 - `ADSModule.Network.AccessMode` (`AccessModeState`, set on the Controller) is how the Controller reaches a remote

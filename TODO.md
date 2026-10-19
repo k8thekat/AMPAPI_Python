@@ -18,7 +18,6 @@ A small todo list local to the project.
 
 ---
 
-- Plan what else `TargetADS` should mirror from `Controller` (eg. its Target data on `self`, the cache guard).
 
 ## ampapi/base.py
 

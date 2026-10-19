@@ -1283,7 +1283,14 @@ class TargetADS(TargetData, ADSModule, Instance):
         for target in result:
             # Our own view of the Target is the entry whose ID is ours, and it wins over the Controller's copy.
             if target["instance_id"] == self.instance_id:
-                self._parse_target_data(data=target)
+                # Bar the fields that depend on who is asking. From the Target itself `url` is localhost, `is_remote`
+                # is False and `id` is its own numbering, so we keep the Controller's for those once we have them.
+                own_view: ControllerResponse = target.copy()
+                if object.__getattribute__(self, "_is_cached") is True:
+                    own_view["url"] = self.url
+                    own_view["is_remote"] = self.is_remote
+                    own_view["id"] = self.id
+                self._parse_target_data(data=own_view)
 
             for instance in target["available_instances"]:
                 # The Target lists its own ADS Instance, that is us, so we refresh ourselves from it.
