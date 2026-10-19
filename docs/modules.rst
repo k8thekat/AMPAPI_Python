@@ -16,7 +16,6 @@ All Modules/Plugins inherit from this class.
 
 .. autoclass:: Base
    :members:
-   :exclude-members: session_ttl, instance_id
 
 Response Handler Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +41,6 @@ Core Module
 ~~~~~~~~~~~~
 .. autoclass:: Core
    :members:
-   :exclude-members: triggers
    :show-inheritance:
 
 Email Sender Module

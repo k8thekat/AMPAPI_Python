@@ -140,11 +140,6 @@ class Base:
     ----------
     api_url : :class:`str`
         The URL to access the Web Panel. This comes from your :class:`APIParams`.
-    session_ttl : :class:`int`
-        How long before the session ID expires in seconds, default is 240 seconds.
-    instance_id : :class:`str`
-        The Instance ID is a string determined by AMP, default is "0" (zero). \n
-        This is not set by a login. A Controller keeps "0", since it is the key its session is stored under.
     session : :class:`aiohttp.ClientSession`
         A static Session to use, otherwise the class will generate it's own as needed.
 
@@ -282,7 +277,10 @@ class Base:
 
     @property
     def instance_id(self) -> str:
-        """AMP Instance ID."""
+        """The Instance ID AMP gave this Instance, default is "0" (zero).
+
+        This is not set by a login. A Controller keeps "0", since it is the key its session is stored under.
+        """
         return self._instance_id
 
     @property

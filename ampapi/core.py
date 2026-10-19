@@ -109,11 +109,6 @@ class Core(Base):
         If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
 
 
-    Attributes
-    ----------
-    triggers : :class:`TriggerID`
-        You can access all the trigger IDs an Instance has via this attribute. See :class:`TriggerID` for more information.
-
     """
 
     @property

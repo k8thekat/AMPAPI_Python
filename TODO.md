@@ -67,8 +67,6 @@ A small todo list local to the project.
 
 ---
 
-- `Base.session_ttl` / `instance_id`, `Core.triggers`, `Instance.app_state` and `Player.uuid` / `name` are documented
-  twice, in the class Attributes section and on the member. The rst `:exclude-members:` hides the member's own docstring.
 
 ## Issues
 

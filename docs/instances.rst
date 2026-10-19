@@ -14,7 +14,7 @@ This class object is for Generic type Instances providing the endpoints specific
 
 .. autoclass:: Instance
    :members:
-   :exclude-members: has_controller, app_state
+   :exclude-members: has_controller
 
 
 Target ADS Instance
@@ -26,7 +26,7 @@ every :class:`ADSModule` method, so calls go to that Target and act on the Insta
 
 .. autoclass:: TargetADS
    :members:
-   :exclude-members: has_controller, app_state
+   :exclude-members: has_controller
 
 
 Minecraft Instance

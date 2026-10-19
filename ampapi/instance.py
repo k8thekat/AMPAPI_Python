@@ -100,8 +100,6 @@ class Instance(
         The version of the AMP, default is None.
     application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state : :class:`InstanceState`
-        The state of the application.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
     container_memory_mb : :class:`int`
@@ -657,8 +655,6 @@ class MinecraftInstance(MinecraftModule, Instance):
         The version of the AMP, default is None.
     application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state : :class:`InstanceState`
-        The state of the application.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
     container_memory_mb : :class:`int`
@@ -739,8 +735,6 @@ class TargetADS(ADSModule, Instance):
         The version of the AMP, default is None.
     application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state : :class:`InstanceState`
-        The state of the application.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
     container_memory_mb : :class:`int`
