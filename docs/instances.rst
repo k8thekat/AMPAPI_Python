@@ -26,6 +26,9 @@ Target ADS Instance
 This class object is for the Target ADS Instances held in :attr:`Controller.targets`. It is an :class:`Instance` that also has
 every :class:`ADSModule` method, so calls go to that Target and act on the Instances it holds. Those Instances belong to
 it, in :attr:`~TargetADS.instances`, and each one has the Target ADS as its :attr:`~Instance.ads`.
+A Target ADS also carries its Target's data flat on itself like the Controller does (eg. :attr:`~TargetADS.platform`,
+:attr:`~TargetADS.url`, :attr:`~TargetADS.state`), except `friendly_name`, `description` and `tags`, which stay the
+Instance's values. Reading that data before :meth:`~Controller.get_instances` has filled it raises :exc:`AttributeError`.
 :meth:`~TargetADS.start_instance`, :meth:`~TargetADS.stop_instance`, :meth:`~TargetADS.restart_instance`,
 :meth:`~TargetADS.delete_instance_users`, :meth:`~TargetADS.get_instance` and :meth:`~TargetADS.get_instances` are overridden.
 
