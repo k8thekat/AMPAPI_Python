@@ -434,7 +434,7 @@ class Instance(
         Pick the ADS that start, stop and restart should be sent to for this Instance.
 
         AMP looks the Instance name up on whichever ADS receives the call, so a Target's Instance has to be
-        called through its own :class:`TargetADS`. Instance names repeat across Targets (every ADS is ``ADS01``),
+        called through its own :class:`TargetADS`. Instance names repeat across Targets (every ADS is `ADS01`),
         so the :class:`Controller` would find the wrong Instance or none at all.
 
         Parameters
@@ -463,9 +463,17 @@ class Instance(
             if isinstance(known_instance, TargetADS) and known_instance.instance_id == self.target_id:
                 return known_instance
 
-        target_ads = await self._controller.get_instance(instance_id=self.target_id)
+        # format_data=True whatever the global says, since only a TargetADS can carry the call to that Target.
+        target_ads = await self._controller.get_instance(instance_id=self.target_id, format_data=True)
         if isinstance(target_ads, TargetADS):
             return target_ads
+        LOGGER.warning(
+            "<%s.%s> | %s is not a TargetADS, so %s goes through the Controller by name and may reach another Instance.",
+            __class__.__name__,
+            "_routed_ads",
+            self.target_id,
+            self.instance_name,
+        )
         return self._controller
 
     @has_controller
