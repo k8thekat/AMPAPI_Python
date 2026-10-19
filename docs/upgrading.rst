@@ -103,6 +103,10 @@ Changed methods
 - :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk` renamed ``append`` to ``final_chunk``. It was always
   sent as AMP's ``FinalChunk``, which marks the last chunk of the file, not an append.
 - ``APIParams`` (and so :class:`~ampapi.Bridge`) strips a trailing ``/`` from ``url``.
+- :attr:`~ampapi.instance.Instance.url` is ``Union[str, None]`` and defaults to None, since AMP never sends a URL
+  for an Instance; 4.x typed it ``str``. A :class:`~ampapi.instance.TargetADS` holds its Target's URL. Instance fields
+  AMP sends as null hold their documented default (``""`` for ``description``, ``display_image_source`` and
+  ``module_display_name``, None otherwise).
 - ``Base.sanitize_path`` (used by every file method) only drops leading ``/`` now. 4.x refused any ``_`` (so
   ``AMP_Logs`` was out of reach), turned ``..`` into ``.`` and stripped a leading ``.`` (so ``.trash`` became
   ``trash``). AMP takes all of those as given.

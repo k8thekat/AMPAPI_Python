@@ -338,9 +338,11 @@ class Instance(
         return wrapper_online
 
     def _parse_instance_data(self, data: InstanceResponse) -> None:
-        # Every field gets set, even when AMP sends null, so reading one never raises an AttributeError.
+        # Every field gets set, even when AMP sends null.
         for key in self.__slots__:
             value = data.get(key)
+            # if value is None:
+            #     continue
             if value is None:
                 value = self._null_defaults.get(key)
             setattr(self, key, value)
@@ -727,7 +729,7 @@ class TargetData(Base):
     _cached_names: ClassVar[frozenset[str]] = frozenset()
 
     # What the cache messages tell a user to call. Anything populated by a different endpoint gets an
-    # entry in `_cache_sources`; everything else falls back to `_cache_source`.
+    # entry in `_cache_sources`, everything else falls back to `_cache_source`.
     _cache_source: ClassVar[str] = "get_instances()"
     _cache_sources: ClassVar[dict[str, str]] = {}
 
@@ -735,7 +737,7 @@ class TargetData(Base):
         """Guard the cached attributes, raising when unpopulated and warning when stale.
 
         .. note::
-            This has to be ``__getattribute__`` rather than ``__getattr__``, so the stale warning also fires on
+            This has to be `__getattribute__` rather than `__getattr__`, so the stale warning also fires on
             populated attributes.
 
         """
@@ -746,7 +748,7 @@ class TargetData(Base):
             if not object.__getattribute__(self, "_is_cached"):
                 raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
 
-            # Inlined staleness check; monotonic subtraction keeps this off the datetime path.
+            # Inlined staleness check. Monotonic subtraction keeps this off the datetime path.
             stamped: Optional[float] = object.__getattribute__(self, "_cached_monotonic")
             timeout: int = object.__getattribute__(self, "_cache_timeout")
             if stamped is not None:
@@ -764,8 +766,8 @@ class TargetData(Base):
         return object.__getattribute__(self, name)
 
     def _parse_target_data(self, data: ControllerResponse) -> None:
-        # Only the names this class guards get set, so a TargetADS never overwrites the Instance's own values.
-        # Every one of them is set, even when AMP sends null, so a populated attribute never raises.
+        # Only the names this class guards get set. A TargetADS keeps the Instance's own values for the rest.
+        # Every one of them is set, even when AMP sends null.
         for key in self.__cached__:
             setattr(self, key, data.get(key))
 
@@ -1287,8 +1289,8 @@ class TargetADS(TargetData, ADSModule, Instance):
         for target in result:
             # Our own view of the Target is the entry whose ID is ours, and it wins over the Controller's copy.
             if target["instance_id"] == self.instance_id:
-                # Bar the fields that depend on who is asking. From the Target itself `url` is localhost, `is_remote`
-                # is False and `id` is its own numbering, so we keep the Controller's for those once we have them.
+                # From the Target itself `url` is localhost, `is_remote` is False and `id` is its own numbering.
+                # We keep the Controller's for those three once we have them.
                 own_view: ControllerResponse = target.copy()
                 if object.__getattribute__(self, "_is_cached") is True:
                     if self.url is not None:
@@ -1304,7 +1306,7 @@ class TargetADS(TargetData, ADSModule, Instance):
                     continue
                 available_instances.append(instance)
 
-        # Updated in place, matched by ID, so the Instances keep their identity across calls.
+        # Updated in place, matched by ID.
         self._controller._sync_instances(current=self._instances, available=available_instances, ads=self)  # pyright: ignore[reportPrivateUsage]
         return self._instances
 
@@ -1880,7 +1882,7 @@ class Controller(TargetData, ADSModule, Core, EmailSenderPlugin, FileManagerPlug
 
         # AMP sends one Target per ADS. The local one is us, so its data lands on our self object and its Instances
         # are ours. A remote Target becomes a TargetADS and gets its Instances from the Target itself, not our copy of them.
-        # Everything is updated in place, matched by ID, so references to our objects stay valid across calls.
+        # Everything is updated in place, matched by ID.
         local_instances: list[InstanceResponse] = []
         remote_ids: set[str] = set()
         for target in result:
