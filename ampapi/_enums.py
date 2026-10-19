@@ -146,19 +146,11 @@ class PortAssignmentState(Enum):
     allow_all_except_excluded = 1
 
 
-class PostCreateActionsState(Enum):
-    """The action the Instance will take after creation. Used in dataclass parameters."""
-
-    do_nothing = 0
-    start_instance = 1
-    start_and_update = 2
-    full_startup = 3
-    every_time = 16
-
-
 class PostCreateState(Enum):
-    """Represents the state of the API call `ADSModule/DeployTemplate`
-    Related to Node: ADSModule.Defaults.DefaultPostCreate
+    """The action an Instance takes after it is created, AMP's `PostCreateAppActions`.
+
+    Used by every `PostCreate` parameter (eg. `ADSModule/CreateInstance`, `ADSModule/DeployTemplate`) and the
+    `ADSModule.Defaults.DefaultPostCreate` setting.
 
     """
 

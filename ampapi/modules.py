@@ -73,7 +73,6 @@ from ._enums import (
     InstanceState,
     LoggingLevelState,
     PortAssignmentState,
-    PostCreateActionsState,
     PostCreateState,
     Protocols,
     ReleaseStreamState,
@@ -868,8 +867,8 @@ class CreateInstance:
     auto_configure : :class:`bool`
         When enabled, all settings other than the module, target and friendly_name are ignored and
         replaced with automatically generated values
-    post_create : :class:`PostCreateActionsState`
-        The action to take after creating the Instance, defaults to :attr:`~PostCreateActionsState.do_nothing`
+    post_create : :class:`PostCreateState`
+        The action to take after creating the Instance, defaults to :attr:`~PostCreateState.do_nothing`
     start_on_boot : :class:`bool`
         If the Instance starts on boot or not, default is False.
     display_image_source : :class:`str`
@@ -891,7 +890,7 @@ class CreateInstance:
     admin_password: str = field(default_factory=lambda: secrets.token_urlsafe(18))
     provision_settings: dict[str, str] = field(default_factory=dict[str, str])
     auto_configure: bool = field(default=False)
-    post_create: PostCreateActionsState = field(default=PostCreateActionsState.do_nothing)
+    post_create: PostCreateState = field(default=PostCreateState.do_nothing)
     start_on_boot: bool = field(default=False)
     display_image_source: str = field(default="")
     target_datastore: int = field(default=0)
@@ -2685,8 +2684,8 @@ class Template:
     secret : Union[:class:`str`, None] , optional
         Must be a non-empty strong in order to get a callback on deployment state change. This secret
         will be passed back to you in the callback so you can verify the request. Default is None.
-    post_create : :class:`PostCreateActionsState`, optional
-        The action to take after the Instance is created, default is :attr:`PostCreateActionsState.do_nothing`.
+    post_create : :class:`PostCreateState`, optional
+        The action to take after the Instance is created, default is :attr:`PostCreateState.do_nothing`.
     extra_provision_settings : Union[dict[:class:`str`, :class:`str`], None]
         A dictionary of setting nodes and values to create the new Instance with. Identical in function
         to the provisioning arguments in the template itself. Default is None.
@@ -2701,7 +2700,7 @@ class Template:
     tag: Union[str, None] = field(default=None)
     friendly_name: Union[str, None] = field(default=None)
     secret: Union[str, None] = field(default=None)
-    post_create: PostCreateActionsState = field(default=PostCreateActionsState.do_nothing)
+    post_create: PostCreateState = field(default=PostCreateState.do_nothing)
     extra_provision_settings: Union[dict[str, str], None] = field(default=None)
 
     def __repr__(self) -> str:

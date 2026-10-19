@@ -83,7 +83,6 @@ from .modules import (
     InstanceInfo,
     InstanceStatus,
     PortInfo,
-    PostCreateActionsState,
     PostCreateState,
     Provision,
     ProvisionSettingInfo,
@@ -692,7 +691,7 @@ class ADSModule(Base):
         spec_id: str,
         target_ads: str,
         friendly_name: str,
-        post_create: PostCreateActionsState | None = None,
+        post_create: Union[PostCreateState, None] = None,
         start_on_boot: bool | None = None,
         target_datastore: str | None = None,
         group: str | None = None,
@@ -713,7 +712,7 @@ class ADSModule(Base):
             The Target ADS Instance ID.
         friendly_name : :class:`str`
             The friendly name of the Instance.
-        post_create : :class:`PostCreateActionsState | None`, optional
+        post_create : Union[:class:`PostCreateState`, None], optional
             The action the Instance will take after creation, by default None.
         start_on_boot : :class:`bool | None`, optional
             If the Instance should start on PC boot, by default None.
@@ -764,7 +763,7 @@ class ADSModule(Base):
     async def create_local_instance(
         self,
         instance: CreateInstance,
-        post_create: PostCreateActionsState = PostCreateActionsState.do_nothing,
+        post_create: PostCreateState = PostCreateState.do_nothing,
         *,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
@@ -783,8 +782,8 @@ class ADSModule(Base):
         ----------
         instance : :class:`CreateInstance`
             Your pre-created data structure to be parsed for the required API parameters.
-        post_create : :class:`PostCreateActionsState`, optional
-            The action to take after creating the local Instance, by default :attr:`~PostCreateActionsState.do_nothing`.
+        post_create : :class:`PostCreateState`, optional
+            The action to take after creating the local Instance, by default :attr:`~PostCreateState.do_nothing`.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional

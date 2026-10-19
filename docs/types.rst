@@ -39,9 +39,6 @@ Enums
 .. autoenum:: PortAssignmentState
     :members:
 
-.. autoenum:: PostCreateActionsState
-    :members:
-
 .. autoenum:: PostCreateState
     :members: 
 

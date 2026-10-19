@@ -64,6 +64,10 @@ Changed methods
 - :meth:`~ampapi.adsmodule.ADSModule.create_instance` returns a :class:`~ampapi.modules.RunningTask`, which is what AMP
   sends; 4.x returned an ``ActionResult``.
 - :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like ``mc_accept_eula``; 4.x returned None.
+- ``PostCreateActionsState`` was removed; it never matched AMP's ``PostCreateAppActions`` (eg. its ``start_instance``
+  was AMP's ``update_once``, and ``every_time`` = 16 doesn't exist). :class:`~ampapi.CreateInstance`,
+  ``DeploymentTemplate``, ``create_instance_from_spec`` and ``create_local_instance`` take
+  :class:`~ampapi.PostCreateState`, whose values are AMP's.
 - :class:`~ampapi.modules.CreateInstance` fills ``new_instance_id`` with the zero GUID (AMP picks the ID),
   ``admin_username`` with ``"admin"`` and ``admin_password`` with a generated password, since AMP rejects empty values.
 - ``Base.version_validation()`` takes the ``endpoint`` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises

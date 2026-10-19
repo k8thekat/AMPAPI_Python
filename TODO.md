@@ -13,9 +13,6 @@ A small todo list local to the project.
 
 - Build a dataclass/TypedDict for `get_group` and `servers`.
 - Confirm `ProvisionResponse` against a live payload; AMP answered `GetProvisionFitness` with null on the VMs.
-- `PostCreateActionsState` (`start_instance` = 1 ... `every_time` = 16) doesn't match AMP's `PostCreateAppActions`
-  (0-5, which `PostCreateState` matches), yet `CreateInstance`, `DeploymentTemplate`, `create_instance_from_spec`
-  and `create_local_instance` send it; decide how to swap it.
 
 ## ampapi/instance.py
 
