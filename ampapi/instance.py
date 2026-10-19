@@ -24,7 +24,7 @@ import functools
 import logging
 import time
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, overload, override
 
 from .adsmodule import ADSModule
 from .analytics import AnalyticsPlugin
@@ -45,7 +45,15 @@ if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import ControllerResponse, InstanceResponse, PlatformInfoResponse, StatusResponse, TargetDatastoreResponse, UpdatesResponse
+    from ._types import (
+        ActionResultResponse,
+        ControllerResponse,
+        InstanceResponse,
+        PlatformInfoResponse,
+        StatusResponse,
+        TargetDatastoreResponse,
+        UpdatesResponse,
+    )
     from .base import ResponseHandlerOptions
     from .bridge import Bridge
 
@@ -621,12 +629,18 @@ class MinecraftInstance(MinecraftModule, Instance):
     module: str = "Minecraft"
 
 
-class TargetADS(Instance):
+class TargetADS(ADSModule, Instance):
     """Typically referred to the "Target ADS" which is apart of the available Instances of the :class:`Controller`
     via :attr:`~Controller.instances`.
 
     .. note::
-        No fundamental difference between this class and a :class:`Instance`.
+        A Target ADS serves the ADSModule endpoints, so this class is an :class:`Instance` that also has every
+        :class:`ADSModule` method. Those calls go to this Target and act on the Instances it holds.
+
+    .. note::
+        :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance` and :meth:`delete_instance_users`
+        take the :class:`ADSModule` signature (an `instance_name` or `instance_id`) and act on an Instance of this
+        Target. They no longer act on the Target ADS itself like the :class:`Instance` versions did.
 
 
     Attributes
@@ -695,6 +709,158 @@ class TargetADS(Instance):
     """
 
     module: str = "ADS"
+
+    @override
+    async def start_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Start an Instance of this Target, picked by its name on this Target.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.start_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def stop_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Stop an Instance of this Target, picked by its name on this Target.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.stop_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def restart_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Restart an Instance of this Target, picked by its name on this Target.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.restart_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def delete_instance_users(
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Delete all Users from an Instance of this Target, picked by its ID on this Target.
+
+        Parameters
+        ----------
+        instance_id : :class:`str`
+            The ID of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.delete_instance_users(
+            self,
+            instance_id=instance_id,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
 
 
 class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):

@@ -81,3 +81,13 @@ Returned data
   ``state``) raise an ``AttributeError`` naming ``get_instances()`` until it has run, and log a warning on each read
   once that data is older than 300 seconds. ``include_self=False`` leaves them unset, since AMP then drops the
   Controller's own entry.
+
+
+Target ADS
+----------
+
+- :class:`~ampapi.instance.TargetADS` gains the :class:`~ampapi.adsmodule.ADSModule` methods, and they go to that Target.
+- Its :meth:`~ampapi.instance.TargetADS.start_instance`, :meth:`~ampapi.instance.TargetADS.stop_instance` and
+  :meth:`~ampapi.instance.TargetADS.restart_instance` now take an ``instance_name`` and act on an Instance on that
+  Target. In 4.6.0 they took no argument and went through the Controller by name, so for an ADS named like the
+  Controller's (eg. ``ADS01``) they acted on the Controller's own ADS.
