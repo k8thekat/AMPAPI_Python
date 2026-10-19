@@ -51,7 +51,7 @@ class Bridge(APIParams):
     api_params : :class:`APIParams`
         The prebuilt class to pass login credentials to <Bridge>.
     singleton : :class:`bool`, optional
-        If ``True``, the :class:`Bridge` will be created as a singleton, by default False.
+        If ``True``, the :class:`Bridge` will be created as a singleton, by default True.
 
     """
 

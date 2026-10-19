@@ -100,7 +100,7 @@ class Instance(
         The version of the AMP, default is None.
     application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state : :class:`AMPInstanceState`
+    app_state : :class:`InstanceState`
         The state of the application.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
@@ -567,7 +567,7 @@ class MinecraftInstance(MinecraftModule, Instance):
         The version of the AMP, default is None.
     application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state : :class:`AMPInstanceState`
+    app_state : :class:`InstanceState`
         The state of the application.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
@@ -649,7 +649,7 @@ class TargetADS(ADSModule, Instance):
         The version of the AMP, default is None.
     application_endpoints : list[dict[str, str]]
         The list of application endpoints for the Instance.
-    app_state : :class:`AMPInstanceState`
+    app_state : :class:`InstanceState`
         The state of the application.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
@@ -1131,8 +1131,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         The last_updated comes in as  ISO format and :meth:`Controller`__post_init__` converts it into a datetime object.
     instance_id : :class:`str`
         The Controller/Instance ID tied to the Instance, default is "0".
-    state : :py:class:`AMPInstanceState`
-        The state the Controller/Instance is in. See enum :py:class:`AMPInstanceState`, default is ``AMPInstanceState.UNDEFINED``.
+    state : :py:class:`InstanceState`
+        The state the Controller/Instance is in. See enum :py:class:`InstanceState`, default is ``InstanceState.UNDEFINED``.
     fitness : Union[dict[:class:`str`, Any], None]
         UNK.
     friendly_name : :class:`str`
