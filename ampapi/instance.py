@@ -1265,14 +1265,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             new_vars[key] = value
         return pformat(new_vars)
 
-        # res = f"Type: {type(self)} | ID : {id(self)}\n"
-        # res += f"Name: {self.friendly_name}\nInstance ID: {self.instance_id}\n"
-        # res += f"Url: {self.url}\n"
-        # res += f"Instance State: {self.state.name}\n"
-        # res += f"Instances:\n{self.available_instances}"
-        # res += "\n"
-        # return res
-
     def __getattribute__(self, name: str) -> Any:
         """Guard the cached attributes, raising when unpopulated and warning when stale.
 
@@ -1396,12 +1388,12 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         Retrieve a single Instance by ID and convert the Instance.
 
         .. note::
-            This Controller's own ADS Instance comes back as `self`. The Controller only knows its own ADS id once
+            This Controller's own ADS Instance comes back as `self`. The Controller only knows its own ADS ID once
             :meth:`get_instances` has run, or when `auto_detect` is True.
 
         .. note::
-            With the id unknown and `auto_detect` False, an ADS Instance logs a warning and comes back as a
-            :class:`TargetADS`. Other Instances never need the id, and `format_data=False` never looks it up.
+            With the ID unknown and `auto_detect` False, an ADS Instance logs a warning and comes back as a
+            :class:`TargetADS`. Other Instances never need the ID, and `format_data=False` never looks it up.
 
         Parameters
         ----------
@@ -1410,7 +1402,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         auto_detect : :class:`bool`, optional
-            Look up this Controller's own ADS id with one extra API call when it is unknown and the Instance is an
+            Look up this Controller's own ADS ID with one extra API call when it is unknown and the Instance is an
             ADS, by default False.
         request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
