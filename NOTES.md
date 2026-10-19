@@ -152,9 +152,10 @@ task, and only the Controller's log says it failed for want of a key. `CreateIns
 Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Target with only its ADS:
 - `GetInstances` sends one Target per ADS. The local Target's `friendly_name` is "Local Instances", and each Target
   lists its own ADS Instance, the one whose `instance_id` matches the Target's.
-- `ForceIncludeSelf` False on a Controller drops the whole local Target, not just its ADS Instance, so
-  `Controller.get_instances(include_self=False)` leaves `self`'s cached data unset. On a Target or a standalone ADS it
-  changes nothing. Unchecked: whether it also drops local game Instances on a hybrid ADS.
+- `ForceIncludeSelf` False on a Controller drops the whole local Target only when it holds nothing but the
+  Controller's own ADS, and then `Controller.get_instances(include_self=False)` leaves `self`'s cached data unset.
+  With local game Instances (2026-10-19, vm1 with six) the local Target is sent anyway, ADS01 included, in controller
+  mode and in hybrid mode alike. On a Target or a standalone ADS it changes nothing.
 - `GetInstance` on the Controller's own ADS ID, or on a Target's ADS ID, returns that ADS Instance. Nothing in it
   says which. `Controller.get_instance` returns `self` for its own ID once it knows that ID (from `get_instances()` or
   `auto_detect=True`), and a `TargetADS` otherwise. A `TargetADS` for either ID proxies fine (`get_updates`).
@@ -200,6 +201,23 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   and `Controller.restart_instance` by name. Nothing in the settings spec stops a Target managing its own Instances.
 - For a few seconds after `restart_instance`, calls to that Instance fail with "Instance Unavailable" ("The requested
   instance is not available at this time"), and so does the library's re-login.
+
+## Endpoint shapes confirmed on the VMs (2026-10-19)
+
+- `ADSModule/GetGroup` (`groupId` = a Target's ADS ID, the Controller's own too): the Target item, the shape of one
+  `GetInstances` entry (`ControllerResponse`), JSON null for an unknown ID. The panel calls it to refresh one Target.
+- `ADSModule/Servers` is AMP's proxy route (`ADSModule/Servers/<ID>/API/...`). Called as an endpoint it answers
+  "Index was outside the bounds of the array".
+- `Core/GetStructuredDiagnostics`: `{"core": <the GetDiagnosticsInfo keys>, "application": {...}}`. `application` is
+  `{}` on an ADS and `{"config_version": "1"}` on a Generic Instance.
+- `FileManagerPlugin/WriteFileChunk`: `Data` is base64, `FinalChunk` True only on the last chunk (the panel's upload).
+- `FileManagerPlugin/UploadFolder`: each file is `{"RelativePath": str, "Base64Data": str}`, into an existing
+  `TargetDirectory`; subfolders in `RelativePath` are created. The panel uploads folders file by file instead.
+- `FileManagerPlugin/AppendFileChunk`: answers null and has no visible effect. It creates no file, doesn't append to
+  one WriteFileChunk made, and `Delete` True leaves it alone. The panel never calls it.
+- `AnalyticsPlugin/GetUserDetails` and `ADSModule/GetProvisionFitness`: JSON null on the VMs (no player data, no
+  fitness data), so their shapes are still unknown.
+- `Base.sanitize_path` refuses any `_` in a path, while AMP takes them fine (`AMP_Logs` is in every Instance).
 
 ## Generic Instances
 

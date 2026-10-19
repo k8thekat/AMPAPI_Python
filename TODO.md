@@ -11,8 +11,7 @@ A small todo list local to the project.
 
 ---
 
-- Build a dataclass/TypedDict for `get_group` and `servers`.
-- Confirm `ProvisionResponse` against a live payload; AMP answered `GetProvisionFitness` with null on the VMs.
+- Confirm `ProvisionResponse` against a live payload; AMP answers `GetProvisionFitness` with null on the VMs.
 - `create_local_instance` sends `CreateInstance.to_dict()` as `Instance`, but AMP wants a `LocalAMPInstance`, and
   answers with a null reference (vm1, 2.8.0.8).
 
@@ -21,47 +20,42 @@ A small todo list local to the project.
 ---
 
 - Plan what else `TargetADS` should mirror from `Controller` (eg. its Target data on `self`, the cache guard).
-- Check `ForceIncludeSelf` False on a hybrid ADS with local game Instances.
 
 ## ampapi/base.py
 
 ---
 
-- `APIParams` / `Bridge` don't strip a trailing `/` from the URL, so `http://host:8080/` gives `//API/...` and login fails.
+- `sanitize_path` refuses any `_` in a path, so the file wrappers can't reach eg. `AMP_Logs/`. AMP takes them fine.
 
 ## ampapi/core.py
 
 ---
 
 - Confirm `UserApplicationDataResponse` against a live payload; `Core/GetUserInfo` needs a player online.
-- Confirm the shape of `get_structured_diagnostics` (typed `dict[str, Any]` for now).
 
 ## ampapi/analytics.py
 
 ---
 
-- Confirm the shape of `get_user_details` (typed `dict[str, Any]` for now).
+- Confirm the shape of `get_user_details` with a player who has played; AMP answers null otherwise.
 
 ## ampapi/filemanager.py, filebackup.py, emailsender.py, minecraft.py
 
 ---
 
-- Confirm what `append_file_chunk`'s `delete` parameter does; the 2.8.0.8 spec gives no description.
-- Confirm the `FolderUploadFile` keys `upload_folder` sends.
+- Find what `append_file_chunk` does; on 2.8.0.8 it answers null and changes no file.
 
 ## ampapi/modules.py
 
 ---
 
 - Nested shapes are still raw dicts (`Methods.consumes`, `Triggers.tasks`, `TriggerTasks.parameter_mapping`,
-  `RemoteTargetInfo`); prototype the in-house `build(cls, data)` on one or two dataclasses for Kat's review.
+  `RemoteTargetInfo`); Kat to review the `build(cls, data)` prototype on branch `prototype/nested-build`.
 
 ## ampapi/util.py
 
 ---
 
-- Move `find_parameter_mismatches` to the URL matching `find_missing_endpoints` uses, and fix its
-  `ampapi/x.py` links, which break from `docs/api_spec_sheets/`.
 
 ## Docs
 

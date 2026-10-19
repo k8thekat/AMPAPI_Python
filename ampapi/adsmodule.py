@@ -2906,7 +2906,7 @@ class ADSModule(Base):
 
 
         .. warning::
-            ``ADSModule/Servers`` is AMP's proxy route, the one the library uses as a URL path in ``ADSModule/Servers/<ID>/API/...``.
+            `ADSModule/Servers` is AMP's proxy route, the one the library uses as a URL path in `ADSModule/Servers/<ID>/API/...`.
             Calling it as an endpoint fails, AMP 2.8.0.8 answers "Index was outside the bounds of the array".
 
 

@@ -127,8 +127,8 @@ Returned data
   Controller's own included.
 - The Controller attributes copied from :meth:`~ampapi.instance.Controller.get_instances` (eg. ``friendly_name``,
   ``state``) raise an ``AttributeError`` naming ``get_instances()`` until it has run, and log a warning on each read
-  once that data is older than 300 seconds. ``include_self=False`` leaves them unset, since AMP then drops the
-  local Target.
+  once that data is older than 300 seconds. ``include_self=False`` can leave them unset: AMP then drops the local
+  Target when it holds nothing but the Controller's own ADS.
 - Keys holding a dot are AMP setting nodes and keep AMP's spelling (eg. ``deployment_args`` keeps
   ``ADSModule.Defaults.DefaultAuthServerURL``); 4.x rewrote them like field names
   (``ads_module._defaults._default_auth_server_url``).

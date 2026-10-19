@@ -744,7 +744,8 @@ class Base:
                 "rememberMe": True,
             }
             # Network and response errors raise straight through; their URL already names Core/Login.
-            result = await self._call_end_point(endpoint="Core/Login", parameters=parameters)
+            # We post directly, since `_call_end_point` logs in first and would call us again.
+            result = await self._post(url="Core/Login", parameters=parameters)
             if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
                 # AMP sends no reason; a wrong password and a wrong 2FA code both answer `result: 40`.
                 amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
@@ -908,14 +909,11 @@ class Base:
 
 
         .. note::
-            The session is handled for you.
+            The session is handled for you, it logs in first like every wrapper does.
 
 
         .. warning::
             DO NOT include the full URL - *Exclude: www.yourAMPURL.com/API/*\n
-
-        .. warning::
-            You must login first prior to calling this function!
 
 
 
@@ -936,7 +934,7 @@ class Base:
            The JSON response from the API endpoint.
 
         """
-        # await self._reauth()
+        await self._reauth()
         return await self._post(url=endpoint, parameters=parameters, request_params=request_params, **response_params)
 
     @staticmethod
