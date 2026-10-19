@@ -46,7 +46,7 @@ _SPEC_MODULE_MAP: dict[str, tuple[str, str]] = {
     "minecraft_module": ("minecraft.py", "mc_"),
 }
 
-# Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" style endpoint urls.
+# Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" style endpoint URLs.
 _ENDPOINT_URL_RE = re.compile(r"^(?:API/)?([A-Za-z]+)/([A-Za-z0-9]+)$")
 _PYTHON_ONLY_PARAMS: frozenset[str] = frozenset({"format_data"})
 
@@ -360,7 +360,7 @@ def compare_api_spec_versions(
     version_b : str
         The newer version string to compare against (e.g. ``"2.6.5.0"``).
     instance_type : str
-        The instance type identifier matching the filename (e.g. ``"ADS"`` or ``"Minecraft"``).
+        The Instance type identifier matching the filename (e.g. ``"ADS"`` or ``"Minecraft"``).
     base_path : Path | None, optional
         Root of the ``api_spec_sheets`` directory. Defaults to ``../docs/api_spec_sheets`` relative to this file.
     output_path : Path | None, optional
@@ -437,7 +437,7 @@ def compare_api_spec_versions(
 
 
 def _get_endpoint_urls(filepath: Path) -> set[str]:
-    """Return the normalized endpoint urls a Python source file posts to.
+    """Return the normalized endpoint URLs a Python source file posts to.
 
     Collects every string literal passed as a ``url=`` or ``endpoint=`` keyword argument whose
     value looks like ``Module/EndpointName`` (an optional leading ``API/`` is ignored).
@@ -450,7 +450,7 @@ def _get_endpoint_urls(filepath: Path) -> set[str]:
     Returns
     -------
     set[:class:`str`]
-        The urls in :func:`_normalize_endpoint` form, eg. ``core/createtesttask``.
+        The URLs in :func:`_normalize_endpoint` form, eg. ``core/createtesttask``.
 
     """
     urls: set[str] = set()
@@ -475,7 +475,7 @@ def _normalize_endpoint(name: str) -> str:
     Parameters
     ----------
     name : :class:`str`
-        A spec section, a spec endpoint or a url part, eg. ``get_webauthn_credential_i_ds``.
+        A spec section, a spec endpoint or a URL part, eg. ``get_webauthn_credential_i_ds``.
 
     Returns
     -------
@@ -523,10 +523,10 @@ def find_missing_endpoints(
     Results are written to a Markdown file and summarised via logging.
 
     .. note::
-        An endpoint counts as implemented when any module in ``ampapi_path`` posts to its url (eg.
+        An endpoint counts as implemented when any module in ``ampapi_path`` posts to its URL (eg.
         ``url="Core/CreateTestTask"``), whatever the wrapper method is named. This covers renamed wrappers,
-        private ``DEV:`` wrappers and endpoints folded into another method. Spec and url names are compared
-        lowercased with underscores removed, and the spec section must match the url's module part
+        private ``DEV:`` wrappers and endpoints folded into another method. Spec and URL names are compared
+        lowercased with underscores removed, and the spec section must match the URL's module part
         (``ads_module`` -> ``ADSModule/``).
 
     Parameters
@@ -538,7 +538,7 @@ def find_missing_endpoints(
     output_path : Path | None, optional
         Path for the output report. Defaults to ``{spec_path}/missing_endpoints.md``.
     suffix_aliases : list[str] | None, optional
-        Unused here since endpoints are matched on their url rather than the method name; still accepted so
+        Unused here since endpoints are matched on their URL rather than the method name; still accepted so
         existing calls keep working, by default None.
 
     """
@@ -566,7 +566,7 @@ def find_missing_endpoints(
 
     _out: Path = output_path if output_path is not None else _spec_dir / "missing_endpoints.md"
 
-    # Every endpoint url any module posts to; "Core/Login" lives in base.py, so all of the modules are read.
+    # Every endpoint URL any module posts to; "Core/Login" lives in base.py, so all of the modules are read.
     implemented_urls: set[str] = set()
     for module_path in sorted(_ampapi_dir.glob("*.py")):
         implemented_urls |= _get_endpoint_urls(module_path)
@@ -962,18 +962,18 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     Parameters
     ----------
     instance : :class:`Controller`
-        Must be the Controller instance; as we are looking for the ADS and a Minecraft Instance.
+        Must be the Controller Instance; as we are looking for the ADS and a Minecraft Instance.
     sanitize_json : bool
         Sanitize the JSON responses to meet PEP8 compliance.
 
     """
     _logger: Logger = logging.getLogger(__name__)
-    # We call get_instances() to force a current listing of instances to be populated.
+    # We call get_instances() to force a current listing of Instances to be populated.
     await instance.get_instances()
     ads_diag: Diagnostics | DiagnosticsInfoResponse = await instance.get_diagnostics_info()
     # cur_version: None | AMPMinecraftInstance = None
     for entry in instance.instances:
-        # Minecraft instances have their own unique API endpoints; so we need to get those.
+        # Minecraft Instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
             instance_diag: Diagnostics | DiagnosticsInfoResponse = await entry.get_diagnostics_info()
             if isinstance(ads_diag, Diagnostics) and isinstance(instance_diag, Diagnostics):
@@ -1037,7 +1037,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     Parameters
     ----------
     instance : :class:`Controller`
-        Must be the Controller instance, as the API endpoint :meth:`get_setting_spec` is not available to all.
+        Must be the Controller Instance, as the API endpoint :meth:`get_setting_spec` is not available to all.
 
     """
     logger: Logger = logging.getLogger(__name__)
@@ -1048,12 +1048,12 @@ async def generate_docs_rst(instance: Controller) -> None:
     _path: Path = Path(__file__).parent.joinpath("../docs/nodes")
 
     logger.info("Generating Settings Node.rst...")
-    # As far as I know settings spec information is the same for all instances
+    # As far as I know settings spec information is the same for all Instances
     try:
         _settings_node_parse(data=spec, title="Setting Nodes", title_body="", path=_path.as_posix())
     except Exception:
         logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
-    # As far as I know Permission spec information is the same for all instances
+    # As far as I know Permission spec information is the same for all Instances
     perms: list[PermissionNode] = await instance.get_permissions_spec()
     logger.info("Generating Permission Nodes.rst...")
     try:

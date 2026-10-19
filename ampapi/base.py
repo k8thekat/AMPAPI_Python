@@ -606,7 +606,7 @@ class Base:
         Parameters
         ----------
         response : :class:`aiohttp.ClientResponse`
-            The response the capture came from; its url names the endpoint.
+            The response the capture came from; its URL names the endpoint.
         data : :class:`object`
             The captured JSON response.
         path : :class:`pathlib.Path`
@@ -615,7 +615,7 @@ class Base:
             If the JSON was sanitized; the TypedDicts use the sanitized `snake_case` keys.
 
         """
-        # The url ends in the endpoint, after any ADSModule/Servers/<id>/ proxy prefix.
+        # The URL ends in the endpoint, after any ADSModule/Servers/<id>/ proxy prefix.
         match = re.search(r"API/([A-Za-z]+/[A-Za-z0-9]+)$", response.url.path)
         if match is None:
             return

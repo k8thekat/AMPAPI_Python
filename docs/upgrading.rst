@@ -29,6 +29,7 @@ Renamed classes
 ``AMPInstanceState``            :class:`~ampapi.InstanceState`
 ``Metric``                      :class:`~ampapi.modules.Metrics`
 ``User``                        :class:`~ampapi.modules.UserInfo`
+``APISPecEndpointData``         :class:`~ampapi._types.APISpecEndpointData`
 ==============================  ==================================================
 
 Renamed attributes: ``Base.url`` -> ``endpoint_url``, ``FileChunk.base_64_data`` -> ``base64_data``,

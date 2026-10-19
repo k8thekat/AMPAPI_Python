@@ -204,15 +204,15 @@ class ActionResultResponse(TypedDict, total=False):
 
 
 class ActionSpec(TypedDict):
-    """ads_module: dict[:class:`str`, Any]
+    """ads_module : dict[:class:`str`, Any]
 
-    file_manager_plugin: dict[:class:`str`, Any]
+    file_manager_plugin : dict[:class:`str`, Any]
 
-    email_sender_plugin: dict[:class:`str`, Any]
+    email_sender_plugin : dict[:class:`str`, Any]
 
-    common_core_plugin: dict[:class:`str`, Any]
+    common_core_plugin : dict[:class:`str`, Any]
 
-    core: dict[:class:`str`, Any]
+    core : dict[:class:`str`, Any]
 
     """
 
@@ -224,38 +224,38 @@ class ActionSpec(TypedDict):
 
 
 class APISpec(TypedDict):
-    """analytics_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+    """analytics_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
 
-    common_core_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+    common_core_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
 
-    email_sender_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+    email_sender_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
 
-    file_manager_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+    file_manager_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
 
-    local_file_backup_plugin: dict[:class:`str`, :class:`APISPecEndpointData`]
+    local_file_backup_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
 
-    minecraft_module: dict[:class:`str`, :class:`APISPecEndpointData`]
+    minecraft_module : dict[:class:`str`, :class:`APISpecEndpointData`]
 
     """
 
-    analytics_plugin: dict[str, APISPecEndpointData]
-    common_core_plugin: dict[str, APISPecEndpointData]
-    email_sender_plugin: dict[str, APISPecEndpointData]
-    file_manager_plugin: dict[str, APISPecEndpointData]
-    local_file_backup_plugin: dict[str, APISPecEndpointData]
-    minecraft_module: dict[str, APISPecEndpointData]
+    analytics_plugin: dict[str, APISpecEndpointData]
+    common_core_plugin: dict[str, APISpecEndpointData]
+    email_sender_plugin: dict[str, APISpecEndpointData]
+    file_manager_plugin: dict[str, APISpecEndpointData]
+    local_file_backup_plugin: dict[str, APISpecEndpointData]
+    minecraft_module: dict[str, APISpecEndpointData]
 
 
-class APISPecEndpointData(TypedDict):
-    """description: :class:`str`
+class APISpecEndpointData(TypedDict):
+    """description : :class:`str`
 
-    is_complex_type: :class:`bool`
+    is_complex_type : :class:`bool`
 
-    parameters: :class:`APISpecEndpointParameters`
+    parameters : :class:`APISpecEndpointParameters`
 
-    return_type_name: :class:`str`
+    return_type_name : :class:`str`
 
-    returns: :class:`str`
+    returns : :class:`str`
 
     """
 
@@ -268,15 +268,15 @@ class APISPecEndpointData(TypedDict):
 
 
 class APISpecEndpointParameters(TypedDict):
-    """description: :class:`str`
+    """description : :class:`str`
 
-    name: :class:`str`
+    name : :class:`str`
 
-    option: :class:`bool`
+    option : :class:`bool`
 
-    param_enum_values: :class:`str`
+    param_enum_values : :class:`str`
 
-    type_name: :class:`str`
+    type_name : :class:`str`
 
     """
 
@@ -392,9 +392,9 @@ class AvailableTriggersResponse(TypedDict):
 
 
 class BukkitCategories(TypedDict):
-    """id: :class:`int`
+    """id : :class:`int`
 
-    name: :class:`str`
+    name : :class:`str`
 
     """
 
@@ -706,9 +706,9 @@ class LoginUserInfoResponse(TypedDict):
 
 
 class MCUserData(TypedDict):
-    """name: :class:`str`
+    """name : :class:`str`
 
-    uuid: :class:`str`
+    uuid : :class:`str`
     """
 
     name: str
@@ -728,13 +728,13 @@ class MessagesResponse(TypedDict):
 
 
 class MethodsData(TypedDict):
-    """id: :class:`str`
+    """id : :class:`str`
 
-    name: :class:`str`
+    name : :class:`str`
 
-    description: :class:`str`
+    description : :class:`str`
 
-    consumes: list[:class:`Consumes`]
+    consumes : list[:class:`Consumes`]
 
     """
 
@@ -810,9 +810,9 @@ class OPWhitelistResponse(TypedDict):
 
 
 class ParameterMapping(TypedDict, total=False):
-    """user: NotRequired[:class:`str`]
+    """user : NotRequired[:class:`str`]
 
-    reason: NotRequired[:class:`str`]
+    reason : NotRequired[:class:`str`]
 
     """
 
@@ -825,15 +825,15 @@ class PermissionNode(TypedDict):
 
     Keys
     ----
-    name: :class:`str`
+    name : :class:`str`
 
-    node: :class:`str`
+    node : :class:`str`
 
-    display_name: :class:`str`
+    display_name : :class:`str`
 
-    description: :class:`str`
+    description : :class:`str`
 
-    children: Union[list[:class:`PermissionNode`], None]
+    children : Union[list[:class:`PermissionNode`], None]
 
     """
 
@@ -1066,23 +1066,23 @@ class TimedTriggerResponse(TypedDict):
 
 
 class TriggersResponse(TypedDict):
-    """id: :class:`str`
+    """id : :class:`str`
 
-    description: :class:`str`
+    description : :class:`str`
 
-    emits: list[:class:`str`]
+    emits : list[:class:`str`]
 
-    enabled_state: :class:`int`
+    enabled_state : :class:`int`
 
-    tasks: list[:class:`TriggerTasksData`]
+    tasks : list[:class:`TriggerTasksData`]
 
-    type: :class:`str`
+    type : :class:`str`
 
-    trigger_type: :class:`str`
+    trigger_type : :class:`str`
 
-    last_execute_error: NotRequired[:class:`bool`]
+    last_execute_error : NotRequired[:class:`bool`]
 
-    last_error_reason: NotRequired[:class:`str`]
+    last_error_reason : NotRequired[:class:`str`]
 
     """
 
@@ -1098,19 +1098,19 @@ class TriggersResponse(TypedDict):
 
 
 class TriggersTasksResponse(TypedDict):
-    """id: :class:`str`
+    """id : :class:`str`
 
-    task_method_name: :class:`str`
+    task_method_name : :class:`str`
 
-    parameter_mapping: :class:`ParameterMapping`
+    parameter_mapping : :class:`ParameterMapping`
 
-    enabled_state: :class:`int`
+    enabled_state : :class:`int`
 
-    locked: :class:`bool`
+    locked : :class:`bool`
 
-    created_by: :class:`str`
+    created_by : :class:`str`
 
-    order: :class:`int`
+    order : :class:`int`
     """
 
     id: str

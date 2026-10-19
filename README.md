@@ -2,7 +2,7 @@
 
 ---
 
-An asynchronous Python wrapper for the CubeCoders AMP (Application Management Panel) API, enabling developers to programmatically manage game server instances with a clean, Pythonic interface.
+An asynchronous Python wrapper for the CubeCoders AMP (Application Management Panel) API, enabling developers to programmatically manage game server Instances with a clean, Pythonic interface.
 
 <div align="left">
     <a href="https://discord.gg/BtNyU8DFtt"><img src='https://img.shields.io/discord/705500489248145459?color=blue&label=Discord&logo=Discord%20Server&logoColor=green' alt='Discord Server'></a>
@@ -35,7 +35,7 @@ An asynchronous Python wrapper for the CubeCoders AMP (Application Management Pa
 - Pythonic API wrapper using `async` and `await` via `aiohttp`.
 - Data is automatically deserialized into typed dataclasses for easier management and interaction.
   - Optional parameter per function or global to disable formatting of data.
-- Inheritance-based instance model (`Controller`, `Instance`, `MinecraftInstance`, etc.) groups endpoints by instance type, preventing invalid calls at the class level.
+- Inheritance-based Instance model (`Controller`, `Instance`, `MinecraftInstance`, etc.) groups endpoints by Instance type, preventing invalid calls at the class level.
 - TOTP/2FA authentication support for secure programmatic login via `pyotp`.
 - Fully typed and verified with Pyright in strict mode, compatible with Python 3.12+.
 
@@ -71,7 +71,7 @@ pip install cc-ampapi
 
 In your IDE Python file. -> `import ampapi`.
 
-1. First you need to fill out the APIParams class with the required fields (url, user and password).
+1. First you need to fill out the APIParams class with the required fields (`url`, `user` and `password`).
 2. Pass the APIParams class into the Bridge class parameter api_params.
    - You only need to make ONE bridge class; the rest of the API classes will get the same object and handle logging in for you.
 3. You can then use the Parent class `Controller()` or the smaller class `Instance()` or any of the API classes as a stand alone.

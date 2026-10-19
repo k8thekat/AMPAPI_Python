@@ -46,7 +46,7 @@ class MinecraftModule(Base):
         Raises
         ------
         :exc:`RuntimeError`
-            This API call is only available on ADS instances.
+            This API call is only available on ADS Instances.
 
         """
 

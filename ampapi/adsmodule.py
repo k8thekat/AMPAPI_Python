@@ -240,11 +240,11 @@ class ADSModule(Base):
     ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Overlays an existing template on an existing instance, used to perform package reconfigurations.
+        Overlays an existing template on an existing Instance, used to perform package reconfigurations.
 
         .. warning::
             Do not use this to "transform" an existing application into another.
-            The instance should be deleted and re-created in that situation.
+            The Instance should be deleted and re-created in that situation.
 
         .. note::
             If you need to get an AMP Templates ID, use :meth:`get_deployment_templates` and
@@ -681,7 +681,7 @@ class ADSModule(Base):
         instance : :class:`CreateInstance`
             Your pre-created data structure to be parsed for the required API parameters.
         post_create : :class:`PostCreateActionsState`, optional
-            The action to take after creating the local instance, by default :attr:`~PostCreateActionsState.do_nothing`.
+            The action to take after creating the local Instance, by default :attr:`~PostCreateActionsState.do_nothing`.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -1090,7 +1090,7 @@ class ADSModule(Base):
     ) -> list[Endpoints] | list[EndpointsResponse]:
         """|coro|
 
-        Get the application endpoints for the specified instance.
+        Get the application endpoints for the specified Instance.
 
         Parameters
         ----------
@@ -1106,7 +1106,7 @@ class ADSModule(Base):
         Returns
         -------
         list[:class:`Endpoints`]
-            Returns a list of endpoints for the specified instance.
+            Returns a list of endpoints for the specified Instance.
 
         """
         await self._reauth()
@@ -1540,7 +1540,7 @@ class ADSModule(Base):
     ) -> list[Instance] | list[InstanceResponse]:
         """|coro|
 
-        Gets the local instances related to the ADS or Controller.
+        Gets the local Instances related to the ADS or Controller.
 
         Parameters
         ----------
@@ -1959,10 +1959,10 @@ class ADSModule(Base):
     ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Manage the specified instance.
+        Manage the specified Instance.
 
         .. note::
-            Actual usage unknown, may be used for AMP instance management via the web interface.
+            Actual usage unknown, may be used for AMP Instance management via the web interface.
 
 
         Parameters
@@ -2016,7 +2016,7 @@ class ADSModule(Base):
     ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Modify the Firewall Rule of the specified instance.
+        Modify the Firewall Rule of the specified Instance.
 
         Parameters
         ----------
@@ -2182,7 +2182,7 @@ class ADSModule(Base):
     ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
-        Reactivate local instances.
+        Reactivate local Instances.
 
         Parameters
         ----------
@@ -2399,9 +2399,9 @@ class ADSModule(Base):
         Parameters
         ----------
         controller_url : :class:`str`
-            The Controller panel url.
+            The Controller panel URL.
         my_url : :class:`str`
-            The Target AMP panel url.
+            The Target AMP panel URL.
         username : :class:`str`
             The username for logging into the Target AMP panel.
         password : :class:`str`
@@ -2467,9 +2467,9 @@ class ADSModule(Base):
         Parameters
         ----------
         controller_url : :class:`str`
-            The Controller panel url.
+            The Controller panel URL.
         my_url : :class:`str`
-            The Target AMP panel url.
+            The Target AMP panel URL.
         code : :class:`str`
             The pairing code from :meth:`get_target_pairing_code`.
         friendly_name : :class:`str`
@@ -2856,7 +2856,7 @@ class ADSModule(Base):
         instance_name : :class:`str`
             The Instance name.
         suspended : :class:`bool`, optional
-            Set the instance to be suspended, by default False.
+            Set the Instance to be suspended, by default False.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional

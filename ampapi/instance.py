@@ -77,7 +77,7 @@ class Instance(
     Updates,
 ):
     """:class:`Instance` represents an entire Instance from AMP that is not Controller, Target/ADS or Minecraft.\n
-    This is similar to what you get when selecting 'Manage' an instance from the Web GUI.
+    This is similar to what you get when selecting 'Manage' an Instance from the Web GUI.
 
     .. note::
         - Do *NOT* change the :attr:`~Instance.module` attribute.
@@ -131,7 +131,7 @@ class Instance(
     instance_name : :class:`str`
         The Instance name.
     is_container_instance : :class:`bool`
-        If the Instance is a container instance.
+        If the Instance is a container Instance.
     is_https : :class:`bool`
         If the Instance is using HTTPS.
     management_mode : :class:`int`
@@ -147,7 +147,7 @@ class Instance(
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`
-        If the Instance is running. *Not the application the instance is managing,* see :attr:`app_state`.
+        If the Instance is running. *Not the application the Instance is managing,* see :attr:`app_state`.
     suspended : :class:`bool`
         If the Instance is suspended.
     tags : Union[:class:`None`, :class:`list`]
@@ -155,7 +155,7 @@ class Instance(
     target_id : :class:`str`
         The target ID of the Instance.
     url : :class:`str`
-        The API url.
+        The API URL.
 
     """
 
@@ -289,7 +289,7 @@ class Instance(
         Raises
         ------
         :exc:`ConnectionError`
-            The requested instance is not currently running at this time.
+            The requested Instance is not currently running at this time.
 
         """
 
@@ -321,7 +321,7 @@ class Instance(
             self.amp_version = BuildInfo.to_dataclass(data["amp_version"])
 
         self._app_state = data["app_state"]
-        # Base defaults this to "0" (the Controller), our session and endpoint url need the real Instance ID.
+        # Base defaults this to "0" (the Controller), our session and endpoint URL need the real Instance ID.
         self._instance_id = data["instance_id"]
 
     @online
@@ -342,7 +342,7 @@ class Instance(
         Raises
         ------
         :exc:`ConnectionError`:
-            The requested instance is not available at this time if the Instance is not running.
+            The requested Instance is not available at this time if the Instance is not running.
 
         Returns
         -------
@@ -520,7 +520,7 @@ class Instance(
         Raises
         ------
         :exc:`ConnectionError`:
-            The requested instance is not available at this time if the Instance is offline.
+            The requested Instance is not available at this time if the Instance is offline.
         :exc:`RuntimeError`:
             If the :attr:`_controller` attribute has not been set.
 
@@ -598,7 +598,7 @@ class MinecraftInstance(MinecraftModule, Instance):
     instance_name : :class:`str`
         The Instance name.
     is_container_instance : :class:`bool`
-        If the Instance is a container instance.
+        If the Instance is a container Instance.
     is_https : :class:`bool`
         If the Instance is using HTTPS.
     management_mode : :class:`int`
@@ -622,7 +622,7 @@ class MinecraftInstance(MinecraftModule, Instance):
     target_id : :class:`str`
         The target ID of the Instance.
     url : :class:`str`
-        The API url.
+        The API URL.
 
     """
 
@@ -680,7 +680,7 @@ class TargetADS(ADSModule, Instance):
     instance_name : :class:`str`
         The Instance name.
     is_container_instance : :class:`bool`
-        If the Instance is a container instance.
+        If the Instance is a container Instance.
     is_https : :class:`bool`
         If the Instance is using HTTPS.
     management_mode : :class:`int`
@@ -704,7 +704,7 @@ class TargetADS(ADSModule, Instance):
     target_id : :class:`str`
         The target ID of the Instance.
     url : :class:`str`
-        The API url.
+        The API URL.
 
     """
 

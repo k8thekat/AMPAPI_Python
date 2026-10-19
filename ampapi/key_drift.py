@@ -192,7 +192,7 @@ class KeyDriftCheck:
     Attributes
     ----------
     shapes : dict[:class:`str`, tuple[:class:`type`, ...]]
-        Each endpoint url (eg. `Core/GetStatus`) and the TypedDicts its response is expected to match.
+        Each endpoint URL (eg. `Core/GetStatus`) and the TypedDicts its response is expected to match.
 
     """
 
@@ -226,7 +226,7 @@ class KeyDriftCheck:
         Returns
         -------
         dict[:class:`str`, tuple[:class:`type`, ...]]
-            The endpoint url and its TypedDicts. An endpoint with no TypedDict is left out.
+            The endpoint URL and its TypedDicts. An endpoint with no TypedDict is left out.
 
         """
         shapes: dict[str, set[type]] = collections.defaultdict(set)
@@ -247,7 +247,7 @@ class KeyDriftCheck:
                                 urls.add(match.group(1))
                     if isinstance(node.func, ast.Name) and node.func.id in _NARROWING_CALLS and len(node.args) > 1:
                         narrowed.extend(_annotation_names(node.args[1]))
-                # A method posting to more than one url cannot say which response a shape belongs to.
+                # A method posting to more than one URL cannot say which response a shape belongs to.
                 if len(urls) != 1:
                     continue
                 url: str = next(iter(urls))
@@ -263,7 +263,7 @@ class KeyDriftCheck:
         Parameters
         ----------
         endpoint : :class:`str`
-            The endpoint url, eg. `Core/GetStatus`.
+            The endpoint URL, eg. `Core/GetStatus`.
         data : :class:`object`
             The sanitized JSON response; a list response compares each of its objects.
 

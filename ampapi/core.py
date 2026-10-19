@@ -110,13 +110,13 @@ class Core(Base):
     Attributes
     ----------
     triggers : :class:`TriggerID`
-        You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information.
+        You can access all the trigger IDs an Instance has via this attribute. See :class:`TriggerID` for more information.
 
     """
 
     @property
     def triggers(self) -> TriggerID:
-        """You can access all the trigger IDs an instance has via this attribute. See :class:`TriggerID` for more information."""
+        """You can access all the trigger IDs an Instance has via this attribute. See :class:`TriggerID` for more information."""
         try:
             return self._triggers
         except AttributeError:
@@ -3998,7 +3998,7 @@ class Core(Base):
     ) -> None:
         """|coro|
 
-        Prevents the current instance from being started, and stops it if it's currently running.
+        Prevents the current Instance from being started, and stops it if it's currently running.
 
         Parameters
         ----------

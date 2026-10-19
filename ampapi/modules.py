@@ -522,7 +522,7 @@ class Application:
     description : :class:`str`
         A brief description of what the application is.
     display_image_source : :class:`str`
-        The url for the application image. Typically what you see as the Instance Banner.
+        The URL for the application image. Typically what you see as the Instance Banner.
     extra_setup_steps_uri : :class:`str`
         UNK
     friendly_name : :class:`str`
@@ -703,7 +703,7 @@ class BukkitPlugin:
     version : dict[:class:`str` , Union[:class:`int`, :class:`str`]]
         The version information of the plugin.
     icon : dict[:class:`str`, :class:`str`]
-        The icon name and url in a dict key, value pair.
+        The icon name and URL in a dict key, value pair.
     tested_version : list[:class:`str`]
         The tested versions of the plugin, default is a list
     update_date : Union[:class:`int`, None]
@@ -844,7 +844,7 @@ class CreateInstance:
     Attributes
     ----------
     target_ads_instance : :class:`str`
-        The Target instance ID to tie this Instance to.
+        The Target Instance ID to tie this Instance to.
     friendly_name : :class:`str`
         The Instance friendly name, this is what you see in the web GUI.
     module : :class:`str`
@@ -867,11 +867,11 @@ class CreateInstance:
         When enabled, all settings other than the module, target and friendly_name are ignored and
         replaced with automatically generated values
     post_create : :class:`PostCreateActionsState`
-        The action to take after creating the instance, defaults to :attr:`~PostCreateActionsState.do_nothing`
+        The action to take after creating the Instance, defaults to :attr:`~PostCreateActionsState.do_nothing`
     start_on_boot : :class:`bool`
-        If the instance starts on boot or not, default is False.
+        If the Instance starts on boot or not, default is False.
     display_image_source : :class:`str`
-        If the instance has a banner to display, you can define it here, default is "".
+        If the Instance has a banner to display, you can define it here, default is "".
     target_datastore : :class:`int`
         The Datastore ID to create this Instance on.
             * See :attr:`Controller.datastores` ID values.
@@ -1337,10 +1337,10 @@ class InstanceDatastore:
     description : :class:`str`
         The description of the datastore.
     directory : :class:`str`
-        The on-disk location where instances will be stored. Changing this will not affect existing instances, only newly created ones.
+        The on-disk location where Instances will be stored. Changing this will not affect existing Instances, only newly created ones.
     soft_limit_mb : :class:`int`
         Datastores that reach or exceed this limit in total size will not be considered as deployment
-        targets. This is only a soft limit and does not prevent instances on this datastore from using
+        targets. This is only a soft limit and does not prevent Instances on this datastore from using
         more space.
     priority : :class:`int`
         Instances with a lower priority number are preferred over those with a higher number, all other factors being equal.
@@ -1349,9 +1349,9 @@ class InstanceDatastore:
     is_internal : :class:`bool`
         If the datastore is internal.
     instance_limit:
-        The maximum number of instances that can be provisioned on this datastore, defaults to 0 for unlimited.
+        The maximum number of Instances that can be provisioned on this datastore, defaults to 0 for unlimited.
     active:
-        Deactivating a datastore prevents new instances from being provisioned to it, defaults to True.
+        Deactivating a datastore prevents new Instances from being provisioned to it, defaults to True.
     current_usage_mb : :class:`int`
         The current usage of the datastore in megabytes, defaults to -1.
     sanitised_name : :class:`str`
@@ -1594,7 +1594,7 @@ class Messages:
 class Methods:
     """Tied to :attr:`ScheduleData.available_methods`.
 
-    Hold's information regarding Methods/Events that are available to the Instance. Varies depending on instance type.
+    Hold's information regarding Methods/Events that are available to the Instance. Varies depending on Instance type.
 
     Attributes
     ----------
@@ -1621,7 +1621,7 @@ class Methods:
     display_format: Union[str, None] = field(default=None)
     # TODO: Convert consumes into DCConsumes in a __post_init__.
     # Methods(**entry) currently assigns the nested dicts straight through; ConsumeResponse needs
-    # confirming against more instance types before converting.
+    # confirming against more Instance types before converting.
     consumes: list[DCConsumes] | list[ConsumeResponse] = field(default_factory=list[DCConsumes])
 
     __hash__ = None  # type: ignore[assignment]
@@ -1737,13 +1737,13 @@ class Module:
     friendly_name : :class:`str`
         The friendly name.
     instance_id : :class:`str`
-        The instance ID.
+        The Instance ID.
     instance_name : :class:`str`
-        The instance name.
+        The Instance name.
     is_oidc_enabled : :class:`bool`
         Whether OIDC login is enabled.
     is_remote_instance : :class:`bool`
-        Whether the instance is remote.
+        Whether the Instance is remote.
     loaded_plugins : :class:`list[str]`
         A list of loaded plugins.
     module_name : :class:`str`
@@ -1755,9 +1755,9 @@ class Module:
     primary_endpoint : :class:`str`
         The primary endpoint.
     requires_full_load : :class:`bool`
-        Whether the instance requires full load.
+        Whether the Instance requires full load.
     supports_sleep : :class:`bool`
-        Whether the instance supports sleep.
+        Whether the Instance supports sleep.
     timestamp : :class:`str`
         The current timestamp.
     tools_version : :class:`str`
@@ -1854,7 +1854,7 @@ class PlatformInfo:
     virtualization : :class:`int`
         The virtualization.
     is_shared_setup : :class:`bool`
-        Whether the instance is shared setup.
+        Whether the Instance is shared setup.
     admin_rights : :class:`int`
         The admin rights level.
     hardware_platform_name : :class:`str`
@@ -1997,7 +1997,7 @@ class Provision:
     Attributes
     ----------
     available : :class:`bool`
-        Whether the instance is available.
+        Whether the Instance is available.
     cpu_service_ratio : :class:`float`
         The CPU service ratio.
     free_disk_mb : :class:`int`
@@ -2007,7 +2007,7 @@ class Provision:
     load_avg : :class:`float`
         The load average.
     remaining_instance_slots : :class:`int`
-        The remaining instance slots.
+        The remaining Instance slots.
     score : :class:`float`
         The score.
     thread_queue_length : :class:`int`
@@ -2133,7 +2133,7 @@ class RemoteTargetInfo:
     datastores : list[:class:`TargetDatastoreResponse`]
         The datastores, carrying only an ``id`` and ``friendly_name``.
     deploys_in_containers : :class:`bool`
-        If the target deploys instances inside containers.
+        If the target deploys Instances inside containers.
 
     """
 
@@ -2167,7 +2167,7 @@ class Role:
     members : :class:`list[str]`
         The list of AMP users who have the role.
     is_instance_specific : :class:`bool`
-        If the AMP role is only for a specific instance or not.
+        If the AMP role is only for a specific Instance or not.
     is_common_role : :class:`bool`
         If the AMP role is common or not.
     disable_edits : :class:`bool`
@@ -2531,7 +2531,7 @@ class SettingsSpecParent:
     file_manager : list[:class:`SettingSpec`]
         The list of file manager settings in the UI, default is an empty list.
     instance_deployment : list[:class:`SettingSpec`]
-        The list of instance deployment settings in the UI, default is an empty list.
+        The list of Instance deployment settings in the UI, default is an empty list.
     login : list[:class:`SettingSpec`]
         The list of login settings in the UI, default is an empty list.
     security_and_privacy : list[:class:`SettingSpec`]
@@ -2662,8 +2662,8 @@ class Template:
     template_id : int
         The ID of the template to be deployed, as per the Template Management UI in AMP itself.
     new_username : Union[:class:`str`, None] , optional
-        If specified, AMP will create a new user with this name for this instance. Default is None.
-        * Must be unique, If this user already exists, this will be ignored but the new instance will be assigned to this user.
+        If specified, AMP will create a new user with this name for this Instance. Default is None.
+        * Must be unique, If this user already exists, this will be ignored but the new Instance will be assigned to this user.
     new_password : Union[:class:`str`, None] , optional
         If :attr:`new_username` is specified and the user doesn't already exist, the password will be
         assigned to this user. Default is None.
@@ -2675,18 +2675,18 @@ class Template:
         specified in their target configuration. You can adjust this via the controller by clicking
         'Edit' on the target settings. Default is None.
     tag : Union[:class:`str`, None] , optional
-        Unrelated to required_tags. This is to uniquely identify this instance to your own systems. It
-        may be something like an order ID or service ID so you can find the associated instance again
+        Unrelated to required_tags. This is to uniquely identify this Instance to your own systems. It
+        may be something like an order ID or service ID so you can find the associated Instance again
         at a later time. Default is None.
     friendly_name : Union[:class:`str`, None] , optional
-        A friendly name for this instance. If left blank, AMP will generate one for you. Defaults is None.
+        A friendly name for this Instance. If left blank, AMP will generate one for you. Defaults is None.
     secret : Union[:class:`str`, None] , optional
         Must be a non-empty strong in order to get a callback on deployment state change. This secret
         will be passed back to you in the callback so you can verify the request. Default is None.
     post_create : :class:`PostCreateActionsState`, optional
         The action to take after the Instance is created, default is :attr:`PostCreateActionsState.do_nothing`.
     extra_provision_settings : Union[dict[:class:`str`, :class:`str`], None]
-        A dictionary of setting nodes and values to create the new instance with. Identical in function
+        A dictionary of setting nodes and values to create the new Instance with. Identical in function
         to the provisioning arguments in the template itself. Default is None.
 
     """

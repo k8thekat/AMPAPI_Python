@@ -87,7 +87,7 @@ they only run from a repo checkout.
 ~/.local/bin/uvx pyright ampapi/
 ```
 
-`unit_test.py` at the repo root is untracked and hits a live AMP instance - do not run it
+`unit_test.py` at the repo root is untracked and hits a live AMP Instance - do not run it
 unattended.
 
 Captured responses live in `_responses/`. A TypedDict built from a dataclass definition instead of
@@ -108,7 +108,7 @@ Controller before pairing a Target.
 A pairing code alone is not enough (AMP 2.8.0.8): the Controller's polls fail with "Token Rejected", and the remote
 Target lists no Instances. The Controller logs in to the Target with a token from its own `AMP_SYSTEM` user, so the
 Target has to check logins with the Controller (`Core.Login.UseAuthServer` True, `Core.Login.AuthServerURL` the
-Controller's url), and the Controller has to answer them (`Core.Security.EnablePassthruAuth` True, else "Passthru
+Controller's URL), and the Controller has to answer them (`Core.Security.EnablePassthruAuth` True, else "Passthru
 Disabled"). Restart both ADSs after. From then on the Target takes the Controller's logins, not its own.
 `vms.py pair` does this by setting each config node.
 
@@ -117,7 +117,7 @@ The Target's Instances need the same: an Instance created on the Target authenti
 `ampinstmgr --RepairAuth <mode> <controller url>` (alias `-magic`, run as `amp` with ADS stopped): it points the ADS
 and every Instance at the Controller, and sets `Defaults.DefaultAuthServerURL` so new Instances start that way. It
 asks the same two questions as the role choice in the web setup (`standalone` / `controller` / `target` / `hybrid`, and the
-Controller's url). Run on vm2 as `target`, it fixed `MCTest01`; not yet run on a Controller.
+Controller's URL). Run on vm2 as `target`, it fixed `MCTest01`; not yet run on a Controller.
 
 Creating an Instance needs a licence key in `ADSModule.Defaults.NewInstanceKey` on the ADS that runs it, the Target
 when creating from the Controller; `vms.py activate` sets it. AMP accepts the `CreateInstance` call and queues it as a

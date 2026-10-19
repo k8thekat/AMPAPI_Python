@@ -42,7 +42,7 @@ A small todo list local to the project.
 
 ---
 
-- Narrowing sites raise with `end_point="Core/ActionResult"` instead of the endpoint's own url.
+- Narrowing sites raise with `end_point="Core/ActionResult"` instead of the endpoint's own URL.
 - `get_permissions_spec` takes no `format_data`; passing it falls through to `_response_handler` as a bare `TypeError`.
 - `get_tasks` returns `list[RunningTask] | list[Any]`; name `RunningTaskResponse` so `KeyDriftCheck` can check it.
 - `get_api_spec` is annotated `APISpec | dict[str, Any]` but always returns a plain `dict(result)`.
@@ -79,7 +79,7 @@ A small todo list local to the project.
 
 ---
 
-- Move `find_parameter_mismatches` to the url matching `find_missing_endpoints` uses, and fix its
+- Move `find_parameter_mismatches` to the URL matching `find_missing_endpoints` uses, and fix its
   `ampapi/x.py` links, which break from `docs/api_spec_sheets/`.
 
 ## Docs
