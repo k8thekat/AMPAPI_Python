@@ -89,6 +89,8 @@ class MinecraftModule(Base):
 
         Accept the EULA summary.
 
+        Endpoint: `MinecraftModule/AcceptEULA`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -126,6 +128,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Add an entry to the OP list.
+
+        Endpoint: `MinecraftModule/AddOPEntry`
 
         Parameters
         ----------
@@ -177,6 +181,8 @@ class MinecraftModule(Base):
 
         Add a user to the whitelist.
 
+        Endpoint: `MinecraftModule/AddToWhitelist`
+
         Parameters
         ----------
         user_or_uuid : :class:`str`
@@ -225,6 +231,8 @@ class MinecraftModule(Base):
 
         Get Bukkit categories.
 
+        Endpoint: `MinecraftModule/BukGetCategories`
+
         .. note::
             CATEGORIES: 'Bungee - Spigot', 'Bungee - Proxy', 'Spigot', 'Transportation', 'Chat', 'Tools and Utilities',
             'Misc', 'Libraries / APIs'
@@ -266,6 +274,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Get Bukkit installed plugins.
+
+        Endpoint: `MinecraftModule/BukGetInstalledPlugins`
 
         Parameters
         ----------
@@ -310,6 +320,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Get update for Bukkit plugin.
+
+        Endpoint: `MinecraftModule/BukGetInstallUpdatePlugin`
 
         Parameters
         ----------
@@ -360,6 +372,8 @@ class MinecraftModule(Base):
 
         Get Bukkit plugin info.
 
+        Endpoint: `MinecraftModule/BukGetPluginInfo`
+
 
         Parameters
         ----------
@@ -402,6 +416,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Get Bukkit plugins from category.
+
+        Endpoint: `MinecraftModule/BukGetPluginsForCategory`
 
         Parameters
         ----------
@@ -455,6 +471,8 @@ class MinecraftModule(Base):
 
         Get Bukkit popular plugins.
 
+        Endpoint: `MinecraftModule/BukGetPopularPlugins`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -498,6 +516,8 @@ class MinecraftModule(Base):
 
         Remove Bukkit plugin.
 
+        Endpoint: `MinecraftModule/BukGetRemovePlugin`
+
         Parameters
         ----------
         plugin_id : :class:`int`
@@ -538,6 +558,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Search for Bukkit plugins.
+
+        Endpoint: `MinecraftModule/BukGetSearch`
 
         Parameters
         ----------
@@ -588,6 +610,8 @@ class MinecraftModule(Base):
 
         Ban the specified Minecraft UUID.
 
+        Endpoint: `MinecraftModule/BanUserByID`
+
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.
 
@@ -628,6 +652,8 @@ class MinecraftModule(Base):
 
         Clear a players inventory.
 
+        Endpoint: `MinecraftModule/ClearInventoryByID`
+
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.
 
@@ -667,6 +693,8 @@ class MinecraftModule(Base):
 
         Get the Server failure reason, if any.
 
+        Endpoint: `MinecraftModule/GetFailureReason`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -703,6 +731,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Get a skin as a base64 string.
+
+        Endpoint: `MinecraftModule/GetHeadByUUID`
 
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.
@@ -749,6 +779,8 @@ class MinecraftModule(Base):
 
         Get the OP whitelist.
 
+        Endpoint: `MinecraftModule/GetOPWhitelist`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -794,6 +826,8 @@ class MinecraftModule(Base):
 
         Get the whitelist.
 
+        Endpoint: `MinecraftModule/GetWhitelist`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -836,6 +870,8 @@ class MinecraftModule(Base):
 
         Kick the specified Minecraft Users UUID.
 
+        Endpoint: `MinecraftModule/KickUserByID`
+
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.
 
@@ -875,6 +911,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Kill the Minecraft player.
+
+        Endpoint: `MinecraftModule/KillByID`
 
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.
@@ -918,6 +956,8 @@ class MinecraftModule(Base):
 
         Get the OP list.
 
+        Endpoint: `MinecraftModule/LoadOPList`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -958,6 +998,8 @@ class MinecraftModule(Base):
 
         Reject the EULA agreement.
 
+        Endpoint: `MinecraftModule/RejectEULA`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -994,6 +1036,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Remove an entry from the OP list.
+
+        Endpoint: `MinecraftModule/RemoveOPEntry`
 
         .. note::
             You can supply a Minecraft UUID (non-trimmed) or Username.
@@ -1033,6 +1077,8 @@ class MinecraftModule(Base):
 
         Remove a user from the whitelist.
 
+        Endpoint: `MinecraftModule/RemoveWhitelistEntry`
+
         .. note::
             You can supply a Minecraft UUID (non-trimmed) or Username.
 
@@ -1068,6 +1114,8 @@ class MinecraftModule(Base):
         """|coro|
 
         Strike a player with lightning
+
+        Endpoint: `MinecraftModule/SmiteByID`
 
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.

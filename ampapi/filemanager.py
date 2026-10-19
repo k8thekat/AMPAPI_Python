@@ -71,6 +71,8 @@ class FileManagerPlugin(Base):
 
         Append data to a file.
 
+        Endpoint: `FileManagerPlugin/AppendFileChunk`
+
         .. warning::
             On AMP 2.8.0.8 this call has no visible effect. It creates no file, does not append to a file made by
             :meth:`write_file_chunk`, and `delete` set to True leaves the file alone. The panel never calls it,
@@ -111,6 +113,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Calculate the MD5 sum of a file.
+
+        Endpoint: `FileManagerPlugin/CalculateFileMD5Sum`
 
         Parameters
         ----------
@@ -160,6 +164,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Change a file or directory to be excluded from backups.
+
+        Endpoint: `FileManagerPlugin/ChangeExclusion`
 
         Parameters
         ----------
@@ -217,6 +223,8 @@ class FileManagerPlugin(Base):
 
         Moves a file from the origin directory to the target_directory.
 
+        Endpoint: `FileManagerPlugin/CopyFile`
+
         .. warning::
             Make sure to NOT INCLUDE the file name in the destionation_path parameter.
 
@@ -270,6 +278,8 @@ class FileManagerPlugin(Base):
 
         Create an archive file.
 
+        Endpoint: `FileManagerPlugin/CreateArchive`
+
         Parameters
         ----------
         file_path : :class:`str`
@@ -316,6 +326,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Creates a new directory. The parent directory must already exist.
+
+        Endpoint: `FileManagerPlugin/CreateDirectory`
 
         Parameters
         ----------
@@ -365,6 +377,8 @@ class FileManagerPlugin(Base):
 
         Download a file from a URL.
 
+        Endpoint: `FileManagerPlugin/DownloadFileFromURL`
+
         Parameters
         ----------
         source : :class:`str`
@@ -413,6 +427,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Download an entire folder as a zip archive.
+
+        Endpoint: `FileManagerPlugin/DownloadFolderAsZip`
 
         .. note::
             Requires the ``FileManager.FileManager.DownloadFiles`` permission.
@@ -465,6 +481,8 @@ class FileManagerPlugin(Base):
 
         Empties a trash bin for the AMP Server/Instance.
 
+        Endpoint: `FileManagerPlugin/EmptyTrash`
+
         .. note::
             Typically the directory is called ``Trashed Files``, it is case sensitive and located in the Server/Instance root directory.
 
@@ -516,6 +534,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Extract an archive file.
+
+        Endpoint: `FileManagerPlugin/ExtractArchive`
 
         Parameters
         ----------
@@ -570,6 +590,8 @@ class FileManagerPlugin(Base):
 
         Returns a dictionary of the path's properties and the files contained in the directory and their properties.
 
+        Endpoint: `FileManagerPlugin/GetDirectoryListing`
+
         .. note::
             If a file has a similar name it may return the file instead of the directory.
 
@@ -620,6 +642,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Returns a specific section of Base64 data from the file.
+
+        Endpoint: `FileManagerPlugin/GetFileChunk`
 
         Parameters
         ----------
@@ -673,6 +697,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Read a chunk of data from a file.
+
+        Endpoint: `FileManagerPlugin/ReadFileChunk`
 
         Parameters
         ----------
@@ -729,6 +755,8 @@ class FileManagerPlugin(Base):
 
         Releases a File Upload Lock.
 
+        Endpoint: `FileManagerPlugin/ReleaseFileUploadLock`
+
         Parameters
         ----------
         file_path : :class:`str`
@@ -776,6 +804,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Rename a directory.
+
+        Endpoint: `FileManagerPlugin/RenameDirectory`
 
         Parameters
         ----------
@@ -830,6 +860,8 @@ class FileManagerPlugin(Base):
 
         Changes the name of a file.
 
+        Endpoint: `FileManagerPlugin/RenameFile`
+
         Parameters
         ----------
         file_path : :class:`str`
@@ -878,6 +910,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Moves a directory to the trash, directories must be trashed before they can be `emptied`.
+
+        Endpoint: `FileManagerPlugin/TrashDirectory`
 
         .. note::
             See :meth:`FileManagerPlugin.empty_trash` to remove the files from the trash directory.
@@ -929,6 +963,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Moves a file to the trash, files must be trashed before they can be `emptied`.
+
+        Endpoint: `FileManagerPlugin/TrashFile`
 
         .. note::
             See :meth:`FileManagerPlugin.empty_trash` to remove the files from the trash directory.
@@ -983,6 +1019,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Write data to a file with an offset.
+
+        Endpoint: `FileManagerPlugin/WriteFileChunk`
 
         Parameters
         ----------
@@ -1042,6 +1080,8 @@ class FileManagerPlugin(Base):
         """|coro|
 
         Upload an entire folder as a set of files with relative paths.
+
+        Endpoint: `FileManagerPlugin/UploadFolder`
 
         .. note::
             The `target_directory` must already exist, AMP answers "The specified directory does not exist" otherwise.

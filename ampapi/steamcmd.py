@@ -44,7 +44,9 @@ class SteamCMDPlugin(Base):
     ) -> None:
         """|coro|
 
-        Cancels a pending Steam Guard login, `steamcmdplugin/CancelSteamGuard`.
+        Cancels a pending Steam Guard login.
+
+        Endpoint: `steamcmdplugin/CancelSteamGuard`
 
         Parameters
         ----------
@@ -76,7 +78,9 @@ class SteamCMDPlugin(Base):
     ) -> None:
         """|coro|
 
-        Sends the Steam Guard code to a pending Steam login, `steamcmdplugin/SteamGuardCode`.
+        Sends the Steam Guard code to a pending Steam login.
+
+        Endpoint: `steamcmdplugin/SteamGuardCode`
 
         Parameters
         ----------
@@ -113,7 +117,9 @@ class SteamCMDPlugin(Base):
     ) -> None:
         """|coro|
 
-        Sets the Steam username and password the Instance logs in with, `steamcmdplugin/SteamUsernamePassword`.
+        Sets the Steam username and password the Instance logs in with.
+
+        Endpoint: `steamcmdplugin/SteamUsernamePassword`
 
         Parameters
         ----------
