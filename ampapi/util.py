@@ -980,24 +980,25 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
         # Minecraft Instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
             instance_diag: Diagnostics | DiagnosticsInfoResponse = await entry.get_diagnostics_info()
-            if isinstance(ads_diag, Diagnostics) and isinstance(instance_diag, Diagnostics):
-                if instance_diag.application_version == ads_diag.application_version:
-                    _logger.info(
-                        "Found %s matching the current ADS version `%s` .",
-                        entry.instance_name,
-                        ads_diag.application_version,
-                    )
-                    await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
-                    break
-                _logger.warning(
-                    "<%s.%s> | Version mismatch between the Instance and the ADS. ADS: %s | Instance: %s",
-                    "util",
-                    "amp_api_update",
-                    instance_diag.application_version,
+            if not isinstance(ads_diag, Diagnostics) or not isinstance(instance_diag, Diagnostics):
+                msg = f"Responses are of the wrong type. ADS: {type(ads_diag)} | Instance: {type(instance_diag)}"
+                raise TypeError(msg)
+            if instance_diag.application_version == ads_diag.application_version:
+                _logger.info(
+                    "Found %s matching the current ADS version `%s` .",
+                    entry.instance_name,
                     ads_diag.application_version,
                 )
-            err = "Responses are of the wrong type. ADS: %s | Instance: %s"
-            raise TypeError(err, type(ads_diag), type(instance_diag))
+                await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
+                break
+            # A mismatched Instance isn't fatal, we just move on and try the next one.
+            _logger.warning(
+                "<%s.%s> | Version mismatch between the Instance and the ADS. ADS: %s | Instance: %s",
+                "util",
+                "amp_api_update",
+                ads_diag.application_version,
+                instance_diag.application_version,
+            )
     # We found our Minecraft Instance, now lets parse our Controller/ADS
     await _parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
 
@@ -1089,12 +1090,15 @@ async def generate_docs_rst(instance: Controller) -> None:
                 raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=mc_data, expec_type=dict)
             data = dict_merge(data, mc_data)
             mc_ = True
-        if gen_ is False and entry.running and entry.module == "Generic":
+        # AMP 2.8 reports Generic Instances as "GenericModule", Source (srcds) games included.
+        if gen_ is False and entry.running and entry.module in ("Generic", "GenericModule"):
             generic_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
             if not isinstance(generic_data, dict):
                 raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=generic_data, expec_type=dict)
             data = dict_merge(data, generic_data)
             gen_ = True
+        # TODO: AMP 2.8 has no "srcds" module, so this never matches there.
+        #       Drop it once we know no supported AMP version still sends it.
         if src_ is False and entry.running and entry.module == "srcds":
             srcds_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
             if not isinstance(srcds_data, dict):
