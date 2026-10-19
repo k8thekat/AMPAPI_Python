@@ -140,6 +140,10 @@ USER_APPLICATION_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 BACKUP_REQUIRED_KEYS: tuple[str, ...] = ("id", "stored_locally", "stored_remotely")
 BACKUP_EXCLUDED_KEYS: tuple[str, ...] = ()
 
+# Confirmed against a live ImportConfig reply (AMP 2.8.0.8, a missing file). Every list was empty.
+IMPORT_CONFIG_REQUIRED_KEYS: tuple[str, ...] = ("imported", "not_imported", "unrecognised", "rejected")
+IMPORT_CONFIG_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 # TODO: Confirm these keys against a live GetOPWhitelist response.
 # The captured response is a "Missing Method" error, so they come from the `OPWhitelist` dataclass.
 OP_WHITELIST_REQUIRED_KEYS: tuple[str, ...] = ("op_list", "whitelist")
@@ -632,6 +636,18 @@ class EndpointResponseError(TypedDict, total=False):
     status: bool
     message: str
     stackTrace: Required[Any]
+
+
+class ImportConfigResponse(TypedDict):
+    """The raw response from :meth:`GenericModule.import_config`."""
+
+    # TODO: Confirm the element types against a real import.
+    # Only empty lists were seen, so they are typed as Any for now.
+    settings: dict[str, Any]
+    imported: list[Any]
+    not_imported: list[Any]
+    unrecognised: list[Any]
+    rejected: list[Any]
 
 
 class InstanceResponse(TypedDict):

@@ -40,6 +40,15 @@ This class object is for Minecraft type Instances providing the endpoints specif
    :members:
 
 
+GenericModule Instance
+~~~~~~~~~~~~~~~~~~~~~~~
+This class object is for Generic type Instances (the game templates and Custom Application) providing the
+:class:`GenericModule` and :class:`SteamCMDPlugin` endpoints.
+
+.. autoclass:: GenericInstance
+   :members:
+
+
 
 API Utility
 ~~~~~~~~~~~~

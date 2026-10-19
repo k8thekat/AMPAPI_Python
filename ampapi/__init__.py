@@ -39,9 +39,11 @@ from .errors import *
 from .emailsender import *
 from .filebackup import *
 from .filemanager import *
+from .generic import *
 from .instance import *
 from .minecraft import *
 from .modules import *
+from .steamcmd import *
 from ._enums import *
 from .backoff import *
 

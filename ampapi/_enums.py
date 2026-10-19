@@ -136,6 +136,7 @@ class Module(StrEnum):
     ADS = "ADS"
     Minecraft = "Minecraft"
     Generic = "Generic"
+    GenericModule = "GenericModule"
     SourceDedicatedServer = "SRCDS"
 
 
