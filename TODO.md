@@ -27,6 +27,7 @@ A small todo list local to the project.
 
 ---
 
+- `APIParams` / `Bridge` don't strip a trailing `/` from the URL, so `http://host:8080/` gives `//API/...` and login fails.
 
 ## ampapi/core.py
 

@@ -179,13 +179,18 @@ class ADSModule(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
-        Apply an Instance configuration.
+        Apply settings to an Instance's own configuration, through the ADS that holds it.
+
+        .. note::
+            `args` takes setting nodes, eg. `{"Core.Login.UseAuthServer": "True", "Core.Login.AuthServerURL": url}`
+            points an Instance at its Controller for logins, which is what `ampinstmgr --RepairAuth` does
+            (tested on AMP 2.8.0.8). Send it through the :class:`TargetADS` for a Target's Instance.
 
         .. warning::
-            This Endpoint has not been fully tested, multiple parameters are unknown, or functionality is unknown.
+            `rebuild_configuration` is untested.
 
 
         Parameters
@@ -193,9 +198,9 @@ class ADSModule(Base):
         instance_id : :class:`str`
             The Instance ID.
         args : dict[:class:`str`, :class:`str`]
-            UNK.
+            The setting nodes and the values to apply.
         rebuild_configuration : :class:`bool`, optional
-            UNK, by default False.
+            Rebuild the Instance's configuration, by default False.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -205,8 +210,9 @@ class ADSModule(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns a :class:`RunningTask` dataclass, or the raw dictionary when `format_data` is False.
+            AMP 2.8 answers with a running task that also carries the :class:`ActionResult` keys.
 
         """
         await self._reauth()
@@ -221,11 +227,11 @@ class ADSModule(Base):
             raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return RunningTask(**result)
             return result
-        raise AMPAPIKeyError("status", "ADSModule/ApplyInstanceConfiguration", result)  # noqa: EM101
+        raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def apply_template(

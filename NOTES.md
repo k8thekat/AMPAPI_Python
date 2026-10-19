@@ -119,9 +119,26 @@ and every Instance at the Controller, and sets `Defaults.DefaultAuthServerURL` s
 asks the same two questions as the role choice in the web setup (`standalone` / `controller` / `target` / `hybrid`, and the
 Controller's URL). Run on vm2 as `target`, it fixed `MCTest01`; not yet run on a Controller.
 
-`CreateInstanceFromSpec` (2026-10-19, CS:Source on vm2) left the new Instance on `Login.AuthServerURL=http://localhost:8080/`
-even with the Target's `Defaults.DefaultAuthServerURL` pointing at the Controller, so its login through vm1 failed
-(result 0). `RepairAuth target <vm1 url>` fixed it, and stopped vm2's Instances, which need starting again after.
+A new Instance's auth server comes from the ADS that receives the create call (VM pair, 2026-10-19):
+- Its `Login.AuthServerURL` is the receiving ADS's `ADSModule.Defaults.DefaultAuthServerURL`. Sent to the Controller
+  for a Target, that is the Controller's default. `ampinstmgr quick` leaves it as `http://localhost:8080/`, which on
+  the Target means the Target, so the Instance's logins through the Controller fail (result 0).
+- Same CreateInstanceFromSpec sent through the `TargetADS`: the Target's own default (the Controller's URL), correct.
+- `CreateInstance` with `Core.Login.*` in `ProvisionSettings` still got the Controller's default. ProvisionSettings
+  don't override it.
+- AMP's setup wizard (`/Plugins/ADSModule/Plugin.js`, `finish`) sets a Controller's or Hybrid's DefaultAuthServerURL
+  and `Core.Login.AuthServerURL` to its own URL, and a Target's to the Controller's URL. With vm1's default set to its
+  own URL, Instances created through either route log in.
+- `ApplyInstanceConfiguration` with `Args` `{"Core.Login.UseAuthServer": "True", "Core.Login.AuthServerURL": url}`,
+  sent through the `TargetADS`, repairs one Instance, like `RepairAuth` does for all. It answers a RunningTask.
+  `RepairAuth target <vm1 url>` (on vm2) also works, and stops vm2's Instances, which need starting again after.
+- `ADSModule.Network.AccessMode` (0/10/20) doesn't change any of it: a wrongly pointed Instance fails and a right one
+  logs in, in every mode.
+- Users: one created through the `TargetADS` lives in vm2's own user database (vm1's `GetAMPUserInfo` doesn't know
+  it). With a role it logs in to vm2 directly, to vm2 through the Controller's proxy, and to vm2's Instances, but not
+  to vm1 (result 5). One created on the Controller with a role logs in everywhere. vm2 reports the same role IDs as
+  vm1. Without a role, either gets result 5 on Instances. Deleting a user needs it disabled first.
+
 A GenericModule Instance's `GetDiagnosticsInfo` adds `config_version` (eg. "3"), like Minecraft adds `server_type`,
 `server_jar` and `java_version`.
 
