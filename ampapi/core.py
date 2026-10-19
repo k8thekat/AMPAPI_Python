@@ -131,6 +131,8 @@ class Core(Base):
 
         **DEV**: Creates a non-ending task with 50% progress for testing purposes
 
+        Endpoint: `Core/CreateTestTask`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -155,6 +157,8 @@ class Core(Base):
         """|coro|
 
         **DEV**: Async test method
+
+        Endpoint: `Core/AsyncTest`
 
         Parameters
         ----------
@@ -185,6 +189,8 @@ class Core(Base):
 
         Approve an AMP update.
 
+        Endpoint: `Core/AcknowledgeAMPUpdate`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -212,6 +218,8 @@ class Core(Base):
         """|coro|
 
         Activate an AMP License key.
+
+        Endpoint: `Core/ActivateAMPLicence`
 
         Parameters
         ----------
@@ -264,6 +272,8 @@ class Core(Base):
         """|coro|
 
         Add an Event Trigger to an Instance.
+
+        Endpoint: `Core/AddEventTrigger`
 
         .. note::
             See :attr:`Triggers.id`; which you can get a list of triggers from the documentation.
@@ -323,6 +333,8 @@ class Core(Base):
         """|coro|
 
         Add an Interval Trigger to an Instance.
+
+        Endpoint: `Core/AddIntervalTrigger`
 
         .. note::
             Requires the ``Core.Scheduler.CreateTrigger`` permission.
@@ -398,6 +410,8 @@ class Core(Base):
 
         Add a task.
 
+        Endpoint: `Core/AddTask`
+
         This requires knowing the structure of the Method IDs
         - See http://ampapi-python.readthedocs.io/en/latest/events/method_events.html
 
@@ -459,6 +473,8 @@ class Core(Base):
 
         Cancel an existing Task.
 
+        Endpoint: `Core/CancelTask`
+
         Parameters
         ----------
         task_id : :class:`str`
@@ -511,6 +527,8 @@ class Core(Base):
         """|coro|
 
         Change a AMP Users password.
+
+        Endpoint: `Core/ChangeUserPassword`
 
         .. note::
             Requires having the old password.
@@ -578,6 +596,8 @@ class Core(Base):
 
         Change the order of a task.
 
+        Endpoint: `Core/ChangeTaskOrder`
+
         Parameters
         ----------
         trigger_id : :class:`str`
@@ -633,6 +653,8 @@ class Core(Base):
 
         Completes two-factor setup by supplying a valid two factor code based on the secret provided by EnableTwoFactor.
 
+        Endpoint: `Core/ConfirmTwoFactorSetup`
+
         Parameters
         ----------
         username : :class:`str`
@@ -685,6 +707,8 @@ class Core(Base):
         """|coro|
 
         Convert an AMP User to sign in through OIDC.
+
+        Endpoint: `Core/ConvertUserToOIDC`
 
         .. note::
             Requires the ``Core.UserManagement.UpdateUserInfo`` permission.
@@ -745,6 +769,8 @@ class Core(Base):
 
         Creates an AMP Role.
 
+        Endpoint: `Core/CreateRole`
+
         Parameters
         ----------
         role_name : :class:`str`
@@ -797,6 +823,8 @@ class Core(Base):
 
         Create an AMP user.
 
+        Endpoint: `Core/CreateUser`
+
         Parameters
         ----------
         username : :class:`str`
@@ -846,6 +874,8 @@ class Core(Base):
 
         Retrieves the current Session IDs permissions. This will differ between the ADS and a Server/Instance.
 
+        Endpoint: `Core/CurrentSessionHasPermission`
+
         .. note::
             Supports looking for a blocked permission node simply by appending ``-`` in front of the permission node.
             - eg ``-Core.RoleManagement.DeleteRoles``, also supports wildcards ``*``. eg ``Core.RoleManagement.*``
@@ -890,6 +920,8 @@ class Core(Base):
         """|coro|
 
         Delete an Instances User list.
+
+        Endpoint: `Core/DeleteInstanceUsers`
 
         Parameters
         ----------
@@ -940,6 +972,8 @@ class Core(Base):
         """|coro|
 
         Deletes a role.
+
+        Endpoint: `Core/DeleteRole`
 
         Parameters
         ----------
@@ -992,6 +1026,7 @@ class Core(Base):
 
         Delete a task.
 
+        Endpoint: `Core/DeleteTask`
 
         Parameters
         ----------
@@ -1045,6 +1080,8 @@ class Core(Base):
 
         Delete a trigger.
 
+        Endpoint: `Core/DeleteTrigger`
+
         Parameters
         ----------
         trigger_id : :class:`str`
@@ -1095,6 +1132,8 @@ class Core(Base):
 
         Delete an AMP user.
 
+        Endpoint: `Core/DeleteUser`
+
         Parameters
         ----------
         username : :class:`str`
@@ -1143,6 +1182,8 @@ class Core(Base):
         """|coro|
 
         Disables two-factor authentication for the currently logged in AMP User.
+
+        Endpoint: `Core/DisableTwoFactor`
 
         .. warning::
             This applies to the AMP User name supplied to interact with the API.
@@ -1198,6 +1239,8 @@ class Core(Base):
 
         Dismiss all task notifications.
 
+        Endpoint: `Core/DismissAllTasks`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1243,6 +1286,8 @@ class Core(Base):
         """|coro|
 
         Dismiss a task notification.
+
+        Endpoint: `Core/DismissTask`
 
         Parameters
         ----------
@@ -1299,6 +1344,8 @@ class Core(Base):
         """|coro|
 
         Edits an interval trigger.
+
+        Endpoint: `Core/EditIntervalTrigger`
 
         Parameters
         ----------
@@ -1388,6 +1435,8 @@ class Core(Base):
 
         Edit a task.
 
+        Endpoint: `Core/EditTask`
+
         Parameters
         ----------
         trigger_id : :class:`str`
@@ -1442,6 +1491,8 @@ class Core(Base):
         """|coro|
 
         Sets up two-factor authentication for the given user.
+
+        Endpoint: `Core/EnableTwoFactor`
 
         .. warning::
             ConfirmTwoFactorSetup must be invoked to complete setup.
@@ -1499,6 +1550,8 @@ class Core(Base):
 
         Closes the specified User's session ID to AMP.
 
+        Endpoint: `Core/EndUserSession`
+
         .. warning::
             The Instance must be an ADS or Controller.
 
@@ -1534,6 +1587,8 @@ class Core(Base):
         """|coro|
 
         Returns currently active AMP Sessions.
+
+        Endpoint: `Core/GetActiveAMPSessions`
 
         .. warning::
             The Instance must be an ADS or Controller.
@@ -1582,6 +1637,8 @@ class Core(Base):
 
         Retrieves all AMP Users and their information.
 
+        Endpoint: `Core/GetAllAMPUserInfo`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1624,6 +1681,8 @@ class Core(Base):
 
         Retrieves the AMP Role permission nodes for the provided role ID.
 
+        Endpoint: `Core/GetAMPRolePermissions`
+
         Parameters
         ----------
         role_id : :class:`str`
@@ -1662,6 +1721,8 @@ class Core(Base):
         """|coro|
 
         Retrieves the AMP User information for the provided username.\n
+
+        Endpoint: `Core/GetAMPUserInfo`
 
         Parameters
         ----------
@@ -1709,6 +1770,8 @@ class Core(Base):
 
         Get all AMP users summary.
 
+        Endpoint: `Core/GetAMPUsersSummary`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1747,6 +1810,8 @@ class Core(Base):
         """|coro|
 
         Get's all the API specs for the Instance.
+
+        Endpoint: `Core/GetAPISpec`
 
         .. note::
             See :ref:`API Reference <Documentation>` for more information.
@@ -1788,6 +1853,8 @@ class Core(Base):
         """|coro|
 
         Returns the last ``count`` number of audit log entries.
+
+        Endpoint: `Core/GetAuditLogEntries`
 
         .. note::
             These are anything in the Console of the Controller/ADS such as login events or API calls.
@@ -1839,6 +1906,8 @@ class Core(Base):
 
         Get a list of Authentication requirements for the AMP user.
 
+        Endpoint: `Core/GetAuthenticationRequirements`
+
         Parameters
         ----------
         username : :class:`str`
@@ -1877,6 +1946,8 @@ class Core(Base):
         """|coro|
 
         Returns the config settings for a specific node.
+
+        Endpoint: `Core/GetConfig`
 
         .. note::
             See :ref:`Setting Nodes <Documentation>` for more information.
@@ -1932,6 +2003,8 @@ class Core(Base):
 
         Returns the config settings for each node in the list.
 
+        Endpoint: `Core/GetConfigs`
+
         .. note::
             See :ref:`Setting Nodes <Documentation>` for more information.
 
@@ -1980,6 +2053,8 @@ class Core(Base):
 
         Get's the system diagnostics information.
 
+        Endpoint: `Core/GetDiagnosticsInfo`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -2025,6 +2100,7 @@ class Core(Base):
 
         Returns the module information.
 
+        Endpoint: `Core/GetModuleInfo`
 
         Parameters
         ----------
@@ -2067,6 +2143,8 @@ class Core(Base):
 
         Get a new GUID for the Instance.
 
+        Endpoint: `Core/GetNewGuid`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2101,6 +2179,7 @@ class Core(Base):
 
         Interacts with OIDC credentials.
 
+        Endpoint: `Core/GetOIDCLoginURL`
 
         __Endpoint__: "Core/GetOIDCLoginURL"
 
@@ -2142,6 +2221,7 @@ class Core(Base):
 
         Interacts with OIDC credentials.
 
+        Endpoint: `Core/GetOIDCLogoutURL`
 
         __Endpoint__: "Core/GetOIDCLogoutURL"
 
@@ -2182,6 +2262,8 @@ class Core(Base):
 
         Retrieves the AMP Permissions node tree.
 
+        Endpoint: `Core/GetPermissionsSpec`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2215,6 +2297,8 @@ class Core(Base):
         """|coro|
 
         Get a summary of the Instance's open ports.
+
+        Endpoint: `Core/GetPortSummaries`
 
         Parameters
         ----------
@@ -2255,6 +2339,8 @@ class Core(Base):
         """|coro|
 
         Returns the provisioning spec.
+
+        Endpoint: `Core/GetProvisionSpec`
 
         Parameters
         ----------
@@ -2297,6 +2383,8 @@ class Core(Base):
 
         Get the remote login token.
 
+        Endpoint: `Core/GetRemoteLoginToken`
+
         Parameters
         ----------
         description : Union[:class:`str`, None], optional
@@ -2337,6 +2425,8 @@ class Core(Base):
         """|coro|
 
         Retrieves the AMP Role information for the provided role ID.
+
+        Endpoint: `Core/GetRole`
 
         Parameters
         ----------
@@ -2384,6 +2474,8 @@ class Core(Base):
 
         Get's a list of all the roles.
 
+        Endpoint: `Core/GetRoleData`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -2423,6 +2515,8 @@ class Core(Base):
 
         Retrieves all the Roles AMP currently has and the role IDs.
 
+        Endpoint: `Core/GetRoleIds`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2458,6 +2552,8 @@ class Core(Base):
         """|coro|
 
         Returns an Instances scheduled Events and Triggers.
+
+        Endpoint: `Core/GetScheduleData`
 
         Parameters
         ----------
@@ -2501,6 +2597,8 @@ class Core(Base):
         """|coro|
 
         Retrieves a list of settings specifications that can be changed.
+
+        Endpoint: `Core/GetSettingsSpec`
 
         .. note::
             See :ref:`Setting Nodes <Documentation>` for more information.
@@ -2553,6 +2651,8 @@ class Core(Base):
 
         Returns the setting values.
 
+        Endpoint: `Core/GetSettingValues`
+
         .. note::
             See :ref:`Setting Nodes <Documentation>` for more information.
 
@@ -2596,6 +2696,8 @@ class Core(Base):
 
         Gets the AMP Instance application status information. Such as active users, cpu usage, memory usage, state and uptime.
 
+        Endpoint: `Core/GetStatus`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -2637,6 +2739,8 @@ class Core(Base):
 
         Retrieves the structured diagnostics of the Instance.
 
+        Endpoint: `Core/GetStructuredDiagnostics`
+
         .. note::
             Requires the ``Core.Special.Diagnostics`` permission.
 
@@ -2674,6 +2778,8 @@ class Core(Base):
         """|coro|
 
         Get a list of running tasks on the Instance.
+
+        Endpoint: `Core/GetTasks`
 
         Parameters
         ----------
@@ -2725,6 +2831,8 @@ class Core(Base):
         """|coro|
 
         Gets a time interval trigger information.
+
+        Endpoint: `Core/GetTimeIntervalTrigger`
 
         Parameters
         ----------
@@ -2799,6 +2907,8 @@ class Core(Base):
 
         Gets the Update Version information for AMP.
 
+        Endpoint: `Core/GetUpdateInfo`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -2841,6 +2951,8 @@ class Core(Base):
 
         Gets changes to the server status, in addition to any notifications or console output that have occurred
         since the last time meth:`get_updates` was called by the current session.
+
+        Endpoint: `Core/GetUpdates`
 
         Parameters
         ----------
@@ -2885,6 +2997,8 @@ class Core(Base):
 
         Get a specification of the user actions.
 
+        Endpoint: `Core/GetUserActionsSpec`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2920,6 +3034,8 @@ class Core(Base):
         """|coro|
 
         Provides information about a given in-application user (as opposed to AMP Users).
+
+        Endpoint: `Core/GetUserInfo`
 
         Parameters
         ----------
@@ -2972,6 +3088,8 @@ class Core(Base):
 
         Returns the list of the connected users to the Application.
 
+        Endpoint: `Core/GetUserList`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -3012,6 +3130,8 @@ class Core(Base):
         """|coro|
 
         Get a webauthn challenge.
+
+        Endpoint: `Core/GetWebauthnChallenge`
 
         Parameters
         ----------
@@ -3058,6 +3178,8 @@ class Core(Base):
 
         Get a webauthn credential IDs.
 
+        Endpoint: `Core/GetWebauthnCredentialIDs`
+
         Parameters
         ----------
         username : :class:`str`
@@ -3095,6 +3217,8 @@ class Core(Base):
 
         Get the webauthn credential summaries.
 
+        Endpoint: `Core/GetWebauthnCredentialSummaries`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3129,6 +3253,7 @@ class Core(Base):
 
         Gets the webserver metrics.
 
+        Endpoint: `Core/GetWebserverMetrics`
 
         .. versionremoved::  "2.6.0.0"
 
@@ -3172,6 +3297,8 @@ class Core(Base):
         """|coro|
 
         Kills the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
+
+        Endpoint: `Core/Kill`
 
         Parameters
         ----------
@@ -3236,6 +3363,7 @@ class Core(Base):
 
         AMP API login function.
 
+        Endpoint: `Core/Login`
 
         Parameters
         ----------
@@ -3283,6 +3411,8 @@ class Core(Base):
 
         Logout from AMP.
 
+        Endpoint: `Core/Logout`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3309,6 +3439,8 @@ class Core(Base):
 
         Restart the AMP Instance
 
+        Endpoint: `Core/RestartAMP`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3333,6 +3465,8 @@ class Core(Base):
         """|coro|
 
         Allows the service to be re-started after previously being suspended.
+
+        Endpoint: `Core/Resume`
 
         Parameters
         ----------
@@ -3362,6 +3496,8 @@ class Core(Base):
         """|coro|
 
         Related to OIDC credentials. Return type is UNKNOWN as of v`3.0.0`.
+
+        Endpoint: `Core/OIDCLogin`
 
         __EndPoint__: /API/Core/OIDCLogin
 
@@ -3407,6 +3543,8 @@ class Core(Base):
         """|coro|
 
         Refreshes a setting nodes values.
+
+        Endpoint: `Core/RefreshSettingValueList`
 
         Parameters
         ----------
@@ -3457,6 +3595,8 @@ class Core(Base):
 
         Refreshes the settings source cache.
 
+        Endpoint: `Core/RefreshSettingsSourceCache`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -3503,6 +3643,8 @@ class Core(Base):
         """|coro|
 
         Renames a role.
+
+        Endpoint: `Core/RenameRole`
 
         Parameters
         ----------
@@ -3593,6 +3735,8 @@ class Core(Base):
 
         Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
+        Endpoint: `Core/Restart`
+
         Parameters
         ----------
         format_data : Union[bool, None], optional
@@ -3637,6 +3781,8 @@ class Core(Base):
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> ActionResult | ActionResultResponse:
         """For administrative users to alter the password of another user.
+
+        Endpoint: `Core/ResetUserPassword`
 
         Parameters
         ----------
@@ -3689,6 +3835,8 @@ class Core(Base):
         """|coro|
 
         Revert an AMP User from OIDC back to a local sign in.
+
+        Endpoint: `Core/RevertUserFromOIDC`
 
         .. note::
             Requires the ``Core.UserManagement.UpdateUserInfo`` permission.
@@ -3744,6 +3892,8 @@ class Core(Base):
 
         Revoke a webauthn credential.
 
+        Endpoint: `Core/RevokeWebauthnCredential`
+
         Parameters
         ----------
         auth_id : :class:`int`
@@ -3793,6 +3943,8 @@ class Core(Base):
 
         Run a security check on the Instance.
 
+        Endpoint: `Core/RunSecurityCheck`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3823,6 +3975,8 @@ class Core(Base):
         """|coro|
 
         Runs an event trigger immediately.
+
+        Endpoint: `Core/RunEventTriggerImmediately`
 
         Parameters
         ----------
@@ -3875,6 +4029,8 @@ class Core(Base):
         """|coro|
 
         Adds a user to an AMP role.
+
+        Endpoint: `Core/SetAMPUserRoleMembership`
 
         Parameters
         ----------
@@ -3932,6 +4088,8 @@ class Core(Base):
 
         Set a permission node to "True" or "False" for the provided AMP role.
 
+        Endpoint: `Core/SetAMPRolePermission`
+
         Parameters
         ----------
         role_id : :class:`str`
@@ -3988,6 +4146,8 @@ class Core(Base):
 
         Sets the enabled state of a trigger.
 
+        Endpoint: `Core/SetTriggerEnabled`
+
         Parameters
         ----------
         trigger_id : :class:`str`
@@ -4039,6 +4199,8 @@ class Core(Base):
 
         Sends a message or command to the Console. (eg `/list`)
 
+        Endpoint: `Core/SendConsoleMessage`
+
         .. note::
             Calling :meth:`Core.get_updates` directly after this function will not have the console output,
             best practice is to delay ~ 1 sec to catch results.
@@ -4081,6 +4243,8 @@ class Core(Base):
 
         Set multiple Setting Nodes values.
 
+        Endpoint: `Core/SetConfigs`
+
         Parameters
         ----------
         data : dict[:class:`str`, :class:`str`]
@@ -4120,6 +4284,8 @@ class Core(Base):
         """|coro|
 
         Set a Setting Node value.
+
+        Endpoint: `Core/SetConfig`
 
         Parameters
         ----------
@@ -4172,6 +4338,8 @@ class Core(Base):
 
         Put the application to sleep.
 
+        Endpoint: `Core/Sleep`
+
         .. note::
             Requires the ``Core.AppManagement.StopApplication`` permission.
 
@@ -4217,6 +4385,8 @@ class Core(Base):
 
         Starts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
+        Endpoint: `Core/Start`
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -4261,6 +4431,8 @@ class Core(Base):
 
         Stops the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
 
+        Endpoint: `Core/Stop`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -4285,6 +4457,8 @@ class Core(Base):
         """|coro|
 
         Prevents the current Instance from being started, and stops it if it's currently running.
+
+        Endpoint: `Core/Suspend`
 
         Parameters
         ----------
@@ -4313,6 +4487,8 @@ class Core(Base):
         """|coro|
 
         Update account info.
+
+        Endpoint: `Core/UpdateAccountInfo`
 
         .. note::
             All these settings take affect on the account logged in via the API.
@@ -4369,6 +4545,8 @@ class Core(Base):
 
         Upgrade the current AMP Instance.
 
+        Endpoint: `Core/UpgradeAMP`
+
          .. warning::
             The Instance must be an ADS or Controller.
 
@@ -4397,6 +4575,8 @@ class Core(Base):
         """|coro|
 
         Updates the ADS Instance.
+
+        Endpoint: `Core/UpdateAMPInstance`
 
         .. warning::
             The Instance must be an ADS or Controller.
@@ -4427,6 +4607,7 @@ class Core(Base):
 
         Update the Instance application.
 
+        Endpoint: `Core/UpdateApplication`
 
         Parameters
         ----------
@@ -4474,6 +4655,8 @@ class Core(Base):
         """|coro|
 
         Update the OIDC subject linked to an AMP User.
+
+        Endpoint: `Core/UpdateOIDCSub`
 
         .. note::
             Requires the ``Core.UserManagement.UpdateUserInfo`` permission.
@@ -4531,6 +4714,8 @@ class Core(Base):
     ) -> ActionResult | ActionResultResponse:
         """Update a public key.
 
+        Endpoint: `Core/UpdatePublicKey`
+
         Parameters
         ----------
         pub_key : :class:`str`
@@ -4579,6 +4764,8 @@ class Core(Base):
         """|coro|
 
         Update the AMP system tools (ampinstmgr) to the latest release.
+
+        Endpoint: `Core/UpdateTools`
 
         .. note::
             Requires the ``Core.Special.UpgradeAMP`` permission.
@@ -4630,6 +4817,8 @@ class Core(Base):
         """|coro|
 
         Update an AMP user.
+
+        Endpoint: `Core/UpdateUserInfo`
 
         Parameters
         ----------
@@ -4699,6 +4888,8 @@ class Core(Base):
         """|coro|
 
         Webauthn register.
+
+        Endpoint: `Core/WebauthnRegister`
 
         .. note::
             Unknown usage.
