@@ -158,3 +158,12 @@ Target ADS
 - :meth:`~ampapi.instance.TargetADS.get_instances` returns the Instances on that Target, leaving out the Target's own
   ADS Instance, and keeps them on ``TargetADS.instances``. The Target's own data in the reply refreshes the
   ``TargetADS`` itself, and each returned Instance has the ``TargetADS`` as its ``ads``.
+- A ``TargetADS`` carries its Target's data flat on itself like the ``Controller`` does (``platform``, ``url``,
+  ``state``, ``datastores``, ``available_instances`` and the rest). ``friendly_name``, ``description`` and ``tags``
+  stay the Instance's values. The data arrives with :meth:`~ampapi.instance.Controller.get_instances` (the
+  Controller's copy), then the ``TargetADS``'s own :meth:`~ampapi.instance.TargetADS.get_instances` replaces it with
+  the Target's own view. Reading it before that raises :exc:`AttributeError`, as on the ``Controller``.
+- :meth:`~ampapi.instance.Controller.get_instances` and :meth:`~ampapi.instance.TargetADS.get_instances` update
+  existing objects in place, matched by Instance ID, instead of building new ones. ``Controller.targets``,
+  ``Controller.instances`` and ``TargetADS.instances`` stay the same objects, so a reference to an Instance or a
+  ``TargetADS`` stays valid across refreshes. Instances AMP no longer lists are dropped.

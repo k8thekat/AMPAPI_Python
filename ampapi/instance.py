@@ -690,7 +690,91 @@ class MinecraftInstance(MinecraftModule, Instance):
     module: str = "Minecraft"
 
 
-class TargetADS(ADSModule, Instance):
+class TargetData(Base):
+    """The Target data an ADS keeps flat on itself, shared by :class:`Controller` and :class:`TargetADS`.
+
+    .. note::
+        Each subclass sets `__cached__` to the Target fields it holds. Those names are guarded, so reading one before
+        :meth:`_parse_target_data` has run raises :exc:`AttributeError`, and reading one after the cache timeout logs a
+        warning. A :class:`TargetADS` leaves out `friendly_name`, `description` and `tags`, as the Instance's values win.
+
+    """
+
+    # These stay unset until `get_instances()` populates them, see __getattribute__ below.
+    id: int
+    disabled: bool
+    is_remote: bool
+    platform: PlatformInfoResponse
+    datastores: list[TargetDatastoreResponse]
+    creates_in_containers: bool
+    can_create: bool
+    available_instances: list[InstanceResponse]
+    available_ips: list[str]
+    url: str
+    last_updated: datetime.datetime | str
+    state: InstanceState
+    fitness: Union[dict[str, Any], None]
+    state_reason: Union[str, None]
+    tags_list: Union[str, None]
+
+    __cached__: ClassVar[tuple[str, ...]] = ()
+
+    # O(1) membership for the __getattribute__ guard, which runs on every attribute access.
+    _cached_names: ClassVar[frozenset[str]] = frozenset()
+
+    # What the cache messages tell a user to call. Anything populated by a different endpoint gets an
+    # entry in `_cache_sources`; everything else falls back to `_cache_source`.
+    _cache_source: ClassVar[str] = "get_instances()"
+    _cache_sources: ClassVar[dict[str, str]] = {}
+
+    def __getattribute__(self, name: str) -> Any:
+        """Guard the cached attributes, raising when unpopulated and warning when stale.
+
+        .. note::
+            This has to be ``__getattribute__`` rather than ``__getattr__``, so the stale warning also fires on
+            populated attributes.
+
+        """
+        # Cheap frozenset test first so uncached names and every method call fall straight through.
+        # `_is_cached` only flips in `_parse_target_data`, so it alone says if our own data was applied.
+        cls: type[TargetData] = type(self)
+        if name in cls._cached_names:
+            if not object.__getattribute__(self, "_is_cached"):
+                raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
+
+            # Inlined staleness check; monotonic subtraction keeps this off the datetime path.
+            stamped: Optional[float] = object.__getattribute__(self, "_cached_monotonic")
+            timeout: int = object.__getattribute__(self, "_cache_timeout")
+            if stamped is not None:
+                age: float = time.monotonic() - stamped
+                if age > timeout:
+                    LOGGER.warning(
+                        Base._stale_cache,
+                        cls.__name__,
+                        name,
+                        int(age),
+                        timeout,
+                        cls.__name__,
+                        cls._cache_hint(name),
+                    )
+        return object.__getattribute__(self, name)
+
+    def _parse_target_data(self, data: ControllerResponse) -> None:
+        # Only the names this class guards get set, so a TargetADS never overwrites the Instance's own values.
+        # Every one of them is set, even when AMP sends null, so a populated attribute never raises.
+        for key in self.__cached__:
+            setattr(self, key, data.get(key))
+
+        # AMP sends last_updated as an ISO string, so we convert it here.
+        self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])
+        try:
+            self.state = InstanceState(data["state"])
+        except ValueError:
+            self.state = InstanceState.undefined
+        self._mark_cached()
+
+
+class TargetADS(TargetData, ADSModule, Instance):
     """Typically referred to the "Target ADS", the ADS Instance of a remote Target held by the :class:`Controller`
     in :attr:`~Controller.targets`.
 
@@ -706,6 +790,11 @@ class TargetADS(ADSModule, Instance):
         :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance` and :meth:`delete_instance_users`
         take the :class:`ADSModule` signature (an `instance_name` or `instance_id`) and act on an Instance of this
         Target. They no longer act on the Target ADS itself like the :class:`Instance` versions did.
+
+    .. note::
+        The Target's own data is kept flat on this object like :class:`Controller` does, and reading it before
+        :meth:`~Controller.get_instances` has run raises :exc:`AttributeError`. `friendly_name`, `description` and `tags`
+        are not part of it, those stay the Instance's values.
 
 
     Attributes
@@ -767,13 +856,61 @@ class TargetADS(ADSModule, Instance):
     target_id : :class:`str`
         The target ID of the Instance.
     url : :class:`str`
-        The API URL.
+        The URL of the Target.
+    id : :class:`int`
+        The Target's ID.
+    disabled : :class:`bool`
+        If the Target is Disabled or not.
+    is_remote : :class:`bool`
+        If the Target is remote or not.
+    platform : :class:`PlatformInfoResponse`
+        Platform information related to the Target.
+    datastores : list[:class:`TargetDatastoreResponse`]
+        The Datastores that the Target has access to.
+    creates_in_containers : :class:`bool`
+        The Target will create the Instances in containers.
+    can_create : :class:`bool`
+        If the Target can create Instances or not.
+    available_instances : list[:class:`InstanceResponse`]
+        The raw Instances the Target lists.
+    available_ips : list[:class:`str`]
+        The list of available IPs the Target has.
+    last_updated : Union[:class:`str`, :class:`datetime`]
+        When the Target last updated, converted into a datetime object.
+    state : :class:`InstanceState`
+        The state the Target is in.
+    fitness : Union[dict[:class:`str`, Any], None]
+        UNK.
+    state_reason : Union[:class:`str`, None]
+        UNK.
+    tags_list : Union[:class:`str`, None]
+        The tags related to the Target if any.
 
     """
 
     module: str = "ADS"
 
     _instances: set[InstanceTypeAliases]
+
+    # The Target fields minus `friendly_name`, `description` and `tags`, which stay the Instance's values.
+    __cached__ = (
+        "available_instances",
+        "available_ips",
+        "can_create",
+        "creates_in_containers",
+        "datastores",
+        "disabled",
+        "fitness",
+        "id",
+        "is_remote",
+        "last_updated",
+        "platform",
+        "state",
+        "state_reason",
+        "tags_list",
+        "url",
+    )
+    _cached_names: ClassVar[frozenset[str]] = frozenset(__cached__)
 
     @property
     def instances(self) -> set[InstanceTypeAliases]:
@@ -1102,6 +1239,10 @@ class TargetADS(ADSModule, Instance):
             response is copied onto `self`. The Instances in the set have `self` as their :attr:`~Instance.ads`.
 
         .. note::
+            The set is :attr:`instances`, updated in place by Instance ID. Instances already in it are refreshed and
+            keep their identity, new ones are added and the ones this Target no longer lists are dropped.
+
+        .. note::
             If `format_data` is False this will return the raw list of Target dicts instead and nothing is stored.
 
         Parameters
@@ -1138,22 +1279,25 @@ class TargetADS(ADSModule, Instance):
         if self._controller is None:
             raise RuntimeError(self._no_controller)
 
-        converted_instances: set[InstanceTypeAliases] = set()
+        available_instances: list[InstanceResponse] = []
         for target in result:
-            available_instances: list[InstanceResponse] = []
+            # Our own view of the Target is the entry whose ID is ours, and it wins over the Controller's copy.
+            if target["instance_id"] == self.instance_id:
+                self._parse_target_data(data=target)
+
             for instance in target["available_instances"]:
                 # The Target lists its own ADS Instance, that is us, so we refresh ourselves from it.
                 if instance["instance_id"] == self.instance_id:
                     self._parse_instance_data(data=instance)
                     continue
                 available_instances.append(instance)
-            converted_instances.update(self._controller.instance_conversion(instances=available_instances, ads=self))
 
-        self._instances = converted_instances
+        # Updated in place, matched by ID, so the Instances keep their identity across calls.
+        self._controller._sync_instances(current=self._instances, available=available_instances, ads=self)  # pyright: ignore[reportPrivateUsage]
         return self._instances
 
 
-class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
+class Controller(TargetData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     """Represents an AMP Controller Instance.
 
     .. note::
@@ -1211,29 +1355,13 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
     """
 
-    # These stay unset until `get_instances()` populates them, see __getattribute__ below.
-    id: int
-    disabled: bool
-    is_remote: bool
-    platform: PlatformInfoResponse
-    datastores: list[TargetDatastoreResponse]
-    creates_in_containers: bool
-    can_create: bool
-    available_instances: list[InstanceResponse]
-    available_ips: list[str]
-    tags: list[str]
-    url: str
-    last_updated: datetime.datetime | str
-    # instance_id: str = "0"
-    state: InstanceState
-    fitness: Union[dict[str, Any], None]
+    # These three are the Controller's own, a TargetADS keeps the Instance's values instead.
     friendly_name: str
-    state_reason: Union[str, None]
     description: str
-    tags_list: Union[str, None]
+    tags: list[str]
 
     _instances: set[InstanceTypeAliases]
-    # The remote Targets keyed by their ADS ID, rebuilt by `get_instances`.
+    # The remote Targets keyed by their ADS ID, updated in place by `get_instances`.
     _targets: dict[str, TargetADS]
     # The Controller's own ADS ID. `instance_id` is the session key, so AMP's real ID lives here until known.
     _ads_instance_id: Union[str, None]
@@ -1259,13 +1387,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         "url",
     )
 
-    # O(1) membership for the __getattribute__ guard, which runs on every attribute access.
     _cached_names: ClassVar[frozenset[str]] = frozenset(__cached__)
-
-    #  What the cache messages tell a user to call. Anything populated by a different endpoint gets an
-    # entry in `_cache_sources`; everything else falls back to `_cache_source`.
-    _cache_source: ClassVar[str] = "get_instances()"
-    _cache_sources: ClassVar[dict[str, str]] = {}
 
     # __slots__ = ()
 
@@ -1331,7 +1453,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         self._ads_instance_id = None
 
         if data is not None:
-            self._parse_controller_data(data=data)
+            self._parse_target_data(data=data)
 
     def __hash__(self) -> int:
         """Hash the Controller by its Instance ID."""
@@ -1350,38 +1472,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
                 continue
             new_vars[key] = value
         return pformat(new_vars)
-
-    def __getattribute__(self, name: str) -> Any:
-        """Guard the cached attributes, raising when unpopulated and warning when stale.
-
-        .. note::
-            This has to be ``__getattribute__`` rather than ``__getattr__``, so the stale warning also fires on
-            populated attributes.
-
-        """
-        # Cheap frozenset test first so uncached names and every method call fall straight through.
-        # `_is_cached` only flips in `_parse_controller_data`, so it alone says if our own data was applied.
-        if name in Controller._cached_names:
-            cls: type[Controller] = type(self)
-            if not object.__getattribute__(self, "_is_cached"):
-                raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
-
-            # Inlined staleness check; monotonic subtraction keeps this off the datetime path.
-            stamped: Optional[float] = object.__getattribute__(self, "_cached_monotonic")
-            timeout: int = object.__getattribute__(self, "_cache_timeout")
-            if stamped is not None:
-                age: float = time.monotonic() - stamped
-                if age > timeout:
-                    LOGGER.warning(
-                        Base._stale_cache,
-                        cls.__name__,
-                        name,
-                        int(age),
-                        timeout,
-                        cls.__name__,
-                        cls._cache_hint(name),
-                    )
-        return object.__getattribute__(self, name)
 
     async def __adel__(self) -> None:
         """Close any open connection when the Controller is discarded."""
@@ -1437,6 +1527,48 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             return MinecraftInstance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
 
         return Instance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
+
+    def _sync_instances(
+        self,
+        current: set[InstanceTypeAliases],
+        available: list[InstanceResponse],
+        ads: Optional[Union[Controller, TargetADS]] = None,
+    ) -> None:
+        """Update `current` in place from the raw Instance data, matched by Instance ID.
+
+        Existing Instances are refreshed, new ones are converted and added, and the ones missing from `available`
+        are dropped. An Instance whose module changed is replaced.
+
+        Parameters
+        ----------
+        current : set[Union[:class:`InstanceTypeAliases`]]
+            The set to update, kept as the same object.
+        available : list[:class:`InstanceResponse`]
+            The raw Instance data AMP listed.
+        ads : Union[:class:`Controller`, :class:`TargetADS`, None], optional
+            The ADS that holds the Instances, None means this Controller, by default None.
+
+        """
+        known: dict[str, InstanceTypeAliases] = {instance.instance_id: instance for instance in current}
+        listed: set[str] = set()
+        for data in available:
+            instance_id: str = data["instance_id"]
+            listed.add(instance_id)
+            existing: Union[InstanceTypeAliases, None] = known.get(instance_id)
+            if existing is not None and existing.module == data["module"]:
+                existing._parse_instance_data(data=data)  # pyright: ignore[reportPrivateUsage]
+                continue
+
+            # A new Instance, or one whose module changed and so needs another class.
+            if existing is not None:
+                current.discard(existing)
+            converted: InstanceTypeAliases = self.instance_conversion(instances=data, ads=ads)
+            current.add(converted)
+            known[instance_id] = converted
+
+        for instance_id, stale in known.items():
+            if instance_id not in listed:
+                current.discard(stale)
 
     @overload
     async def get_instance(
@@ -1600,19 +1732,6 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
                 self._ads_instance_id = module_info["instance_id"]
         return self._ads_instance_id
 
-    def _parse_controller_data(self, data: ControllerResponse) -> None:
-        # Every cached name gets set, even when AMP sends null, so a populated attribute never raises.
-        for key in self.__cached__:
-            setattr(self, key, data.get(key))
-
-        # AMP sends last_updated as an ISO string, so we convert it here.
-        self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])
-        try:
-            self.state = InstanceState(data["state"])
-        except ValueError:
-            self.state = InstanceState.undefined
-        self._mark_cached()
-
     @overload
     async def get_instances(
         self,
@@ -1662,6 +1781,11 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             Each remote Target becomes a :class:`TargetADS` in :attr:`targets`, and every one of them runs its own
             :meth:`TargetADS.get_instances` at the same time. A Target that fails logs a warning and keeps an empty
             :attr:`TargetADS.instances`. A Target whose own ADS Instance is missing from the reply is skipped.
+
+        .. note::
+            The Instances and Targets are updated in place by Instance ID. :attr:`instances` and :attr:`targets` stay
+            the same objects, existing Instances and :class:`TargetADS` objects are refreshed and keep their identity,
+            new ones are added and the ones AMP no longer lists are dropped.
 
         .. note::
             If ``format_data`` is False this will return the raw list of Target dicts instead and nothing is updated.
@@ -1744,8 +1868,9 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         # AMP sends one Target per ADS. The local one is us, so its data lands on our self object and its Instances
         # are ours. A remote Target becomes a TargetADS and gets its Instances from the Target itself, not our copy of them.
-        conv_instances: set[InstanceTypeAliases] = set()
-        remote_targets: dict[str, TargetADS] = {}
+        # Everything is updated in place, matched by ID, so references to our objects stay valid across calls.
+        local_instances: list[InstanceResponse] = []
+        remote_ids: set[str] = set()
         for target in result:
             available_instances: list[InstanceResponse] = target["available_instances"]
             LOGGER.debug(
@@ -1757,11 +1882,10 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
                 len(available_instances),
             )
             if target["is_remote"] is False:
-                self._parse_controller_data(data=target)
+                self._parse_target_data(data=target)
                 # Each Target lists its own ADS Instance, the one whose instance_id matches the Target's. In the local
                 # Target that Instance is us, so it stays out of `instances`.
-                available_instances = [instance for instance in available_instances if instance["instance_id"] != target["instance_id"]]
-                conv_instances.update(self.instance_conversion(instances=available_instances))
+                local_instances.extend(instance for instance in available_instances if instance["instance_id"] != target["instance_id"])
                 continue
 
             # The Target's own ADS Instance is the one we build the TargetADS from.
@@ -1780,18 +1904,30 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
                     target["instance_id"],
                 )
                 continue
-            remote_targets[target["instance_id"]] = TargetADS(
-                data=own_ads_data,
-                controller=self,
-                bridge=self._bridge,
-                session=self.session,
-            )
 
-        self._instances = conv_instances
-        self._targets = remote_targets
+            target_ads: Union[TargetADS, None] = self._targets.get(target["instance_id"])
+            if target_ads is None or own_ads_data["module"] != target_ads.module:
+                target_ads = TargetADS(
+                    data=own_ads_data,
+                    controller=self,
+                    bridge=self._bridge,
+                    session=self.session,
+                )
+                self._targets[target["instance_id"]] = target_ads
+            else:
+                target_ads._parse_instance_data(data=own_ads_data)  # pyright: ignore[reportPrivateUsage]
+
+            # Our copy of the Target's data goes on first, so a Target that is down still has some.
+            target_ads._parse_target_data(data=target)
+            remote_ids.add(target["instance_id"])
+
+        # The Targets AMP no longer lists are dropped.
+        for target_id in [target_id for target_id in self._targets if target_id not in remote_ids]:
+            del self._targets[target_id]
+        self._sync_instances(current=self._instances, available=local_instances)
 
         # Every Target answers on its own, so we ask them all at once.
-        target_list: list[TargetADS] = list(remote_targets.values())
+        target_list: list[TargetADS] = list(self._targets.values())
         outcomes = await asyncio.gather(
             *(target_ads.get_instances(format_data=True, request_params=request_params, **response_params) for target_ads in target_list),
             return_exceptions=True,
