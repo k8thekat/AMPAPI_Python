@@ -84,6 +84,7 @@ from .modules import (
     InstanceStatus,
     PortInfo,
     PostCreateActionsState,
+    PostCreateState,
     Provision,
     ProvisionSettingInfo,
     RemoteTargetInfo,
@@ -417,6 +418,108 @@ class ADSModule(Base):
                 return ActionResult(**result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/CancelPairing", result)  # noqa: EM101
+
+    @Base.ads_only
+    async def clone_instance(
+        self,
+        source_instance_id: str,
+        target_ads_instance_id: str,
+        new_friendly_name: Union[str, None] = None,
+        post_create: Union[PostCreateState, None] = None,
+        start_on_boot: Union[bool, None] = None,
+        target_datastore: Union[int, None] = None,
+        licence_key: Union[str, None] = None,
+        new_instance_username: Union[str, None] = None,
+        new_instance_password: Union[str, None] = None,
+        delete_source: Union[bool, None] = None,
+        copy_files: Union[bool, None] = None,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
+        """|coro|
+
+        Clone an Instance onto a Target.
+
+        .. note::
+            Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
+
+
+        Parameters
+        ----------
+        source_instance_id : :class:`str`
+            The ID of the Instance to clone.
+        target_ads_instance_id : :class:`str`
+            The ID of the Target ADS Instance that will hold the clone.
+        new_friendly_name : Union[:class:`str`, None], optional
+            The friendly name of the clone, by default None.
+        post_create : Union[:class:`PostCreateState`, None], optional
+            The action the clone takes after creation, by default None.
+        start_on_boot : Union[:class:`bool`, None], optional
+            If the clone should start when the Target boots, by default None.
+        target_datastore : Union[:class:`int`, None], optional
+            The ID of the Datastore to place the clone in, by default None.
+        licence_key : Union[:class:`str`, None], optional
+            The licence key for the clone, by default None.
+        new_instance_username : Union[:class:`str`, None], optional
+            The administrator user name of the clone, by default None.
+        new_instance_password : Union[:class:`str`, None], optional
+            The administrator password of the clone, by default None.
+        delete_source : Union[:class:`bool`, None], optional
+            If the source Instance is deleted once cloned, by default None.
+        copy_files : Union[:class:`bool`, None], optional
+            If the source Instance's files are copied to the clone, by default None.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns a :class:`RunningTask` dataclass, or the raw dictionary when `format_data` is False.
+
+        """
+        await self._reauth()
+        parameters: dict[str, Any] = {"SourceInstanceId": source_instance_id, "TargetADSInstance": target_ads_instance_id}
+        if new_friendly_name is not None:
+            parameters["NewFriendlyName"] = new_friendly_name
+        if post_create is not None:
+            parameters["PostCreate"] = post_create.value
+        if start_on_boot is not None:
+            parameters["StartOnBoot"] = start_on_boot
+        if target_datastore is not None:
+            parameters["TargetDatastore"] = target_datastore
+        if licence_key is not None:
+            parameters["LicenceKey"] = licence_key
+        if new_instance_username is not None:
+            parameters["NewInstanceUsername"] = new_instance_username
+        if new_instance_password is not None:
+            parameters["NewInstancePassword"] = new_instance_password
+        if delete_source is not None:
+            parameters["DeleteSource"] = delete_source
+        if copy_files is not None:
+            parameters["CopyFiles"] = copy_files
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/CloneInstance",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/CloneInstance", cur_type=result, expec_type=dict)
+
+        if format_data is None:
+            format_data = self.format_data
+
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask(**result)
+            return result
+        raise AMPAPITypeError(end_point="ADSModule/CloneInstance", cur_type=result, expec_type=dict)
 
     @Base.ads_only
     async def clone_template(
@@ -1437,6 +1540,50 @@ class ADSModule(Base):
         raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
 
     @Base.ads_only
+    async def get_instance_live_settings(
+        self,
+        instance_id: str,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> dict[str, str]:
+        """|coro|
+
+        Get the live settings of an Instance, keyed by setting node name.
+
+        .. note::
+            Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
+
+
+        Parameters
+        ----------
+        instance_id : :class:`str`
+            The ID of the Instance.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        dict[:class:`str`, :class:`str`]
+            On success returns a dictionary of setting node names and their values.
+
+        """
+        await self._reauth()
+        parameters: dict[str, str] = {"instanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/GetInstanceLiveSettings",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="ADSModule/GetInstanceLiveSettings", cur_type=result, expec_type=dict)
+        # The keys are AMP setting node names, a user defined mapping that cannot be typed any further.
+        return result  # pyright: ignore[reportReturnType]
+
+    @Base.ads_only
     async def get_instance_network_info(
         self,
         instance_name: str,
@@ -2136,6 +2283,58 @@ class ADSModule(Base):
                 return RunningTask(**result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/MoveInstanceDatastore", cur_type=result, expec_type=dict)
+
+    @Base.ads_only
+    async def prepare_file_transfer(
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Prepare an Instance for a file transfer.
+
+        .. note::
+            Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
+
+
+        Parameters
+        ----------
+        instance_id : :class:`str`
+            The ID of the Instance.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        await self._reauth()
+        parameters: dict[str, str] = {"instanceId": instance_id}
+        result: ResponseAliasFull = await self._post(
+            url="ADSModule/PrepareFileTransfer",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if isinstance(result, (str, bool)) or result is None:
+            raise AMPAPITypeError(end_point="ADSModule/PrepareFileTransfer", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult(**result)
+            return result
+        raise AMPAPIKeyError("status", "ADSModule/PrepareFileTransfer", result)  # noqa: EM101
 
     async def reactivate_instance(
         self,
