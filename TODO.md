@@ -5,7 +5,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 
 - (#1) Refresh `_responses/` from a non-Controller (ADS) setup; see NOTES.md "Captured responses".
-- (#2) `.scripts/vms.py`: set the ADS role at install time like the web setup does (`ampinstmgr --RepairAuth`), not after pairing.
 
 
 ## ampapi/adsmodule.py
@@ -70,8 +69,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 ---
 
 - (#9) Implement non-dataclass types to lower overhead and speed via Format_data arg
-- (#10) Add API endpoints to the remaining function docstrings.
-  - About 11 of 207 endpoint methods name their endpoint.
 - (#11) Update function returns and parameters since adding `bool` to `_post`.
 - (#12) Store plugin (17 endpoints) and Webhook plugin (`trigger_webhook_event`) have no wrapper module.
 - (#13) Add the spec parameters our wrappers lack (list in NOTES.md, "Wrapper parameter gaps").

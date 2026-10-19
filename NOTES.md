@@ -110,7 +110,9 @@ Target lists no Instances. The Controller logs in to the Target with a token fro
 Target has to check logins with the Controller (`Core.Login.UseAuthServer` True, `Core.Login.AuthServerURL` the
 Controller's URL), and the Controller has to answer them (`Core.Security.EnablePassthruAuth` True, else "Passthru
 Disabled"). Restart both ADSs after. From then on the Target takes the Controller's logins, not its own.
-`vms.py pair` does this by setting each config node.
+`vms.py role` does this right after the install, the way AMP's setup wizard does (one `SetConfigs`, then an ADS
+restart, then it waits for the panel): the role, `Core.Login.*`, `DefaultAuthServerURL` and passthru. `vms.py pair`
+runs it for both ADSs, then pairs. Order for a fresh pair: create, install-amp, activate, role, pair.
 
 The Target's Instances need the same: an Instance created on the Target authenticates with the Target's ADS
 (`Login.AuthServerURL=http://localhost:8080/`), and that hop fails even with passthru on. AMP's own fix is
