@@ -147,6 +147,12 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - `Core/GetModuleInfo` gives the logged-in ADS's own id (`instance_id`) and `is_remote_instance`: True on a Target,
   False on a Controller and on a standalone ADS (Kat's live capture), so it tells a Target apart but nothing else.
 
+- `ADSModule/StartInstance` and its siblings pick the Instance by name, on the ADS the call is sent to. Sent to the
+  Controller, `"ADS01"` is the Controller's own ADS even when the caller means a Target's `ADS01` (vm1 logged the
+  request, vm2 nothing). `Instance.start_instance()` / `stop_instance()` / `restart_instance()` go through the
+  Controller by name, so on a `TargetADS` they act on the Controller's ADS, and any Instance whose name repeats on
+  another ADS can hit the wrong one.
+
 ## Non-admin users
 
 Tested with a user holding no roles, then a role with `Instances.<id>` nodes (AMP 2.8.0.8, Professional licence):
