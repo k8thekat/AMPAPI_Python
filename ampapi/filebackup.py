@@ -56,6 +56,8 @@ class LocalFileBackupPlugin(Base):
 
         Check if taking a backup will stop the Instance.
 
+        Endpoint: `LocalFileBackupPlugin/BackupWillStopServer`
+
         .. note::
             Requires the ``LocalFileBackup.Backup.ViewBackupsList`` permission.
 
@@ -94,6 +96,8 @@ class LocalFileBackupPlugin(Base):
         """|coro|
 
         Delete a backup from S3.
+
+        Endpoint: `LocalFileBackupPlugin/DeleteFromS3`
 
         Parameters
         ----------
@@ -141,6 +145,8 @@ class LocalFileBackupPlugin(Base):
 
         Delete a local backup.
 
+        Endpoint: `LocalFileBackupPlugin/DeleteLocalBackup`
+
         Parameters
         ----------
         backup_id : :class:`str`
@@ -176,6 +182,8 @@ class LocalFileBackupPlugin(Base):
         """|coro|
 
         Download a backup from S3.
+
+        Endpoint: `LocalFileBackupPlugin/DownloadFromS3`
 
 
         Parameters
@@ -223,6 +231,8 @@ class LocalFileBackupPlugin(Base):
         """|coro|
 
         Get a list of Backups.
+
+        Endpoint: `LocalFileBackupPlugin/GetBackups`
 
         Parameters
         ----------
@@ -273,6 +283,8 @@ class LocalFileBackupPlugin(Base):
 
         Refresh the list of backups.
 
+        Endpoint: `LocalFileBackupPlugin/RefreshBackupList`
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -305,6 +317,8 @@ class LocalFileBackupPlugin(Base):
         """|coro|
 
         Restore a backup.
+
+        Endpoint: `LocalFileBackupPlugin/RestoreBackup`
 
         Parameters
         ----------
@@ -355,6 +369,8 @@ class LocalFileBackupPlugin(Base):
 
         Set a backup as sticky.
 
+        Endpoint: `LocalFileBackupPlugin/SetBackupSticky`
+
         Parameters
         ----------
         backup_id : :class:`str`
@@ -396,6 +412,8 @@ class LocalFileBackupPlugin(Base):
         """|coro|
 
         Takes a backup of the AMP Server.
+
+        Endpoint: `LocalFileBackupPlugin/TakeBackup`
 
         Parameters
         ----------
@@ -456,6 +474,8 @@ class LocalFileBackupPlugin(Base):
         """|coro|
 
         Upload a backup to S3.
+
+        Endpoint: `LocalFileBackupPlugin/UploadToS3`
 
         Parameters
         ----------

@@ -59,6 +59,8 @@ class AnalyticsPlugin(Base):
         Retrieves the Analytics data for the Instance. \n
         See data such as how many people are playing, how long they've been playing, and where they are from.
 
+        Endpoint: `AnalyticsPlugin/GetAnalyticsSummary`
+
         Parameters
         ----------
         period_days : :class:`int`, optional
@@ -115,6 +117,8 @@ class AnalyticsPlugin(Base):
         """|coro|
 
         Retrieves the Analytics details of a user.
+
+        Endpoint: `AnalyticsPlugin/GetUserDetails`
 
         .. note::
             Requires the ``Analytics.Analytics.AccessUserDetails`` permission.

@@ -47,6 +47,8 @@ class EmailSenderPlugin(Base):
 
         Test SMTP Settings.
 
+        Endpoint: `EmailSenderPlugin/TestSMTPSettings`
+
         .. note::
             This is a development endpoint.
 
