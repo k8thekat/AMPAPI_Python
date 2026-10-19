@@ -24,7 +24,7 @@ A small todo list local to the project.
 
 ---
 
-- `Controller.get_instance` on the Controller's own ADS id returns a new `TargetADS`, not `self`.
+- Plan what else `TargetADS` should mirror from `Controller` (eg. its entry's data on `self`, the cache guard).
 - `Instance.start_instance` / `stop_instance` / `restart_instance` pick the Instance by name on the Controller; route
   them to the ADS in the row's `target_id` so a name repeated on another ADS can't hit the wrong one.
 - Check `ForceIncludeSelf` False on a hybrid ADS with local game Instances.
