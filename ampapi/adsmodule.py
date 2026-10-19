@@ -20,6 +20,8 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
+import contextlib
+import logging
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
 from ._types import (
@@ -72,6 +74,7 @@ from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPIKeyError, AMPAPITypeError
 from .modules import (
     ActionResult,
+    ADSModeState,
     Application,
     CreateInstance,
     DeploymentTemplate,
@@ -94,6 +97,8 @@ if TYPE_CHECKING:
     from .instance import Instance
 
 __all__ = ("ADSModule",)
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class ADSModule(Base):
@@ -1560,6 +1565,65 @@ class ADSModule(Base):
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
+
+    @Base.ads_only
+    async def get_mode(
+        self,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ADSModeState:
+        """|coro|
+
+        Gets the role of the ADS this object logs in to (Controller, Target, hybrid or stand alone).
+
+        .. note::
+            This reads the `ADSModule.ADS.Mode` setting, so any logged in user can read it on the ADS they log in to.
+            On a :class:`TargetADS` the Target must accept the login. On AMP Professional that means an admin, a plain
+            user gets result 5 (NoInstanceAccess).
+
+        .. note::
+            The mode is not cached, every call asks AMP.
+
+        Parameters
+        ----------
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ADSModeState`
+            The ADS mode, or `ADSModeState.not_set` (with a warning logged) when AMP sends a value the enum lacks.
+
+        """
+        await self._reauth()
+        parameters: dict[str, str] = {"node": "ADSModule.ADS.Mode"}
+        result: ResponseAliasFull = await self._post(
+            url="Core/GetConfig",
+            parameters=parameters,
+            request_params=request_params,
+            **response_params,
+        )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/GetConfig", cur_type=result, expec_type=dict)
+        if "subcategory" not in result:
+            raise AMPAPIKeyError("subcategory", "Core/GetConfig", result)  # noqa: EM101
+
+        mode_value: Any = result["current_value"]
+        # A value that is not an int, or that the enum lacks, falls through to the warning below.
+        if isinstance(mode_value, int):
+            with contextlib.suppress(ValueError):
+                return ADSModeState(mode_value)
+
+        LOGGER.warning(
+            "<%s.%s> | Unknown ADSModule.ADS.Mode value: %r | Returning ADSModeState.not_set",
+            __class__.__name__,
+            "get_mode",
+            mode_value,
+        )
+        return ADSModeState.not_set
 
     @Base.ads_only
     async def get_provision_arguments(
