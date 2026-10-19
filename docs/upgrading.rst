@@ -61,6 +61,14 @@ Changed methods
   ``set_configs``); passing it now raises a :exc:`TypeError`.
 - ``Bridge.api_params`` was removed. :class:`~ampapi.Bridge` is an :class:`~ampapi.modules.APIParams` itself, so read
   ``bridge.url``, ``bridge.user`` and the rest straight off it. ``Bridge(api_params=...)`` still works.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance` returns a :class:`~ampapi.modules.RunningTask`, which is what AMP
+  sends; 4.x returned an ``ActionResult``.
+- :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like ``mc_accept_eula``; 4.x returned None.
+- :class:`~ampapi.modules.CreateInstance` fills ``new_instance_id`` with the zero GUID (AMP picks the ID),
+  ``admin_username`` with ``"admin"`` and ``admin_password`` with a generated password, since AMP rejects empty values.
+- ``Base.version_validation()`` takes the ``endpoint`` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
+  the :exc:`RuntimeError` instead of returning it.
+- ``Base.clean_up()`` takes a keyword-only ``logout`` (default False) to call ``Core/Logout`` before closing the session.
 
 
 Errors
