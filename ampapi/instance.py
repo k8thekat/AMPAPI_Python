@@ -428,8 +428,53 @@ class Instance(
             self.parse_data(data=result)
         return result
 
+    async def _routed_ads(self, route_by_target: Union[bool, None] = None) -> ADSModule:
+        """|coro|
+
+        Pick the ADS that start, stop and restart should be sent to for this Instance.
+
+        AMP looks the Instance name up on whichever ADS receives the call, so a Target's Instance has to be
+        called through its own :class:`TargetADS`. Instance names repeat across Targets (every ADS is ``ADS01``),
+        so the :class:`Controller` would find the wrong Instance or none at all.
+
+        Parameters
+        ----------
+        route_by_target : Union[:class:`bool`, None], optional
+            Send the call to the Target that holds this Instance. (Uses :attr:`route_by_target` if None), by default None.
+
+        Returns
+        -------
+        :class:`ADSModule`
+            The :class:`Controller` or the :class:`TargetADS` holding this Instance.
+
+        """
+        assert self._controller is not None  # noqa: S101
+        if route_by_target is None:
+            route_by_target = self.route_by_target
+        if route_by_target is False:
+            return self._controller
+
+        own_ads_id = await self._controller._learn_ads_instance_id()  # pyright: ignore[reportPrivateUsage]
+        # A missing target_id or our own ADS ID means the Controller holds this Instance.
+        if self.target_id is None or self.target_id == own_ads_id:
+            return self._controller
+
+        for known_instance in self._controller.instances:
+            if isinstance(known_instance, TargetADS) and known_instance.instance_id == self.target_id:
+                return known_instance
+
+        target_ads = await self._controller.get_instance(instance_id=self.target_id)
+        if isinstance(target_ads, TargetADS):
+            return target_ads
+        return self._controller
+
     @has_controller
-    async def start_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def start_instance(
+        self,
+        format_data: Union[bool, None] = None,
+        *,
+        route_by_target: Union[bool, None] = None,
+    ) -> ActionResult:
         """|coro|
 
         Start the Instance.
@@ -440,10 +485,18 @@ class Instance(
 
 
 
+        .. note::
+            By default the call goes to the Target that holds this Instance (see :attr:`route_by_target`),
+            as AMP looks the Instance name up on the ADS that receives the call.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+        route_by_target : Union[:class:`bool`, None], optional
+            Send the call to the Target that holds this Instance instead of the :class:`Controller`.
+            AMP looks the Instance name up on the ADS that receives the call, and names repeat across Targets.
+            (Uses :attr:`route_by_target` if None), by default None.
 
         Raises
         ------
@@ -458,11 +511,17 @@ class Instance(
 
         """
         # This function is to mimic the `ADSModule.start_instance()` which we use the self._controller attribute to access.
-        return await self._controller.start_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        ads_module = await self._routed_ads(route_by_target=route_by_target)
+        return await ads_module.start_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @online
     @has_controller
-    async def stop_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def stop_instance(
+        self,
+        format_data: Union[bool, None] = None,
+        *,
+        route_by_target: Union[bool, None] = None,
+    ) -> ActionResult:
         """|coro|
 
         Stops the Instance.
@@ -476,10 +535,18 @@ class Instance(
             - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
 
+        .. note::
+            By default the call goes to the Target that holds this Instance (see :attr:`route_by_target`),
+            as AMP looks the Instance name up on the ADS that receives the call.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+        route_by_target : Union[:class:`bool`, None], optional
+            Send the call to the Target that holds this Instance instead of the :class:`Controller`.
+            AMP looks the Instance name up on the ADS that receives the call, and names repeat across Targets.
+            (Uses :attr:`route_by_target` if None), by default None.
 
         Raises
         ------
@@ -495,11 +562,17 @@ class Instance(
 
         """
         # This function is to mimic the `ADSModule.stop_instance()` which we use the self._controller attribute to access.
-        return await self._controller.stop_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        ads_module = await self._routed_ads(route_by_target=route_by_target)
+        return await ads_module.stop_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @online
     @has_controller
-    async def restart_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def restart_instance(
+        self,
+        format_data: Union[bool, None] = None,
+        *,
+        route_by_target: Union[bool, None] = None,
+    ) -> ActionResult:
         """|coro|
 
         Restart the Instance.
@@ -512,10 +585,18 @@ class Instance(
             - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
 
 
+        .. note::
+            By default the call goes to the Target that holds this Instance (see :attr:`route_by_target`),
+            as AMP looks the Instance name up on the ADS that receives the call.
+
         Parameters
         ----------
         format_data : Union[bool, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+        route_by_target : Union[:class:`bool`, None], optional
+            Send the call to the Target that holds this Instance instead of the :class:`Controller`.
+            AMP looks the Instance name up on the ADS that receives the call, and names repeat across Targets.
+            (Uses :attr:`route_by_target` if None), by default None.
 
         Raises
         ------
@@ -531,7 +612,8 @@ class Instance(
 
         """
         # This function is to mimic the `ADSModule.restart_instance()` which we use the self._controller attribute to access.
-        return await self._controller.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        ads_module = await self._routed_ads(route_by_target=route_by_target)
+        return await ads_module.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @has_controller
     async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
@@ -1429,14 +1511,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
         # Only an ADS Instance can be us, so every other module skips the ID question.
         if result["module"] == "ADS":
-            if self._ads_instance_id is None and auto_detect:
-                module_info = await self.get_module_info(
-                    format_data=False,
-                    request_params=request_params,
-                    **response_params,
-                )
-                if isinstance(module_info, dict):
-                    self._ads_instance_id = module_info["instance_id"]
+            if auto_detect:
+                await self._learn_ads_instance_id(request_params=request_params, **response_params)
 
             if self._ads_instance_id is None:
                 LOGGER.warning(
@@ -1449,6 +1525,38 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             elif result["instance_id"] == self._ads_instance_id:
                 return self
         return self.instance_conversion(instances=result)
+
+    async def _learn_ads_instance_id(
+        self,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[str, None]:
+        """|coro|
+
+        Learn this Controller's own ADS ID with one :meth:`get_module_info` call, only when it is not known yet.
+
+        Parameters
+        ----------
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        Union[:class:`str`, None]
+            The ADS ID stored on :attr:`_ads_instance_id`, or None if it could not be learned.
+
+        """
+        if self._ads_instance_id is None:
+            module_info = await self.get_module_info(
+                format_data=False,
+                request_params=request_params,
+                **response_params,
+            )
+            if isinstance(module_info, dict):
+                self._ads_instance_id = module_info["instance_id"]
+        return self._ads_instance_id
 
     def _parse_controller_data(self, data: ControllerResponse) -> None:
         # Every cached name gets set, even when AMP sends null, so a populated attribute never raises.
