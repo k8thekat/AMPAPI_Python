@@ -74,7 +74,7 @@ A small todo list local to the project.
 
 ---
 
-- Impliment non-dataclass types to lower overhead and speed via Format_data arg
+- Implement non-dataclass types to lower overhead and speed via Format_data arg
 - Add API endpoints to the remaining function docstrings.
   - About 11 of 207 endpoint methods name their endpoint.
 - Update function returns and parameters since adding `bool` to `_post`.

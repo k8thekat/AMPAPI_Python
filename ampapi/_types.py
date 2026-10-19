@@ -862,7 +862,7 @@ class ParameterMapping(TypedDict, total=False):
 
 
 class PermissionNode(TypedDict):
-    """Permission node response struction.
+    """Permission node response structure.
 
     Keys
     ----
