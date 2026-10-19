@@ -150,18 +150,23 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 
 - `ADSModule/StartInstance` and its siblings pick the Instance by name, on the ADS the call is sent to. Sent to the
   Controller, `"ADS01"` is the Controller's own ADS even when the caller means a Target's `ADS01` (vm1 logged the
-  request, vm2 nothing). `Instance.start_instance()` / `stop_instance()` / `restart_instance()` pick the ADS with
-  `_routed_ads()`, which reads `target_id`, unless `route_by_target` is False (on the Instance or its Controller).
+  request, vm2 nothing). So an Instance stores the ADS that holds it (`Instance.ads`): the Controller for its own, the
+  `TargetADS` for a Target's. `start_instance()` / `stop_instance()` / `restart_instance()` / `update_instance()` and
+  `get_instance_status()` go through it. Checked live (2026-10-19) with a same-named `MCTest01` on vm1 and vm2:
+  stopping and starting each one through its object left the other running.
 - A Target's game Instances carry the wrong `target_id` when read through the Controller (2026-10-19). vm2 lists
   MCTest01 with `target_id` = vm2's ADS ID, but vm1's `GetInstances` and `GetInstance` relay it with vm1's own ADS ID,
-  while the Target's ADS Instance keeps its own ID. So `_routed_ads()` sends MCTest01 to the Controller by name. The
-  2026-10-18 live check reached vm2 only because the name is unique. The Target item that lists the Instance is the
-  reliable source.
+  while the Target's ADS Instance keeps its own ID. The Controller answers from its own copy of a Target's Instances,
+  and other fields differ too (`deployment_args`, `application_endpoints`, `is_multi_ip_aware`, `order`). So
+  `Controller.get_instances()` never builds objects from that copy: it builds a `TargetADS` per remote Target and fills
+  each from the Target itself, all at once. `Controller.get_instance()` raises for an ID a cached `TargetADS` holds.
 - Through the Target's own ADS the data is right. `Controller.get_instances()` builds a `TargetADS` for a Target's ADS
   Instance (endpoint `ADSModule/Servers/<Target ADS ID>`), and vm2 answers its calls: `get_module_info` gives vm2's ID
   with `is_remote_instance` True, and `get_mode()` gives `target`. `TargetADS.get_instances()` and
-  `TargetADS.get_instance()` return MCTest01 with `target_id` = vm2's ID, and that object routes to the `TargetADS`.
-  `Controller.get_instance(<Target ADS ID>)` builds a new `TargetADS`, not the one in `Controller.instances`.
+  `TargetADS.get_instance()` return MCTest01 with `target_id` = vm2's ID.
+- A Target whose ADS is stopped is still listed by the Controller's `GetInstances` (from its copy, `state` 20, with its
+  Instances). Its `TargetADS.get_instances()` fails at once with "Instance Unavailable", so `Controller.get_instances()`
+  logs a warning, keeps that `TargetADS` with empty `instances`, and returns as normal.
 - The library only ever talks to the Controller's URL. A `TargetADS` calls `ADSModule/Servers/<Target ADS ID>/API/...`
   and an Instance calls `ADSModule/Servers/<Instance ID>/API/...`, both on the Controller, which passes them on.
 - `ADSModule.Network.AccessMode` (`AccessModeState`, set on the Controller) is how the Controller reaches a remote

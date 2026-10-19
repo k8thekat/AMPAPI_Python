@@ -78,14 +78,13 @@ Changed methods
   Target's. :meth:`~ampapi.instance.Instance.start_instance`, ``stop_instance``, ``restart_instance``,
   ``update_instance`` and ``get_instance_status`` go through that ADS, so the name is looked up on the right one. 4.x
   sent them to the Controller, which acts on its own Instance when two ADSs share a name (every ADS is ``ADS01``).
-  There is no switch back to the 4.x path; ``route_by_target`` does not exist.
 - :attr:`~ampapi.instance.Controller.instances` is no longer flat. It holds only the Instances the Controller itself
   holds (its local Target), and the remote Targets are in the new :attr:`~ampapi.instance.Controller.targets`, keyed by
   the Target's ADS ID. Each :class:`~ampapi.instance.TargetADS` holds its own Instances in
   :attr:`~ampapi.instance.TargetADS.instances`. Code that read a remote Target's Instances from
   ``Controller.instances`` has to read them from ``Controller.targets`` instead.
 - :meth:`~ampapi.instance.Controller.get_instances` fills every ``TargetADS.instances`` at the same time, with one extra
-  call per Target. A Target that fails logs a warning and keeps an empty ``instances``; a Target that does not list its
+  call per Target. A Target that fails logs a warning and keeps an empty ``instances``. A Target that does not list its
   own ADS Instance is skipped.
 - :meth:`~ampapi.instance.Controller.get_instance` raises a :exc:`ValueError` for an Instance a cached ``TargetADS``
   holds, because the Controller's copy of it differs from the Target's own data. Use

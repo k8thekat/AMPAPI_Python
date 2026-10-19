@@ -1805,7 +1805,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             *(target_ads.get_instances(format_data=True, request_params=request_params, **response_params) for target_ads in target_list),
             return_exceptions=True,
         )
-        for target_ads, outcome in zip(target_list, outcomes, strict=False):
+        for target_ads, outcome in zip(target_list, outcomes, strict=True):
             if isinstance(outcome, BaseException):
                 LOGGER.warning(
                     "<%s.%s> | Failed to get the Instances of the Target %s (%s) | Error: %s",
