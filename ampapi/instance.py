@@ -1208,7 +1208,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         these are transferred from :attr:`~Controller.available_instance`.\n
 
         .. note::
-            Similar to :attr:`~Controller.available_instance` but converted into a type of :class:`Instance` classes that have API functions.\n
+            Similar to :attr:`~Controller.available_instance` but converted into a type of :class:`Instance` classes that
+            have API functions.\n
             The set of :class:`Instance` types will be ordered by :attr:`~Instance.instance_id`.
 
 
@@ -1553,7 +1554,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         #         id(result[0]),
         #         result[0],
         #     )
-        #     # We make the first Controller dataclass our AMPControllerInstance and transfer all the information from the Controller to Self.
+        #     # We make the first Controller dataclass our AMPControllerInstance and transfer all the information from
+        #     # the Controller to Self.
         #     _url = self._endpoint_url
         #     self.parse_data(data=result[0])
         #     self._controller_exists = True
@@ -1569,7 +1571,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         #         # If we have another Controller, we want to get it's available_instances and convert them into proper objects to be used.
         #         if isinstance(i, Controller):
         #             LOGGER.debug("Found an additional Controller dataclass: %s | %s", id(i), i)
-        #             # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we just updated the attribute above.
+        #             # after the conversion we are updating our instance attribute; we cannot overwrite the attribute as we
+        #             # just updated the attribute above.
         #             res: set[InstanceTypeAliases] = self.instance_conversion(instances=i.available_instances)
         #             if isinstance(res, InstanceTypeAliases):
         #                 self.instances.add(res)

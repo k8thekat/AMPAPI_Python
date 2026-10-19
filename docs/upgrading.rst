@@ -45,6 +45,8 @@ Everything public is still available straight from ``ampapi``.
 - ``ampapi.controller`` was removed; :class:`~ampapi.instance.Controller` lives in ``ampapi.instance``.
 - ``ampapi.enums_`` -> ``ampapi._enums``
 - ``ampapi.types_`` -> ``ampapi._types``
+- ``ampapi.util`` holds developer tools and is no longer star-imported, so its functions (eg. ``amp_api_update``,
+  ``find_missing_endpoints``) are no longer on ``ampapi``. Import the module instead: ``from ampapi import util``.
 
 
 Changed methods
@@ -64,7 +66,8 @@ Changed methods
 Errors
 ------
 
-API errors are now raised (see ``ampapi.errors``) instead of an ``ActionResultError`` being returned.
+API errors are now raised (see ``ampapi.errors``) instead of an ``ActionResultError`` being returned. Every error
+class can be imported from ``ampapi`` directly (eg. ``from ampapi import AMPAPIResponseError``).
 
 
 Returned data

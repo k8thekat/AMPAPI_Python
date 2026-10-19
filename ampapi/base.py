@@ -425,7 +425,7 @@ class Base:
                 e,
             )
             await asyncio.sleep(delay=retry)
-            return await self._post(  # pyright: ignore[reportCallIssue]
+            return await self._post(
                 url=url,
                 parameters=parameters,
                 no_data=no_data,
@@ -994,10 +994,10 @@ class Base:
             has_none = len(non_none) < len(items)
             if all(isinstance(v, dict) for v in non_none):
                 child_name = "".join(part.title() for part in key.split("_"))
-                _build_merged(child_name, non_none)  # pyright: ignore[reportUnknownArgumentType]
+                _build_merged(child_name, non_none)
                 elem = child_name
             else:
-                elem_types = {_infer(v, key) for v in non_none}  # pyright: ignore[reportUnknownVariableType]
+                elem_types = {_infer(v, key) for v in non_none}
                 elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
             if has_none:
                 elem = f"{elem} | None"
