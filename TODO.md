@@ -102,6 +102,7 @@ A small todo list local to the project.
 
 ---
 
+- `check_code.py` findings left in `backoff.py`, `emailsender.py` and `filemanager.py` (13: headers, `TD004`, `N802`, long lines).
 - Impliment non-dataclass types to lower overhead and speed via Format_data arg
 - Add API endpoints to the remaining function docstrings.
   - About 11 of 207 endpoint methods name their endpoint.
