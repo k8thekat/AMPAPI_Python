@@ -44,6 +44,7 @@ __all__ = ("GenericModule",)
 class GenericModule(Base):
     """Contains all Endpoints for `/API/GenericModule/`."""
 
+    @Base.generic_only
     async def import_config(
         self,
         filename: str,
@@ -91,6 +92,7 @@ class GenericModule(Base):
             return ImportConfig(**result)
         return result
 
+    @Base.generic_only
     async def refresh_remote_options(
         self,
         field_name: str,
@@ -138,6 +140,7 @@ class GenericModule(Base):
             return ActionResult(**result)
         return result
 
+    @Base.generic_only
     async def refresh_tool_discovery(
         self,
         field_name: str,
@@ -185,6 +188,7 @@ class GenericModule(Base):
             return ActionResult(**result)
         return result
 
+    @Base.generic_only
     async def reload_generic_config(
         self,
         *,
@@ -215,6 +219,7 @@ class GenericModule(Base):
             **response_params,
         )
 
+    @Base.generic_only
     async def request_server_info(
         self,
         *,

@@ -35,6 +35,7 @@ __all__ = ("SteamCMDPlugin",)
 class SteamCMDPlugin(Base):
     """Contains all Endpoints for `/API/steamcmdplugin/`."""
 
+    @Base.generic_only
     async def cancel_steam_guard(
         self,
         *,
@@ -65,6 +66,7 @@ class SteamCMDPlugin(Base):
             **response_params,
         )
 
+    @Base.generic_only
     async def steam_guard_code(
         self,
         code: str,
@@ -100,6 +102,7 @@ class SteamCMDPlugin(Base):
             **response_params,
         )
 
+    @Base.generic_only
     async def steam_username_password(
         self,
         username: str,

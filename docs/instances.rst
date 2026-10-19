@@ -12,7 +12,9 @@ This object is used to control all instances it has access to similar to main pa
 
 Generic Instance
 ~~~~~~~~~~~~~~~~~
-This class object is for Generic type Instances providing the endpoints specific to it's type.
+This class object is for every Instance that is not a Controller, Target ADS or Minecraft Instance. It also carries the
+:class:`GenericModule` and :class:`SteamCMDPlugin` endpoints, which only Generic type Instances (module `GenericModule`
+or `Generic`) serve; on any other module they raise :exc:`RuntimeError`.
 
 .. autoclass:: Instance
    :members:
@@ -37,15 +39,6 @@ Minecraft Instance
 This class object is for Minecraft type Instances providing the endpoints specific to it's type.
 
 .. autoclass:: MinecraftInstance
-   :members:
-
-
-GenericModule Instance
-~~~~~~~~~~~~~~~~~~~~~~~
-This class object is for Generic type Instances (the game templates and Custom Application) providing the
-:class:`GenericModule` and :class:`SteamCMDPlugin` endpoints.
-
-.. autoclass:: GenericInstance
    :members:
 
 

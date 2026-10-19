@@ -204,8 +204,9 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 ## Generic Instances
 
 Surveyed 2026-10-19 on TF2, Valheim, ET: Legacy, Custom Application and CS:Source (AMP 2.8.0.8):
-- Every game template reports `module` "GenericModule", a Custom Application reports "Generic". Both become
-  `GenericInstance`. AMP 2.8 has no `srcds` module.
+- Every game template reports `module` "GenericModule", a Custom Application reports "Generic". Both stay a plain
+  `Instance`, which carries the GenericModule and SteamCMDPlugin endpoints behind `Base.generic_only`, so a Minecraft
+  Instance or a `TargetADS` raises instead of asking AMP. AMP 2.8 has no `srcds` module.
 - Every one serves the same extra API sections, Steam or not: `GenericModule` (5), `steamcmdplugin` (3) and
   `RCONPlugin` (`Dummy`, a placeholder). The SteamCMD URL is lowercase `steamcmdplugin/...`.
 - The Void endpoints answer JSON null. `RefreshRemoteOptions` / `RefreshToolDiscovery` need a setting that has a

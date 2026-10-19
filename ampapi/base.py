@@ -174,6 +174,7 @@ class Base:
     # Error response strings.
     _ads_only: ClassVar[str] = "This API call is only available to <class:`ADSModule`> type classes."
     _failed_api: ClassVar[str] = "The API call returned a malformed response."
+    _generic_only: ClassVar[str] = "This API call is only available on Generic (GenericModule) type instances."
     _minecraft_only: ClassVar[str] = "This API call is only available on Minecraft type instances."
     _no_bridge: ClassVar[str] = "Failed to setup connection. You need to initiate `<class Bridge>` first."
     _no_controller: ClassVar[str] = "The function failed as the <class:`Controller`> was not properly initialized and set."
@@ -316,6 +317,43 @@ class Base:
             raise RuntimeError(self._ads_only)
 
         return wrapper_ads_only
+
+    @staticmethod
+    def generic_only(
+        func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
+    ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
+        """Checks the class attribute `.module` is a Generic one, `GenericModule` for a game template or `Generic` for a
+        Custom Application.
+
+        .. note::
+            :class:`Instance` carries the :class:`GenericModule` and :class:`SteamCMDPlugin` endpoints, so its
+            subclasses (eg. :class:`MinecraftInstance`, :class:`TargetADS`) have them too. This stops those calls
+            before they reach AMP, which would only answer "No such module loaded".
+
+        Parameters
+        ----------
+        func : Callable[Concatenate[D, T], Coroutine[None, None, F]]
+            The function the decorator is wrapping.
+
+        Returns
+        -------
+        Callable[Concatenate[D, T], Coroutine[None, None, F]]
+            The function the decorator is wrapping.
+
+        Raises
+        ------
+        RuntimeError
+            The API call is only allowed on a Generic type Instance.
+
+        """
+
+        @functools.wraps(wrapped=func)
+        def wrapper_generic_only(self: D, *args: T.args, **kwargs: T.kwargs) -> Coroutine[None, None, F]:
+            if self.module in ("GenericModule", "Generic"):
+                return func(self, *args, **kwargs)
+            raise RuntimeError(self._generic_only)
+
+        return wrapper_generic_only
 
     @overload
     async def _post(

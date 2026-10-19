@@ -766,6 +766,8 @@ class ADSModule(Base):
             return result
         raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
 
+    # TODO: AMP answers a null reference to every `Instance` shape we've sent (AMP 2.8.0.8).
+    #       It wants a `LocalAMPInstance`, which the spec doesn't describe, and the panel never calls this. Kat to decide.
     @Base.ads_only
     async def create_local_instance(
         self,

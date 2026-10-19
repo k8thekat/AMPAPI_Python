@@ -65,9 +65,9 @@ Changed methods
   and :meth:`~ampapi.adsmodule.ADSModule.apply_instance_configuration` return a :class:`~ampapi.modules.RunningTask`,
   which is what AMP sends. 4.x returned an ``ActionResult``, and the last two raised on AMP 2.8's reply.
 - :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like ``mc_accept_eula``; 4.x returned None.
-- Generic Instances (module ``GenericModule`` or ``Generic``) now come back as :class:`~ampapi.instance.GenericInstance`,
-  with the :class:`~ampapi.generic.GenericModule` and :class:`~ampapi.steamcmd.SteamCMDPlugin` endpoints; 4.x gave a
-  plain :class:`~ampapi.instance.Instance`.
+- :class:`~ampapi.instance.Instance` has the :class:`~ampapi.generic.GenericModule` and
+  :class:`~ampapi.steamcmd.SteamCMDPlugin` endpoints, which Generic Instances (module ``GenericModule`` or ``Generic``)
+  serve. On any other module they raise :exc:`RuntimeError`.
 - ``PostCreateActionsState`` was removed; it never matched AMP's ``PostCreateAppActions`` (eg. its ``start_instance``
   was AMP's ``update_once``, and ``every_time`` = 16 doesn't exist). :class:`~ampapi.CreateInstance`,
   ``DeploymentTemplate``, ``create_instance_from_spec`` and ``create_local_instance`` take
