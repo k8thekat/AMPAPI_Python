@@ -20,6 +20,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import logging
 import time
@@ -193,38 +194,27 @@ class Instance(
     _app_state: InstanceState | int
     url: str
     _controller: Union[Controller, None]
+    _ads: Union[Controller, TargetADS, None] = None
 
     @property
-    @override
-    def route_by_target(self) -> bool:
-        """Controls whether this Instance's start, stop and restart go through the Target that holds it.\n
-        Default is `True`.
-
-        An Instance that was not set uses its :class:`Controller`'s :attr:`~Base.route_by_target`, so setting it on the
-        Controller covers every Instance it holds, including the ones a later :meth:`~Controller.get_instances`
-        builds. A value set here only lasts as long as this object, and :meth:`~Controller.get_instances` builds new ones.
+    def ads(self) -> Union[Controller, TargetADS, None]:
+        """The ADS that holds this Instance, the :class:`Controller` or the :class:`TargetADS` of a remote Target.
 
         .. note::
-            `True` = send the call to the Target that holds the Instance \n
-            `False` = always send the call to the :class:`Controller`
+            :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance`, :meth:`update_instance` and
+            :meth:`get_instance_status` go through this ADS, as AMP looks the Instance up on the ADS that receives the call.
+            An Instance built without one falls back to its :class:`Controller`.
 
 
         Returns
         -------
-        :class:`bool`
-            Returns `True` or `False`.
+        Union[:class:`Controller`, :class:`TargetADS`, None]
+            The ADS holding this Instance, or None if neither it nor a :class:`Controller` was set.
 
         """
-        if self._route_override is not None:
-            return self._route_override
-        if self._controller is not None:
-            return self._controller.route_by_target
-        return Base._route_by_target
-
-    @route_by_target.setter
-    @override
-    def route_by_target(self, value: bool) -> None:
-        self._route_override = value
+        if self._ads is not None:
+            return self._ads
+        return self._controller
 
     @property
     def app_state(self) -> InstanceState:
@@ -241,6 +231,7 @@ class Instance(
         self,
         data: InstanceResponse,
         controller: Optional[Controller] = None,
+        ads: Optional[Union[Controller, TargetADS]] = None,
         **kwargs: Any,
     ) -> None:
         """Build an Instance, unpacking an API response onto its attributes.
@@ -251,6 +242,8 @@ class Instance(
             The Instance data to unpack onto this class.
         controller : :class:`Controller` | None, optional
             The Controller used to make ADSModule specific API calls, by default None.
+        ads : Union[:class:`Controller`, :class:`TargetADS`, None], optional
+            The ADS that holds this Instance, None means the Controller, by default None.
         **kwargs : Any
             Keyword arguments forwarded to :meth:`Base.__init__`.
 
@@ -262,6 +255,7 @@ class Instance(
         # We use the Controller class to call ADSModule specific Endpoints as a
         # typical Instance will not have the :py:class:`ADSModule` API Endpoints.
         self._controller = controller
+        self._ads = ads
         self._endpoint_url = f"{self._bridge.url}/API/ADSModule/Servers/{self._instance_id}"
 
     def __hash__(self) -> int:  # noqa: D105
@@ -402,6 +396,8 @@ class Instance(
         .. warning::
             This will fail if you attempt to call it on the Target or Controller type Instance.
 
+        .. note::
+            The refresh goes through :attr:`ads`, the ADS that holds this Instance.
 
 
         Raises
@@ -416,8 +412,8 @@ class Instance(
 
         """
         # We want the raw dict here, so we can update ourselves instead of building a new Instance.
-        assert self._controller is not None  # noqa: S101
-        result: InstanceResponse = await self._controller.get_instance(
+        assert self.ads is not None  # noqa: S101
+        result: InstanceResponse = await self.ads.get_instance(
             instance_id=self._instance_id,
             format_data=False,
         )
@@ -458,48 +454,6 @@ class Instance(
             self.parse_data(data=result)
         return result
 
-    async def _routed_ads(self) -> ADSModule:
-        """|coro|
-
-        Pick the ADS that start, stop and restart should be sent to for this Instance.
-
-        AMP looks the Instance name up on whichever ADS receives the call, so a Target's Instance has to be
-        called through its own :class:`TargetADS`. Instance names repeat across Targets (every ADS is `ADS01`),
-        so the :class:`Controller` would find the wrong Instance or none at all. :attr:`route_by_target` set to
-        False sends every call to the :class:`Controller`.
-
-        Returns
-        -------
-        :class:`ADSModule`
-            The :class:`Controller` or the :class:`TargetADS` holding this Instance.
-
-        """
-        assert self._controller is not None  # noqa: S101
-        if self.route_by_target is False:
-            return self._controller
-
-        own_ads_id = await self._controller._learn_ads_instance_id()  # pyright: ignore[reportPrivateUsage]
-        # A missing target_id or our own ADS ID means the Controller holds this Instance.
-        if self.target_id is None or self.target_id == own_ads_id:
-            return self._controller
-
-        for known_instance in self._controller.instances:
-            if isinstance(known_instance, TargetADS) and known_instance.instance_id == self.target_id:
-                return known_instance
-
-        # format_data=True whatever the global says, since only a TargetADS can carry the call to that Target.
-        target_ads = await self._controller.get_instance(instance_id=self.target_id, format_data=True)
-        if isinstance(target_ads, TargetADS):
-            return target_ads
-        LOGGER.warning(
-            "<%s.%s> | %s is not a TargetADS, so %s goes through the Controller by name and may reach another Instance.",
-            __class__.__name__,
-            "_routed_ads",
-            self.target_id,
-            self.instance_name,
-        )
-        return self._controller
-
     @has_controller
     async def start_instance(
         self,
@@ -516,9 +470,8 @@ class Instance(
 
 
         .. note::
-            By default the call goes to the Target that holds this Instance, as AMP looks the Instance name up on the
-            ADS that receives the call. Set :attr:`route_by_target` to False, here or on the :class:`Controller`,
-            to send it to the Controller instead.
+            The call goes to :attr:`ads`, the ADS that holds this Instance, as AMP looks the Instance name up on the
+            ADS that receives the call.
 
         Parameters
         ----------
@@ -537,9 +490,9 @@ class Instance(
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        # This function is to mimic the `ADSModule.start_instance()` which we use the self._controller attribute to access.
-        ads_module = await self._routed_ads()
-        return await ads_module.start_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        # This function is to mimic the `ADSModule.start_instance()` which we call on the ADS holding this Instance.
+        assert self.ads is not None  # noqa: S101
+        return await self.ads.start_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @online
     @has_controller
@@ -561,9 +514,8 @@ class Instance(
 
 
         .. note::
-            By default the call goes to the Target that holds this Instance, as AMP looks the Instance name up on the
-            ADS that receives the call. Set :attr:`route_by_target` to False, here or on the :class:`Controller`,
-            to send it to the Controller instead.
+            The call goes to :attr:`ads`, the ADS that holds this Instance, as AMP looks the Instance name up on the
+            ADS that receives the call.
 
         Parameters
         ----------
@@ -583,9 +535,9 @@ class Instance(
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        # This function is to mimic the `ADSModule.stop_instance()` which we use the self._controller attribute to access.
-        ads_module = await self._routed_ads()
-        return await ads_module.stop_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        # This function is to mimic the `ADSModule.stop_instance()` which we call on the ADS holding this Instance.
+        assert self.ads is not None  # noqa: S101
+        return await self.ads.stop_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @online
     @has_controller
@@ -606,9 +558,8 @@ class Instance(
 
 
         .. note::
-            By default the call goes to the Target that holds this Instance, as AMP looks the Instance name up on the
-            ADS that receives the call. Set :attr:`route_by_target` to False, here or on the :class:`Controller`,
-            to send it to the Controller instead.
+            The call goes to :attr:`ads`, the ADS that holds this Instance, as AMP looks the Instance name up on the
+            ADS that receives the call.
 
         Parameters
         ----------
@@ -628,14 +579,17 @@ class Instance(
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        # This function is to mimic the `ADSModule.restart_instance()` which we use the self._controller attribute to access.
-        ads_module = await self._routed_ads()
-        return await ads_module.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        # This function is to mimic the `ADSModule.restart_instance()` which we call on the ADS holding this Instance.
+        assert self.ads is not None  # noqa: S101
+        return await self.ads.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @has_controller
     async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
         """|coro|
         Update the AMP Instance.
+
+        .. note::
+            The call goes to :attr:`ads`, the ADS that holds this Instance, like :meth:`start_instance`.
 
         .. warning::
             This only applies if you are manually creating these classes.\n
@@ -653,8 +607,9 @@ class Instance(
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        # This function is to mimic the `ADSModule.update_instance()` which we use the self._controller attribute to access.
-        return await self._controller.upgrade_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        # This function is to mimic the `ADSModule.update_instance()` which we call on the ADS holding this Instance.
+        assert self.ads is not None  # noqa: S101
+        return await self.ads.upgrade_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
 
 class MinecraftInstance(MinecraftModule, Instance):
@@ -727,8 +682,12 @@ class MinecraftInstance(MinecraftModule, Instance):
 
 
 class TargetADS(ADSModule, Instance):
-    """Typically referred to the "Target ADS" which is apart of the available Instances of the :class:`Controller`
-    via :attr:`~Controller.instances`.
+    """Typically referred to the "Target ADS", the ADS Instance of a remote Target held by the :class:`Controller`
+    in :attr:`~Controller.targets`.
+
+    .. note::
+        The Instances this Target holds belong to it, see :attr:`instances`. Each one has this object as its
+        :attr:`~Instance.ads`, so its start, stop, restart and update calls go through this Target.
 
     .. note::
         A Target ADS serves the ADSModule endpoints, so this class is an :class:`Instance` that also has every
@@ -827,6 +786,7 @@ class TargetADS(ADSModule, Instance):
         self,
         data: InstanceResponse,
         controller: Optional[Controller] = None,
+        ads: Optional[Union[Controller, TargetADS]] = None,
         **kwargs: Any,
     ) -> None:
         """Build a Target ADS, unpacking an API response onto its attributes.
@@ -837,11 +797,13 @@ class TargetADS(ADSModule, Instance):
             The Instance data to unpack onto this class.
         controller : Union[:class:`Controller`, None], optional
             The Controller that holds this Target, used to convert the Instances this Target returns, by default None.
+        ads : Union[:class:`Controller`, :class:`TargetADS`, None], optional
+            The ADS that holds this Target ADS, None means the Controller, by default None.
         **kwargs : Any
             Keyword arguments forwarded to :meth:`Instance.__init__`.
 
         """
-        super().__init__(data=data, controller=controller, **kwargs)
+        super().__init__(data=data, controller=controller, ads=ads, **kwargs)
         self._instances = set()
 
     @override
@@ -1040,7 +1002,8 @@ class TargetADS(ADSModule, Instance):
         Retrieve a single Instance of this Target by ID and convert the Instance.
 
         .. note::
-            This Target's own ADS ID returns `self`. AMP answers null for an ID that is not on this Target.
+            This Target's own ADS ID returns `self`, refreshed with the Target's own data. AMP answers null for an ID
+            that is not on this Target.
 
         Parameters
         ----------
@@ -1076,12 +1039,13 @@ class TargetADS(ADSModule, Instance):
         if format_data is False:
             return result
         if result["instance_id"] == self.instance_id:
+            self._parse_instance_data(data=result)
             return self
 
         # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
         if self._controller is None:
             raise RuntimeError(self._no_controller)
-        return self._controller.instance_conversion(instances=result)
+        return self._controller.instance_conversion(instances=result, ads=self)
 
     @overload
     async def get_instances(
@@ -1129,8 +1093,8 @@ class TargetADS(ADSModule, Instance):
         and :class:`TargetADS` objects, and keeps them on :attr:`instances`.
 
         .. note::
-            This Target's own ADS Instance is `self`, so it is left out of the set. The Target's data from the
-            response is not copied onto `self`.
+            This Target's own ADS Instance is `self`, so it is left out of the set. The Target's own data from the
+            response is copied onto `self`. The Instances in the set have `self` as their :attr:`~Instance.ads`.
 
         .. note::
             If `format_data` is False this will return the raw list of Target dicts instead and nothing is stored.
@@ -1174,10 +1138,14 @@ class TargetADS(ADSModule, Instance):
 
         converted_instances: set[InstanceTypeAliases] = set()
         for target in result:
-            available_instances: list[InstanceResponse] = [
-                instance for instance in target["available_instances"] if instance["instance_id"] != self.instance_id
-            ]
-            converted_instances.update(self._controller.instance_conversion(instances=available_instances))
+            available_instances: list[InstanceResponse] = []
+            for instance in target["available_instances"]:
+                # The Target lists its own ADS Instance, that is us, so we refresh ourselves from it.
+                if instance["instance_id"] == self.instance_id:
+                    self._parse_instance_data(data=instance)
+                    continue
+                available_instances.append(instance)
+            converted_instances.update(self._controller.instance_conversion(instances=available_instances, ads=self))
 
         self._instances = converted_instances
         return self._instances
@@ -1189,13 +1157,13 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     .. note::
         :meth:`~Controller.get_instances` copies this Controller's own data onto `self` and leaves its own ADS Instance
         (eg. `ADS01`) out of :attr:`Controller.instances`. The ADS Instances of remote Targets come back as
-        :class:`TargetADS`.
+        :class:`TargetADS` in :attr:`Controller.targets`, and each one holds its own Instances.
 
 
     .. note::
         Similar to what you see when you log into AMP web GUI and see the Instances list.
         This attribute is cached and will require calling :meth:`~ADSModule.get_instances` to access the API converted class objects.
-        * See the :attr:`Controller.instances` attribute.
+        * See the :attr:`Controller.instances` and :attr:`Controller.targets` attributes.
 
 
     Attributes
@@ -1263,6 +1231,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     tags_list: Union[str, None]
 
     _instances: set[InstanceTypeAliases]
+    # The remote Targets keyed by their ADS ID, rebuilt by `get_instances`.
+    _targets: dict[str, TargetADS]
     # The Controller's own ADS ID. `instance_id` is the session key, so AMP's real ID lives here until known.
     _ads_instance_id: Union[str, None]
 
@@ -1299,22 +1269,39 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
 
     @property
     def instances(self) -> set[InstanceTypeAliases]:
-        """Represents all Instances the :class:`Controller` can see,
+        """Represents the Instances the :class:`Controller` itself holds (its local Target),
         these are transferred from :attr:`~Controller.available_instance`.\n
 
         .. note::
             Similar to :attr:`~Controller.available_instance` but converted into a type of :class:`Instance` classes that
             have API functions.\n
-            The set of :class:`Instance` types will be ordered by :attr:`~Instance.instance_id`.
+            The Instances of remote Targets are not in here, they belong to their :class:`TargetADS` in :attr:`targets`.
 
 
         Returns
         -------
         set[Union[:class:`InstanceTypeAliases`]]
-            A set of converted :class:`Instance` classes sorted by :class:`~Instance.instance_id`.
+            A set of converted :class:`Instance` classes, empty until :meth:`get_instances` has run.
 
         """
         return self._instances
+
+    @property
+    def targets(self) -> dict[str, TargetADS]:
+        """The remote Targets this :class:`Controller` can see, keyed by the Target's ADS ID.
+
+        .. note::
+            Each :class:`TargetADS` holds the Instances of its Target in :attr:`TargetADS.instances`, and
+            :meth:`get_instances` fills them all.
+
+
+        Returns
+        -------
+        dict[:class:`str`, :class:`TargetADS`]
+            The Target ADS objects from the last :meth:`get_instances` call, empty until it has run.
+
+        """
+        return self._targets
 
     def __init__(
         self,
@@ -1338,6 +1325,7 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         super().__init__(bridge=bridge, session=session)
         self._module = "ADS"
         self._instances = set()
+        self._targets = {}
         self._ads_instance_id = None
 
         if data is not None:
@@ -1398,13 +1386,22 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         await self.clean_up()
 
     @overload
-    def instance_conversion(self, instances: InstanceResponse) -> InstanceTypeAliases: ...
+    def instance_conversion(
+        self,
+        instances: InstanceResponse,
+        ads: Optional[Union[Controller, TargetADS]] = None,
+    ) -> InstanceTypeAliases: ...
     @overload
-    def instance_conversion(self, instances: list[InstanceResponse]) -> set[InstanceTypeAliases]: ...
+    def instance_conversion(
+        self,
+        instances: list[InstanceResponse],
+        ads: Optional[Union[Controller, TargetADS]] = None,
+    ) -> set[InstanceTypeAliases]: ...
 
     def instance_conversion(
         self,
         instances: Union[list[InstanceResponse], InstanceResponse],
+        ads: Optional[Union[Controller, TargetADS]] = None,
     ) -> Union[set[InstanceTypeAliases], InstanceTypeAliases]:
         """Takes the raw Instance data and turns it into :class:`Instance`, :class:`MinecraftInstance` and or
         :class:`TargetADS` respectively to facilitate API function accessibility.
@@ -1413,6 +1410,8 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         ----------
         instances : Union[list[:class:`InstanceResponse`], :class:`InstanceResponse`]
             A list of raw Instance dicts or a single one.
+        ads : Union[:class:`Controller`, :class:`TargetADS`, None], optional
+            The ADS that holds the Instances, None means this Controller, by default None.
 
         Returns
         -------
@@ -1424,18 +1423,18 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         if isinstance(instances, list):
             conv_instances: set[InstanceTypeAliases] = set()
             for instance in instances:
-                conv_instances.add(self.instance_conversion(instances=instance))
+                conv_instances.add(self.instance_conversion(instances=instance, ads=ads))
             return conv_instances
 
         # An ADS Instance here is a remote Target's. Our own is left out by get_instances, and get_instance returns
         # self for it once our ADS ID is known. We hand them ourselves so they can still reach ADSModule endpoints.
         if instances["module"] == "ADS":
-            return TargetADS(data=instances, controller=self, bridge=self._bridge, session=self.session)
+            return TargetADS(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
 
         if instances["module"] == "Minecraft":
-            return MinecraftInstance(data=instances, controller=self, bridge=self._bridge, session=self.session)
+            return MinecraftInstance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
 
-        return Instance(data=instances, controller=self, bridge=self._bridge, session=self.session)
+        return Instance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
 
     @overload
     async def get_instance(
@@ -1491,6 +1490,10 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
             With the ID unknown and `auto_detect` False, an ADS Instance logs a warning and comes back as a
             :class:`TargetADS`. Other Instances never need the ID, and `format_data=False` never looks it up.
 
+        .. note::
+            A Target's ADS ID returns the cached :class:`TargetADS` from :attr:`targets`, refreshed from the Target.
+            With `format_data` False that is the Target's own raw dict.
+
         Parameters
         ----------
         instance_id : :class:`str`
@@ -1505,13 +1508,37 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
+        Raises
+        ------
+        :exc:`ValueError`
+            If the ID is an Instance held by a cached :class:`TargetADS`. Use :meth:`TargetADS.get_instance` for it.
+
         Returns
         -------
         Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`, :class:`Controller`, :class:`InstanceResponse`]
-            On success returns the converted Instance, `self` for this Controller's own ADS, or the raw Instance dict
-            if `format_data` is False.
+            On success returns the converted Instance, `self` for this Controller's own ADS, the cached
+            :class:`TargetADS` for a Target's ADS ID, or the raw Instance dict if `format_data` is False.
 
         """
+        cached_target = self._targets.get(instance_id)
+        if cached_target is not None:
+            return await cached_target.get_instance(
+                instance_id=instance_id,
+                format_data=format_data,
+                request_params=request_params,
+                **response_params,
+            )
+
+        # The Controller's copy of a Target's Instance differs from the Target's own data, so we refuse to build one.
+        for target_ads in self._targets.values():
+            for known_instance in target_ads.instances:
+                if known_instance.instance_id == instance_id:
+                    msg = (
+                        f"The Instance {instance_id} is held by the Target {target_ads.friendly_name} ({target_ads.instance_id}). "
+                        "Use `TargetADS.get_instance` on it instead."
+                    )
+                    raise ValueError(msg)
+
         result: InstanceResponse = await super().get_instance(
             instance_id=instance_id,
             request_params=request_params,
@@ -1629,8 +1656,14 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         and updates our ``self`` object with the Controller's data.
 
         .. note::
-            The Controller's own ADS Instance (eg. `ADS01`) is `self`, so it is left out of the set.
-            The local Target's `instance_id` is also kept as the Controller's own ADS ID, for :meth:`get_instance`.
+            The set holds only the Instances the Controller itself holds (its local Target), and the Controller's own
+            ADS Instance (eg. `ADS01`) is `self`, so it is left out. The local Target's `instance_id` is also kept as the
+            Controller's own ADS ID, for :meth:`get_instance`.
+
+        .. note::
+            Each remote Target becomes a :class:`TargetADS` in :attr:`targets`, and every one of them runs its own
+            :meth:`TargetADS.get_instances` at the same time. A Target that fails logs a warning and keeps an empty
+            :attr:`TargetADS.instances`. A Target whose own ADS Instance is missing from the reply is skipped.
 
         .. note::
             On a Controller, `include_self=False` makes AMP drop the local Target, so `self` is not updated. Its
@@ -1718,16 +1751,12 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
         if format_data is False:
             return result
 
-        # AMP sends one Target per ADS. The local one is us, so its data lands on our self object,
-        # and every Target's Instances get converted and placed under us.
+        # AMP sends one Target per ADS. The local one is us, so its data lands on our self object and its Instances
+        # are ours. A remote Target becomes a TargetADS and gets its Instances from the Target itself, not our copy of them.
         conv_instances: set[InstanceTypeAliases] = set()
+        remote_targets: dict[str, TargetADS] = {}
         for target in result:
             available_instances: list[InstanceResponse] = target["available_instances"]
-            if target["is_remote"] is False:
-                self._parse_controller_data(data=target)
-                # Each Target lists its own ADS Instance, the one whose instance_id matches the Target's. In the local
-                # Target that Instance is us, so it stays out of `instances`. A remote Target's own one is a TargetADS.
-                available_instances = [instance for instance in available_instances if instance["instance_id"] != target["instance_id"]]
             LOGGER.debug(
                 "<%s.%s> | Target: %s | Remote: %s | Instances: %s",
                 __class__.__name__,
@@ -1736,7 +1765,55 @@ class Controller(ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
                 target["is_remote"],
                 len(available_instances),
             )
-            conv_instances.update(self.instance_conversion(instances=available_instances))
+            if target["is_remote"] is False:
+                self._parse_controller_data(data=target)
+                # Each Target lists its own ADS Instance, the one whose instance_id matches the Target's. In the local
+                # Target that Instance is us, so it stays out of `instances`.
+                available_instances = [instance for instance in available_instances if instance["instance_id"] != target["instance_id"]]
+                conv_instances.update(self.instance_conversion(instances=available_instances))
+                continue
+
+            # The Target's own ADS Instance is the one we build the TargetADS from.
+            own_ads_data: Union[InstanceResponse, None] = None
+            for instance in available_instances:
+                if instance["instance_id"] == target["instance_id"]:
+                    own_ads_data = instance
+                    break
+
+            if own_ads_data is None:
+                LOGGER.warning(
+                    "<%s.%s> | The Target %s (%s) did not list its own ADS Instance, skipping it.",
+                    __class__.__name__,
+                    "get_instances",
+                    target["friendly_name"],
+                    target["instance_id"],
+                )
+                continue
+            remote_targets[target["instance_id"]] = TargetADS(
+                data=own_ads_data,
+                controller=self,
+                bridge=self._bridge,
+                session=self.session,
+            )
 
         self._instances = conv_instances
+        self._targets = remote_targets
+
+        # Every Target answers on its own, so we ask them all at once.
+        target_list: list[TargetADS] = list(remote_targets.values())
+        outcomes = await asyncio.gather(
+            *(target_ads.get_instances(format_data=True, request_params=request_params, **response_params) for target_ads in target_list),
+            return_exceptions=True,
+        )
+        for target_ads, outcome in zip(target_list, outcomes, strict=False):
+            if isinstance(outcome, BaseException):
+                LOGGER.warning(
+                    "<%s.%s> | Failed to get the Instances of the Target %s (%s) | Error: %s",
+                    __class__.__name__,
+                    "get_instances",
+                    target_ads.friendly_name,
+                    target_ads.instance_id,
+                    outcome,
+                )
+
         return self._instances

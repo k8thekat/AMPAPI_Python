@@ -73,11 +73,23 @@ Changed methods
 - ``Base.version_validation()`` takes the ``endpoint`` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
 - ``Base.clean_up()`` takes a keyword-only ``logout`` (default False) to call ``Core/Logout`` before closing the session.
-- :meth:`~ampapi.instance.Instance.start_instance`, ``stop_instance`` and ``restart_instance`` go through the Target that
-  holds the Instance, so the name is looked up on the right ADS. 4.x sent them to the Controller, which acts on its own
-  Instance when two ADSs share a name (every ADS is ``ADS01``). For the 4.x path, set ``route_by_target`` to False on
-  the :class:`~ampapi.instance.Controller` (every Instance it holds follows it) or on one Instance. The first routed
-  call may make one ``get_module_info`` call.
+- Every :class:`~ampapi.instance.Instance` knows the ADS that holds it, :attr:`~ampapi.instance.Instance.ads`: the
+  :class:`~ampapi.instance.Controller` for its own Instances, the :class:`~ampapi.instance.TargetADS` for a remote
+  Target's. :meth:`~ampapi.instance.Instance.start_instance`, ``stop_instance``, ``restart_instance``,
+  ``update_instance`` and ``get_instance_status`` go through that ADS, so the name is looked up on the right one. 4.x
+  sent them to the Controller, which acts on its own Instance when two ADSs share a name (every ADS is ``ADS01``).
+  There is no switch back to the 4.x path; ``route_by_target`` does not exist.
+- :attr:`~ampapi.instance.Controller.instances` is no longer flat. It holds only the Instances the Controller itself
+  holds (its local Target), and the remote Targets are in the new :attr:`~ampapi.instance.Controller.targets`, keyed by
+  the Target's ADS ID. Each :class:`~ampapi.instance.TargetADS` holds its own Instances in
+  :attr:`~ampapi.instance.TargetADS.instances`. Code that read a remote Target's Instances from
+  ``Controller.instances`` has to read them from ``Controller.targets`` instead.
+- :meth:`~ampapi.instance.Controller.get_instances` fills every ``TargetADS.instances`` at the same time, with one extra
+  call per Target. A Target that fails logs a warning and keeps an empty ``instances``; a Target that does not list its
+  own ADS Instance is skipped.
+- :meth:`~ampapi.instance.Controller.get_instance` raises a :exc:`ValueError` for an Instance a cached ``TargetADS``
+  holds, because the Controller's copy of it differs from the Target's own data. Use
+  :meth:`~ampapi.instance.TargetADS.get_instance` for it. A Target's ADS ID returns the cached ``TargetADS``.
 - :meth:`~ampapi.adsmodule.ADSModule.get_provision_fitness` returns None when AMP has no fitness data (JSON null),
   instead of raising.
 - ``DeploymentTemplate.settings_mappings`` is now ``setting_mappings``, AMP's own key; its ``description``, ``module``,
@@ -102,8 +114,9 @@ Returned data
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
 - :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. ``ADS01``) out of
   :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the
-  Controller. The ADS Instances of remote Targets come back as :class:`~ampapi.instance.TargetADS`; 4.x returned an
-  ``AMPADSInstance`` for every ADS Instance, the Controller's own included.
+  Controller. The ADS Instances of remote Targets come back as :class:`~ampapi.instance.TargetADS` in
+  :attr:`~ampapi.instance.Controller.targets`; 4.x returned an ``AMPADSInstance`` for every ADS Instance, the
+  Controller's own included.
 - The Controller attributes copied from :meth:`~ampapi.instance.Controller.get_instances` (eg. ``friendly_name``,
   ``state``) raise an ``AttributeError`` naming ``get_instances()`` until it has run, and log a warning on each read
   once that data is older than 300 seconds. ``include_self=False`` leaves them unset, since AMP then drops the
@@ -127,4 +140,5 @@ Target ADS
   Controller learns its own ADS ID from :meth:`~ampapi.instance.Controller.get_instances`, or from the new
   ``auto_detect=True`` argument. Without either, an ADS Instance logs a warning and comes back as a ``TargetADS``.
 - :meth:`~ampapi.instance.TargetADS.get_instances` returns the Instances on that Target, leaving out the Target's own
-  ADS Instance, and keeps them on ``TargetADS.instances``.
+  ADS Instance, and keeps them on ``TargetADS.instances``. The Target's own data in the reply refreshes the
+  ``TargetADS`` itself, and each returned Instance has the ``TargetADS`` as its ``ads``.
