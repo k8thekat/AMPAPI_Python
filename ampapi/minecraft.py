@@ -953,7 +953,7 @@ class MinecraftModule(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> bool:
         """|coro|
 
         Reject the EULA agreement.
@@ -967,16 +967,19 @@ class MinecraftModule(Base):
 
         Returns
         -------
-        None
+        :class:`bool`
+            On success returns a Bool.
 
         """
         await self._reauth()
-        return await self._post(
+        result: ResponseAliasFull = await self._post(
             url="MinecraftModule/RejectEULA",
-            no_data=True,
             request_params=request_params,
             **response_params,
         )
+        if isinstance(result, bool):
+            return result
+        raise AMPAPITypeError(end_point="MinecraftModule/RejectEULA", cur_type=result, expec_type=bool)
 
     # TODO: Removed in AMP API 2.6.5.0
     @deprecated("Removed in AMP API 2.6.5.0")
