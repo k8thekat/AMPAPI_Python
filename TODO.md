@@ -59,7 +59,6 @@ A small todo list local to the project.
 
 - Move `find_parameter_mismatches` to the URL matching `find_missing_endpoints` uses, and fix its
   `ampapi/x.py` links, which break from `docs/api_spec_sheets/`.
-- The two loops over `instance.instances` miss a Target's Instances, which now live in `Controller.targets`.
 
 ## Docs
 

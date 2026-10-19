@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from io import TextIOWrapper
 
     from ._types import DiagnosticsInfoResponse, PermissionNode, ScheduleDataResponse, SettingsSpecParentResponse
-    from .instance import Controller, Instance
+    from .instance import Controller, Instance, InstanceTypeAliases
     from .modules import Methods, SettingSpec, Triggers
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -972,7 +972,11 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     await instance.get_instances()
     ads_diag: Diagnostics | DiagnosticsInfoResponse = await instance.get_diagnostics_info()
     # cur_version: None | AMPMinecraftInstance = None
-    for entry in instance.instances:
+    # A remote Target's Instances live on its TargetADS, so we look through those too.
+    every_instance: set[InstanceTypeAliases] = set(instance.instances)
+    for target_ads in instance.targets.values():
+        every_instance.update(target_ads.instances)
+    for entry in every_instance:
         # Minecraft Instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
             instance_diag: Diagnostics | DiagnosticsInfoResponse = await entry.get_diagnostics_info()
@@ -1073,7 +1077,11 @@ async def generate_docs_rst(instance: Controller) -> None:
     mc_: bool = False
     gen_: bool = False
     src_: bool = False
-    for entry in instance.instances:
+    # A remote Target's Instances live on its TargetADS, so we look through those too.
+    every_instance: set[InstanceTypeAliases] = set(instance.instances)
+    for target_ads in instance.targets.values():
+        every_instance.update(target_ads.instances)
+    for entry in every_instance:
         # print(entry.running, entry.friendly_name, entry.module)
         if mc_ is False and entry.running and entry.module == "Minecraft":
             mc_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
