@@ -24,6 +24,8 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
+from typing_extensions import deprecated
+
 from ._types import (
     ACTION_RESULT_EXCLUDED_KEYS,
     ACTION_RESULT_REQUIRED_KEYS,
@@ -767,7 +769,11 @@ class ADSModule(Base):
         raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
 
     # TODO: AMP answers a null reference to every `Instance` shape we've sent (AMP 2.8.0.8).
-    #       It wants a `LocalAMPInstance`, which the spec doesn't describe, and the panel never calls this. Kat to decide.
+    #       It wants a `LocalAMPInstance`, which the spec doesn't describe, and the panel never calls this.
+    @deprecated(
+        "AMP 2.8.0.8 answers a null reference to every Instance shape sent; its LocalAMPInstance is undocumented and "
+        "the panel never calls it. Use create_instance or create_instance_from_spec.",
+    )
     @Base.ads_only
     async def create_local_instance(
         self,
@@ -782,6 +788,11 @@ class ADSModule(Base):
 
         Create a local AMP Instance, similar to :meth:`create_instance`.
         Use case could be on a remote Target ADS Instance instead of letting AMP decide where to create the Instance.
+
+        .. deprecated:: 5.0.0
+            AMP 2.8.0.8 answers a null reference to every `Instance` shape sent. It wants a `LocalAMPInstance`, which
+            AMP's API spec doesn't describe, and AMP's own panel never calls this endpoint. Use :meth:`create_instance`
+            or :meth:`create_instance_from_spec`.
 
         .. note::
             See the :class:`CreateInstance` for more details on how to configure the Instance when creating.

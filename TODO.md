@@ -12,8 +12,7 @@ A small todo list local to the project.
 ---
 
 - Confirm `ProvisionResponse` against a live payload; AMP answers `GetProvisionFitness` with null on the VMs.
-- `create_local_instance` sends `CreateInstance.to_dict()` as `Instance`, but AMP wants a `LocalAMPInstance`, and
-  answers with a null reference (vm1, 2.8.0.8).
+- `create_local_instance` is deprecated: remove it, or fix it once AMP's `LocalAMPInstance` shape is known.
 
 ## ampapi/instance.py
 

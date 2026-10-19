@@ -65,6 +65,9 @@ Changed methods
   and :meth:`~ampapi.adsmodule.ADSModule.apply_instance_configuration` return a :class:`~ampapi.modules.RunningTask`,
   which is what AMP sends. 4.x returned an ``ActionResult``, and the last two raised on AMP 2.8's reply.
 - :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like ``mc_accept_eula``; 4.x returned None.
+- :meth:`~ampapi.adsmodule.ADSModule.create_local_instance` is deprecated. AMP 2.8.0.8 answers a null reference to
+  every Instance shape sent, and its ``LocalAMPInstance`` is undocumented. Use ``create_instance`` or
+  ``create_instance_from_spec``.
 - :class:`~ampapi.instance.Instance` has the :class:`~ampapi.generic.GenericModule` and
   :class:`~ampapi.steamcmd.SteamCMDPlugin` endpoints, which Generic Instances (module ``GenericModule`` or ``Generic``)
   serve. On any other module they raise :exc:`RuntimeError`.
