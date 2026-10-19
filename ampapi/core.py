@@ -94,6 +94,7 @@ if TYPE_CHECKING:
         PortResponse,
         RoleResponse,
         SessionResponse,
+        StructuredDiagnosticsResponse,
         UpdateInfoResponse,
         UpdatesResponse,
         UserInfoResponse,
@@ -2631,7 +2632,7 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> dict[str, Any]:
+    ) -> StructuredDiagnosticsResponse:
         """|coro|
 
         Retrieves the structured diagnostics of the Instance.
@@ -2649,8 +2650,8 @@ class Core(Base):
 
         Returns
         -------
-        dict[:class:`str`, Any]
-            On success returns the raw dictionary of diagnostic sections.
+        :class:`StructuredDiagnosticsResponse`
+            On success returns a dictionary with the `core` diagnostics and the module specific `application` diagnostics.
 
         """
         await self._reauth()
@@ -2661,8 +2662,6 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetStructuredDiagnostics", cur_type=result, expec_type=dict)
-        # TODO: Confirm the shape of the response against a live payload.
-        # AMP documents it as Dictionary<String, Object>; no TypedDict until the sections are seen.
         return result  # pyright: ignore[reportReturnType]
 
     async def get_tasks(

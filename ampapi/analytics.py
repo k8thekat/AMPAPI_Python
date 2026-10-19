@@ -111,13 +111,18 @@ class AnalyticsPlugin(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> dict[str, Any]:
+    ) -> Union[dict[str, Any], None]:
         """|coro|
 
         Retrieves the Analytics details of a user.
 
         .. note::
             Requires the ``Analytics.Analytics.AccessUserDetails`` permission.
+
+
+        .. note::
+            AMP answers with JSON null when it has no data for the player. This method returns None for that,
+            through the `allow_null` response option. Every other error is raised as normal.
 
 
         Parameters
@@ -131,11 +136,13 @@ class AnalyticsPlugin(Base):
 
         Returns
         -------
-        dict[:class:`str`, Any]
-            On success returns the raw dictionary of the user's details.
+        Union[dict[:class:`str`, Any], None]
+            On success returns the raw dictionary of the user's details, or None when AMP has no data for the player.
 
         """
         await self._reauth()
+        # AMP answers JSON null when it has no data for the player, which is not an error here.
+        response_params["allow_null"] = True
         parameters: dict[str, str] = {"Username": username}
         result: ResponseAliasFull = await self._post(
             url="AnalyticsPlugin/GetUserDetails",
@@ -143,8 +150,11 @@ class AnalyticsPlugin(Base):
             request_params=request_params,
             **response_params,
         )
+        if result is None:
+            return None
+
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetUserDetails", cur_type=result, expec_type=dict)
-        # TODO: Confirm the shape of the response against a live payload.
-        # AMP documents it as Object; no TypedDict until the keys are seen.
+        # TODO: Confirm the shape of the response with a player who has played.
+        # AMP answers null when the player has no data, so no TypedDict until the keys are seen.
         return result  # pyright: ignore[reportReturnType]

@@ -484,6 +484,7 @@ class ControllerResponse(TypedDict):
     poll_update_throttle_interval: NotRequired[str]
     can_push_update: NotRequired[bool]
     can_poll_update: NotRequired[bool]
+    push_is_current: NotRequired[bool]
 
 
 class CPUInfoResponse(TypedDict):
@@ -616,6 +617,13 @@ class DiagnosticsInfoResponse(TypedDict):
     server_jar: NotRequired[str]
     java_version: NotRequired[str]
     config_version: NotRequired[str]
+
+
+class StructuredDiagnosticsResponse(TypedDict):
+    """Represents the response of :meth:`Core.get_structured_diagnostics`."""
+
+    core: DiagnosticsInfoResponse
+    application: dict[str, str]
 
 
 class EndpointsResponse(TypedDict):

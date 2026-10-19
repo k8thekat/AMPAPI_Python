@@ -50,7 +50,7 @@ _SPEC_MODULE_MAP: dict[str, tuple[str, str]] = {
 
 # Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" style endpoint URLs.
 _ENDPOINT_URL_RE = re.compile(r"^(?:API/)?([A-Za-z]+)/([A-Za-z0-9]+)$")
-_PYTHON_ONLY_PARAMS: frozenset[str] = frozenset({"format_data"})
+_PYTHON_ONLY_PARAMS: frozenset[str] = frozenset({"format_data", "request_params"})
 
 
 def _method_event_parse(data: list[Methods], title: str = "", title_body: str = "", path: str | None = None) -> None:
@@ -610,7 +610,7 @@ def find_parameter_mismatches(
     spec_path: Path | None = None,
     ampapi_path: Path | None = None,
     output_path: Path | None = None,
-    suffix_aliases: list[str] | None = None,
+    suffix_aliases: list[str] | None = None,  # noqa: ARG001 # kept so existing callers still work, see the docstring
 ) -> None:
     """Compare implemented Python method parameters against their API spec definitions and report mismatches.
 
@@ -620,29 +620,73 @@ def find_parameter_mismatches(
     defined in :data:`_PYTHON_ONLY_PARAMS` are excluded from the comparison. Results are written
     to a Markdown file and summarised via logging.
 
+    .. note::
+        A spec endpoint is matched to the Python methods that post to its URL (eg. ``url="Core/CreateTestTask"``),
+        whatever the method is named, the same matching :func:`find_missing_endpoints` uses.
+
+
+    .. note::
+        Only the newest spec version directory under `spec_path` is compared (versions compare as numbers, so
+        `2.10.0.0` is newer than `2.8.0.8`). When `spec_path` holds no version directories, every
+        ``*_api_spec.md`` file under it is merged instead.
+
+
     Parameters
     ----------
     spec_path : Path | None, optional
-        Directory containing ``*_api_spec.md`` files. Defaults to ``../docs/api_spec_sheets`` relative to this file.
+        Directory containing the versioned spec directories, or the ``*_api_spec.md`` files themselves.
+        Defaults to ``../docs/api_spec_sheets`` relative to this file.
     ampapi_path : Path | None, optional
         Directory containing the Python module files. Defaults to the directory of this file.
     output_path : Path | None, optional
         Path for the output report. Defaults to ``{spec_path}/parameter_mismatches.md``.
     suffix_aliases : list[str] | None, optional
-        Additional suffixes to try when resolving a spec endpoint name to a Python method name.
-        Defaults to ``["_application"]``.
+        Unused here since endpoints are matched on their URL rather than the method name; still accepted so
+        existing calls keep working, by default None.
 
     """
     _logger: Logger = logging.getLogger(__name__)
     _spec_dir: Path = spec_path if spec_path is not None else Path(__file__).parent.parent.joinpath("docs/api_spec_sheets")
     _ampapi_dir: Path = ampapi_path if ampapi_path is not None else Path(__file__).parent
-    _aliases: list[str] = suffix_aliases if suffix_aliases is not None else ["_application"]
 
-    # Merge spec endpoints from all versioned spec files; first file seen wins per key.
+    # Versions compare as int tuples, so 2.10.0.0 sorts after 2.8.0.8.
+    version_dirs: dict[tuple[int, ...], Path] = {
+        tuple(int(part) for part in child.name.split(".")): child
+        for child in _spec_dir.iterdir()
+        if child.is_dir() and re.fullmatch(r"\d+(\.\d+)*", child.name)
+    }
+    spec_root: Path = _spec_dir
+    if version_dirs:
+        spec_root = version_dirs[max(version_dirs)]
+        _logger.info("Comparing against the newest spec version: %s", spec_root.name)
+
     all_spec: dict[str, dict[str, str]] = {}
-    for spec_file in sorted(_spec_dir.glob("**/*_api_spec.md")):
+    for spec_file in sorted(spec_root.glob("**/*_api_spec.md")):
         for key, fields in _parse_api_spec_file(spec_file).items():
             all_spec.setdefault(key, fields)
+
+    # Every method that posts to a URL, keyed by the URL in `_normalize_endpoint` form.
+    methods_by_url: dict[str, list[tuple[str, str, list[str]]]] = {}
+    for module_path in sorted(_ampapi_dir.glob("*.py")):
+        signatures = _get_function_signatures(module_path)
+        for node in ast.walk(ast.parse(module_path.read_text())):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for call in ast.walk(node):
+                if not isinstance(call, ast.Call):
+                    continue
+                for keyword in call.keywords:
+                    if keyword.arg not in ("url", "endpoint"):
+                        continue
+                    if not isinstance(keyword.value, ast.Constant) or not isinstance(keyword.value.value, str):
+                        continue
+                    match = _ENDPOINT_URL_RE.match(keyword.value.value)
+                    if match is None:
+                        continue
+                    url_key = f"{_normalize_endpoint(match.group(1))}/{_normalize_endpoint(match.group(2))}"
+                    entry = (module_path.name, node.name, signatures[node.name])
+                    if entry not in methods_by_url.setdefault(url_key, []):
+                        methods_by_url[url_key].append(entry)
 
     _out: Path = output_path if output_path is not None else _spec_dir / "parameter_mismatches.md"
 
@@ -650,13 +694,12 @@ def find_parameter_mismatches(
     with _out.open("w") as out_file:
         out_file.write("# Parameter Mismatches\n\n")
 
-        for section, (py_file, prefix) in sorted(_SPEC_MODULE_MAP.items()):
+        for section, (py_file, _prefix) in sorted(_SPEC_MODULE_MAP.items()):
             py_path = _ampapi_dir / py_file
             if not py_path.exists():
                 _logger.warning("Python file not found for section '%s': %s", section, py_path)
                 continue
 
-            signatures = _get_function_signatures(py_path)
             section_mismatches: list[str] = []
 
             for key, fields in sorted(all_spec.items()):
@@ -664,20 +707,9 @@ def find_parameter_mismatches(
                 if parent != section:
                     continue
 
-                # Resolve the Python method name, accounting for suffix aliases.
-                full = prefix + endpoint
-                py_method: str | None = None
-                if full in signatures:
-                    py_method = full
-                else:
-                    for alias in _aliases:
-                        if (full + alias) in signatures:
-                            py_method = full + alias
-                            break
-                if py_method is None:
+                url_key = f"{_normalize_endpoint(section)}/{_normalize_endpoint(endpoint)}"
+                if url_key not in methods_by_url:
                     continue  # unimplemented endpoint; covered by find_missing_endpoints
-
-                py_params: set[str] = set(signatures[py_method]) - _PYTHON_ONLY_PARAMS
 
                 raw_params_str = fields.get("parameters", "[]")
                 try:
@@ -688,22 +720,26 @@ def find_parameter_mismatches(
 
                 spec_params: set[str] = {Base.camel_to_snake_re(p["name"]) for p in spec_param_list}
 
-                missing_in_python = sorted(spec_params - py_params)
-                extra_in_python = sorted(py_params - spec_params)
+                for method_file, method_name, method_params in methods_by_url[url_key]:
+                    py_params: set[str] = set(method_params) - _PYTHON_ONLY_PARAMS
+                    missing_in_python = sorted(spec_params - py_params)
+                    extra_in_python = sorted(py_params - spec_params)
 
-                if missing_in_python or extra_in_python:
-                    total_mismatches += 1
-                    section_mismatches.append(f"### `{key}`\n\n")
-                    if missing_in_python:
-                        section_mismatches.append("**In spec, missing from Python:**\n")
-                        section_mismatches.extend(f"- `{p}`\n" for p in missing_in_python)
-                        section_mismatches.append("\n")
-                    if extra_in_python:
-                        section_mismatches.append("**In Python, not in spec:**\n")
-                        section_mismatches.extend(f"- `{p}`\n" for p in extra_in_python)
-                        section_mismatches.append("\n")
+                    if missing_in_python or extra_in_python:
+                        total_mismatches += 1
+                        section_mismatches.append(f"### `{key}` -> `{method_file}::{method_name}`\n\n")
+                        if missing_in_python:
+                            section_mismatches.append("**In spec, missing from Python:**\n")
+                            section_mismatches.extend(f"- `{p}`\n" for p in missing_in_python)
+                            section_mismatches.append("\n")
+                        if extra_in_python:
+                            section_mismatches.append("**In Python, not in spec:**\n")
+                            section_mismatches.extend(f"- `{p}`\n" for p in extra_in_python)
+                            section_mismatches.append("\n")
 
-            out_file.write(f"## {section} -> [{py_file}](ampapi/{py_file})\n\n")
+            # The link is relative to the report, wherever it is written to.
+            py_link: str = Path(os.path.relpath(py_path, _out.parent)).as_posix()
+            out_file.write(f"## {section} -> [{py_file}]({py_link})\n\n")
             if section_mismatches:
                 out_file.writelines(section_mismatches)
             else:

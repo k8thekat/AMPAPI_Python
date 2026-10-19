@@ -20,6 +20,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
+import base64
 import datetime
 import logging
 import secrets
@@ -111,6 +112,7 @@ __all__ = (
     "Directory",
     "FileChunk",
     "Fitness",
+    "FolderUploadFile",
     "ImportConfig",
     "InstanceDatastore",
     "MCUser",
@@ -464,7 +466,7 @@ class APIParams:
     Attributes
     ----------
     url : :class:`str`
-        The URL to access the Web GUI panel home page/login page.
+        The URL to access the Web GUI panel home page/login page. A trailing ``/`` is removed.
     user : :class:`str`
         The AMP User name to login to the Web Panel.
     password : :class:`str`
@@ -482,6 +484,11 @@ class APIParams:
     use_2fa: bool = False
     token: str = ""
     _sessions: dict[str, APISession] = field(init=False, default_factory=dict[str, "APISession"])
+
+    def __post_init__(self) -> None:
+        """Strips a trailing `/` from :attr:`url`."""
+        # We drop any trailing slash once here so every URL built from `url` is right.
+        self.url = self.url.rstrip("/")
 
 
 @dataclass
@@ -929,6 +936,37 @@ class CreateInstance:
         if self.group is not None:
             data["Group"] = self.group
         return data
+
+
+@dataclass
+class FolderUploadFile:
+    """Represents one file for :meth:`FileManagerPlugin.upload_folder`.
+
+    Attributes
+    ----------
+    relative_path : :class:`str`
+        The path of the file relative to the target directory. Subfolders in the path are created by AMP.
+    data : :class:`bytes`
+        The raw content of the file.
+
+    """
+
+    relative_path: str
+    data: bytes
+
+    def to_dict(self) -> dict[str, str]:
+        """Converts the class to a dict for use as an API parameter.
+
+        Returns
+        -------
+        dict[:class:`str`, :class:`str`]
+            The class attributes keyed by their AMP API parameter names, with `data` as base64.
+
+        """
+        return {
+            "RelativePath": self.relative_path,
+            "Base64Data": base64.b64encode(self.data).decode(),
+        }
 
 
 @dataclass
