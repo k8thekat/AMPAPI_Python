@@ -968,6 +968,10 @@ class TargetADS(ADSData, ADSModule, Instance):
 
         Start an Instance of this Target, picked by its name on this Target.
 
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and started that Instance of this Target. 4.x's `AMPADSInstance.start_instance`
+            started the Target ADS itself.
+
         Parameters
         ----------
         instance_name : :class:`str`
@@ -1006,6 +1010,10 @@ class TargetADS(ADSData, ADSModule, Instance):
 
         Stop an Instance of this Target, picked by its name on this Target.
 
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and stopped that Instance of this Target. 4.x's `AMPADSInstance.stop_instance`
+            stopped the Target ADS itself.
+
         Parameters
         ----------
         instance_name : :class:`str`
@@ -1043,6 +1051,10 @@ class TargetADS(ADSData, ADSModule, Instance):
         """|coro|
 
         Restart an Instance of this Target, picked by its name on this Target.
+
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and restarted that Instance of this Target. 4.x's `AMPADSInstance.restart_instance`
+            restarted the Target ADS itself.
 
         Parameters
         ----------
@@ -1412,6 +1424,10 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
             have API functions.\n
             The Instances of remote Targets are not in here, they belong to their :class:`TargetADS` in :attr:`targets`.
 
+        .. versionchanged:: 5.0.0
+            Holds only the Controller's own Instances. 4.x held every Target's Instances here, with each ADS Instance
+            as an `AMPADSInstance`.
+
 
         Returns
         -------
@@ -1428,6 +1444,8 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         .. note::
             Each :class:`TargetADS` holds the Instances of its Target in :attr:`TargetADS.instances`, and
             :meth:`get_instances` fills them all.
+
+        .. versionadded:: 5.0.0
 
 
         Returns

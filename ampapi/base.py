@@ -1235,6 +1235,9 @@ class Base:
         .. note::
             Leading slashes are dropped, so `/` means the Instance root. Everything else is sent to AMP as given.
 
+        .. versionchanged:: 5.0.0
+            Only drops leading slashes. 4.x refused any `_`, turned `..` into `.` and stripped a leading `.`.
+
 
         Parameters
         ----------

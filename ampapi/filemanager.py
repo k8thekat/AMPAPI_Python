@@ -1021,6 +1021,9 @@ class FileManagerPlugin(Base):
 
         Endpoint: `FileManagerPlugin/WriteFileChunk`
 
+        .. versionchanged:: 5.0.0
+            `append` is renamed `final_chunk`. It was always sent as AMP's `FinalChunk`, which marks the last chunk.
+
         Parameters
         ----------
         file_path : :class:`str`

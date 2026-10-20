@@ -297,3 +297,8 @@ Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and f
   Font Awesome icons. The docs don't load Font Awesome, so the icons would be blank without it.
 - The version is compared against the last release (4.6.0). Things added and changed inside the 5.0.0 work
   (`route_by_target`, `Controller.targets`) never shipped, so they are `versionadded:: 5.0.0` at most.
+- 5.0.0 tags only the objects whose use changed (Kat, 2026-10-20): `Controller.instances` / `targets`,
+  `TargetADS` start, stop and restart, `write_file_chunk` and `sanitize_path`. `docs/upgrading.rst` stays the full
+  4.x -> 5.0.0 record. Later changes get their tag as they are made.
+- `Core.get_webserver_metrics` carries `.. versionremoved:: "2.6.0.0"`, an AMP version, which Sphinx shows as
+  "Removed in version “2.6.0.0”" like a library version.
