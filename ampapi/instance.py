@@ -163,7 +163,7 @@ class Instance(
     target_id : :class:`str`
         The target ID of the Instance.
     url : Union[:class:`str`, None]
-        The URL of the Instance. AMP doesn't send one for an Instance, so it is None, by default None.
+        The URL of the Instance. AMP doesn't send one, by default None.
 
     """
 
@@ -214,8 +214,8 @@ class Instance(
 
         .. note::
             :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance`, :meth:`update_instance` and
-            :meth:`get_instance_status` go through this ADS, as AMP looks the Instance up on the ADS that receives the call.
-            An Instance built without one falls back to its :class:`Controller`.
+            :meth:`get_instance_status` go through this ADS. An Instance built without one falls back to its
+            :class:`Controller`.
 
 
         Returns
@@ -412,7 +412,7 @@ class Instance(
             This will fail if you attempt to call it on the Target or Controller type Instance.
 
         .. note::
-            The refresh goes through :attr:`ads`, the ADS that holds this Instance.
+            The call goes to :attr:`ads`, the ADS that holds this Instance.
 
 
         Raises
@@ -485,8 +485,7 @@ class Instance(
 
 
         .. note::
-            The call goes to :attr:`ads`, the ADS that holds this Instance, as AMP looks the Instance name up on the
-            ADS that receives the call.
+            The call goes to :attr:`ads`, the ADS that holds this Instance.
 
         Parameters
         ----------
@@ -529,8 +528,7 @@ class Instance(
 
 
         .. note::
-            The call goes to :attr:`ads`, the ADS that holds this Instance, as AMP looks the Instance name up on the
-            ADS that receives the call.
+            The call goes to :attr:`ads`, the ADS that holds this Instance.
 
         Parameters
         ----------
@@ -573,8 +571,7 @@ class Instance(
 
 
         .. note::
-            The call goes to :attr:`ads`, the ADS that holds this Instance, as AMP looks the Instance name up on the
-            ADS that receives the call.
+            The call goes to :attr:`ads`, the ADS that holds this Instance.
 
         Parameters
         ----------
@@ -604,7 +601,7 @@ class Instance(
         Update the AMP Instance.
 
         .. note::
-            The call goes to :attr:`ads`, the ADS that holds this Instance, like :meth:`start_instance`.
+            The call goes to :attr:`ads`, the ADS that holds this Instance.
 
         .. warning::
             This only applies if you are manually creating these classes.\n
@@ -689,7 +686,7 @@ class MinecraftInstance(MinecraftModule, Instance):
     target_id : :class:`str`
         The target ID of the Instance.
     url : Union[:class:`str`, None]
-        The URL of the Instance. AMP doesn't send one for an Instance, so it is None, by default None.
+        The URL of the Instance. AMP doesn't send one, by default None.
 
     """
 
@@ -697,12 +694,12 @@ class MinecraftInstance(MinecraftModule, Instance):
 
 
 class ADSData(Base):
-    """The Target data an ADS keeps flat on itself, shared by :class:`Controller` and :class:`TargetADS`.
+    """The Target data of an ADS, kept flat on the object. Shared by :class:`Controller` and :class:`TargetADS`.
 
     .. note::
-        Each subclass sets `__cached__` to the Target fields it holds. Those names are guarded, so reading one before
-        :meth:`_parse_target_data` has run raises :exc:`AttributeError`, and reading one after the cache timeout logs a
-        warning. A :class:`TargetADS` leaves out `friendly_name`, `description` and `tags`, as the Instance's values win.
+        Each subclass sets `__cached__` to the Target fields it holds. Reading one before :meth:`_parse_target_data`
+        has run raises :exc:`AttributeError`, and reading one after the cache timeout logs a warning.
+        A :class:`TargetADS` leaves out `friendly_name`, `description` and `tags`, which keep the Instance's values.
 
     """
 
@@ -795,12 +792,12 @@ class TargetADS(ADSData, ADSModule, Instance):
     .. note::
         :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance` and :meth:`delete_instance_users`
         take the :class:`ADSModule` signature (an `instance_name` or `instance_id`) and act on an Instance of this
-        Target. They no longer act on the Target ADS itself like the :class:`Instance` versions did.
+        Target, not on the Target ADS itself.
 
     .. note::
-        The Target's own data is kept flat on this object like :class:`Controller` does, and reading it before
+        The Target's own data is kept flat on this object, the same as :class:`Controller`. Reading it before
         :meth:`~Controller.get_instances` has run raises :exc:`AttributeError`. `friendly_name`, `description` and `tags`
-        are not part of it, those stay the Instance's values.
+        keep the Instance's values.
 
 
     Attributes
@@ -861,7 +858,7 @@ class TargetADS(ADSData, ADSModule, Instance):
         The list of tags of the Instance, default is None.
     target_id : :class:`str`
         The target ID of the Instance.
-    url : :class:`str`
+    url : Union[:class:`str`, None]
         The URL of the Target.
     id : :class:`int`
         The Target's ID.
@@ -1237,8 +1234,8 @@ class TargetADS(ADSData, ADSModule, Instance):
     ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]:
         """|coro|
 
-        Returns the Instances this Target holds as a set of converted :class:`Instance`, :class:`MinecraftInstance`
-        and :class:`TargetADS` objects, and keeps them on :attr:`instances`.
+        Returns the Instances this Target holds as a set of converted :class:`Instance` and :class:`MinecraftInstance`
+        objects, and keeps them on :attr:`instances`.
 
         .. note::
             This Target's own ADS Instance is `self`, so it is left out of the set. The Target's own data from the
@@ -1783,7 +1780,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
     ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]:
         """|coro|
 
-        Returns a set of converted :class:`Instance`, :class:`MinecraftInstance` and :class:`TargetADS` objects
+        Returns a set of converted :class:`Instance` and :class:`MinecraftInstance` objects
         and updates our ``self`` object with the Controller's data.
 
         .. note::

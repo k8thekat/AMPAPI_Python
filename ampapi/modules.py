@@ -466,7 +466,7 @@ class APIParams:
     Attributes
     ----------
     url : :class:`str`
-        The URL to access the Web GUI panel home page/login page. A trailing ``/`` is removed.
+        The URL to access the Web GUI panel home page/login page. A trailing `/` is removed.
     user : :class:`str`
         The AMP User name to login to the Web Panel.
     password : :class:`str`

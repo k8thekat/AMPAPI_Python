@@ -1490,14 +1490,13 @@ class ADSModule(Base):
 
         .. note::
             AMP answers with the Target item for the ID, the same shape as one entry of :meth:`get_instances`.
-            The panel calls this to refresh a single Target and treats JSON null as the Target being gone.
-            This method returns None for that, through the `allow_null` response option.
+            JSON null means the Target is gone, and this method returns None for it.
 
 
         Parameters
         ----------
         group_id : :class:`str`
-            The ID of the Target, as in :attr:`ControllerResponse.id`.
+            The ADS ID of the Target, the `instance_id` of a :meth:`get_instances` entry.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1584,9 +1583,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetInstances`
 
         .. note::
-            AMP's `ForceIncludeSelf` is always sent as True, so the ADS's own Target is in the list. False only ever made
-            AMP drop a Controller's local Target when it held nothing but its own ADS, which left the Controller's
-            data unset.
+            AMP's `ForceIncludeSelf` is always sent as True, so the ADS's own Target is in the list.
 
 
         Parameters

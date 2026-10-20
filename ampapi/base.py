@@ -327,8 +327,8 @@ class Base:
 
         .. note::
             :class:`Instance` carries the :class:`GenericModule` and :class:`SteamCMDPlugin` endpoints, so its
-            subclasses (eg. :class:`MinecraftInstance`, :class:`TargetADS`) have them too. This stops those calls
-            before they reach AMP, which would only answer "No such module loaded".
+            subclasses (eg. :class:`MinecraftInstance`, :class:`TargetADS`) have them too. Any other module raises
+            before the call is sent.
 
         Parameters
         ----------
@@ -909,7 +909,7 @@ class Base:
 
 
         .. note::
-            The session is handled for you, it logs in first like every wrapper does.
+            The session is handled for you.
 
 
         .. warning::
@@ -1233,9 +1233,7 @@ class Base:
 
 
         .. note::
-            AMP takes the path as given (`\\`, `//`, `./` and `../` all work, and `../` stays inside the Instance).
-            Only a bare `/` fails, so leading slashes are dropped and `/` means the Instance root. A typo gets AMP's
-            own error.
+            Leading slashes are dropped, so `/` means the Instance root. Everything else is sent to AMP as given.
 
 
         Parameters

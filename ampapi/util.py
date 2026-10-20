@@ -707,6 +707,21 @@ def find_parameter_mismatches(
                 if parent != section:
                     continue
 
+                # # Resolve the Python method name, accounting for suffix aliases.
+                # full = prefix + endpoint
+                # py_method: str | None = None
+                # if full in signatures:
+                #     py_method = full
+                # else:
+                #     for alias in _aliases:
+                #         if (full + alias) in signatures:
+                #             py_method = full + alias
+                #             break
+                # if py_method is None:
+                #     continue  # unimplemented endpoint; covered by find_missing_endpoints
+
+                # py_params: set[str] = set(signatures[py_method]) - _PYTHON_ONLY_PARAMS
+
                 url_key = f"{_normalize_endpoint(section)}/{_normalize_endpoint(endpoint)}"
                 if url_key not in methods_by_url:
                     continue  # unimplemented endpoint; covered by find_missing_endpoints
@@ -719,6 +734,21 @@ def find_parameter_mismatches(
                     continue
 
                 spec_params: set[str] = {Base.camel_to_snake_re(p["name"]) for p in spec_param_list}
+
+                # missing_in_python = sorted(spec_params - py_params)
+                # extra_in_python = sorted(py_params - spec_params)
+
+                # if missing_in_python or extra_in_python:
+                #     total_mismatches += 1
+                #     section_mismatches.append(f"### `{key}`\n\n")
+                #     if missing_in_python:
+                #         section_mismatches.append("**In spec, missing from Python:**\n")
+                #         section_mismatches.extend(f"- `{p}`\n" for p in missing_in_python)
+                #         section_mismatches.append("\n")
+                #     if extra_in_python:
+                #         section_mismatches.append("**In Python, not in spec:**\n")
+                #         section_mismatches.extend(f"- `{p}`\n" for p in extra_in_python)
+                #         section_mismatches.append("\n")
 
                 for method_file, method_name, method_params in methods_by_url[url_key]:
                     py_params: set[str] = set(method_params) - _PYTHON_ONLY_PARAMS
@@ -1018,6 +1048,25 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
         # Minecraft Instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
             instance_diag: Diagnostics | DiagnosticsInfoResponse = await entry.get_diagnostics_info()
+            # if isinstance(ads_diag, Diagnostics) and isinstance(instance_diag, Diagnostics):
+            #     if instance_diag.application_version == ads_diag.application_version:
+            #         _logger.info(
+            #             "Found %s matching the current ADS version `%s` .",
+            #             entry.instance_name,
+            #             ads_diag.application_version,
+            #         )
+            #         await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
+            #         break
+            #     _logger.warning(
+            #         "<%s.%s> | Version mismatch between the Instance and the ADS. ADS: %s | Instance: %s",
+            #         "util",
+            #         "amp_api_update",
+            #         instance_diag.application_version,
+            #         ads_diag.application_version,
+            #     )
+            # err = "Responses are of the wrong type. ADS: %s | Instance: %s"
+            # raise TypeError(err, type(ads_diag), type(instance_diag))
+
             if not isinstance(ads_diag, Diagnostics) or not isinstance(instance_diag, Diagnostics):
                 msg = f"Responses are of the wrong type. ADS: {type(ads_diag)} | Instance: {type(instance_diag)}"
                 raise TypeError(msg)

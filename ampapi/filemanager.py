@@ -75,8 +75,7 @@ class FileManagerPlugin(Base):
 
         .. warning::
             On AMP 2.8.0.8 this call has no visible effect. It creates no file, does not append to a file made by
-            :meth:`write_file_chunk`, and `delete` set to True leaves the file alone. The panel never calls it,
-            use :meth:`write_file_chunk` instead.
+            :meth:`write_file_chunk`, and `delete` set to True leaves the file alone. Use :meth:`write_file_chunk`.
 
         Parameters
         ----------
@@ -1031,7 +1030,7 @@ class FileManagerPlugin(Base):
         offset : :class:`int`
             The position offset from start of file.
         final_chunk : :class:`bool`, optional
-            Marks this as the last chunk of the file, so send `True` only on the last chunk, by default False.
+            If this is the last chunk of the file or not, by default False.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
