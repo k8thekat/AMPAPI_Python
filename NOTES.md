@@ -300,5 +300,5 @@ Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and f
 - 5.0.0 tags only the objects whose use changed (Kat, 2026-10-20): `Controller.instances` / `targets`,
   `TargetADS` start, stop and restart, `write_file_chunk` and `sanitize_path`. `docs/upgrading.rst` stays the full
   4.x -> 5.0.0 record. Later changes get their tag as they are made.
-- `Core.get_webserver_metrics` carries `.. versionremoved:: "2.6.0.0"`, an AMP version, which Sphinx shows as
-  "Removed in version “2.6.0.0”" like a library version.
+- An AMP version in a directive is written `AMP-2.6.0.0` (`Core.get_webserver_metrics`). Sphinx takes the first word
+  as the version and the rest as the text, so `AMP 2.6.0.0` renders "Removed in version AMP: 2.6.0.0".

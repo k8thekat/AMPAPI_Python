@@ -3255,7 +3255,7 @@ class Core(Base):
 
         Endpoint: `Core/GetWebserverMetrics`
 
-        .. versionremoved::  "2.6.0.0"
+        .. versionremoved:: AMP-2.6.0.0
 
         Parameters
         ----------
