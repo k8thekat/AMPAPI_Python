@@ -696,7 +696,7 @@ class MinecraftInstance(MinecraftModule, Instance):
     module: str = "Minecraft"
 
 
-class TargetData(Base):
+class ADSData(Base):
     """The Target data an ADS keeps flat on itself, shared by :class:`Controller` and :class:`TargetADS`.
 
     .. note::
@@ -743,7 +743,7 @@ class TargetData(Base):
         """
         # Cheap frozenset test first so uncached names and every method call fall straight through.
         # `_is_cached` only flips in `_parse_target_data`, so it alone says if our own data was applied.
-        cls: type[TargetData] = type(self)
+        cls: type[ADSData] = type(self)
         if name in cls._cached_names:
             if not object.__getattribute__(self, "_is_cached"):
                 raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
@@ -780,7 +780,7 @@ class TargetData(Base):
         self._mark_cached()
 
 
-class TargetADS(TargetData, ADSModule, Instance):
+class TargetADS(ADSData, ADSModule, Instance):
     """Typically referred to the "Target ADS", the ADS Instance of a remote Target held by the :class:`Controller`
     in :attr:`~Controller.targets`.
 
@@ -1311,7 +1311,7 @@ class TargetADS(TargetData, ADSModule, Instance):
         return self._instances
 
 
-class Controller(TargetData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
+class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
     """Represents an AMP Controller Instance.
 
     .. note::
