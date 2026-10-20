@@ -284,3 +284,16 @@ for vm in vm1 vm2; do
     --noautoconsole
 done
 ```
+## Version directives
+
+Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and furo:
+- `.. versionadded:: X`, `.. versionchanged:: X`, `.. deprecated:: X` and `.. versionremoved:: X` are built into
+  Sphinx (`versionremoved` since 7.3), so `conf.py` needs nothing. Napoleon passes them through from a numpy docstring,
+  in the body or nested under a parameter's description, and `:attr:` / `:meth:` references inside them resolve.
+- `docs/_static/styles/furo.css` already styles `div.versionadded`, `div.versionchanged` and `div.versionremoved`.
+  They render as "Added in version 5.0.0:", "Changed in version 5.0.0:" and "Removed in version 5.0.0:".
+- Already in use: `Bridge` (`versionadded`) and `create_local_instance` (`deprecated`).
+- `docs/extensions/prettyversion.py` (from dpy/Umbra, commented out in `conf.py`) swaps them for boxes with
+  Font Awesome icons. The docs don't load Font Awesome, so the icons would be blank without it.
+- The version is compared against the last release (4.6.0). Things added and changed inside the 5.0.0 work
+  (`route_by_target`, `Controller.targets`) never shipped, so they are `versionadded:: 5.0.0` at most.

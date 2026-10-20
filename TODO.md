@@ -58,6 +58,7 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
+- (#14) Mark per-object changes with Sphinx `.. versionadded::` / `.. versionchanged::` (see NOTES.md "Version directives").
 
 ## Issues
 
