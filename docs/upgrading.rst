@@ -169,6 +169,10 @@ Returned data
 - :attr:`~ampapi.instance.Instance.application_endpoints` holds :class:`~ampapi.modules.Endpoints`, and the
   ``datastores`` of a :class:`~ampapi.instance.Controller` or :class:`~ampapi.instance.TargetADS` hold
   :class:`~ampapi.modules.TargetDatastore`; 4.x left both as dicts.
+- ``ampapi._types.APISpec`` and ``ActionSpec`` are dicts keyed by module name then method name, matching what
+  :meth:`~ampapi.Core.get_api_spec` and :meth:`~ampapi.Core.get_user_action_spec` return. 4.x declared fixed module keys.
+  ``APISpecEndpointData`` and ``APISpecEndpointParameters`` follow AMP's keys (eg. ``type_name``,
+  ``required_permissions``).
 - :meth:`~ampapi.Core.get_permissions_spec` returns :class:`~ampapi.modules.PermissionNode` dataclasses (with
   ``children`` built the same way) and takes ``format_data``. 4.x returned the dicts, which are now
   ``ampapi._types.PermissionNodeResponse``.

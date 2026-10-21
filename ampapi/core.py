@@ -90,6 +90,7 @@ if TYPE_CHECKING:
     from . import modules
     from ._types import (
         ActionSpec,
+        APISpec,
         AuditLogEntryResponse,
         DiagnosticsResponse,
         LoginResultsResponse,
@@ -1813,7 +1814,7 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> dict[str, Any]:
+    ) -> APISpec:
         """|coro|
 
         Get's all the API specs for the Instance.
@@ -1832,9 +1833,9 @@ class Core(Base):
 
         Returns
         -------
-        dict[:class:`str`, Any]
+        :data:`APISpec`
             On success returns a dictionary with all of the API specs, their parameters and return types for the Instance.
-            Each key is a plugin name, shaped like :class:`APISpec`.
+            Each key is a module name, holding a dictionary of its methods as :class:`APISpecEndpointData`.
 
         """
         await self._reauth()
@@ -1845,8 +1846,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetAPISpec", cur_type=result, expec_type=dict)
-        # No TypedDict models this response, so it comes back as a plain dict.
-        return dict(result)
+        return result  # pyright: ignore[reportReturnType]
 
     async def get_audit_log_entries(
         self,
@@ -2005,7 +2005,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[SettingSpec] | list[Any]:
+    ) -> list[SettingSpec] | list[SettingSpecResponse]:
         """|coro|
 
         Returns the config settings for each node in the list.
@@ -2349,7 +2349,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[SettingSpec] | list[Any]:
+    ) -> list[SettingSpec] | list[SettingSpecResponse]:
         """|coro|
 
         Returns the provisioning spec.
@@ -3015,7 +3015,7 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionSpec | dict[str, Any]:
+    ) -> ActionSpec:
         """|coro|
 
         Get a specification of the user actions.
@@ -3031,8 +3031,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`ActionSpec`
-            On success returns a :class:`ActionSpec`.
+        :data:`ActionSpec`
+            On success returns a dictionary keyed by module name, each holding its method names and captions.
 
         """
         await self._reauth()
@@ -3043,8 +3043,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetUserActionsSpec", cur_type=result, expec_type=dict)
-        # No TypedDict models this response, so it comes back as a plain dict.
-        return dict(result)
+        return result  # pyright: ignore[reportReturnType]
 
     async def get_user_info(
         self,
@@ -3125,7 +3124,7 @@ class Core(Base):
         Returns
         -------
         :class:`Players`
-            On success returns a :class:`Players` dataclasses.
+            On success returns a :class:`Players` dataclass, with no players when AMP answers an empty list.
 
         """
         await self._reauth()
@@ -3134,14 +3133,19 @@ class Core(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        # AMP answers an empty list instead of an empty object when no one is connected.
+        if isinstance(result, list) and len(result) == 0:
+            users: dict[str, Any] = {}
+        elif isinstance(result, dict):
+            users = dict(result)
+        else:
             raise AMPAPITypeError(end_point="Core/GetUserList", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
         # A UUID -> name map that no TypedDict models; Players takes it as a plain dict.
         if format_data is True:
-            return Players(data=dict(result))
-        return dict(result)
+            return Players(data=users)
+        return users
 
     async def get_webauthn_challenge(
         self,

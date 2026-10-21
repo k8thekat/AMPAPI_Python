@@ -1390,7 +1390,7 @@ class ADSModule(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[Instance] | list[InstanceResponse]:
+    ) -> list[InstanceResponse]:
         """|coro|
 
         Get a list of Instances tied to the specified datastore.
@@ -1412,8 +1412,8 @@ class ADSModule(Base):
 
         Returns
         -------
-        list[:class:`Instance`]
-            On success returns a list of raw Instance dicts.
+        list[:class:`InstanceResponse`]
+            On success returns a list of raw Instance dicts. No :class:`Instance` is built from them.
 
         """
         await self._reauth()

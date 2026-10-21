@@ -174,8 +174,8 @@ async def _parse_get_api_spec_to_file(
                 parents.append(parent)
                 file.write("____________________________________________________\n")
                 file.write(f"{parent}:\n")
-            if isinstance(parent_value, dict):
-                children: dict[str, Any] = parent_value  # pyright: ignore[reportUnknownVariableType]
+            if isinstance(parent_value, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+                children: dict[str, Any] = parent_value
                 for child, child_value in sorted(children.items()):
                     file.write(f"\t{child}:\n")
                     if isinstance(child_value, dict):

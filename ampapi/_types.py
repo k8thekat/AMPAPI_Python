@@ -231,89 +231,127 @@ class ActionResultResponse(TypedDict, total=False):
     support_title: Union[str, None]
 
 
-class ActionSpec(TypedDict):
-    """ads_module : dict[:class:`str`, Any]
-
-    file_manager_plugin : dict[:class:`str`, Any]
-
-    email_sender_plugin : dict[:class:`str`, Any]
-
-    common_core_plugin : dict[:class:`str`, Any]
-
-    core : dict[:class:`str`, Any]
-
-    """
-
-    ads_module: dict[str, Any]
-    file_manager_plugin: dict[str, Any]
-    email_sender_plugin: dict[str, Any]
-    common_core_plugin: dict[str, Any]
-    core: dict[str, Any]
-
-
-class APISpec(TypedDict):
-    """analytics_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
-
-    common_core_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
-
-    email_sender_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
-
-    file_manager_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
-
-    local_file_backup_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
-
-    minecraft_module : dict[:class:`str`, :class:`APISpecEndpointData`]
-
-    """
-
-    analytics_plugin: dict[str, APISpecEndpointData]
-    common_core_plugin: dict[str, APISpecEndpointData]
-    email_sender_plugin: dict[str, APISpecEndpointData]
-    file_manager_plugin: dict[str, APISpecEndpointData]
-    local_file_backup_plugin: dict[str, APISpecEndpointData]
-    minecraft_module: dict[str, APISpecEndpointData]
-
-
-class APISpecEndpointData(TypedDict):
-    """description : :class:`str`
-
-    is_complex_type : :class:`bool`
-
-    parameters : :class:`APISpecEndpointParameters`
-
-    return_type_name : :class:`str`
-
-    returns : :class:`str`
-
-    """
-
-    id: str
-    description: str
-    is_complex_type: bool
-    parameters: APISpecEndpointParameters
-    return_type_name: str
-    returns: str
+ActionSpec = dict[str, dict[str, str]]
+"""Represents the JSON response data from :meth:`Core.get_user_action_spec`, keyed by module name (eg. `"ads_module"`)
+then by method name, with the caption of the action as the value. A module without actions is an empty dict.
+"""
 
 
 class APISpecEndpointParameters(TypedDict):
-    """description : :class:`str`
+    """Represents a single parameter of an endpoint in :data:`APISpec`."""
 
-    name : :class:`str`
-
-    option : :class:`bool`
-
-    param_enum_values : :class:`str`
-
-    type_name : :class:`str`
-
-    """
-
-    id: str
-    description: str
     name: str
-    option: bool
-    param_enum_values: str
     type_name: str
+    description: str
+    placeholder: str
+    suffix: str
+    optional: bool
+    # The values an enum parameter accepts, None for any other parameter.
+    param_enum_values: Union[dict[str, int], None]
+
+
+class APISpecEndpointData(TypedDict):
+    """Represents a single endpoint (method) in :data:`APISpec`."""
+
+    description: Union[str, None]
+    returns: Union[str, None]
+    parameters: list[APISpecEndpointParameters]
+    return_type_name: str
+    is_complex_type: bool
+    # The permission nodes the endpoint needs, empty when it needs none.
+    required_permissions: list[str]
+
+
+APISpec = dict[str, dict[str, APISpecEndpointData]]
+"""Represents the JSON response data from :meth:`Core.get_api_spec`, keyed by module name (eg. `"core"`)
+then by method name (eg. `"GetConfig"`).
+"""
+
+
+# Replaced by the aliases and TypedDicts above, which match the AMP-2.8.0.8 captures.
+# class ActionSpec(TypedDict):
+#     """ads_module : dict[:class:`str`, Any]
+#
+#     file_manager_plugin : dict[:class:`str`, Any]
+#
+#     email_sender_plugin : dict[:class:`str`, Any]
+#
+#     common_core_plugin : dict[:class:`str`, Any]
+#
+#     core : dict[:class:`str`, Any]
+#
+#     """
+#
+#     ads_module: dict[str, Any]
+#     file_manager_plugin: dict[str, Any]
+#     email_sender_plugin: dict[str, Any]
+#     common_core_plugin: dict[str, Any]
+#     core: dict[str, Any]
+#
+#
+# class APISpec(TypedDict):
+#     """analytics_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
+#
+#     common_core_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
+#
+#     email_sender_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
+#
+#     file_manager_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
+#
+#     local_file_backup_plugin : dict[:class:`str`, :class:`APISpecEndpointData`]
+#
+#     minecraft_module : dict[:class:`str`, :class:`APISpecEndpointData`]
+#
+#     """
+#
+#     analytics_plugin: dict[str, APISpecEndpointData]
+#     common_core_plugin: dict[str, APISpecEndpointData]
+#     email_sender_plugin: dict[str, APISpecEndpointData]
+#     file_manager_plugin: dict[str, APISpecEndpointData]
+#     local_file_backup_plugin: dict[str, APISpecEndpointData]
+#     minecraft_module: dict[str, APISpecEndpointData]
+#
+#
+# class APISpecEndpointData(TypedDict):
+#     """description : :class:`str`
+#
+#     is_complex_type : :class:`bool`
+#
+#     parameters : :class:`APISpecEndpointParameters`
+#
+#     return_type_name : :class:`str`
+#
+#     returns : :class:`str`
+#
+#     """
+#
+#     id: str
+#     description: str
+#     is_complex_type: bool
+#     parameters: APISpecEndpointParameters
+#     return_type_name: str
+#     returns: str
+#
+#
+# class APISpecEndpointParameters(TypedDict):
+#     """description : :class:`str`
+#
+#     name : :class:`str`
+#
+#     option : :class:`bool`
+#
+#     param_enum_values : :class:`str`
+#
+#     type_name : :class:`str`
+#
+#     """
+#
+#     id: str
+#     description: str
+#     name: str
+#     option: bool
+#     param_enum_values: str
+#     type_name: str
 
 
 class ApplicationResponse(TypedDict):
