@@ -101,37 +101,72 @@ SettingSpecTableAliases = Union[
 
 __all__ = (
     "APIParams",
+    "APISession",
     "ActionResult",
     "AnalyticsCountryData",
     "AnalyticsFilter",
     "AnalyticsStats",
     "AnalyticsSummary",
     "AnalyticsTopPlayers",
+    "Application",
+    "AuditLogEntry",
     "Backup",
     "BuildInfo",
+    "BukkitPlugin",
+    "CPUInfo",
     "ConsoleEntries",
+    "Consumes",
     "CreateInstance",
     "DeploymentTemplate",
+    "Diagnostics",
     "Directory",
+    "Endpoints",
     "FileChunk",
     "Fitness",
     "FolderUploadFile",
     "ImportConfig",
     "InstanceDatastore",
+    "InstanceInfo",
+    "InstanceStatus",
+    "LoginResults",
+    "LoginUserInfo",
     "MCUser",
     "Messages",
+    "Methods",
     "Metrics",
     "MetricsData",
+    "OPList",
+    "OPWhitelist",
+    "ParameterMapping",
+    "PlatformInfo",
     "Player",
     "Players",
+    "Port",
+    "PortInfo",
+    "Provision",
+    "ProvisionSettingInfo",
+    "RemoteTargetInfo",
     "Role",
     "RunningTask",
     "ScheduleData",
     "Session",
+    "SettingSpec",
+    "SettingSpecAction",
+    "SettingSpecSelectionSource",
+    "SettingSpecTable",
     "SettingSpecTableAliases",
+    "SettingsSpecAttribute",
+    "SettingsSpecParent",
     "Status",
+    "TargetDatastore",
+    "Template",
+    "TimedTrigger",
     "TriggerID",
+    "TriggerTasks",
+    "Triggers",
+    "UpdateInfo",
     "Updates",
+    "UserApplicationData",
     "UserInfo",
 )
 
@@ -601,7 +636,7 @@ class APISession:
     id: str
     ttl: datetime.datetime
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return f"ID: {self.id} | TTL: {self.ttl}"
 
 
@@ -662,7 +697,7 @@ class Application:
     resource_usage_info: str | None = field(default=None)
     settings: dict[str, Any] = field(default_factory=dict[str, Any])
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
 
@@ -700,11 +735,11 @@ class AuditLogEntry:
     user: str
     timestamp: str | datetime.datetime
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.timestamp, str):
             self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
 
@@ -860,7 +895,7 @@ class BukkitPlugin:
     contributors: str = field(default="")
     donation_link: str = field(default="")
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
 
@@ -931,7 +966,7 @@ class CPUInfo:
     total_cores: int
     total_threads: int
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
 
@@ -1130,10 +1165,10 @@ class Consumes:
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name < other.name
 
 
@@ -1377,7 +1412,7 @@ class ParameterMapping:
     z: Union[float, str, None] = field(default=None)
     z_angle: Union[float, str, None] = field(default=None)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         # AMP sends every value as a string. An empty one becomes None, a value that doesn't parse stays as sent.
         for name in self._bool_fields:
             raw_value = getattr(self, name)
@@ -1635,10 +1670,10 @@ class Diagnostics:
     # Generic Instances (GenericModule) only, eg. a Counter-Strike: Source server sends "3".
     config_version: str = ""
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.application_version, str):
             self.application_version = BuildInfo.to_dataclass(data=self.application_version)
 
@@ -1984,7 +2019,7 @@ class LoginResults:
     # LoginUserInfoResponse, not UserInfoResponse; only the login shape carries the username.
     user_info: Union[LoginUserInfo | LoginUserInfoResponse, None] = field(default=None)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.user_info, dict):
             self.user_info = build(LoginUserInfo, self.user_info)
 
@@ -2026,7 +2061,7 @@ class LoginUserInfo:
     last_login: str | datetime.datetime
     username: str
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         # TODO: This may be best handled with a try/except and setting a default value afterwards. - 6/14/26
         if isinstance(self.last_login, str):
             self.last_login = timestamp_converter(self.last_login)
@@ -2121,10 +2156,10 @@ class Methods:
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name < other.name
 
 
@@ -2613,7 +2648,7 @@ class PortInfo:
     parent_node: Union[str, None] = field(default=None)
     parent_ref: Union[str, None] = field(default=None)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         # AMP sends the protocol as an int; convert it so the annotation holds true.
         if isinstance(self.protocol, int):
             self.protocol = Protocols(self.protocol)
@@ -2973,7 +3008,7 @@ class SettingSpec:
     warn_text: Union[str, None] = field(default=None)
     warn_when_value: Any = field(default=None)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         # determines the current value type and converts the data into the respective dataclass if needed.
         _table = SettingSpecTable().table
         if self.node in _table and isinstance(self.current_value, int):
@@ -2982,10 +3017,10 @@ class SettingSpec:
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name < other.name
 
 
@@ -3116,7 +3151,7 @@ class SettingsSpecParent:
     updates: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
     modules: dict[str, list[SettingSpec]] | dict[str, list[SettingSpecResponse]] = field(default_factory=dict[str, list[SettingSpec]])
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         for category in fields(class_or_instance=self):
             if category.name == "modules":
                 continue
@@ -3149,6 +3184,8 @@ class SettingSpecSelectionSource:
 
 
 class SettingSpecTable:
+    """Maps a setting node to the Enum :class:`SettingSpec.current_value` is converted into."""
+
     table: ClassVar[dict[str, type[SettingSpecTableAliases]]] = {
         "ADSModule.Network.AccessMode": AccessModeState,
         "ADSModule.Defaults.DefaultPostCreate": PostCreateState,
@@ -3254,7 +3291,7 @@ class Template:
     post_create: PostCreateState = field(default=PostCreateState.do_nothing)
     extra_provision_settings: Union[dict[str, str], None] = field(default=None)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return self.__class__.__qualname__ + " " + " ".join([f"{f.name}={getattr(self, f.name)!r}" for f in fields(class_or_instance=self)])
 
     def to_dict(self) -> dict[str, Any]:
@@ -3319,7 +3356,7 @@ class TimedTrigger:
     # Confirmed live on AMP 2.8.0.8.
     last_executed: Union[str, None] = field(default=None)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D105
         self.tasks = [build(TriggerTasks, entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
@@ -3415,10 +3452,10 @@ class Triggers:
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.description == other.description
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.description < other.description
 
 
@@ -3608,6 +3645,8 @@ class UserInfo:
 
 
 class UserApplicationData:
+    """Represents the JSON response data from :meth:`Core.get_user_info`."""
+
     id: str
     user_session_id: str
     session_id: str | None
@@ -3632,7 +3671,7 @@ class UserApplicationData:
         "user_session_id",
     )
 
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         id: str,  # noqa: A002 # This is due to id overshadowing Python built-ins, the JSON response data comes in with an id key.
         user_session_id: str,

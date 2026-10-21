@@ -85,6 +85,7 @@ from .modules import (
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
 
+    from . import modules
     from ._types import (
         ActionSpec,
         AuditLogEntryResponse,
@@ -2099,7 +2100,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Module | ModuleResponse:
+    ) -> modules.Module | ModuleResponse:
         """|coro|
 
         Returns the module information.
@@ -2117,8 +2118,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`Module`
-            On success returns a :class:`Module` dataclass.
+        :class:`~ampapi.modules.Module`
+            On success returns a :class:`~ampapi.modules.Module` dataclass.
 
         """
         await self._reauth()

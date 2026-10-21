@@ -74,3 +74,6 @@ Data Modules
 .. autoclass:: ampapi.modules.Player
     :members:
     :exclude-members: uuid, name
+
+.. autoclass:: ampapi.modules.Module
+    :members:
