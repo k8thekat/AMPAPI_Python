@@ -500,7 +500,7 @@ _reported_unknown_keys: set[tuple[str, str]] = set()
 
 
 def _is_json_object(value: object) -> TypeGuard[dict[str, Any]]:
-    """If `value` is a decoded JSON object; its keys are always strings."""
+    """If `value` is a decoded JSON object, whose keys are always strings."""
     return isinstance(value, dict)
 
 
@@ -3054,8 +3054,9 @@ class TriggerTasks:
         The ID of the task, these are unique per Instance.
     task_method_name : :class:`str`
         The name of the task method.
-    parameter_mapping : :class:`DCParameterMapping` | :class:`ParameterMapping`
-        The parameter mapping for the task; still assigned as the raw response dict.
+    parameter_mapping : :class:`ParameterMapping`
+        The arguments the task passes to its method, keyed by the name of each argument of that method (eg. `seconds`
+        for `Event.CommonCorePlugin.Wait`). Kept as the raw response dict.
     enabled_state : :class:`int`
         If the task is enabled or not.
     locked : :class:`bool`
@@ -3069,7 +3070,7 @@ class TriggerTasks:
 
     id: str
     task_method_name: str
-    parameter_mapping: DCParameterMapping | ParameterMapping
+    parameter_mapping: ParameterMapping
     enabled_state: int
     locked: bool
     created_by: str

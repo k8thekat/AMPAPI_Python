@@ -129,9 +129,9 @@ Returned data
 - :meth:`~ampapi.Core.get_updates` fills the ``console_entries``, ``messages``, ``ports`` and ``tasks`` of
   :class:`~ampapi.modules.Updates` with dataclasses (``ConsoleEntries``, ``Messages``, ``Port`` and ``RunningTask``);
   4.x left them as dicts.
-- ``dataclass-wizard`` is no longer a dependency. A key AMP sends that a dataclass doesn't declare is dropped and
-  logged once as a warning, instead of raising a :exc:`TypeError`. Nested data is built into its dataclass as in 4.x (eg. ``RemoteTargetInfo.platform_info``,
-  ``Methods.consumes``).
+- ``dataclass-wizard`` is no longer a dependency. A key AMP sends that a dataclass doesn't declare is still dropped,
+  as in 4.x, but is now logged once as a warning. Nested data is built into its dataclass as in 4.x (eg.
+  ``RemoteTargetInfo.platform_info``, ``Methods.consumes``).
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
 - :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. ``ADS01``) out of
   :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the
