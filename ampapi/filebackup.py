@@ -27,8 +27,11 @@ from ._types import (
     ACTION_RESULT_REQUIRED_KEYS,
     BACKUP_EXCLUDED_KEYS,
     BACKUP_REQUIRED_KEYS,
+    RUNNING_TASK_EXCLUDED_KEYS,
+    RUNNING_TASK_REQUIRED_KEYS,
     ActionResultResponse,
     BackupResponse,
+    RunningTaskResponse,
     is_response_type,
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
@@ -37,8 +40,6 @@ from .modules import ActionResult, Backup, RunningTask, build
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
-
-    from ._types import RunningTaskResponse
 
 __all__ = ("LocalFileBackupPlugin",)
 
@@ -408,12 +409,15 @@ class LocalFileBackupPlugin(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Takes a backup of the AMP Server.
 
         Endpoint: `LocalFileBackupPlugin/TakeBackup`
+
+        .. versionchanged:: 5.0.0
+            Returns a :class:`RunningTask`, which is what AMP sends, not an :class:`ActionResult`.
 
         Parameters
         ----------
@@ -436,8 +440,8 @@ class LocalFileBackupPlugin(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns a :class:`RunningTask` dataclass, unless format_data is False which returns the raw dict.
 
         """
         await self._reauth()
@@ -457,10 +461,10 @@ class LocalFileBackupPlugin(Base):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        if not is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return build(RunningTask, result)
         return result
 
     async def upload_to_s3(

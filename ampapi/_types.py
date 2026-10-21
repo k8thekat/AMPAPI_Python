@@ -124,9 +124,12 @@ INSTANCE_EXCLUDED_KEYS: tuple[str, ...] = ()
 SCHEDULE_DATA_REQUIRED_KEYS: tuple[str, ...] = ("available_methods", "available_triggers")
 SCHEDULE_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# The eight UI categories are the whole response; branding + system_settings is enough to pin it down.
-SETTINGS_SPEC_PARENT_REQUIRED_KEYS: tuple[str, ...] = ("branding", "system_settings")
+# Every category is optional (the VMs send no `branding`, live Instances do), these two are always sent.
+SETTINGS_SPEC_PARENT_REQUIRED_KEYS: tuple[str, ...] = ("system_settings", "security_and_privacy")
 SETTINGS_SPEC_PARENT_EXCLUDED_KEYS: tuple[str, ...] = ()
+
+WEBAUTHN_CREDENTIAL_IDS_REQUIRED_KEYS: tuple[str, ...] = ("ids", "challenge")
+WEBAUTHN_CREDENTIAL_IDS_EXCLUDED_KEYS: tuple[str, ...] = ()
 
 # The match_* keys are what separates a time interval trigger from the event triggers in TriggersResponse.
 TIMED_TRIGGER_REQUIRED_KEYS: tuple[str, ...] = ("match_days", "match_minutes")
@@ -403,6 +406,7 @@ class AvailableMethodsResponse(TypedDict):
     category: str
     display_format: str | None
     consumes: list[ConsumeResponse]
+    notice: NotRequired[Union[str, None]]
 
 
 class AvailableTriggersResponse(TypedDict):
@@ -530,6 +534,8 @@ class ConfigResponse(TypedDict):
     required: bool
     attributes: None
     order: int
+    warn_when_value: NotRequired[Any]
+    warn_text: NotRequired[Union[str, None]]
 
 
 class ConsoleEntriesResponse(TypedDict):
@@ -553,6 +559,9 @@ class ConsumeResponse(TypedDict):
     enum_values: dict[str, str] | None
     selection_source: None
     input_type: str
+    locked: NotRequired[bool]
+    locked_value: NotRequired[Union[str, None]]
+    locked_reason: NotRequired[Union[str, None]]
 
 
 # Confirmed live on AMP 2.8.0.8: AMP spells the mapping key `setting_mappings`, and sends null for
@@ -808,6 +817,7 @@ class MethodsData(TypedDict):
     name: str
     description: str
     consumes: list[ConsumeResponse]
+    notice: NotRequired[Union[str, None]]
 
 
 class MetricsResponse(TypedDict):
@@ -866,6 +876,7 @@ class ModuleInfoResponse(TypedDict):
     base_port: int
     is_oidc_enabled: bool
     oidc_provider_friendly_name: str
+    local_login_enabled: NotRequired[bool]
 
 
 class OPWhitelistResponse(TypedDict):
@@ -1078,19 +1089,23 @@ class SessionResponse(TypedDict):
 
 
 class SettingsSpecParentResponse(TypedDict):
-    """The raw response from :meth:`Core.get_setting_spec`; one key per settings category in the UI.
+    """The raw response from :meth:`Core.get_setting_spec`, one key per settings category in the UI.
 
-    Every value is a list of the same shape :meth:`Core.get_config` returns for a single node.
+    Every value is a list of the same shape :meth:`Core.get_config` returns for a single node. Module categories
+    (eg. `valheim:stadiacontroller`) hold a colon in the name, so they can't be keys here.
     """
 
-    branding: list[ConfigResponse]
-    external_services: list[ConfigResponse]
-    file_manager: list[ConfigResponse]
-    instance_deployment: list[ConfigResponse]
-    login: list[ConfigResponse]
     security_and_privacy: list[ConfigResponse]
     system_settings: list[ConfigResponse]
-    updates: list[ConfigResponse]
+    backups: NotRequired[list[ConfigResponse]]
+    branding: NotRequired[list[ConfigResponse]]
+    external_services: NotRequired[list[ConfigResponse]]
+    file_manager: NotRequired[list[ConfigResponse]]
+    instance_deployment: NotRequired[list[ConfigResponse]]
+    login: NotRequired[list[ConfigResponse]]
+    meta_config: NotRequired[list[ConfigResponse]]
+    minecraft: NotRequired[list[ConfigResponse]]
+    updates: NotRequired[list[ConfigResponse]]
 
 
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
@@ -1100,6 +1115,13 @@ class StatusResponse(TypedDict):
     metrics: MetricsResponse
     # Added in AMP 2.8.
     ports: NotRequired[list[PortResponse]]
+
+
+class WebauthnCredentialIDsResponse(TypedDict):
+    """The raw response from :meth:`Core.get_webauthn_credential_ids`."""
+
+    ids: list[Any]
+    challenge: Union[str, None]
 
 
 class TargetDatastoreResponse(TypedDict):
@@ -1191,6 +1213,10 @@ class TriggersTasksResponse(TypedDict):
     locked: bool
     created_by: str
     order: int
+    error_behaviour: NotRequired[int]
+    wait_for_complete: NotRequired[bool]
+    last_execute_error: NotRequired[bool]
+    last_error_reason: NotRequired[Union[str, None]]
 
 
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
@@ -1250,3 +1276,4 @@ class UserInfoResponse(TypedDict):
     is_oidc_user: bool
     gravatar_hash: str
     avatar_base64: None
+    oidc_sub: NotRequired[Union[str, None]]

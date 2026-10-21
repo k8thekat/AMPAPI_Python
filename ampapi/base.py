@@ -1338,6 +1338,7 @@ class Base:
         **kwargs: Unpack[DumpParameters],
     ) -> None:
         """Basic file dump with json handling. If the data parameter is of type `dict`, `json.dumps()` will be used with an indent of 4.
+        A `str` also goes through `json.dumps()` when `file_name` ends in `.json`, so the file holds valid JSON.
 
         Parameters
         ----------
@@ -1359,7 +1360,7 @@ class Base:
             LOGGER.debug("<%s.%s> | Wrote data to file %s located at: %s", __name__, "write_data_to_file", path, file_name)
             if isinstance(data, bytes):
                 file.write(data.decode(encoding="utf-8"))
-            elif isinstance(data, (dict, list)):
+            elif isinstance(data, (dict, list)) or file_name.endswith(".json"):
                 file.write(json.dumps(data, **kwargs))
             else:
                 file.write(data)

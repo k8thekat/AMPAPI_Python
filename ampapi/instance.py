@@ -364,7 +364,13 @@ class Instance(
         self._instance_id = data["instance_id"]
 
     @online
-    async def get_application_status(self, format_data: Union[bool, None] = None) -> Status | StatusResponse:
+    async def get_application_status(
+        self,
+        format_data: Union[bool, None] = None,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Status | StatusResponse:
         """|coro|
 
         Similar to :meth:`Core.get_status` but with the added benefit of updating our ``self`` object reference.
@@ -377,6 +383,10 @@ class Instance(
         ----------
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Raises
         ------
@@ -389,7 +399,11 @@ class Instance(
             :class:`Status` if `format_data = True` else :class:`StatusResponse`.
 
         """
-        result: Status | StatusResponse = await super().get_status(format_data=format_data)
+        result: Status | StatusResponse = await super().get_status(
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
         if isinstance(result, Status):
             self.parse_data(data=result)
         return result
@@ -436,7 +450,13 @@ class Instance(
         return self
 
     @online
-    async def get_updates(self, format_data: Union[bool, None] = None) -> Updates | UpdatesResponse:
+    async def get_updates(
+        self,
+        format_data: Union[bool, None] = None,
+        *,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Updates | UpdatesResponse:
         """|coro|
 
         Requests the recent Console entries of the Instance, will acquire all updates from previous API call of :meth:`get_updates`
@@ -450,6 +470,10 @@ class Instance(
         ----------
         format_data : Union[:class:`bool`, :class:`None`], optional
             Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if :class:`None`), by default :class:`None`
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Raises
         ------
@@ -464,7 +488,11 @@ class Instance(
             :class:`Updates` if `format_data = True` else :class:`UpdatesResponse`.
 
         """
-        result: Updates | UpdatesResponse = await super().get_updates(format_data=format_data)
+        result: Updates | UpdatesResponse = await super().get_updates(
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
         if isinstance(result, Updates):
             self.parse_data(data=result)
         return result

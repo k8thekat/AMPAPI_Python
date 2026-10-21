@@ -132,6 +132,16 @@ Returned data
 - ``dataclass-wizard`` is no longer a dependency. A key AMP sends that a dataclass doesn't declare is still dropped,
   as in 4.x, but is now logged once as a warning. Nested data is built into its dataclass as in 4.x (eg.
   ``RemoteTargetInfo.platform_info``, ``Methods.consumes``).
+- :meth:`~ampapi.Core.get_setting_spec` builds on AMP 2.8, which sends no ``branding`` category. The
+  :class:`~ampapi.modules.SettingsSpecParent` gains ``backups``, ``meta_config`` and ``minecraft``, and ``modules``
+  holds the categories with a colon in the name (eg. ``valheim:stadiacontroller``) as a dict of lists of
+  :class:`~ampapi.modules.SettingSpec`.
+- :meth:`~ampapi.Core.get_webauthn_credential_ids` returns the dict AMP sends (``ids`` and ``challenge``). The wrapper
+  typed it as a list, and raised on every call.
+- :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup` returns a :class:`~ampapi.modules.RunningTask`, which is
+  what AMP sends. The wrapper expected an ``ActionResult`` and raised, although the backup was taken.
+- :meth:`~ampapi.instance.Instance.get_updates` and :meth:`~ampapi.instance.Instance.get_application_status` take
+  ``request_params`` and the ``**response_params`` the other methods take (eg. ``to_file``).
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
 - :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. ``ADS01``) out of
   :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the

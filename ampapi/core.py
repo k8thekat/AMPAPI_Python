@@ -42,6 +42,8 @@ from ._types import (
     TIMED_TRIGGER_REQUIRED_KEYS,
     USER_APPLICATION_DATA_EXCLUDED_KEYS,
     USER_APPLICATION_DATA_REQUIRED_KEYS,
+    WEBAUTHN_CREDENTIAL_IDS_EXCLUDED_KEYS,
+    WEBAUTHN_CREDENTIAL_IDS_REQUIRED_KEYS,
     ActionResultResponse,
     RunningTaskResponse,
     ScheduleDataResponse,
@@ -49,6 +51,7 @@ from ._types import (
     StatusResponse,
     TimedTriggerResponse,
     UserApplicationDataResponse,
+    WebauthnCredentialIDsResponse,
     is_response_type,
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
@@ -2222,9 +2225,9 @@ class Core(Base):
 
         Interacts with OIDC credentials.
 
-        Endpoint: `Core/GetOIDCLogoutURL`
+        Endpoint: `Core/GetOIDCLogoutUrl`
 
-        __Endpoint__: "Core/GetOIDCLogoutURL"
+        __Endpoint__: "Core/GetOIDCLogoutUrl"
 
         Parameters
         ----------
@@ -2244,13 +2247,13 @@ class Core(Base):
         await self._reauth()
         parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
         result: ResponseAliasFull = await self._post(
-            url="Core/GetOIDCLogoutURL",
+            url="Core/GetOIDCLogoutUrl",
             parameters=parameters,
             request_params=request_params,
             **response_params,
         )
         if not isinstance(result, str):
-            raise AMPAPITypeError(end_point="Core/GetOIDCLogoutURL", cur_type=result, expec_type=str)
+            raise AMPAPITypeError(end_point="Core/GetOIDCLogoutUrl", cur_type=result, expec_type=str)
         return result
 
     async def get_permissions_spec(
@@ -2636,9 +2639,11 @@ class Core(Base):
             SETTINGS_SPEC_PARENT_EXCLUDED_KEYS,
         ):
             raise AMPAPITypeError(end_point="Core/GetSettingsSpec", cur_type=result, expec_type=dict)
-        # SettingsSpecParent.__post_init__ turns each category's raw dicts into SettingSpec dataclasses.
         if format_data is True:
-            return build(SettingsSpecParent, result)
+            # A module category name holds a colon (eg. `valheim:stadiacontroller`), so those go into `modules`.
+            categories = {name: entries for name, entries in result.items() if ":" not in name}
+            modules = {name: entries for name, entries in result.items() if ":" in name}
+            return build(SettingsSpecParent, {**categories, "modules": modules})
         return result
 
     async def get_setting_values(
@@ -3174,12 +3179,15 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[Any]:
+    ) -> WebauthnCredentialIDsResponse:
         """|coro|
 
         Get a webauthn credential IDs.
 
         Endpoint: `Core/GetWebauthnCredentialIDs`
+
+        .. versionchanged:: 5.0.0
+            Returns the `ids` and `challenge` dict AMP sends, not a list.
 
         Parameters
         ----------
@@ -3192,8 +3200,8 @@ class Core(Base):
 
         Returns
         -------
-        list[Any]
-            On success returns a list of webauthn credential IDs.
+        :class:`WebauthnCredentialIDsResponse`
+            On success returns the dict holding the webauthn credential IDs and the challenge.
 
         """
         await self._reauth()
@@ -3204,8 +3212,15 @@ class Core(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, list):
-            raise AMPAPITypeError(end_point="Core/GetWebauthnCredentialIDs", cur_type=result, expec_type=list)
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/GetWebauthnCredentialIDs", cur_type=result, expec_type=dict)
+        if not is_response_type(
+            result,
+            WebauthnCredentialIDsResponse,
+            WEBAUTHN_CREDENTIAL_IDS_REQUIRED_KEYS,
+            WEBAUTHN_CREDENTIAL_IDS_EXCLUDED_KEYS,
+        ):
+            raise AMPAPITypeError(end_point="Core/GetWebauthnCredentialIDs", cur_type=result, expec_type=dict)
         return result
 
     async def get_webauthn_credential_summary(

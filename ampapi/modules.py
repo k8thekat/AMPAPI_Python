@@ -279,6 +279,10 @@ class AnalyticsCountryData:
         The unique player percent out of all countries.
     session_percent : :class:`int`
         The percent of total sessions related to this country.
+    sessions_percent : :class:`float`, optional
+        The percent of total sessions related to this country, default is 0.0.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -290,6 +294,7 @@ class AnalyticsCountryData:
     unique_player_count: int
     unique_player_percent: float
     session_percent: float = field(default_factory=float)
+    sessions_percent: float = 0.0
 
 
 @dataclass
@@ -382,6 +387,10 @@ class AnalyticsStats:
         Has values such as "Infinity", 0, and 0.0.
     previous : Union[:class:`int`, :class:`str`, float]
         UNK
+    raw_name : :class:`str`, optional
+        The name AMP uses for the stat internally (eg. "TotalSessions"), default is "".
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -391,6 +400,7 @@ class AnalyticsStats:
     display_value: Union[int, str, float]
     difference: Union[int, str, float]
     previous: Union[int, str, float]
+    raw_name: str = ""
 
 
 @dataclass
@@ -1077,6 +1087,18 @@ class DCConsumes:
         The name the web panel shows, default is None.
     selection_source : Union[:class:`str`, None], optional
         Where the choices come from, default is None. Only seen as null so far.
+    locked : :class:`bool`, optional
+        If the argument is locked, default is False.
+
+        .. versionadded:: 5.0.0
+    locked_value : Union[:class:`str`, None], optional
+        The value the argument is locked to, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
+    locked_reason : Union[:class:`str`, None], optional
+        Why the argument is locked, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -1090,6 +1112,9 @@ class DCConsumes:
     suffix: str = field(default="")
     display_name: Union[str, None] = field(default=None)
     selection_source: Union[str, None] = field(default=None)
+    locked: bool = field(default=False)
+    locked_value: Union[str, None] = field(default=None)
+    locked_reason: Union[str, None] = field(default=None)
 
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
@@ -1782,6 +1807,10 @@ class Methods:
         How the Schedule UI renders the method, default is None.
     consumes : list[:class:`DCConsumes` | :class:`ConsumeResponse`]
         A list of parameters the method consumes.
+    notice : Union[:class:`str`, None], optional
+        A note the Schedule UI shows for the method, default is None.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -1793,6 +1822,7 @@ class Methods:
     display_format: Union[str, None] = field(default=None)
     # `build(Methods, entry)` turns these into DCConsumes.
     consumes: list[DCConsumes] | list[ConsumeResponse] = field(default_factory=list[DCConsumes])
+    notice: Union[str, None] = field(default=None)
 
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
@@ -1914,6 +1944,10 @@ class Module:
         Whether OIDC login is enabled.
     is_remote_instance : :class:`bool`
         Whether the Instance is remote.
+    local_login_enabled : :class:`bool`, optional
+        Whether logging in with a local AMP user is enabled, default is True.
+
+        .. versionadded:: 5.0.0
     loaded_plugins : :class:`list[str]`
         A list of loaded plugins.
     module_name : :class:`str`
@@ -1966,6 +2000,7 @@ class Module:
     timestamp: str
     tools_version: str
     version_codename: str
+    local_login_enabled: bool = True
 
 
 @dataclass
@@ -2596,6 +2631,14 @@ class SettingSpec:
         What the setting is related to, similar to a Server Config property or file, default is "".
     val_type : :class:`str`
         What the type is of the current_value, default is "".
+    warn_text : Union[:class:`str`, None], optional
+        The warning the UI shows when the setting is changed, default is None.
+
+        .. versionadded:: 5.0.0
+    warn_when_value : Any, optional
+        The value that triggers `warn_text`, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -2628,6 +2671,8 @@ class SettingSpec:
     suffix: str = ""
     tag: str = ""
     val_type: str = ""  # ['Boolean', 'Int32', 'String', 'Enum', "List<String>"]
+    warn_text: Union[str, None] = field(default=None)
+    warn_when_value: Any = field(default=None)
 
     def __post_init__(self) -> None:
         # determines the current value type and converts the data into the respective dataclass if needed.
@@ -2692,6 +2737,14 @@ class SettingsSpecAttribute:
         The placeholder text for the value.
     read_only_keys : :class:`bool`
         If the key is read only or not.
+    key_enum_values : Union[dict[:class:`str`, :class:`str`], None], optional
+        The values the key can take, default is None.
+
+        .. versionadded:: 5.0.0
+    key_enum_source : :class:`str`, optional
+        Where the key values come from (eg. "SettingNodes"), default is "".
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -2701,6 +2754,8 @@ class SettingsSpecAttribute:
     value_name: str
     value_placeholder: str
     read_only_keys: bool = False
+    key_enum_values: Union[dict[str, str], None] = field(default=None)
+    key_enum_source: str = ""
 
 
 @dataclass
@@ -2709,6 +2764,11 @@ class SettingsSpecParent:
 
     Attributes
     ----------
+    backups : list[:class:`SettingSpec`]
+        The list of backup settings in the UI, default is an empty list.
+
+
+        .. versionadded:: 5.0.0
     branding : list[:class:`SettingSpec`]
         The list of branding settings in the UI, default is an empty list.
     external_services : list[:class:`SettingSpec`]
@@ -2719,6 +2779,22 @@ class SettingsSpecParent:
         The list of Instance deployment settings in the UI, default is an empty list.
     login : list[:class:`SettingSpec`]
         The list of login settings in the UI, default is an empty list.
+    meta_config : list[:class:`SettingSpec`]
+        The list of meta config settings in the UI, default is an empty list.
+
+
+        .. versionadded:: 5.0.0
+    minecraft : list[:class:`SettingSpec`]
+        The list of Minecraft settings in the UI, default is an empty list.
+
+
+        .. versionadded:: 5.0.0
+    modules : dict[:class:`str`, list[:class:`SettingSpec`]]
+        The settings of each module category, keyed by the category name (eg. `valheim:stadiacontroller`). These names
+        hold a colon, so they can't be fields. Default is an empty dict.
+
+
+        .. versionadded:: 5.0.0
     security_and_privacy : list[:class:`SettingSpec`]
         The list of security and privacy settings in the UI, default is an empty list.
     system_settings : list[:class:`SettingSpec`]
@@ -2729,22 +2805,32 @@ class SettingsSpecParent:
     """
 
     # Every category arrives as a list of raw setting dicts, the same shape Core.get_config returns for a
-    # single node; __post_init__ converts them so the SettingSpec annotation holds true.
-    # Spelled as a union of lists rather than list[SettingSpec | ConfigResponse]; list is invariant in its
-    # element type, so the raw response would not be assignable to the combined form.
+    # single node. build() turns them into SettingSpec, and __post_init__ does the same for direct construction.
+    # Spelled as a union of lists rather than list[SettingSpec | ConfigResponse], because list is invariant in its
+    # element type and the raw response would not be assignable to the combined form.
+    backups: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     branding: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     external_services: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     file_manager: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     instance_deployment: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     login: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    meta_config: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    minecraft: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     security_and_privacy: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     system_settings: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
     updates: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
+    modules: dict[str, list[SettingSpec]] | dict[str, list[ConfigResponse]] = field(default_factory=dict[str, list[SettingSpec]])
 
     def __post_init__(self) -> None:
         for category in fields(class_or_instance=self):
+            if category.name == "modules":
+                continue
             entries: list[SettingSpec] | list[ConfigResponse] = getattr(self, category.name)
             setattr(self, category.name, [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries])
+        self.modules = {
+            name: [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries]
+            for name, entries in self.modules.items()
+        }
 
 
 @dataclass
@@ -3065,6 +3151,22 @@ class TriggerTasks:
         The user that created the task.
     order : :class:`int`
         The order in which this task will appear in the list of tasks.
+    error_behaviour : :class:`int`, optional
+        What the task does when it fails, default is 0.
+
+        .. versionadded:: 5.0.0
+    wait_for_complete : :class:`bool`, optional
+        If the trigger waits for the task to complete before running the next, default is False.
+
+        .. versionadded:: 5.0.0
+    last_execute_error : :class:`bool`, optional
+        If the last run of the task failed, default is False.
+
+        .. versionadded:: 5.0.0
+    last_error_reason : Union[:class:`str`, None], optional
+        Why the last run of the task failed, default is None.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -3075,6 +3177,10 @@ class TriggerTasks:
     locked: bool
     created_by: str
     order: int
+    error_behaviour: int = 0
+    wait_for_complete: bool = False
+    last_execute_error: bool = False
+    last_error_reason: Union[str, None] = field(default=None)
 
 
 @dataclass
@@ -3180,6 +3286,10 @@ class UserInfo:
         The email address of the user.
     last_login : :class:`datetime`
         The last login date of the user.
+    oidc_sub : Union[:class:`str`, None], optional
+        The OIDC subject of the user, default is None.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -3199,6 +3309,7 @@ class UserInfo:
     is_oidc_user: bool
     gravatar_hash: str
     avatar_base64: None
+    oidc_sub: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.last_login, str):
