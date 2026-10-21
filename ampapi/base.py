@@ -46,7 +46,7 @@ from ._enums import Module
 from ._types import (
     DIAGNOSTICS_EXCLUDED_KEYS,
     DIAGNOSTICS_REQUIRED_KEYS,
-    DiagnosticsInfoResponse,
+    DiagnosticsResponse,
     EndpointResponseError,
     ResponseTypeAlias,
     is_response_type,
@@ -701,7 +701,7 @@ class Base:
 
         Returns
         -------
-        Union[:class:`LoginResponse`, None]
+        Union[:class:`LoginResultsResponse`, None]
             The raw response from ``API/Core/Login``, or None when the stored session is still valid.
 
         Raises
@@ -1310,7 +1310,7 @@ class Base:
         if (
             isinstance(result, (str, bool))
             or result is None
-            or not is_response_type(result, DiagnosticsInfoResponse, DIAGNOSTICS_REQUIRED_KEYS, DIAGNOSTICS_EXCLUDED_KEYS)
+            or not is_response_type(result, DiagnosticsResponse, DIAGNOSTICS_REQUIRED_KEYS, DIAGNOSTICS_EXCLUDED_KEYS)
         ):
             LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
             return

@@ -12,6 +12,9 @@ Enums
 .. autoenum:: AMPDownloadMirrorState
     :members:
 
+.. autoenum:: IfOperators
+    :members:
+
 .. autoenum:: InstanceState
     :members:
 
@@ -31,6 +34,9 @@ Enums
     :members:
 
 .. autoenum:: LoggingLevelState
+    :members:
+
+.. autoenum:: MailPriority
     :members:
 
 .. autoenum:: Module

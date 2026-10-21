@@ -42,22 +42,21 @@ if TYPE_CHECKING:
 
     from ._types import (
         AnalyticsGraphDataResponse,
-        AnalyticsStatResponse,
-        AvailableTriggersResponse,
-        ConfigResponse,
+        AnalyticsStatsResponse,
         ConsoleEntriesResponse,
-        ConsumeResponse,
+        ConsumesResponse,
         LoginUserInfoResponse,
-        MCUserData,
+        MCUserResponse,
         MessagesResponse,
         MetricsResponse,
-        ParameterMapping,
+        ParameterMappingResponse,
         PortResponse,
         RunningTaskResponse,
         ScheduleDataResponse,
+        SettingSpecResponse,
         StatusResponse,
         TriggersResponse,
-        TriggersTasksResponse,
+        TriggerTasksResponse,
     )
 
     T = ParamSpec("T")
@@ -73,8 +72,10 @@ from ._enums import (
     AppStartupModeState,
     ContainerMemoryPolicyState,
     DefaultIPBindingState,
+    IfOperators,
     InstanceState,
     LoggingLevelState,
+    MailPriority,
     PortAssignmentState,
     PostCreateState,
     Protocols,
@@ -418,7 +419,7 @@ class AnalyticsSummary:
         UNK, default is False.
     quietest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
         UNK, default is a dict.
-    stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatResponse`]
+    stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatsResponse`]
         The Analytics Stats of the summary, default is a list.
     top_players : list[:class:`AnalyticsTopPlayers`]
         The TOP players from the summary, default is a list.
@@ -432,7 +433,7 @@ class AnalyticsSummary:
     )
     is_demo: bool = field(default=False)
     quietest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
-    stats: list[AnalyticsStats] | list[AnalyticsStatResponse] = field(default_factory=list[AnalyticsStats])
+    stats: list[AnalyticsStats] | list[AnalyticsStatsResponse] = field(default_factory=list[AnalyticsStats])
     top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
 
     def __repr__(self) -> str:  # noqa: D105
@@ -532,7 +533,7 @@ def _field_types(cls: type[Any]) -> dict[str, Any]:
 def _convert(hint: Any, value: Any) -> Any:
     """Build `value` into the dataclass its type hint names, recursing into lists, dicts and unions."""
     origin = typing.get_origin(hint)
-    # A union tries each member in order. `list[DCConsumes] | list[ConsumeResponse]` builds DCConsumes.
+    # A union tries each member in order. `list[Consumes] | list[ConsumesResponse]` builds Consumes.
     if origin is Union or origin is types.UnionType:
         for option in typing.get_args(hint):
             if option is type(None):
@@ -1063,8 +1064,11 @@ class FolderUploadFile:
 
 
 @dataclass
-class DCConsumes:
+class Consumes:
     """Represents the JSON response data from :attr:`~Methods.consumes`.
+
+    .. versionchanged:: 5.0.0
+        Renamed from `DCConsumes`.
 
     Attributes
     ----------
@@ -1134,7 +1138,7 @@ class DCConsumes:
 
 
 @dataclass
-class DCParameterMapping:
+class ParameterMapping:
     """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
 
     The arguments a task passes to its method. An argument the task's method doesn't take is None.
@@ -1142,9 +1146,11 @@ class DCParameterMapping:
     An empty string in a converted field becomes None.
 
     .. versionchanged:: 5.0.0
+        Renamed from `DCParameterMapping`.
         Holds the arguments of every task method in AMP-2.8.0.8, not only `user`, `reason`, `title` and `subtitle`.
         An argument the task doesn't hold is None, not "".
-        Booleans, numbers and `state` are converted from AMP's strings. A value that doesn't parse stays a string.
+        Booleans, numbers, `state`, `operation`, `priority` and `when` are converted from AMP's strings.
+        A value that doesn't parse stays a string.
 
     Attributes
     ----------
@@ -1216,15 +1222,15 @@ class DCParameterMapping:
         The warning sent one hour before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
     one_min : Union[:class:`str`, None], optional
         The warning sent one minute before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    operation : Union[:class:`str`, None], optional
-        How `value_to_check` is compared with `value_to_compare` (an `IfOperators` name)
+    operation : Union[:class:`IfOperators`, :class:`str`, None], optional
+        How `value_to_check` is compared with `value_to_compare`, as an :class:`IfOperators`
         (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
     payload : Union[:class:`str`, None], optional
         The body of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
     player : Union[:class:`str`, None], optional
         The player the message is sent to (`MinecraftModule.SendUserMessage`), default is None.
-    priority : Union[:class:`str`, None], optional
-        The priority of the email (a `MailPriority` name) (`EmailSenderPlugin.SendMail`), default is None.
+    priority : Union[:class:`MailPriority`, :class:`str`, None], optional
+        The priority of the email, as a :class:`MailPriority` (`EmailSenderPlugin.SendMail`), default is None.
     quantity : Union[:class:`int`, :class:`str`, None], optional
         The amount of XP to give (`MinecraftModule.GiveXP`), default is None.
     reason : Union[:class:`str`, None], optional
@@ -1238,7 +1244,7 @@ class DCParameterMapping:
     seconds : Union[:class:`float`, :class:`str`, None], optional
         The number of seconds to wait (`CommonCorePlugin.Wait`), default is None.
     state : Union[:class:`InstanceState`, :class:`str`, None], optional
-        The application state (an `ApplicationState` name) (`CommonCorePlugin.ElseIfAppState`,
+        The application state to check for, as an :class:`InstanceState` (`CommonCorePlugin.ElseIfAppState`,
         `CommonCorePlugin.IfAppState`, `CommonCorePlugin.IfNotAppState`, `CommonCorePlugin.WaitForAppState`), default is
         None.
     sticky : Union[:class:`bool`, :class:`str`, None], optional
@@ -1282,8 +1288,8 @@ class DCParameterMapping:
     webhook_url : Union[:class:`str`, None], optional
         The webhook URL the message is posted to (`WebRequestPlugin.DiscordEmbedMessage`,
         `WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
-    when : Union[:class:`str`, None], optional
-        The in-game time to set (`MinecraftModule.SetGameTime`), default is None.
+    when : Union[:class:`datetime`, :class:`str`, None], optional
+        The time to set, as a naive :class:`datetime` (`MinecraftModule.SetGameTime`), default is None.
     x : Union[:class:`float`, :class:`str`, None], optional
         The X coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
     y : Union[:class:`float`, :class:`str`, None], optional
@@ -1338,10 +1344,10 @@ class DCParameterMapping:
     message: Union[str, None] = field(default=None)
     one_hour: Union[str, None] = field(default=None)
     one_min: Union[str, None] = field(default=None)
-    operation: Union[str, None] = field(default=None)
+    operation: Union[IfOperators, str, None] = field(default=None)
     payload: Union[str, None] = field(default=None)
     player: Union[str, None] = field(default=None)
-    priority: Union[str, None] = field(default=None)
+    priority: Union[MailPriority, str, None] = field(default=None)
     quantity: Union[int, str, None] = field(default=None)
     reason: Union[str, None] = field(default=None)
     restart_even_if_not_running: Union[bool, str, None] = field(default=None)
@@ -1364,7 +1370,7 @@ class DCParameterMapping:
     value_to_check: Union[str, None] = field(default=None)
     value_to_compare: Union[str, None] = field(default=None)
     webhook_url: Union[str, None] = field(default=None)
-    when: Union[str, None] = field(default=None)
+    when: Union[datetime.datetime, str, None] = field(default=None)
     x: Union[float, str, None] = field(default=None)
     y: Union[float, str, None] = field(default=None)
     y_angle: Union[float, str, None] = field(default=None)
@@ -1407,6 +1413,35 @@ class DCParameterMapping:
                 self.state = InstanceState(int(self.state))
             except ValueError:
                 pass
+
+        if self.operation == "":
+            self.operation = None
+        elif isinstance(self.operation, str):
+            try:
+                self.operation = IfOperators(int(self.operation))
+            except ValueError:
+                pass
+
+        if self.priority == "":
+            self.priority = None
+        elif isinstance(self.priority, str):
+            try:
+                self.priority = MailPriority(int(self.priority))
+            except ValueError:
+                pass
+
+        if self.when == "":
+            self.when = None
+        elif isinstance(self.when, str):
+            raw_when = self.when
+            # AMP keeps an ISO value as sent, and rewrites one with seconds as month/day/year.
+            try:
+                self.when = datetime.datetime.fromisoformat(raw_when)
+            except ValueError:
+                try:
+                    self.when = datetime.datetime.strptime(raw_when, "%m/%d/%Y %H:%M:%S")  # noqa: DTZ007
+                except ValueError:
+                    pass
 
 
 class DeploymentTemplate:
@@ -2064,7 +2099,7 @@ class Methods:
         The category the method appears under in the Schedule UI, default is "".
     display_format : Union[:class:`str`, None]
         How the Schedule UI renders the method, default is None.
-    consumes : list[:class:`DCConsumes` | :class:`ConsumeResponse`]
+    consumes : list[:class:`Consumes` | :class:`ConsumesResponse`]
         A list of parameters the method consumes.
     notice : Union[:class:`str`, None], optional
         A note the Schedule UI shows for the method, default is None.
@@ -2079,8 +2114,8 @@ class Methods:
     # Confirmed against getscheduledata.json.
     category: str = ""
     display_format: Union[str, None] = field(default=None)
-    # `build(Methods, entry)` turns these into DCConsumes.
-    consumes: list[DCConsumes] | list[ConsumeResponse] = field(default_factory=list[DCConsumes])
+    # `build(Methods, entry)` turns these into Consumes.
+    consumes: list[Consumes] | list[ConsumesResponse] = field(default_factory=list[Consumes])
     notice: Union[str, None] = field(default=None)
 
     __hash__ = None  # type: ignore[assignment]
@@ -2288,15 +2323,15 @@ class OPWhitelist:
 
     Attributes
     ----------
-    op_list : list[:class:`MCUserData`]
+    op_list : list[:class:`MCUserResponse`]
         The list of operator users.
-    whitelist : list[:class:`MCUserData`]
+    whitelist : list[:class:`MCUserResponse`]
         The list of whitelisted users.
 
     """
 
-    op_list: list[MCUserData] = field(default_factory=list["MCUserData"])
-    whitelist: list[MCUserData] = field(default_factory=list["MCUserData"])
+    op_list: list[MCUserResponse] = field(default_factory=list["MCUserResponse"])
+    whitelist: list[MCUserResponse] = field(default_factory=list["MCUserResponse"])
 
 
 @dataclass
@@ -3066,26 +3101,26 @@ class SettingsSpecParent:
 
     # Every category arrives as a list of raw setting dicts, the same shape Core.get_config returns for a
     # single node. build() turns them into SettingSpec, and __post_init__ does the same for direct construction.
-    # Spelled as a union of lists rather than list[SettingSpec | ConfigResponse], because list is invariant in its
+    # Spelled as a union of lists rather than list[SettingSpec | SettingSpecResponse], because list is invariant in its
     # element type and the raw response would not be assignable to the combined form.
-    backups: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    branding: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    external_services: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    file_manager: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    instance_deployment: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    login: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    meta_config: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    minecraft: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    security_and_privacy: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    system_settings: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    updates: list[SettingSpec] | list[ConfigResponse] = field(default_factory=list[SettingSpec])
-    modules: dict[str, list[SettingSpec]] | dict[str, list[ConfigResponse]] = field(default_factory=dict[str, list[SettingSpec]])
+    backups: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    branding: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    external_services: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    file_manager: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    instance_deployment: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    login: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    meta_config: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    minecraft: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    security_and_privacy: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    system_settings: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    updates: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
+    modules: dict[str, list[SettingSpec]] | dict[str, list[SettingSpecResponse]] = field(default_factory=dict[str, list[SettingSpec]])
 
     def __post_init__(self) -> None:
         for category in fields(class_or_instance=self):
             if category.name == "modules":
                 continue
-            entries: list[SettingSpec] | list[ConfigResponse] = getattr(self, category.name)
+            entries: list[SettingSpec] | list[SettingSpecResponse] = getattr(self, category.name)
             setattr(self, category.name, [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries])
         self.modules = {
             name: [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries]
@@ -3278,9 +3313,9 @@ class TimedTrigger:
     name: str
     order: int
     # AMP sends a list of raw task dicts; __post_init__ converts them so the annotation holds true.
-    # Spelled as a union of lists rather than list[TriggerTasks | TriggersTasksResponse]; list is invariant
+    # Spelled as a union of lists rather than list[TriggerTasks | TriggerTasksResponse]; list is invariant
     # in its element type, so the raw response would not be assignable to the combined form.
-    tasks: list[TriggerTasks] | list[TriggersTasksResponse] = field(default_factory=list["TriggerTasks"])
+    tasks: list[TriggerTasks] | list[TriggerTasksResponse] = field(default_factory=list["TriggerTasks"])
     # Confirmed live on AMP 2.8.0.8.
     last_executed: Union[str, None] = field(default=None)
 
@@ -3321,9 +3356,8 @@ class TriggerID:
     the_server_enters_sleep_mode: str
     the_server_wakes_up_from_sleep_mode_due_to_player_connect: str
 
-    # Core.get_triggers feeds this from ScheduleData.available_triggers, which is the reduced
-    # AvailableTriggersResponse shape; only `description` and `id` are read, and both shapes carry them.
-    def __init__(self, data: list[TriggersResponse] | list[AvailableTriggersResponse]) -> None:  # noqa: D107
+    # Core.get_triggers feeds this from ScheduleData.available_triggers. Only `description` and `id` are read.
+    def __init__(self, data: list[TriggersResponse]) -> None:  # noqa: D107
         for entry in data:
             setattr(self, entry["description"], entry["id"])
 
@@ -3367,7 +3401,7 @@ class Triggers:
     """
 
     enabled_state: int
-    tasks: list[TriggerTasks] | list[TriggersTasksResponse] = field(default_factory=list["TriggerTasks"])
+    tasks: list[TriggerTasks] | list[TriggerTasksResponse] = field(default_factory=list["TriggerTasks"])
     id: str = ""
     type: str = ""
     description: str = ""
@@ -3400,7 +3434,7 @@ class TriggerTasks:
         The ID of the task, these are unique per Instance.
     task_method_name : :class:`str`
         The name of the task method.
-    parameter_mapping : :class:`DCParameterMapping`
+    parameter_mapping : :class:`ParameterMapping`
         The arguments the task passes to its method (eg. `seconds` for `Event.CommonCorePlugin.Wait`).
     enabled_state : :class:`int`
         If the task is enabled or not.
@@ -3431,7 +3465,7 @@ class TriggerTasks:
 
     id: str
     task_method_name: str
-    parameter_mapping: DCParameterMapping | ParameterMapping
+    parameter_mapping: ParameterMapping | ParameterMappingResponse
     enabled_state: int
     locked: bool
     created_by: str

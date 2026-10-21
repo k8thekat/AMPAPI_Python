@@ -88,17 +88,17 @@ if TYPE_CHECKING:
     from ._types import (
         ActionSpec,
         AuditLogEntryResponse,
-        AvailableTriggersResponse,
-        ConfigResponse,
-        DiagnosticsInfoResponse,
-        LoginResponse,
+        DiagnosticsResponse,
+        LoginResultsResponse,
         LoginUserInfoResponse,
-        ModuleInfoResponse,
+        ModuleResponse,
         PermissionNode,
         PortResponse,
         RoleResponse,
         SessionResponse,
+        SettingSpecResponse,
         StructuredDiagnosticsResponse,
+        TriggersResponse,
         UpdateInfoResponse,
         UpdatesResponse,
         UserInfoResponse,
@@ -1946,7 +1946,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> SettingSpec | ConfigResponse:
+    ) -> SettingSpec | SettingSpecResponse:
         """|coro|
 
         Returns the config settings for a specific node.
@@ -2052,7 +2052,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Diagnostics | DiagnosticsInfoResponse:
+    ) -> Diagnostics | DiagnosticsResponse:
         """|coro|
 
         Get's the system diagnostics information.
@@ -2083,7 +2083,7 @@ class Core(Base):
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetDiagnosticsInfo", cur_type=result, expec_type=dict)
 
-        if "cpu_model" not in result:  # 'cpu_model' uniquely identifies DiagnosticsInfoResponse in the union
+        if "cpu_model" not in result:  # 'cpu_model' uniquely identifies DiagnosticsResponse in the union
             raise AMPAPITypeError(end_point="Core/GetDiagnosticsInfo", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -2099,7 +2099,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Module | ModuleInfoResponse:
+    ) -> Module | ModuleResponse:
         """|coro|
 
         Returns the module information.
@@ -2131,7 +2131,7 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetModuleInfo", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if "app_name" not in result:  # 'app_name' uniquely identifies ModuleInfoResponse in the union
+        if "app_name" not in result:  # 'app_name' uniquely identifies ModuleResponse in the union
             raise AMPAPITypeError(end_point="Core/GetModuleInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             return build(Module, result)
@@ -2896,7 +2896,7 @@ class Core(Base):
         # format_data=False always returns the raw dict; the isinstance check is what tells pyright that.
         if not isinstance(data, dict):
             raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=data, expec_type=dict)
-        triggers: list[AvailableTriggersResponse] = data.get("available_triggers", [])
+        triggers: list[TriggersResponse] = data.get("available_triggers", [])
         for entry in triggers:
             entry["description"] = self.sanitize_json(json=entry["description"])
         self._triggers = TriggerID(data=triggers)
@@ -3374,7 +3374,7 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> LoginResults | LoginResponse | None:
+    ) -> LoginResults | LoginResultsResponse | None:
         """|coro|
 
         AMP API login function.

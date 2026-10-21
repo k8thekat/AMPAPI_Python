@@ -20,7 +20,16 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from enum import Enum, StrEnum
 
-__all__ = ("ADSModeState", "AccessModeState", "AppStartupModeState", "InstanceState", "Module", "PostCreateState")
+__all__ = (
+    "ADSModeState",
+    "AccessModeState",
+    "AppStartupModeState",
+    "IfOperators",
+    "InstanceState",
+    "MailPriority",
+    "Module",
+    "PostCreateState",
+)
 
 
 class AccessModeState(Enum):
@@ -70,6 +79,34 @@ class InstanceState(Enum):
     suspended = 200
     maintenance = 250
     indeterminate = 999  # The state is unknown, or doesn't apply (for modules that don't start an external process)
+
+
+class IfOperators(Enum):
+    """The comparison a task's `CommonCorePlugin.IfCondition` and `CommonCorePlugin.ElseIfCondition` make.
+
+    .. versionadded:: 5.0.0
+    """
+
+    equals = 0
+    not_equals = 1
+    contains = 2
+    does_not_contain = 3
+    greater_than = 4
+    less_than = 5
+    greater_than_or_equal = 6
+    less_than_or_equal = 7
+    regex_match = 8
+
+
+class MailPriority(Enum):
+    """The priority of an email sent by `EmailSenderPlugin.SendMail`.
+
+    .. versionadded:: 5.0.0
+    """
+
+    normal = 0
+    low = 1
+    high = 2
 
 
 class AMPTheme(Enum):

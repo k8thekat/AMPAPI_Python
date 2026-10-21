@@ -30,11 +30,17 @@ Renamed classes
 ``Metric``                      :class:`~ampapi.modules.Metrics`
 ``User``                        :class:`~ampapi.modules.UserInfo`
 ``APISPecEndpointData``         :class:`~ampapi._types.APISpecEndpointData`
+``DCConsumes``                  :class:`~ampapi.modules.Consumes`
+``DCParameterMapping``          :class:`~ampapi.modules.ParameterMapping`
 ==============================  ==================================================
 
 Renamed attributes: ``Base.url`` -> ``endpoint_url``, ``FileChunk.base_64_data`` -> ``base64_data``,
 ``InstanceDatastore.sanitized_name`` -> ``sanitised_name``, ``Module.end_point_ur`` -> ``endpoint_uri`` and
 ``PortInfo.us_user_defined`` -> ``is_user_defined``.
+
+- The raw response TypedDicts in ``ampapi._types`` are named after their dataclass: ``Consumes`` ->
+  ``ConsumesResponse``, ``MethodsData`` -> ``MethodsResponse``, ``ParameterMapping`` -> ``ParameterMappingResponse``
+  and ``MCUserData`` -> ``MCUserResponse``.
 
 
 Moved modules
@@ -142,9 +148,10 @@ Returned data
   what AMP sends. The wrapper expected an ``ActionResult`` and raised, although the backup was taken.
 - :meth:`~ampapi.instance.Instance.get_updates` and :meth:`~ampapi.instance.Instance.get_application_status` take
   ``request_params`` and the ``**response_params`` the other methods take (eg. ``to_file``).
-- :class:`~ampapi.modules.DCParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
+- :class:`~ampapi.modules.ParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
   ``seconds``, ``message``, ``input``); 4.x kept only ``user``, ``reason``, ``title`` and ``subtitle``. An argument
-  the task doesn't hold is ``None``, not ``""``. Booleans, numbers and ``state`` are converted from AMP's strings
+  the task doesn't hold is ``None``, not ``""``. Booleans, numbers, ``state``, ``operation`` (:class:`~ampapi.IfOperators`),
+  ``priority`` (:class:`~ampapi.MailPriority`) and ``when`` (a naive ``datetime``) are converted from AMP's strings
   (a value that doesn't parse stays a string).
 - :attr:`~ampapi.modules.RemoteTargetInfo.datastores` holds :class:`~ampapi.modules.TargetDatastore` (an ID and a
   name, all AMP sends there); 4.x typed it as ``InstanceDatastore``.

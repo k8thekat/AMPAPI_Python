@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from io import TextIOWrapper
 
-    from ._types import DiagnosticsInfoResponse, PermissionNode, ScheduleDataResponse, SettingsSpecParentResponse
+    from ._types import DiagnosticsResponse, PermissionNode, ScheduleDataResponse, SettingsSpecParentResponse
     from .instance import Controller, Instance, InstanceTypeAliases
     from .modules import Methods, SettingSpec, Triggers
 
@@ -110,7 +110,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
         used_ids.append(method.id)
         if len(method.consumes) > 0:
             file.write("Consumes these values:\n")
-            # Methods.consumes holds the raw ConsumeResponse dicts unless a DCConsumes was handed in.
+            # Methods.consumes holds the raw ConsumesResponse dicts unless a Consumes was handed in.
             consumes: list[Mapping[str, Any]] = [consume if isinstance(consume, dict) else asdict(consume) for consume in method.consumes]
             for entry in sorted(consumes, key=lambda x: x["name"]):
                 # print(entry, type(entry.enum_values), entry.enum_values)
@@ -144,7 +144,7 @@ async def _parse_get_api_spec_to_file(
     _logger: Logger = logging.getLogger(__name__)
 
     data: Mapping[str, Any] = await instance.get_api_spec(sanitize_json=sanitize_json)
-    diag_info: Diagnostics | DiagnosticsInfoResponse = await instance.get_diagnostics_info()
+    diag_info: Diagnostics | DiagnosticsResponse = await instance.get_diagnostics_info()
     if not isinstance(diag_info, Diagnostics):
         raise AMPAPITypeError(end_point="Core/GetDiagnosticsInfo", cur_type=diag_info, expec_type=Diagnostics)
     instance_type = instance.module
@@ -1038,7 +1038,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     _logger: Logger = logging.getLogger(__name__)
     # We call get_instances() to force a current listing of Instances to be populated.
     await instance.get_instances()
-    ads_diag: Diagnostics | DiagnosticsInfoResponse = await instance.get_diagnostics_info()
+    ads_diag: Diagnostics | DiagnosticsResponse = await instance.get_diagnostics_info()
     # cur_version: None | AMPMinecraftInstance = None
     # A remote Target's Instances live on its TargetADS, so we look through those too.
     every_instance: set[InstanceTypeAliases] = set(instance.instances)
@@ -1047,7 +1047,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     for entry in every_instance:
         # Minecraft Instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
-            instance_diag: Diagnostics | DiagnosticsInfoResponse = await entry.get_diagnostics_info()
+            instance_diag: Diagnostics | DiagnosticsResponse = await entry.get_diagnostics_info()
             # if isinstance(ads_diag, Diagnostics) and isinstance(instance_diag, Diagnostics):
             #     if instance_diag.application_version == ads_diag.application_version:
             #         _logger.info(

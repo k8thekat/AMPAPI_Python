@@ -28,16 +28,16 @@ ResponseTypeAlias = Union[
     "AppSummaryResponse",
     "ApplicationResponse",
     "AuditLogEntryResponse",
-    "DiagnosticsInfoResponse",
+    "DiagnosticsResponse",
     "ControllerResponse",
     "FileChunkResponse",
     "DeploymentTemplateResponse",
     "InstanceDatastoreResponse",
     "InstanceStatusResponse",
     # "EndpointResponseError",
-    "LoginResponse",
+    "LoginResultsResponse",
     "LoginUserInfoResponse",
-    "ModuleInfoResponse",
+    "ModuleResponse",
     "PortInfoResponse",
     "PortResponse",
     "ProvisionResponse",
@@ -51,7 +51,7 @@ ResponseTypeAlias = Union[
     "UpdateInfoResponse",
     "UpdatesResponse",
     "UserInfoResponse",
-    "ConfigResponse",
+    "SettingSpecResponse",
     # One list[Any] covers the list responses (AuditLogEntry, LoginUserInfo, Port, Role, Session and UserInfo).
     # pyright cannot narrow list[A] | list[B] by inspecting the elements, so each endpoint's own return
     # annotation carries the precise list type instead (eg. -> list[Session] | list[SessionResponse]).
@@ -344,7 +344,7 @@ class AnalyticsGraphDataResponse(TypedDict):
     count: int
 
 
-class AnalyticsStatResponse(TypedDict):
+class AnalyticsStatsResponse(TypedDict):
     raw_name: str
     name: str
     display_value: Union[int, float, str]
@@ -355,7 +355,7 @@ class AnalyticsStatResponse(TypedDict):
 
 
 class AnalyticsSummaryResponse(TypedDict):
-    stats: list[AnalyticsStatResponse]
+    stats: list[AnalyticsStatsResponse]
     graph_data: list[AnalyticsGraphDataResponse]
     country_data: list[Any]
     top_players: list[Any]
@@ -399,25 +399,26 @@ class AuditLogEntryResponse(TypedDict):
     acknowledged: bool
 
 
-class AvailableMethodsResponse(TypedDict):
+class MethodsResponse(TypedDict):
     id: str
     name: str
     description: str
     category: str
     display_format: str | None
-    consumes: list[ConsumeResponse]
+    consumes: list[ConsumesResponse]
     notice: NotRequired[Union[str, None]]
 
 
-class AvailableTriggersResponse(TypedDict):
-    id: str
-    type: str
-    description: str
-    emits: list[str]
-    tasks: list[Any]
-    trigger_type: str
-    enabled_state: int
-    last_run: None
+# Replaced by TriggersResponse, which matches the AMP-2.8.0.8 captures.
+# class AvailableTriggersResponse(TypedDict):
+#     id: str
+#     type: str
+#     description: str
+#     emits: list[str]
+#     tasks: list[Any]
+#     trigger_type: str
+#     enabled_state: int
+#     last_run: None
 
 
 class BackupResponse(TypedDict):
@@ -503,7 +504,7 @@ class CPUInfoResponse(TypedDict):
     total_threads: int
 
 
-class ConfigResponse(TypedDict):
+class SettingSpecResponse(TypedDict):
     """Current response structure from :meth:`get_config()`."""
 
     read_only: bool
@@ -549,7 +550,7 @@ class ConsoleEntriesResponse(TypedDict):
     contents: str
 
 
-class ConsumeResponse(TypedDict):
+class ConsumesResponse(TypedDict):
     name: str
     display_name: None
     description: str
@@ -598,7 +599,7 @@ class DirectoryResponse(TypedDict):
     is_smart_excluded_from_backups: NotRequired[bool]
 
 
-class DiagnosticsInfoResponse(TypedDict):
+class DiagnosticsResponse(TypedDict):
     os: str
     platform: str
     system_type: str
@@ -631,7 +632,7 @@ class DiagnosticsInfoResponse(TypedDict):
 class StructuredDiagnosticsResponse(TypedDict):
     """Represents the response of :meth:`Core.get_structured_diagnostics`."""
 
-    core: DiagnosticsInfoResponse
+    core: DiagnosticsResponse
     application: dict[str, str]
 
 
@@ -703,7 +704,7 @@ class InstanceResponse(TypedDict):
     tags: Union[list[str], None]
     module_display_name: Union[str, None]
     # Keyed by metric name: cpu_usage, memory_usage, active_users (+ tps) on AMP 2.8.0.8; empty while stopped.
-    metrics: Union[dict[str, MetricsKeyResponse], None]
+    metrics: Union[dict[str, MetricsDataResponse], None]
     display_image_source: Union[str, None]
     description: Union[str, None]
     # Confirmed against getinstances.json on 2.6.5.0; these were absent from the original definition.
@@ -753,7 +754,7 @@ class KeyDrift(TypedDict):
     "Each key the shape does not declare, with how many payloads carried it."
 
 
-class LoginResponse(TypedDict):
+class LoginResultsResponse(TypedDict):
     # A failed login sends None for these four (confirmed against AMP 2.8.0.8).
     permissions: Union[list[str], None]
     remember_me_token: Union[str, None]
@@ -780,7 +781,7 @@ class LoginUserInfoResponse(TypedDict):
     avatar_base64: str | None
 
 
-class MCUserData(TypedDict):
+class MCUserResponse(TypedDict):
     """name : :class:`str`
 
     uuid : :class:`str`
@@ -802,37 +803,38 @@ class MessagesResponse(TypedDict):
     age_minutes: int
 
 
-class MethodsData(TypedDict):
-    """id : :class:`str`
-
-    name : :class:`str`
-
-    description : :class:`str`
-
-    consumes : list[:class:`Consumes`]
-
-    """
-
-    id: str
-    name: str
-    description: str
-    consumes: list[ConsumeResponse]
-    notice: NotRequired[Union[str, None]]
+# Replaced by MethodsResponse, which matches the AMP-2.8.0.8 captures.
+# class MethodsData(TypedDict):
+#     """id : :class:`str`
+#
+#     name : :class:`str`
+#
+#     description : :class:`str`
+#
+#     consumes : list[:class:`Consumes`]
+#
+#     """
+#
+#     id: str
+#     name: str
+#     description: str
+#     consumes: list[ConsumesResponse]
+#     notice: NotRequired[Union[str, None]]
 
 
 class MetricsResponse(TypedDict):
     """Represents the data inside the JSON key `metrics` for :meth:`get_status()`."""
 
-    cpu_usage: MetricsKeyResponse
-    memory_usage: MetricsKeyResponse
-    active_users: MetricsKeyResponse
+    cpu_usage: MetricsDataResponse
+    memory_usage: MetricsDataResponse
+    active_users: MetricsDataResponse
     # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft Instances send tps.
-    physical_ram_usage: NotRequired[MetricsKeyResponse]
-    swap_usage: NotRequired[MetricsKeyResponse]
-    tps: NotRequired[MetricsKeyResponse]
+    physical_ram_usage: NotRequired[MetricsDataResponse]
+    swap_usage: NotRequired[MetricsDataResponse]
+    tps: NotRequired[MetricsDataResponse]
 
 
-class MetricsKeyResponse(TypedDict):
+class MetricsDataResponse(TypedDict):
     """Represents the JSON response data for each of the attributes of :class:`Metrics`."""
 
     raw_value: int
@@ -846,7 +848,7 @@ class MetricsKeyResponse(TypedDict):
     short_name: NotRequired[str]
 
 
-class ModuleInfoResponse(TypedDict):
+class ModuleResponse(TypedDict):
     name: str
     author: str
     app_name: str
@@ -882,11 +884,11 @@ class ModuleInfoResponse(TypedDict):
 class OPWhitelistResponse(TypedDict):
     """The raw response from :meth:`MinecraftModule.mc_get_op_whitelist`."""
 
-    op_list: list[MCUserData]
-    whitelist: list[MCUserData]
+    op_list: list[MCUserResponse]
+    whitelist: list[MCUserResponse]
 
 
-class ParameterMapping(TypedDict, total=False):
+class ParameterMappingResponse(TypedDict, total=False):
     """authorization_header : NotRequired[:class:`str`]
 
     avatar_url : NotRequired[:class:`str`]
@@ -1254,9 +1256,9 @@ class RunningTaskResponse(TypedDict):
 
 
 class ScheduleDataResponse(TypedDict):
-    available_methods: list[AvailableMethodsResponse]
-    available_triggers: list[AvailableTriggersResponse]
-    populated_triggers: list[AvailableTriggersResponse]
+    available_methods: list[MethodsResponse]
+    available_triggers: list[TriggersResponse]
+    populated_triggers: list[TriggersResponse]
 
 
 class SessionResponse(TypedDict):
@@ -1275,17 +1277,17 @@ class SettingsSpecParentResponse(TypedDict):
     have a colon in their name (eg. `valheim:stadiacontroller`) and are not keys of this TypedDict.
     """
 
-    security_and_privacy: list[ConfigResponse]
-    system_settings: list[ConfigResponse]
-    backups: NotRequired[list[ConfigResponse]]
-    branding: NotRequired[list[ConfigResponse]]
-    external_services: NotRequired[list[ConfigResponse]]
-    file_manager: NotRequired[list[ConfigResponse]]
-    instance_deployment: NotRequired[list[ConfigResponse]]
-    login: NotRequired[list[ConfigResponse]]
-    meta_config: NotRequired[list[ConfigResponse]]
-    minecraft: NotRequired[list[ConfigResponse]]
-    updates: NotRequired[list[ConfigResponse]]
+    security_and_privacy: list[SettingSpecResponse]
+    system_settings: list[SettingSpecResponse]
+    backups: NotRequired[list[SettingSpecResponse]]
+    branding: NotRequired[list[SettingSpecResponse]]
+    external_services: NotRequired[list[SettingSpecResponse]]
+    file_manager: NotRequired[list[SettingSpecResponse]]
+    instance_deployment: NotRequired[list[SettingSpecResponse]]
+    login: NotRequired[list[SettingSpecResponse]]
+    meta_config: NotRequired[list[SettingSpecResponse]]
+    minecraft: NotRequired[list[SettingSpecResponse]]
+    updates: NotRequired[list[SettingSpecResponse]]
 
 
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
@@ -1330,7 +1332,7 @@ class TimedTriggerResponse(TypedDict):
     match_months: list[int]
     name: str
     order: int
-    tasks: list[TriggersTasksResponse]
+    tasks: list[TriggerTasksResponse]
     # Confirmed live on AMP 2.8.0.8; an ISO timestamp once the trigger has fired, null before.
     last_executed: NotRequired[Union[str, None]]
 
@@ -1362,7 +1364,7 @@ class TriggersResponse(TypedDict):
     description: str
     emits: list[str]
     enabled_state: int
-    tasks: list[TriggersTasksResponse]
+    tasks: list[TriggerTasksResponse]
     type: str
     trigger_type: str
     last_execute_error: NotRequired[bool]
@@ -1370,12 +1372,12 @@ class TriggersResponse(TypedDict):
     last_run: NotRequired[Union[str, None]]
 
 
-class TriggersTasksResponse(TypedDict):
+class TriggerTasksResponse(TypedDict):
     """id : :class:`str`
 
     task_method_name : :class:`str`
 
-    parameter_mapping : :class:`ParameterMapping`
+    parameter_mapping : :class:`ParameterMappingResponse`
 
     enabled_state : :class:`int`
 
@@ -1388,7 +1390,7 @@ class TriggersTasksResponse(TypedDict):
 
     id: str
     task_method_name: str
-    parameter_mapping: ParameterMapping
+    parameter_mapping: ParameterMappingResponse
     enabled_state: int
     locked: bool
     created_by: str

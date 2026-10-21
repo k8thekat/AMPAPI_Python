@@ -144,7 +144,7 @@ class Instance(
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+    metrics : Union[dict[:class:`str`, :class:`MetricsDataResponse`], None]
         The metrics of the Instance keyed by metric name, default is None.
     module : :class:`str`
         The module of the Instance.
@@ -695,7 +695,7 @@ class MinecraftInstance(MinecraftModule, Instance):
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+    metrics : Union[dict[:class:`str`, :class:`MetricsDataResponse`], None]
         The metrics of the Instance keyed by metric name, default is None.
     module : :class:`str`
         The module of the Instance, default is "Minecraft".
@@ -868,7 +868,7 @@ class TargetADS(ADSData, ADSModule, Instance):
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[dict[:class:`str`, :class:`MetricsKeyResponse`], None]
+    metrics : Union[dict[:class:`str`, :class:`MetricsDataResponse`], None]
         The metrics of the Instance keyed by metric name, default is None.
     module : :class:`str`
         The module of the Instance, default is "ADS".
