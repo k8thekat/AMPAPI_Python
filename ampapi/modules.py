@@ -43,10 +43,13 @@ if TYPE_CHECKING:
     from ._types import (
         AnalyticsGraphDataResponse,
         AnalyticsStatsResponse,
+        BrandingResponse,
         ConsoleEntriesResponse,
         ConsumesResponse,
+        DiagnosticsResponse,
         LoginUserInfoResponse,
         MCUserResponse,
+        MessageParametersResponse,
         MessagesResponse,
         MetricsResponse,
         ParameterMappingResponse,
@@ -57,6 +60,7 @@ if TYPE_CHECKING:
         StatusResponse,
         TriggersResponse,
         TriggerTasksResponse,
+        UptimeResponse,
     )
 
     T = ParamSpec("T")
@@ -105,12 +109,14 @@ __all__ = (
     "ActionResult",
     "AnalyticsCountryData",
     "AnalyticsFilter",
+    "AnalyticsGraphData",
     "AnalyticsStats",
     "AnalyticsSummary",
     "AnalyticsTopPlayers",
     "Application",
     "AuditLogEntry",
     "Backup",
+    "Branding",
     "BuildInfo",
     "BukkitPlugin",
     "CPUInfo",
@@ -131,6 +137,7 @@ __all__ = (
     "LoginResults",
     "LoginUserInfo",
     "MCUser",
+    "MessageParameters",
     "Messages",
     "Methods",
     "Metrics",
@@ -138,6 +145,7 @@ __all__ = (
     "OPList",
     "OPWhitelist",
     "ParameterMapping",
+    "PermissionNode",
     "PlatformInfo",
     "Player",
     "Players",
@@ -158,6 +166,7 @@ __all__ = (
     "SettingsSpecAttribute",
     "SettingsSpecParent",
     "Status",
+    "StructuredDiagnostics",
     "TargetDatastore",
     "Template",
     "TimedTrigger",
@@ -166,6 +175,7 @@ __all__ = (
     "Triggers",
     "UpdateInfo",
     "Updates",
+    "Uptime",
     "UserApplicationData",
     "UserInfo",
 )
@@ -398,6 +408,29 @@ class AnalyticsFilter:
 
 
 @dataclass
+class AnalyticsGraphData:
+    """Represents the JSON response data for the entries of :attr:`AnalyticsSummary.graph_data` and for
+    :attr:`AnalyticsSummary.busiest_time` and :attr:`AnalyticsSummary.quietest_time`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    date : :class:`str`
+        When the period starts, as an ISO 8601 string (eg. "2026-09-21T00:00:00Z").
+    end_date : :class:`str`
+        When the period ends, as an ISO 8601 string.
+    count : :class:`int`
+        The number of sessions in the period.
+
+    """
+
+    date: str
+    end_date: str
+    count: int
+
+
+@dataclass
 class AnalyticsStats:
     """Represents the JSON response data from :attr:`AnalyticsSummary.stats`.
 
@@ -444,16 +477,25 @@ class AnalyticsSummary:
 
     Attributes
     ----------
-    busiest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
-        UNK, default is a list.
+    busiest_time : :class:`AnalyticsGraphData` | :class:`AnalyticsGraphDataResponse`
+        The period with the most sessions, default is an empty :class:`AnalyticsGraphData`.
+
+        .. versionchanged:: 5.0.0
+            Is an :class:`AnalyticsGraphData`, was a dict.
     country_data : list[:class:`AnalyticsCountryData`]
         The Country information for the summary, default is a list.
-    graph_data : list[dict[:class:`str`, Union[:class:`int`, :class:`str`]]] | list[:class:`AnalyticsGraphDataResponse`]
+    graph_data : list[:class:`AnalyticsGraphData`] | list[:class:`AnalyticsGraphDataResponse`]
         The Data displayed on the Web UI panel Analytics Menu, default is a list.
+
+        .. versionchanged:: 5.0.0
+            Holds :class:`AnalyticsGraphData`, was a list of dicts.
     is_demo : :class:`bool`
         UNK, default is False.
-    quietest_time : dict[:class:`str`, Union[:class:`int`, :class:`str`]] | :class:`AnalyticsGraphDataResponse`
-        UNK, default is a dict.
+    quietest_time : :class:`AnalyticsGraphData` | :class:`AnalyticsGraphDataResponse`
+        The period with the fewest sessions, default is an empty :class:`AnalyticsGraphData`.
+
+        .. versionchanged:: 5.0.0
+            Is an :class:`AnalyticsGraphData`, was a dict.
     stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatsResponse`]
         The Analytics Stats of the summary, default is a list.
     top_players : list[:class:`AnalyticsTopPlayers`]
@@ -461,13 +503,15 @@ class AnalyticsSummary:
 
     """
 
-    busiest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
-    country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
-    graph_data: list[dict[str, Union[int, str]]] | list[AnalyticsGraphDataResponse] = field(
-        default_factory=list[dict[str, Union[int, str]]],
+    busiest_time: AnalyticsGraphData | AnalyticsGraphDataResponse = field(
+        default_factory=lambda: AnalyticsGraphData(date="", end_date="", count=0),
     )
+    country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
+    graph_data: list[AnalyticsGraphData] | list[AnalyticsGraphDataResponse] = field(default_factory=list[AnalyticsGraphData])
     is_demo: bool = field(default=False)
-    quietest_time: dict[str, Union[int, str]] | AnalyticsGraphDataResponse = field(default_factory=dict[str, Union[int, str]])
+    quietest_time: AnalyticsGraphData | AnalyticsGraphDataResponse = field(
+        default_factory=lambda: AnalyticsGraphData(date="", end_date="", count=0),
+    )
     stats: list[AnalyticsStats] | list[AnalyticsStatsResponse] = field(default_factory=list[AnalyticsStats])
     top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
 
@@ -642,10 +686,18 @@ class APISession:
 
 @dataclass
 class Application:
-    """Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`.
+    """Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`
+    and :meth:`ADSModule.get_supported_app_summaries`.
 
     .. note::
         Shows Template/App information. Similar to the all the applications in a repo lists.
+
+    .. note::
+        An entry from :meth:`ADSModule.get_supported_app_summaries` leaves out `module_name`, `settings` and
+        `is_multi_ip_aware`, which keep their defaults.
+
+    .. versionchanged:: 5.0.0
+        `module_name` defaults to "".
 
 
     Attributes
@@ -668,14 +720,14 @@ class Application:
         A unique ID for the application.
     is_service_spec : :class:`bool`
         UNK.
-    module_name : :class:`str`
-        The type of Module this application uses. (eg. "Minecraft", "Generic")
     no_commercial_usage : :class:`bool`
         As the attribute implies; if it's for commercial usage or not.
     supported_platforms : :class:`int`
         UNK
-    settings : dict[:class:`str`, Any]
-        A dict of Instance specific settings to apply for this application.
+    module_name : :class:`str`, optional
+        The type of Module this application uses. (eg. "Minecraft", "Generic"), default is "".
+    settings : dict[:class:`str`, :class:`str`], optional
+        A dict of Instance specific settings to apply for this application, default is an empty dict.
 
     """
 
@@ -688,14 +740,15 @@ class Application:
     friendly_name: str
     id: str
     is_service_spec: bool
-    module_name: str
     no_commercial_usage: bool
     supported_platforms: int
+    # The summary from `get_supported_app_summaries` leaves these three out.
+    module_name: str = field(default="")
     deprecated_reason: str | None = field(default=None)
     is_multi_ip_aware: bool = field(default=False)
     # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
     resource_usage_info: str | None = field(default=None)
-    settings: dict[str, Any] = field(default_factory=dict[str, Any])
+    settings: dict[str, str] = field(default_factory=dict[str, str])
 
     def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
@@ -811,6 +864,64 @@ class Backup:
 
     def __repr__(self) -> str:  # noqa: D105
         return pformat(vars(self))
+
+
+@dataclass
+class Branding:
+    """Represents the JSON response data from :attr:`Module.branding`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    display_branding : :class:`bool`
+        If the branding is shown.
+    page_title : :class:`str`
+        The title of the web panel page.
+    company_name : :class:`str`
+        The company name.
+    welcome_message : :class:`str`
+        The welcome message on the login page.
+    branding_message : :class:`str`
+        The branding message.
+    short_branding_message : :class:`str`
+        The short branding message (eg. "PoweredByAMP").
+    url : :class:`str`
+        The URL of the company.
+    support_url : :class:`str`
+        The URL of the support page.
+    support_text : :class:`str`
+        The text shown for the support link.
+    submit_ticket_url : :class:`str`
+        The URL to submit a support ticket.
+    logo_url : :class:`str`
+        The URL of the logo.
+    background_url : :class:`str`
+        The URL of the login background.
+    splash_frame_url : :class:`str`
+        The URL of the splash frame.
+    forgot_password_url : :class:`str`
+        The URL of the forgot password page.
+    hosted_analytics_tag : :class:`str`
+        The hosted analytics tag.
+
+    """
+
+    display_branding: bool
+    page_title: str
+    company_name: str
+    welcome_message: str
+    branding_message: str
+    short_branding_message: str
+    url: str
+    support_url: str
+    support_text: str
+    submit_ticket_url: str
+    logo_url: str
+    background_url: str
+    splash_frame_url: str
+    forgot_password_url: str
+    hosted_analytics_tag: str
 
 
 @dataclass
@@ -2085,6 +2196,71 @@ class MCUser:
 
 
 @dataclass
+class Uptime:
+    """Represents the JSON response data from :attr:`MessageParameters.uptime`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    days : :class:`int`
+        The days the Instance has been running.
+    hours : :class:`int`
+        The hours part of the uptime.
+    minutes : :class:`int`
+        The minutes part of the uptime.
+    seconds : :class:`int`
+        The seconds part of the uptime.
+
+    """
+
+    days: int
+    hours: int
+    minutes: int
+    seconds: int
+
+
+@dataclass
+class MessageParameters:
+    """Represents the JSON response data from :attr:`Messages.parameters`.
+
+    .. note::
+        Which keys AMP sends depends on the message. A message from the ADSModule carries `instance_id`, `metrics`,
+        `state` and `uptime`, a message from the LocalFileBackupPlugin carries `name` and `reason`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    instance_id : Union[:class:`str`, None], optional
+        The ID of the Instance the message is about, default is None.
+    metrics : Union[:class:`Metrics`, :class:`MetricsResponse`, None], optional
+        The metrics of that Instance, default is None.
+    uptime : Union[:class:`Uptime`, :class:`UptimeResponse`, None], optional
+        The uptime of that Instance, default is None.
+    state : Union[:class:`InstanceState`, :class:`int`, None], optional
+        The state of that Instance, default is None.
+    name : Union[:class:`str`, None], optional
+        The name of the backup, default is None.
+    reason : Union[:class:`str`, None], optional
+        The reason for the backup message, default is None.
+
+    """
+
+    instance_id: Union[str, None] = field(default=None)
+    # AMP sends `state` as an int and __post_init__ converts it.
+    metrics: Union[Metrics, MetricsResponse, None] = field(default=None)
+    uptime: Union[Uptime, UptimeResponse, None] = field(default=None)
+    state: Union[InstanceState, int, None] = field(default=None)
+    name: Union[str, None] = field(default=None)
+    reason: Union[str, None] = field(default=None)
+
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.state, int):
+            self.state = InstanceState(self.state)
+
+
+@dataclass
 class Messages:
     """Represents a Message from the dataclass attribute :attr:`Updates.messages`
 
@@ -2100,9 +2276,10 @@ class Messages:
         The message.
     source : :class:`str`
         The source of the message.
-    parameters : Union[dict[:class:`str`, Any], None], optional
+    parameters : Union[:class:`MessageParameters`, :class:`MessageParametersResponse`, None], optional
         Extra data for the message, default is None.
-        A "metrics" message carries the ``instance_id``, ``metrics``, ``state`` and ``uptime`` of an Instance.
+
+        .. versionadded:: 5.0.0
 
     """
 
@@ -2112,8 +2289,7 @@ class Messages:
     message: str
     source: str
     # Confirmed against getupdates.json; defaulted so older responses still construct.
-    # Left as a dict, the metrics in it carry a different key set than Metrics.
-    parameters: Union[dict[str, Any], None] = field(default=None)
+    parameters: Union[MessageParameters, MessageParametersResponse, None] = field(default=None)
 
 
 @dataclass
@@ -2253,8 +2429,11 @@ class Module:
         The author.
     base_port : :class:`int`
         The base port.
-    branding : :class:`dict[str, Any]`
+    branding : :class:`Branding` | :class:`BrandingResponse`
         The branding data.
+
+        .. versionchanged:: 5.0.0
+            Is a :class:`Branding`, was a dict.
     build_spec : :class:`str`
         The build spec.
     display_base_uri : :class:`str`
@@ -2309,7 +2488,7 @@ class Module:
     app_name: str
     author: str
     base_port: int
-    branding: dict[str, Any]
+    branding: Branding | BrandingResponse
     build_spec: str
     display_base_uri: str
     endpoint_uri: str
@@ -2367,6 +2546,35 @@ class OPWhitelist:
 
     op_list: list[MCUserResponse] = field(default_factory=list["MCUserResponse"])
     whitelist: list[MCUserResponse] = field(default_factory=list["MCUserResponse"])
+
+
+@dataclass
+class PermissionNode:
+    """Represents the JSON response data from :meth:`Core.get_permissions_spec`.
+
+    .. versionchanged:: 5.0.0
+        Is a dataclass, was a `TypedDict` in 4.6.0 (now :class:`PermissionNodeResponse`).
+
+    Attributes
+    ----------
+    name : :class:`str`
+        The name of the node.
+    node : :class:`str`
+        The full permission node (eg. "Settings.Core.Security").
+    display_name : :class:`str`
+        The name the web panel shows.
+    description : Union[:class:`str`, None]
+        The description of the node.
+    children : Union[list[:class:`PermissionNode`], None]
+        The nodes below this one, None on a node AMP sends no list for.
+
+    """
+
+    name: str
+    node: str
+    display_name: str
+    description: Union[str, None]
+    children: Union[list[PermissionNode], None]
 
 
 @dataclass
@@ -3237,6 +3445,26 @@ class Status:
         if isinstance(self.metrics, dict):
             self.metrics = build(Metrics, self.metrics)
         self.ports = [build(Port, entry) if isinstance(entry, dict) else entry for entry in self.ports]
+
+
+@dataclass
+class StructuredDiagnostics:
+    """Represents the JSON response data from :meth:`Core.get_structured_diagnostics`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    core : :class:`Diagnostics` | :class:`DiagnosticsResponse`
+        The diagnostics every Instance has.
+    application : dict[:class:`str`, Any]
+        The diagnostics of the Instance's module. Empty for modules that send none, a Minecraft Instance sends
+        `server_jar`, `server_type` and `java_version`, a Generic Instance sends `config_version`.
+
+    """
+
+    core: Diagnostics | DiagnosticsResponse
+    application: dict[str, Any]
 
 
 @dataclass

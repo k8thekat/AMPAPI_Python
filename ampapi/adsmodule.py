@@ -1970,9 +1970,10 @@ class ADSModule(Base):
     async def get_supported_app_summaries(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[AppSummaryResponse]:
+    ) -> list[Application] | list[AppSummaryResponse]:
         """|coro|
 
         Get a condensed summary of every application that can be deployed. See :meth:`get_supported_applications` for the full entries.
@@ -1980,12 +1981,13 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetSupportedAppSummaries`
 
         .. note::
-            The API returns these entries as untyped JSON objects, so no dataclass conversion
-            is performed; hence no ``format_data`` parameter.
+            Each entry is an :class:`Application` that leaves out `module_name`, `settings` and `is_multi_ip_aware`.
 
 
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1993,8 +1995,8 @@ class ADSModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            On success returns a list of dictionaries.
+        list[:class:`Application`]
+            On success returns a list of :class:`Application` dataclasses.
 
         """
         await self._reauth()
@@ -2005,7 +2007,11 @@ class ADSModule(Base):
         )
         if isinstance(result, (str, bool)) or result is None:
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
         if is_response_list(result, AppSummaryResponse, APP_SUMMARY_REQUIRED_KEYS, APP_SUMMARY_EXCLUDED_KEYS):
+            if format_data is True:
+                return [build(Application, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
 

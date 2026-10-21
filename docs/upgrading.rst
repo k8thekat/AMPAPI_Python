@@ -159,6 +159,18 @@ Returned data
 - ``AnalyticsCountryData.session_percent`` is renamed
   :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
+- :attr:`~ampapi.modules.Module.branding` is a :class:`~ampapi.modules.Branding` dataclass; 4.x left it as a dict.
+- :attr:`~ampapi.modules.AnalyticsSummary.busiest_time`, ``quietest_time`` and ``graph_data`` hold
+  :class:`~ampapi.modules.AnalyticsGraphData` (``date``, ``end_date`` and ``count``); 4.x left them as dicts.
+- :attr:`~ampapi.modules.Messages.parameters` is a :class:`~ampapi.modules.MessageParameters` (its ``metrics`` a
+  :class:`~ampapi.modules.Metrics`, its ``uptime`` an :class:`~ampapi.modules.Uptime` and its ``state`` an
+  :class:`~ampapi.InstanceState`). 4.x had no ``parameters``.
+- :attr:`~ampapi.instance.Instance.application_endpoints` holds :class:`~ampapi.modules.Endpoints`, and the
+  ``datastores`` of a :class:`~ampapi.instance.Controller` or :class:`~ampapi.instance.TargetADS` hold
+  :class:`~ampapi.modules.TargetDatastore`; 4.x left both as dicts.
+- :meth:`~ampapi.Core.get_permissions_spec` returns :class:`~ampapi.modules.PermissionNode` dataclasses (with
+  ``children`` built the same way) and takes ``format_data``. 4.x returned the dicts, which are now
+  ``ampapi._types.PermissionNodeResponse``.
 - :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. ``ADS01``) out of
   :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the
   Controller. The ADS Instances of remote Targets come back as :class:`~ampapi.instance.TargetADS` in

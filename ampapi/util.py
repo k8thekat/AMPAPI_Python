@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from io import TextIOWrapper
 
-    from ._types import DiagnosticsResponse, PermissionNode, ScheduleDataResponse, SettingsSpecParentResponse
+    from ._types import DiagnosticsResponse, PermissionNodeResponse, ScheduleDataResponse, SettingsSpecParentResponse
     from .instance import Controller, Instance, InstanceTypeAliases
     from .modules import Methods, SettingSpec, Triggers
 
@@ -784,7 +784,7 @@ def find_parameter_mismatches(
 
 
 def _permission_node_parse(
-    data: list[PermissionNode],
+    data: list[PermissionNodeResponse],
     title: str = "",
     title_body: str = "",
     index: int = 0,
@@ -842,7 +842,7 @@ def _permission_node_parse(
                 for children in entry["children"]:
                     # We cheaply ignore them since they always have a "-" in them.
                     if "-" in children["name"]:
-                        new_child: list[PermissionNode] = children.get("children") or []
+                        new_child: list[PermissionNodeResponse] = children.get("children") or []
                         if len(new_child) > 0:
                             for node in sorted(new_child[0]["children"] or [], key=lambda x: x["name"]):
                                 # Handles formatting our nodes
@@ -1146,7 +1146,8 @@ async def generate_docs_rst(instance: Controller) -> None:
     except Exception:
         logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
     # As far as I know Permission spec information is the same for all Instances
-    perms: list[PermissionNode] = await instance.get_permissions_spec()
+    permission_nodes = await instance.get_permissions_spec(format_data=False)
+    perms: list[PermissionNodeResponse] = [node for node in permission_nodes if isinstance(node, dict)]
     logger.info("Generating Permission Nodes.rst...")
     try:
         _permission_node_parse(data=perms, title="Permission Nodes", title_body="", path=_path.as_posix())

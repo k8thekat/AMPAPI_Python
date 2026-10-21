@@ -369,7 +369,7 @@ class AppSummaryResponse(TypedDict):
 
     .. note::
         A condensed :class:`ApplicationResponse`; it drops ``module_name``, ``settings`` and
-        ``is_multi_ip_aware``.
+        ``is_multi_ip_aware``. Builds :class:`~ampapi.modules.Application`.
 
     """
 
@@ -539,6 +539,26 @@ class SettingSpecResponse(TypedDict):
     warn_text: NotRequired[Union[str, None]]
 
 
+class BrandingResponse(TypedDict):
+    """Represents the JSON response data for `branding` from :meth:`Core.get_module_info`."""
+
+    display_branding: bool
+    page_title: str
+    company_name: str
+    welcome_message: str
+    branding_message: str
+    short_branding_message: str
+    url: str
+    support_url: str
+    support_text: str
+    submit_ticket_url: str
+    logo_url: str
+    background_url: str
+    splash_frame_url: str
+    forgot_password_url: str
+    hosted_analytics_tag: str
+
+
 class ConsoleEntriesResponse(TypedDict):
     """Represents the JSON response data for each entry of :attr:`UpdatesResponse.console_entries`."""
 
@@ -633,7 +653,8 @@ class StructuredDiagnosticsResponse(TypedDict):
     """Represents the response of :meth:`Core.get_structured_diagnostics`."""
 
     core: DiagnosticsResponse
-    application: dict[str, str]
+    # Depends on the module, eg. a Minecraft Instance sends `server_type` as an int.
+    application: dict[str, Any]
 
 
 class EndpointsResponse(TypedDict):
@@ -704,7 +725,8 @@ class InstanceResponse(TypedDict):
     tags: Union[list[str], None]
     module_display_name: Union[str, None]
     # Keyed by metric name: cpu_usage, memory_usage, active_users (+ tps) on AMP 2.8.0.8; empty while stopped.
-    metrics: Union[dict[str, MetricsDataResponse], None]
+    # An empty object when the Instance is stopped.
+    metrics: Union[MetricsResponse, None]
     display_image_source: Union[str, None]
     description: Union[str, None]
     # Confirmed against getinstances.json on 2.6.5.0; these were absent from the original definition.
@@ -791,11 +813,32 @@ class MCUserResponse(TypedDict):
     uuid: str
 
 
+class UptimeResponse(TypedDict):
+    """Represents the JSON response data for `uptime` in :class:`MessageParametersResponse`."""
+
+    days: int
+    hours: int
+    minutes: int
+    seconds: int
+
+
+class MessageParametersResponse(TypedDict, total=False):
+    """Represents the JSON response data for `parameters` in :class:`MessagesResponse`."""
+
+    # Depends on the message. A "metrics" message carries instance_id, metrics, state and uptime,
+    # a backup message carries name and reason.
+    instance_id: str
+    metrics: MetricsResponse
+    uptime: UptimeResponse
+    state: int
+    name: str
+    reason: str
+
+
 class MessagesResponse(TypedDict):
     """Represents the JSON response data for each entry of :attr:`UpdatesResponse.messages`."""
 
-    # Depends on the message; a "metrics" message carries instance_id, metrics, state and uptime.
-    parameters: Union[dict[str, Any], None]
+    parameters: Union[MessageParametersResponse, None]
     id: str
     expired: bool
     source: str
@@ -1079,7 +1122,7 @@ class ParameterMappingResponse(TypedDict, total=False):
     z_angle: NotRequired[str]
 
 
-class PermissionNode(TypedDict):
+class PermissionNodeResponse(TypedDict):
     """Permission node response structure.
 
     Keys
@@ -1092,7 +1135,7 @@ class PermissionNode(TypedDict):
 
     description : :class:`str`
 
-    children : Union[list[:class:`PermissionNode`], None]
+    children : Union[list[:class:`PermissionNodeResponse`], None]
 
     """
 
@@ -1100,7 +1143,7 @@ class PermissionNode(TypedDict):
     node: Required[str]
     display_name: Required[str]
     description: Optional[str]
-    children: Required[Union[list[PermissionNode], None]]
+    children: Required[Union[list[PermissionNodeResponse], None]]
 
 
 class PlatformInfoResponse(TypedDict):

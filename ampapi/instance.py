@@ -36,7 +36,7 @@ from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .generic import GenericModule
 from .minecraft import MinecraftModule
-from .modules import ActionResult, BuildInfo, InstanceState, Status, Updates, build
+from .modules import ActionResult, BuildInfo, Endpoints, InstanceState, Metrics, PlatformInfo, Status, TargetDatastore, Updates, build
 from .steamcmd import SteamCMDPlugin
 
 if TYPE_CHECKING:
@@ -48,15 +48,7 @@ if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import (
-        ActionResultResponse,
-        ControllerResponse,
-        InstanceResponse,
-        PlatformInfoResponse,
-        StatusResponse,
-        TargetDatastoreResponse,
-        UpdatesResponse,
-    )
+    from ._types import ActionResultResponse, ControllerResponse, InstanceResponse, StatusResponse, UpdatesResponse
     from .base import ResponseHandlerOptions
     from .bridge import Bridge
 
@@ -108,7 +100,7 @@ class Instance(
     ----------
     amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
         The version of the AMP, default is None.
-    application_endpoints : list[dict[str, str]]
+    application_endpoints : list[:class:`Endpoints`]
         The list of application endpoints for the Instance.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
@@ -144,8 +136,8 @@ class Instance(
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[dict[:class:`str`, :class:`MetricsDataResponse`], None]
-        The metrics of the Instance keyed by metric name, default is None.
+    metrics : Union[:class:`Metrics`, None]
+        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
     module : :class:`str`
         The module of the Instance.
     module_display_name : :class:`str`
@@ -200,6 +192,8 @@ class Instance(
     )
 
     amp_version: dict[str, int] | str | BuildInfo | None
+    application_endpoints: list[Endpoints]
+    metrics: Union[Metrics, None]
     _app_state: InstanceState | int
     # AMP doesn't send a URL for an Instance, a TargetADS gets its Target's.
     url: Union[str, None] = None
@@ -346,6 +340,11 @@ class Instance(
             if value is None:
                 value = self._null_defaults.get(key)
             setattr(self, key, value)
+
+        # AMP sends an empty object for the metrics of an Instance that is stopped.
+        metrics = data.get("metrics")
+        self.metrics = build(Metrics, metrics) if metrics else None
+        self.application_endpoints = [build(Endpoints, entry) for entry in data.get("application_endpoints") or []]
 
         # This is only used for older versions of AMP v ``>2.6.0.0``  and earlier.
         # Per Mike and Developers of AMP state they will be using string versions from `2.6.0.0` and this handles that.
@@ -659,7 +658,7 @@ class MinecraftInstance(MinecraftModule, Instance):
     ----------
     amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
         The version of the AMP, default is None.
-    application_endpoints : list[dict[str, str]]
+    application_endpoints : list[:class:`Endpoints`]
         The list of application endpoints for the Instance.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
@@ -695,8 +694,8 @@ class MinecraftInstance(MinecraftModule, Instance):
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[dict[:class:`str`, :class:`MetricsDataResponse`], None]
-        The metrics of the Instance keyed by metric name, default is None.
+    metrics : Union[:class:`Metrics`, None]
+        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
     module : :class:`str`
         The module of the Instance, default is "Minecraft".
     module_display_name : :class:`str`
@@ -735,8 +734,8 @@ class ADSData(Base):
     id: int
     disabled: bool
     is_remote: bool
-    platform: PlatformInfoResponse
-    datastores: list[TargetDatastoreResponse]
+    platform: PlatformInfo
+    datastores: list[TargetDatastore]
     creates_in_containers: bool
     can_create: bool
     available_instances: list[InstanceResponse]
@@ -796,6 +795,12 @@ class ADSData(Base):
         for key in self.__cached__:
             setattr(self, key, data.get(key))
 
+        # The Target's platform and datastores are held as dataclasses.
+        if "platform" in self.__cached__:
+            self.platform = build(PlatformInfo, data["platform"])
+        if "datastores" in self.__cached__:
+            self.datastores = [build(TargetDatastore, entry) for entry in data.get("datastores") or []]
+
         # AMP sends last_updated as an ISO string, so we convert it here.
         self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])
         try:
@@ -832,7 +837,7 @@ class TargetADS(ADSData, ADSModule, Instance):
     ----------
     amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
         The version of the AMP, default is None.
-    application_endpoints : list[dict[str, str]]
+    application_endpoints : list[:class:`Endpoints`]
         The list of application endpoints for the Instance.
     container_cpus : :class:`float`
         The amount of CPU cores allocated to the container, default is 0.0.
@@ -868,8 +873,8 @@ class TargetADS(ADSData, ADSModule, Instance):
         If the Instance is using HTTPS.
     management_mode : :class:`int`
         The management mode of the Instance.
-    metrics : Union[dict[:class:`str`, :class:`MetricsDataResponse`], None]
-        The metrics of the Instance keyed by metric name, default is None.
+    metrics : Union[:class:`Metrics`, None]
+        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
     module : :class:`str`
         The module of the Instance, default is "ADS".
     module_display_name : :class:`str`
@@ -894,9 +899,9 @@ class TargetADS(ADSData, ADSModule, Instance):
         If the Target is Disabled or not.
     is_remote : :class:`bool`
         If the Target is remote or not.
-    platform : :class:`PlatformInfoResponse`
+    platform : :class:`PlatformInfo`
         Platform information related to the Target.
-    datastores : list[:class:`TargetDatastoreResponse`]
+    datastores : list[:class:`TargetDatastore`]
         The Datastores that the Target has access to.
     creates_in_containers : :class:`bool`
         The Target will create the Instances in containers.
@@ -1371,9 +1376,9 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         If the Controller is Disabled or not.
     is_remote : :class:`bool`
         If the Controller is remote or not.
-    platform : :class:`PlatformInfoResponse`
+    platform : :class:`PlatformInfo`
         Platform information related to the Instance.
-    datastores : list[:class:`TargetDatastoreResponse`]
+    datastores : list[:class:`TargetDatastore`]
         The Datastores that the Controller has access to.
     creates_in_containers : :class:`bool`
         The Controller will create the Instances in containers.

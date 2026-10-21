@@ -64,6 +64,7 @@ from .modules import (
     LoginResults,
     LoginUserInfo,
     Module,
+    PermissionNode,
     Players,
     Port,
     Role,
@@ -73,6 +74,7 @@ from .modules import (
     SettingSpec,
     SettingsSpecParent,
     Status,
+    StructuredDiagnostics,
     TimedTrigger,
     TriggerID,
     UpdateInfo,
@@ -93,7 +95,7 @@ if TYPE_CHECKING:
         LoginResultsResponse,
         LoginUserInfoResponse,
         ModuleResponse,
-        PermissionNode,
+        PermissionNodeResponse,
         PortResponse,
         RoleResponse,
         SessionResponse,
@@ -2260,9 +2262,10 @@ class Core(Base):
     async def get_permissions_spec(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[PermissionNode]:
+    ) -> list[PermissionNode] | list[PermissionNodeResponse]:
         """|coro|
 
         Retrieves the AMP Permissions node tree.
@@ -2271,6 +2274,8 @@ class Core(Base):
 
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -2279,7 +2284,7 @@ class Core(Base):
         Returns
         -------
         list[:class:`PermissionNode`]
-            On success returns a :class:`PermissionNode` dataclass.
+            On success returns a list of :class:`PermissionNode` dataclasses, each holding its children.
 
         """
         await self._reauth()
@@ -2290,6 +2295,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetPermissionsSpec", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return [build(PermissionNode, item) for item in result]
         return result
 
     async def get_port_summaries(
@@ -2739,9 +2748,10 @@ class Core(Base):
     async def get_structured_diagnostics(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> StructuredDiagnosticsResponse:
+    ) -> StructuredDiagnostics | StructuredDiagnosticsResponse:
         """|coro|
 
         Retrieves the structured diagnostics of the Instance.
@@ -2754,6 +2764,8 @@ class Core(Base):
 
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -2761,8 +2773,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`StructuredDiagnosticsResponse`
-            On success returns a dictionary with the `core` diagnostics and the module specific `application` diagnostics.
+        :class:`StructuredDiagnostics`
+            On success returns a :class:`StructuredDiagnostics` dataclass with the `core` and the module specific `application` diagnostics.
 
         """
         await self._reauth()
@@ -2773,6 +2785,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetStructuredDiagnostics", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is True:
+            return build(StructuredDiagnostics, result)
         return result  # pyright: ignore[reportReturnType]
 
     async def get_tasks(
