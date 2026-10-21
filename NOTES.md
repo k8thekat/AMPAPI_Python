@@ -24,8 +24,17 @@ outside the union cannot.
 
 ## Dataclasses vs. the raw JSON
 
-Response dataclasses are built by unpacking the raw dict straight in - `SettingSpec(**result)`.
-No generic converter, no `cast`. `sanitize_json` has already snake_cased the keys by then.
+Response dataclasses are built with `build(Cls, result)` (`modules.py`), never `Cls(**result)` and never `cast`.
+`sanitize_json` has already snake_cased the keys by then. `build` reads the field type hints (cached per class) and
+builds nested dataclasses through lists and unions, trying a union's members in order, so the dataclass goes first
+(`list[DCConsumes] | list[ConsumeResponse]`). A key the dataclass doesn't declare is dropped and logged once per
+class and key at WARNING. 4.x used dataclass-wizard's `fromdict`, which dropped them silently, and the 5.0.0 baseline's
+`Cls(**result)` raised on them. `build` rejects a non-dataclass: `DeploymentTemplate` and `UserApplicationData` are
+still unpacked with `**`.
+
+A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
+`TriggerTasks.parameter_mapping` is the one case: its keys are the snake_cased `consumes` names of the task's method
+(eg. `seconds` for `Event.CommonCorePlugin.Wait`), checked against 117 live tasks. `DCParameterMapping` is unused.
 
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is
 widened to `Rich | Raw` and `__post_init__` does the conversion. `Port.protocol`, `Status.state`,
@@ -39,9 +48,15 @@ An annotation that the runtime does not honour is worse than a loose one; severa
 claiming a nested dataclass that nothing ever built. Where the nested shape is still unconfirmed
 the field is left raw and tagged, rather than annotated aspirationally.
 
-AMP adds keys between versions, and `SomeDataclass(**result)` raises `TypeError` on any key the
-dataclass does not declare. AMP 2.8 added `ports` to the status, three keys to each port and five to
-each backup. New fields go in defaulted so older responses still construct.
+AMP adds keys between versions. AMP 2.8 added `ports` to the status, three keys to each port and five to
+each backup, plus `oidc_sub` (users), `local_login_enabled` (module info), `warn_text` / `warn_when_value` (every
+setting), `notice` (schedule methods), `locked*` (method arguments) and four error keys on trigger tasks. New fields
+go in defaulted so older responses still construct. A dropped-key WARNING from `build` is the cue to declare one.
+
+`Core.get_setting_spec` categories vary by ADS, Instance and licence: only `system_settings` and
+`security_and_privacy` are always sent. The VMs send no `branding`, Kat's live Instances do. Module categories have
+a colon in the name (`valheim:stadiacontroller`, `valheim_plus:extension`) and go into `SettingsSpecParent.modules`.
+`AnalyticsCountryData.session_percent` is never sent, AMP's key is `sessions_percent` (both fields exist for now).
 
 `Base.sanitize_json` is not safe to run twice on keys: a second pass strips the underscores
 (`active_users` -> `activeusers`). The library sanitizes each response once, in `_response_handler`, and
@@ -56,8 +71,14 @@ Instance sends. A stopped Instance reports its `metrics` as `{}`.
 ## Captured responses
 
 `controller_dump.py -section LIVE -out ./_responses` captures responses from a live setup (it hits
-the server, so not unattended). The 2.6.5.0 ADS dumps in `_responses/` were overwritten by a
-Controller run, so a non-Controller pass is still owed.
+the server, so not unattended). The 2.6.5.0 dumps at the root of `_responses/` are a Controller run. The
+2026-10-20 refresh (#1) is in `_responses/vm_2.8.0.8_20261020/` (vm1 Controller, vm2 direct and through the
+Controller, seven Instances) and `_responses/live_2.8.0.8_20261020/` (Kat's ADS and three running Minecraft
+Instances, without sessions or file contents). The `[LIVE]` login needs `bridge.use_2fa = True`, its TOKEN is the
+TOTP secret.
+
+`Core/GetOIDCLogoutUrl` is spelled `Url`, unlike `Core/GetOIDCLoginURL`. The spec sheets snake_case method names, so
+they can't show the casing; "No such web method" on a method the spec lists is the sign of a casing mismatch.
 
 Shapes not yet confirmed against a live payload:
 

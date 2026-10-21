@@ -4,9 +4,6 @@ A small todo list local to the project.
 Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md` tracks their type and status.
 
 
-- (#1) Refresh `_responses/` from a non-Controller (ADS) setup; see NOTES.md "Captured responses".
-
-
 ## ampapi/adsmodule.py
 
 ---
@@ -46,8 +43,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#8) Nested shapes are still raw dicts (`Methods.consumes`, `Triggers.tasks`, `TriggerTasks.parameter_mapping`,
-  `RemoteTargetInfo`); Kat to review the `build(cls, data)` prototype on branch `prototype/nested-build`.
 
 ## ampapi/util.py
 
