@@ -82,6 +82,32 @@ ResponseAliasFull = Union[ResponseTypeAlias, str, bool, None]
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
+# The three passes of `Base.camel_to_snake_re`, compiled once.
+_PLURAL_ACRONYM_PATTERN: re.Pattern[str] = re.compile(r"([A-Z]{2,})(s)(?=[^a-z]|$)")
+_WORD_BOUNDARY_PATTERN: re.Pattern[str] = re.compile("(.)([A-Z][a-z]+)")
+_LOWER_UPPER_PATTERN: re.Pattern[str] = re.compile("([a-z0-9])([A-Z])")
+
+
+def _plural_acronym_repl(match: re.Match[str]) -> str:
+    """Lowers an acronym's trailing letters, so `IDs` -> `Ids` and `CPUs` -> `Cpus`."""
+    return match.group(1)[0] + match.group(1)[1:].lower() + match.group(2)
+
+
+# Bounded because some answers are keyed by player ID, an unbounded cache would grow without limit.
+@functools.lru_cache(maxsize=4096)
+def _snake_key(key: str) -> str:
+    """The `snake_case` form of one AMP response key, remembered per key string.
+
+    Spaces and underscores are stripped, :attr:`Base.json_key_mapping` is applied and
+    :meth:`Base.camel_to_snake_re` does the rest.
+    """
+    # To handle keys with spaces and to remove underscores that exist already.
+    new_key: str = key.replace(" ", "").replace("_", "")
+    if new_key in Base.json_key_mapping:
+        new_key = Base.json_key_mapping[new_key]
+    return Base.camel_to_snake_re(data=new_key)
+
+
 class ResponseHandlerOptions(TypedDict, total=False):
     """Response handling parameters.
 
@@ -957,13 +983,16 @@ class Base:
         """
         # Pre-pass: collapse plural acronyms so e.g. "IDs" -> "Ids" and "CPUs" -> "Cpus"
         # before the main passes split them incorrectly into "i_ds" / "cp_us".
-        data = re.sub(
-            pattern=r"([A-Z]{2,})(s)(?=[^a-z]|$)",
-            repl=lambda m: m.group(1)[0] + m.group(1)[1:].lower() + m.group(2),
-            string=data,
-        )
-        data = re.sub(pattern="(.)([A-Z][a-z]+)", repl=r"\1_\2", string=data)
-        return re.sub(pattern="([a-z0-9])([A-Z])", repl=r"\1_\2", string=data).lower()
+        # data = re.sub(
+        #     pattern=r"([A-Z]{2,})(s)(?=[^a-z]|$)",
+        #     repl=lambda m: m.group(1)[0] + m.group(1)[1:].lower() + m.group(2),
+        #     string=data,
+        # )
+        # data = re.sub(pattern="(.)([A-Z][a-z]+)", repl=r"\1_\2", string=data)
+        # return re.sub(pattern="([a-z0-9])([A-Z])", repl=r"\1_\2", string=data).lower()
+        data = _PLURAL_ACRONYM_PATTERN.sub(repl=_plural_acronym_repl, string=data)
+        data = _WORD_BOUNDARY_PATTERN.sub(repl=r"\1_\2", string=data)
+        return _LOWER_UPPER_PATTERN.sub(repl=r"\1_\2", string=data).lower()
 
     @staticmethod
     def camel_case_data(data: dict[str, Any]) -> dict[str, Any]:
@@ -1183,30 +1212,40 @@ class Base:
             # Bind the narrowed value to a typed local; `json` is Any, so everything derived from it
             # would otherwise be Unknown under strict mode.
             source_list: list[Any] = json  # pyright: ignore[reportUnknownVariableType]
-            entries: list[Any] = copy.copy(x=source_list)
-            for index, entry in enumerate(source_list):
-                # If any of our entries are a dictionary; let's go through them.
-                if isinstance(entry, dict):
-                    entries[index] = cls.sanitize_json(json=entry)
-            return entries
+            # entries: list[Any] = copy.copy(x=source_list)
+            # for index, entry in enumerate(source_list):
+            #     # If any of our entries are a dictionary; let's go through them.
+            #     if isinstance(entry, dict):
+            #         entries[index] = cls.sanitize_json(json=entry)
+            # return entries
+            # Only dictionary entries are sanitized; anything else (nested lists included) is kept as is.
+            return [cls.sanitize_json(json=entry) if isinstance(entry, dict) else entry for entry in source_list]
 
         if isinstance(json, dict):
             source_map: dict[str, Any] = json  # pyright: ignore[reportUnknownVariableType]
-            # Iterate the source and build into the copy; mutating what we iterate would raise.
-            new_map: dict[str, Any] = copy.copy(x=source_map)
+            # new_map: dict[str, Any] = copy.copy(x=source_map)
+            # for old_key, old_value in source_map.items():
+            #     new_map.pop(old_key)
+            #     # AMP setting nodes (eg. `ADSModule.Defaults.DefaultAuthServerURL`) are the only dotted keys AMP sends.
+            #     # None of the captured responses has a dotted field name, so a dotted key is kept exactly as sent.
+            #     if "." in old_key:
+            #         new_map[old_key] = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+            #         continue
+            #     # To handle keys with spaces and to remove underscores that exist already.
+            #     new_key: str = old_key.replace(" ", "").replace("_", "")
+            #     if new_key in cls.json_key_mapping:
+            #         new_key = cls.json_key_mapping[new_key]
+            #     new_key = cls.camel_to_snake_re(data=new_key)
+            #     new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+            #     new_map[new_key] = new_value
+            # return new_map
+            # Build a fresh dict rather than copying and popping, the key conversion is cached per key string.
+            new_map: dict[str, Any] = {}
             for old_key, old_value in source_map.items():
-                new_map.pop(old_key)
+                new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
                 # AMP setting nodes (eg. `ADSModule.Defaults.DefaultAuthServerURL`) are the only dotted keys AMP sends.
                 # None of the captured responses has a dotted field name, so a dotted key is kept exactly as sent.
-                if "." in old_key:
-                    new_map[old_key] = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
-                    continue
-                # To handle keys with spaces and to remove underscores that exist already.
-                new_key: str = old_key.replace(" ", "").replace("_", "")
-                if new_key in cls.json_key_mapping:
-                    new_key = cls.json_key_mapping[new_key]
-                new_key = cls.camel_to_snake_re(data=new_key)
-                new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+                new_key: str = old_key if "." in old_key else _snake_key(old_key)
                 new_map[new_key] = new_value
             return new_map
 

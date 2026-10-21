@@ -35,7 +35,7 @@ from pprint import pformat
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self, TypeGuard, Union
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from typing import Self
 
     from typing_extensions import ParamSpec, TypeVar
@@ -630,24 +630,48 @@ def _field_types(cls: type[Any]) -> dict[str, Any]:
     return typing.get_type_hints(cls, globalns=namespace)
 
 
-def _convert(hint: Any, value: Any) -> Any:
-    """Build `value` into the dataclass its type hint names, recursing into lists, dicts and unions."""
+def _converter(hint: Any) -> Callable[[Any], Any] | None:
+    """The function that turns a response value into what the type hint names, worked out once from the hint.
+
+    Returns None when the hint holds no dataclass or list, the value is then used as sent.
+    """
     origin = typing.get_origin(hint)
-    # A union tries each member in order. `list[Consumes] | list[ConsumesResponse]` builds Consumes.
+    # A union tries each member in order and takes the first that converts.
+    # `list[Consumes] | list[ConsumesResponse]` builds Consumes.
     if origin is Union or origin is types.UnionType:
+        options: list[Callable[[Any], Any]] = []
         for option in typing.get_args(hint):
             if option is type(None):
                 continue
-            converted = _convert(option, value)
-            if converted is not value:
-                return converted
-        return value
-    if isinstance(hint, type) and is_dataclass(hint) and _is_json_object(value):
-        return build(hint, value)
-    if origin is list and _is_json_array(value):
-        element_hint: Any = (typing.get_args(hint) or (Any,))[0]
-        return [_convert(element_hint, item) for item in value]
-    return value
+            option_converter = _converter(option)
+            if option_converter is not None:
+                options.append(option_converter)
+        if not options:
+            return None
+
+        def convert_union(value: Any) -> Any:
+            for option_converter in options:
+                converted = option_converter(value)
+                if converted is not value:
+                    return converted
+            return value
+
+        return convert_union
+    if isinstance(hint, type) and is_dataclass(hint):
+        return lambda value: build(hint, value) if _is_json_object(value) else value
+    if origin is list:
+        element_converter = _converter((typing.get_args(hint) or (Any,))[0])
+        if element_converter is None:
+            return lambda value: list(value) if _is_json_array(value) else value
+        return lambda value: [element_converter(item) for item in value] if _is_json_array(value) else value
+    return None
+
+
+@functools.cache
+def _build_plan(cls: type[Any]) -> dict[str, Callable[[Any], Any] | None]:
+    """Each field name of the dataclass `cls` and the converter for its value, worked out once per class."""
+    field_types = _field_types(cls)
+    return {entry.name: _converter(field_types[entry.name]) for entry in fields(cls)}
 
 
 def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> DataclassT:
@@ -671,18 +695,22 @@ def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> Datacla
     if not is_dataclass(cls):
         msg = f"build() needs a dataclass, got {cls!r}."
         raise TypeError(msg)
-    names: set[str] = {entry.name for entry in fields(cls)}
-    for key in data.keys() - names:
-        if (cls.__name__, key) not in _reported_unknown_keys:
-            _reported_unknown_keys.add((cls.__name__, key))
-            LOGGER.warning(
-                "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
-                "build",
-                cls.__name__,
-                key,
-            )
-    field_types = _field_types(cls)
-    return cls(**{key: _convert(field_types[key], value) for key, value in data.items() if key in names})
+    plan = _build_plan(cls)
+    values: dict[str, Any] = {}
+    for key, value in data.items():
+        if key not in plan:
+            if (cls.__name__, key) not in _reported_unknown_keys:
+                _reported_unknown_keys.add((cls.__name__, key))
+                LOGGER.warning(
+                    "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
+                    "build",
+                    cls.__name__,
+                    key,
+                )
+            continue
+        convert = plan[key]
+        values[key] = value if convert is None else convert(value)
+    return cls(**values)
 
 
 @dataclass(slots=True)
