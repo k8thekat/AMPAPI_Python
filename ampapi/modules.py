@@ -1139,10 +1139,12 @@ class DCParameterMapping:
 
     The arguments a task passes to its method. An argument the task's method doesn't take is None.
     AMP sends every value as a string (eg. `"true"`, `"55"`), which can hold a trigger variable (eg. `{@User}`).
+    An empty string in a converted field becomes None.
 
     .. versionchanged:: 5.0.0
         Holds the arguments of every task method in AMP-2.8.0.8, not only `user`, `reason`, `title` and `subtitle`.
         An argument the task doesn't hold is None, not "".
+        Booleans, numbers and `state` are converted from AMP's strings. A value that doesn't parse stays a string.
 
     Attributes
     ----------
@@ -1153,7 +1155,7 @@ class DCParameterMapping:
         `WebRequestPlugin.DiscordMessage`), default is None.
     backup_id : Union[:class:`str`, None], optional
         The ID of the backup to restore (`LocalFileBackupPlugin.RestoreBackup`), default is None.
-    backup_while_running : Union[:class:`str`, None], optional
+    backup_while_running : Union[:class:`bool`, :class:`str`, None], optional
         If the backup is taken while the application is running (`LocalFileBackupPlugin.TakeBackup`), default is None.
     body : Union[:class:`str`, None], optional
         The body of the push message (`WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`), default is
@@ -1174,7 +1176,7 @@ class DCParameterMapping:
         The text of the message (`WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
     description : Union[:class:`str`, None], optional
         The description of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    dirty_only : Union[:class:`str`, None], optional
+    dirty_only : Union[:class:`bool`, :class:`str`, None], optional
         If the backup is taken only when files have changed since the last one (`LocalFileBackupPlugin.TakeBackup`),
         default is None.
     display_username : Union[:class:`str`, None], optional
@@ -1203,7 +1205,7 @@ class DCParameterMapping:
     instance_name_or_id : Union[:class:`str`, None], optional
         The name or ID of the Instance (`ADSModule.RestartInstance`, `ADSModule.StartInstance`,
         `ADSModule.StopInstance`), default is None.
-    local : Union[:class:`str`, None], optional
+    local : Union[:class:`bool`, :class:`str`, None], optional
         If the backup is kept locally (`LocalFileBackupPlugin.TakeBackup`), default is None.
     mac_address : Union[:class:`str`, None], optional
         The MAC address to send the Wake-on-LAN packet to (`CommonCorePlugin.SendWakeOnLan`), default is None.
@@ -1223,23 +1225,23 @@ class DCParameterMapping:
         The player the message is sent to (`MinecraftModule.SendUserMessage`), default is None.
     priority : Union[:class:`str`, None], optional
         The priority of the email (a `MailPriority` name) (`EmailSenderPlugin.SendMail`), default is None.
-    quantity : Union[:class:`str`, None], optional
+    quantity : Union[:class:`int`, :class:`str`, None], optional
         The amount of XP to give (`MinecraftModule.GiveXP`), default is None.
     reason : Union[:class:`str`, None], optional
         The reason given to the user (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`,
         `MinecraftModule.KickUser`), default is None.
-    restart_even_if_not_running : Union[:class:`str`, None], optional
+    restart_even_if_not_running : Union[:class:`bool`, :class:`str`, None], optional
         If the application is started after the backup even when it was not running before
         (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    s3 : Union[:class:`str`, None], optional
+    s3 : Union[:class:`bool`, :class:`str`, None], optional
         If the backup is uploaded to S3 (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    seconds : Union[:class:`str`, None], optional
+    seconds : Union[:class:`float`, :class:`str`, None], optional
         The number of seconds to wait (`CommonCorePlugin.Wait`), default is None.
-    state : Union[:class:`str`, None], optional
+    state : Union[:class:`InstanceState`, :class:`str`, None], optional
         The application state (an `ApplicationState` name) (`CommonCorePlugin.ElseIfAppState`,
         `CommonCorePlugin.IfAppState`, `CommonCorePlugin.IfNotAppState`, `CommonCorePlugin.WaitForAppState`), default is
         None.
-    sticky : Union[:class:`str`, None], optional
+    sticky : Union[:class:`bool`, :class:`str`, None], optional
         If the backup is kept when old backups are removed (`LocalFileBackupPlugin.TakeBackup`), default is None.
     subject : Union[:class:`str`, None], optional
         The subject of the email (`EmailSenderPlugin.SendMail`), default is None.
@@ -1253,7 +1255,7 @@ class DCParameterMapping:
         The warning sent thirty seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
     thumbnail_url : Union[:class:`str`, None], optional
         The URL of the embed's thumbnail (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    timeout_seconds : Union[:class:`str`, None], optional
+    timeout_seconds : Union[:class:`int`, :class:`str`, None], optional
         The number of seconds to wait for the state before giving up (`CommonCorePlugin.WaitForAppState`), default is
         None.
     title : Union[:class:`str`, None], optional
@@ -1282,23 +1284,34 @@ class DCParameterMapping:
         `WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
     when : Union[:class:`str`, None], optional
         The in-game time to set (`MinecraftModule.SetGameTime`), default is None.
-    x : Union[:class:`str`, None], optional
+    x : Union[:class:`float`, :class:`str`, None], optional
         The X coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
-    y : Union[:class:`str`, None], optional
+    y : Union[:class:`float`, :class:`str`, None], optional
         The Y coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
-    y_angle : Union[:class:`str`, None], optional
+    y_angle : Union[:class:`float`, :class:`str`, None], optional
         The Y angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
-    z : Union[:class:`str`, None], optional
+    z : Union[:class:`float`, :class:`str`, None], optional
         The Z coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
-    z_angle : Union[:class:`str`, None], optional
+    z_angle : Union[:class:`float`, :class:`str`, None], optional
         The Z angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
 
     """
 
+    _bool_fields: ClassVar[tuple[str, ...]] = (
+        "backup_while_running",
+        "dirty_only",
+        "local",
+        "restart_even_if_not_running",
+        "s3",
+        "sticky",
+    )
+    _int_fields: ClassVar[tuple[str, ...]] = ("quantity", "timeout_seconds")
+    _float_fields: ClassVar[tuple[str, ...]] = ("seconds", "x", "y", "z", "y_angle", "z_angle")
+
     authorization_header: Union[str, None] = field(default=None)
     avatar_url: Union[str, None] = field(default=None)
     backup_id: Union[str, None] = field(default=None)
-    backup_while_running: Union[str, None] = field(default=None)
+    backup_while_running: Union[bool, str, None] = field(default=None)
     body: Union[str, None] = field(default=None)
     button_label: Union[str, None] = field(default=None)
     button_url: Union[str, None] = field(default=None)
@@ -1308,7 +1321,7 @@ class DCParameterMapping:
     content_type: Union[str, None] = field(default=None)
     contents: Union[str, None] = field(default=None)
     description: Union[str, None] = field(default=None)
-    dirty_only: Union[str, None] = field(default=None)
+    dirty_only: Union[bool, str, None] = field(default=None)
     display_username: Union[str, None] = field(default=None)
     existing_message_id: Union[str, None] = field(default=None)
     fields: Union[str, None] = field(default=None)
@@ -1320,7 +1333,7 @@ class DCParameterMapping:
     image_url: Union[str, None] = field(default=None)
     input: Union[str, None] = field(default=None)
     instance_name_or_id: Union[str, None] = field(default=None)
-    local: Union[str, None] = field(default=None)
+    local: Union[bool, str, None] = field(default=None)
     mac_address: Union[str, None] = field(default=None)
     message: Union[str, None] = field(default=None)
     one_hour: Union[str, None] = field(default=None)
@@ -1329,20 +1342,20 @@ class DCParameterMapping:
     payload: Union[str, None] = field(default=None)
     player: Union[str, None] = field(default=None)
     priority: Union[str, None] = field(default=None)
-    quantity: Union[str, None] = field(default=None)
+    quantity: Union[int, str, None] = field(default=None)
     reason: Union[str, None] = field(default=None)
-    restart_even_if_not_running: Union[str, None] = field(default=None)
-    s3: Union[str, None] = field(default=None)
-    seconds: Union[str, None] = field(default=None)
-    state: Union[str, None] = field(default=None)
-    sticky: Union[str, None] = field(default=None)
+    restart_even_if_not_running: Union[bool, str, None] = field(default=None)
+    s3: Union[bool, str, None] = field(default=None)
+    seconds: Union[float, str, None] = field(default=None)
+    state: Union[InstanceState, str, None] = field(default=None)
+    sticky: Union[bool, str, None] = field(default=None)
     subject: Union[str, None] = field(default=None)
     subtitle: Union[str, None] = field(default=None)
     target: Union[str, None] = field(default=None)
     thirty_mins: Union[str, None] = field(default=None)
     thirty_secs: Union[str, None] = field(default=None)
     thumbnail_url: Union[str, None] = field(default=None)
-    timeout_seconds: Union[str, None] = field(default=None)
+    timeout_seconds: Union[int, str, None] = field(default=None)
     title: Union[str, None] = field(default=None)
     to: Union[str, None] = field(default=None)
     uri: Union[str, None] = field(default=None)
@@ -1352,11 +1365,48 @@ class DCParameterMapping:
     value_to_compare: Union[str, None] = field(default=None)
     webhook_url: Union[str, None] = field(default=None)
     when: Union[str, None] = field(default=None)
-    x: Union[str, None] = field(default=None)
-    y: Union[str, None] = field(default=None)
-    y_angle: Union[str, None] = field(default=None)
-    z: Union[str, None] = field(default=None)
-    z_angle: Union[str, None] = field(default=None)
+    x: Union[float, str, None] = field(default=None)
+    y: Union[float, str, None] = field(default=None)
+    y_angle: Union[float, str, None] = field(default=None)
+    z: Union[float, str, None] = field(default=None)
+    z_angle: Union[float, str, None] = field(default=None)
+
+    def __post_init__(self) -> None:
+        # AMP sends every value as a string. An empty one becomes None, a value that doesn't parse stays as sent.
+        for name in self._bool_fields:
+            raw_value = getattr(self, name)
+            if raw_value == "":
+                setattr(self, name, None)
+            elif isinstance(raw_value, str) and raw_value.lower() in ("true", "false"):
+                setattr(self, name, raw_value.lower() == "true")
+
+        for name in self._int_fields:
+            raw_value = getattr(self, name)
+            if raw_value == "":
+                setattr(self, name, None)
+            elif isinstance(raw_value, str):
+                try:
+                    setattr(self, name, int(raw_value))
+                except ValueError:
+                    pass
+
+        for name in self._float_fields:
+            raw_value = getattr(self, name)
+            if raw_value == "":
+                setattr(self, name, None)
+            elif isinstance(raw_value, str):
+                try:
+                    setattr(self, name, float(raw_value))
+                except ValueError:
+                    pass
+
+        if self.state == "":
+            self.state = None
+        elif isinstance(self.state, str):
+            try:
+                self.state = InstanceState(int(self.state))
+            except ValueError:
+                pass
 
 
 class DeploymentTemplate:

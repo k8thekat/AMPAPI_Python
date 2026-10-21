@@ -144,7 +144,8 @@ Returned data
   ``request_params`` and the ``**response_params`` the other methods take (eg. ``to_file``).
 - :class:`~ampapi.modules.DCParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
   ``seconds``, ``message``, ``input``); 4.x kept only ``user``, ``reason``, ``title`` and ``subtitle``. An argument
-  the task doesn't hold is ``None``, not ``""``.
+  the task doesn't hold is ``None``, not ``""``. Booleans, numbers and ``state`` are converted from AMP's strings
+  (a value that doesn't parse stays a string).
 - :attr:`~ampapi.modules.RemoteTargetInfo.datastores` holds :class:`~ampapi.modules.TargetDatastore` (an ID and a
   name, all AMP sends there); 4.x typed it as ``InstanceDatastore``.
 - ``AnalyticsCountryData.session_percent`` is renamed
