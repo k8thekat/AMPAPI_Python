@@ -1295,6 +1295,13 @@ class RemoteTargetInfoResponse(TypedDict):
     deploys_in_containers: bool
 
 
+class RoleMemberResponse(TypedDict):
+    """Represents an AMP user in :attr:`RoleResponse.members`."""
+
+    id: str
+    name: str
+
+
 class RoleResponse(TypedDict):
     id: str
     is_default: bool
@@ -1302,7 +1309,7 @@ class RoleResponse(TypedDict):
     description: str
     hidden: bool
     permissions: list[str]
-    members: list[str]
+    members: list[RoleMemberResponse]
     is_instance_specific: bool
     is_common_role: bool
     disable_edits: bool

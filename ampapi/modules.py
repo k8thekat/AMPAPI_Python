@@ -155,6 +155,7 @@ __all__ = (
     "ProvisionSettingInfo",
     "RemoteTargetInfo",
     "Role",
+    "RoleMember",
     "RunningTask",
     "ScheduleData",
     "Session",
@@ -2987,8 +2988,11 @@ class Role:
         If the AMP role is hidden or not.
     permissions : :class:`list[str]`
         The list of permissions the AMP role has.
-    members : :class:`list[str]`
+    members : list[:class:`RoleMember`]
         The list of AMP users who have the role.
+
+        .. versionchanged:: 5.0.0
+            `members` holds :class:`RoleMember` objects.
     is_instance_specific : :class:`bool`
         If the AMP role is only for a specific Instance or not.
     is_common_role : :class:`bool`
@@ -3004,10 +3008,30 @@ class Role:
     description: str
     hidden: bool
     permissions: list[str]
-    members: list[str]
+    # `build(Role, result)` turns these into dataclasses.
+    members: list[RoleMember]
     is_instance_specific: bool
     is_common_role: bool
     disable_edits: bool
+
+
+@dataclass(slots=True)
+class RoleMember:
+    """Represents an AMP user in :attr:`Role.members`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    id : :class:`str`
+        The ID of the AMP user.
+    name : :class:`str`
+        The name of the AMP user.
+
+    """
+
+    id: str
+    name: str
 
 
 @dataclass(slots=True)

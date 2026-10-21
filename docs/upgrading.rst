@@ -162,6 +162,8 @@ Returned data
   name, all AMP sends there); 4.x typed it as ``InstanceDatastore``.
 - ``AnalyticsCountryData.session_percent`` is renamed
   :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
+- :attr:`~ampapi.modules.Role.members` holds :class:`~ampapi.modules.RoleMember` (``id`` and ``name``); 4.x hinted it
+  ``list[str]``.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
 - :attr:`~ampapi.modules.Consumes.enum_values` is None when the argument has no values, not ``""``.
 - :attr:`~ampapi.modules.Module.branding` is a :class:`~ampapi.modules.Branding` dataclass; 4.x left it as a dict.
