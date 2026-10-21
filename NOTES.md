@@ -67,6 +67,14 @@ An annotation that the runtime does not honour is worse than a loose one; severa
 claiming a nested dataclass that nothing ever built. Where the nested shape is still unconfirmed
 the field is left raw and tagged, rather than annotated aspirationally.
 
+The response dataclasses are `slots=True` (5.0.0, #9, Kat 2026-10-21). Measured with tracemalloc on vm1 bodies: 11-14%
+less per object on most classes, 40-66% on classes with many defaulted fields (`ParameterMapping` 1860 -> 764 bytes,
+`Triggers` 2857 -> 1680). A slotted dataclass has no `__dict__`: `__repr__` goes through `_field_values` and code
+reads `fields()` rather than `vars()`. `__post_init__` can only set declared fields. `Instance.__slots__` is
+different: its 28 names are real slots, but `Base` and the mixins have none and an Instance keeps a `__dict__` for its
+8 private attributes. Slotting that whole chain saves 48 bytes per Instance, which isn't worth it. The tuple stays as
+`_parse_instance_data`'s field list. Plan and numbers: `.local_data/plans/memory_overhead/plan.md`.
+
 AMP adds keys between versions. AMP 2.8 added `ports` to the status, three keys to each port and five to
 each backup, plus `oidc_sub` (users), `local_login_enabled` (module info), `warn_text` / `warn_when_value` (every
 setting), `notice` (schedule methods), `locked*` (method arguments) and four error keys on trigger tasks. New fields

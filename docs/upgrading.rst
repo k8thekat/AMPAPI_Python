@@ -42,6 +42,10 @@ Renamed attributes: ``Base.url`` -> ``endpoint_url``, ``FileChunk.base_64_data``
   ``Response`` suffix: ``types_.Consumes`` -> ``ConsumesResponse``, ``MethodsData`` -> ``MethodsResponse``,
   ``types_.ParameterMapping`` -> ``ParameterMappingResponse`` and ``MCUserData`` -> ``MCUserResponse``. ``Consumes``
   and ``ParameterMapping`` are now the dataclasses in :mod:`ampapi.modules`.
+- The response dataclasses in :mod:`ampapi.modules` are slotted (``@dataclass(slots=True)``). They have no
+  ``__dict__``: ``vars(obj)`` raises, an attribute that isn't a field can't be set on them, and they can't be weakly
+  referenced. :func:`dataclasses.asdict`, :func:`dataclasses.fields`, :func:`dataclasses.replace`, pickling and copying
+  work as before.
 
 
 Moved modules

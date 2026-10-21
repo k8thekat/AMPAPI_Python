@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import traceback
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from logging import Logger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union
@@ -944,7 +944,9 @@ def _settings_node_parse(
         file.write("\n" + _wildcard_nodes)
         file.write(f"\n{example_note}\n")
 
-    for key in sorted(vars(data)):
+    # for key in sorted(vars(data)):
+    # SettingsSpecParent is slotted and has no __dict__. Its fields hold the same names.
+    for key in sorted(field.name for field in fields(data)):
         # Our second headers.
         header: str = "Settings " + key.title() + " Nodes"
         # file.write("\n:raw-html:`<hr>`\n")

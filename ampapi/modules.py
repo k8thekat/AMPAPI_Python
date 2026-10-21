@@ -209,6 +209,25 @@ def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
     return new_vars
 
 
+def _field_values(instance: Any) -> dict[str, Any]:
+    """Collect a dataclass instance's field values into a dict.
+
+    A `slots=True` dataclass has no `__dict__`, and `vars(self)` raises on it. The `__repr__` methods use this instead.
+
+    Parameters
+    ----------
+    instance : Any
+        The dataclass instance.
+
+    Returns
+    -------
+    dict[:class:`str`, Any]
+        Field name to value, in field order.
+
+    """
+    return {field_.name: getattr(instance, field_.name) for field_ in fields(instance)}
+
+
 def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
     """Deconstruct a dataclass into an API parameter dict.
 
@@ -273,7 +292,7 @@ def timestamp_converter(timestamp: str) -> datetime.datetime:
     return datetime.datetime.fromisoformat(timestamp)
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionResult:
     """Represents the JSON response data from most API Endpoints.
 
@@ -300,10 +319,11 @@ class ActionResult:
     support_title: Union[str, None] = field(default=None)
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalyticsCountryData:
     """Represents the JSON response data from :attr:`~AnalyticsSummary.country_data`.
 
@@ -342,7 +362,7 @@ class AnalyticsCountryData:
     sessions_percent: float
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalyticsFilter:
     """A dataclass to handle filtering for :meth:`~AnalyticsPlugin.get_analytics_summary`, pass this dataclass in as the ``filter_``
 
@@ -407,7 +427,7 @@ class AnalyticsFilter:
             raise ValueError(msg)
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalyticsGraphData:
     """Represents the JSON response data for the entries of :attr:`AnalyticsSummary.graph_data` and for
     :attr:`AnalyticsSummary.busiest_time` and :attr:`AnalyticsSummary.quietest_time`.
@@ -430,7 +450,7 @@ class AnalyticsGraphData:
     count: int
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalyticsStats:
     """Represents the JSON response data from :attr:`AnalyticsSummary.stats`.
 
@@ -471,7 +491,7 @@ class AnalyticsStats:
     raw_name: str = ""
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalyticsSummary:
     """Represents the JSON response data from :meth:`~AnalyticsPlugin.get_analytics_summary`.
 
@@ -516,10 +536,11 @@ class AnalyticsSummary:
     top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalyticsTopPlayers:
     """Represents the JSON Response data from :attr:`~Analytics_Summary.top_players`.
 
@@ -542,7 +563,7 @@ class AnalyticsTopPlayers:
     username: str
 
 
-@dataclass
+@dataclass(slots=True)
 class APIParams:
     """A class to hold Login information for the AMP API.
 
@@ -664,7 +685,7 @@ def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> Datacla
     return cls(**{key: _convert(field_types[key], value) for key, value in data.items() if key in names})
 
 
-@dataclass
+@dataclass(slots=True)
 class APISession:
     """Stores the Session ID and the TTL usage for :attr:`APIParams._sessions`.
 
@@ -684,7 +705,7 @@ class APISession:
         return f"ID: {self.id} | TTL: {self.ttl}"
 
 
-@dataclass
+@dataclass(slots=True)
 class Application:
     """Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`
     and :meth:`ADSModule.get_supported_app_summaries`.
@@ -751,10 +772,11 @@ class Application:
     settings: dict[str, str] = field(default_factory=dict[str, str])
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class AuditLogEntry:
     """Represents the JSON response data from :meth:`Core.get_audit_log_entries`
 
@@ -793,10 +815,11 @@ class AuditLogEntry:
             self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class Backup:
     """Represents the JSON response data from :meth:`LocalFileBackupPlugin.get_backups`.
 
@@ -863,10 +886,11 @@ class Backup:
             self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class Branding:
     """Represents the JSON response data from :attr:`Module.branding`.
 
@@ -924,7 +948,7 @@ class Branding:
     hosted_analytics_tag: str
 
 
-@dataclass
+@dataclass(slots=True)
 class BukkitPlugin:
     """Represents the JSON response data from any Bukkit function call. Related to :class:`MinecraftModule`.
 
@@ -1007,10 +1031,11 @@ class BukkitPlugin:
     donation_link: str = field(default="")
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class ConsoleEntries:
     """Represents the JSON response data from :attr:`Updates.console_entries`.
 
@@ -1041,10 +1066,11 @@ class ConsoleEntries:
             self.timestamp = timestamp_converter(timestamp=self.timestamp)
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class CPUInfo:
     """Represents the JSON response data from :class:`~PlatformInfo.cpu_info` attribute.\n
     Original Author: p0t4t0sandwich
@@ -1078,10 +1104,11 @@ class CPUInfo:
     total_threads: int
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
 
-@dataclass
+@dataclass(slots=True)
 class CreateInstance:
     """Represents the JSON response data from :meth:`ADSModule.create_instance` function call.
 
@@ -1178,7 +1205,7 @@ class CreateInstance:
         return data
 
 
-@dataclass
+@dataclass(slots=True)
 class FolderUploadFile:
     """Represents one file for :meth:`FileManagerPlugin.upload_folder`.
 
@@ -1209,7 +1236,7 @@ class FolderUploadFile:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class Consumes:
     """Represents the JSON response data from :attr:`~Methods.consumes`.
 
@@ -1286,7 +1313,7 @@ class Consumes:
         return isinstance(other, self.__class__) and self.name < other.name
 
 
-@dataclass
+@dataclass(slots=True)
 class ParameterMapping:
     """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
 
@@ -1693,7 +1720,7 @@ class DeploymentTemplate:
 
 
 # This may be only controller diag info.
-@dataclass
+@dataclass(slots=True)
 class Diagnostics:
     """Represents the JSON response data from :meth:`Core.get_diagnostics_info`.
 
@@ -1787,14 +1814,15 @@ class Diagnostics:
     config_version: str = ""
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.application_version, str):
             self.application_version = BuildInfo.to_dataclass(data=self.application_version)
 
 
-@dataclass
+@dataclass(slots=True)
 class Directory:
     """Represents the JSON response data from :meth:`FileManagerPlugin.get_directory_listing`
 
@@ -1844,7 +1872,7 @@ class Directory:
             self.modified = timestamp_converter(timestamp=self.modified)
 
 
-@dataclass
+@dataclass(slots=True)
 class Endpoints:
     """Represents the JSON response data from :meth:`ADSModule.get_application_endpoints`
 
@@ -1864,7 +1892,7 @@ class Endpoints:
     uri: str
 
 
-@dataclass
+@dataclass(slots=True)
 class FileChunk:
     """Represents the JSON response data from :meth:`FileManagerPlugin.get_file_chunk`
 
@@ -1881,7 +1909,7 @@ class FileChunk:
     bytes_length: int
 
 
-@dataclass
+@dataclass(slots=True)
 class Fitness:
     """Represents the JSON response data for :attr:`Instance.fitness` attribute.
 
@@ -1926,7 +1954,7 @@ class Fitness:
     score_zero_factors: list[Any]
 
 
-@dataclass
+@dataclass(slots=True)
 class ImportConfig:
     """Represents the JSON response data from :meth:`GenericModule.import_config`.
 
@@ -1957,7 +1985,7 @@ class ImportConfig:
     rejected: list[Any] = field(default_factory=list[Any])
 
 
-@dataclass
+@dataclass(slots=True)
 class InstanceDatastore:
     """Represents a the class object to be used in :meth:`ADSModule.add_datastore`
 
@@ -2027,7 +2055,7 @@ class InstanceDatastore:
         return _dataclass_to_dict(self)
 
 
-@dataclass
+@dataclass(slots=True)
 class InstanceInfo:
     """Represents the JSON response data for :meth:`ADSModule.update_instance_info`.
 
@@ -2085,7 +2113,7 @@ class InstanceInfo:
         return _dataclass_to_dict(self)
 
 
-@dataclass
+@dataclass(slots=True)
 class InstanceStatus:
     """Represents the JSON response data from :meth:`ADSModule.get_instance_statuses`.
 
@@ -2102,7 +2130,7 @@ class InstanceStatus:
     running: bool
 
 
-@dataclass
+@dataclass(slots=True)
 class LoginResults:
     """Represents the JSON response data from the AMP Login response.
 
@@ -2140,7 +2168,7 @@ class LoginResults:
             self.user_info = build(LoginUserInfo, self.user_info)
 
 
-@dataclass
+@dataclass(slots=True)
 class LoginUserInfo:
     """Represents an AMP users information, tied to :class:`LoginResults` along with representing the
     JSON response from the function :meth`~Core.get_amp_users_summary`
@@ -2183,7 +2211,7 @@ class LoginUserInfo:
             self.last_login = timestamp_converter(self.last_login)
 
 
-@dataclass
+@dataclass(slots=True)
 class MCUser:
     """Represents the JSON response data from :meth:`MinecraftModule.mc_get_whitelist`.
 
@@ -2200,7 +2228,7 @@ class MCUser:
     uuid: str
 
 
-@dataclass
+@dataclass(slots=True)
 class Uptime:
     """Represents the JSON response data from :attr:`MessageParameters.uptime`.
 
@@ -2225,7 +2253,7 @@ class Uptime:
     seconds: int
 
 
-@dataclass
+@dataclass(slots=True)
 class MessageParameters:
     """Represents the JSON response data from :attr:`Messages.parameters`.
 
@@ -2265,7 +2293,7 @@ class MessageParameters:
             self.state = InstanceState(self.state)
 
 
-@dataclass
+@dataclass(slots=True)
 class Messages:
     """Represents a Message from the dataclass attribute :attr:`Updates.messages`
 
@@ -2297,7 +2325,7 @@ class Messages:
     parameters: Union[MessageParameters, MessageParametersResponse, None] = field(default=None)
 
 
-@dataclass
+@dataclass(slots=True)
 class Methods:
     """Tied to :attr:`ScheduleData.available_methods`.
 
@@ -2344,7 +2372,7 @@ class Methods:
         return isinstance(other, self.__class__) and self.name < other.name
 
 
-@dataclass
+@dataclass(slots=True)
 class Metrics:
     """Represents the JSON response data for :attr:`Status.metrics`.
 
@@ -2374,7 +2402,7 @@ class Metrics:
     tps: Union[MetricsData, None] = field(default=None)
 
 
-@dataclass
+@dataclass(slots=True)
 class MetricsData:
     """Represents the JSON response data for each of the attributes of :class:`Metrics`.
 
@@ -2410,7 +2438,7 @@ class MetricsData:
     short_name: Union[str, None] = field(default=None)
 
 
-@dataclass
+@dataclass(slots=True)
 class Module:
     """Represents the JSON response data from :meth:`Core.get_module_info`.
 
@@ -2516,7 +2544,7 @@ class Module:
     local_login_enabled: bool = True
 
 
-@dataclass
+@dataclass(slots=True)
 class OPList:
     """Represents the JSON response data from :meth:`MinecraftModule.mc_load_op_list`.
 
@@ -2536,7 +2564,7 @@ class OPList:
     uuid: str
 
 
-@dataclass
+@dataclass(slots=True)
 class OPWhitelist:
     """Represents the JSON response data from :meth:`MinecraftModule.mc_get_op_whitelist`.
 
@@ -2553,7 +2581,7 @@ class OPWhitelist:
     whitelist: list[MCUserResponse] = field(default_factory=list["MCUserResponse"])
 
 
-@dataclass
+@dataclass(slots=True)
 class PermissionNode:
     """Represents the JSON response data from :meth:`Core.get_permissions_spec`.
 
@@ -2582,7 +2610,7 @@ class PermissionNode:
     children: Union[list[PermissionNode], None]
 
 
-@dataclass
+@dataclass(slots=True)
 class PlatformInfo:
     """Represents the data from the attribute :attr:`RemoteTargetInfo.platform_info`.
 
@@ -2659,7 +2687,7 @@ class Player(NamedTuple):
         return isinstance(other, self.__class__) and self.name < other.name
 
 
-@dataclass(init=False)
+@dataclass(init=False, slots=True)
 class Players:
     """Represents the JSON response data from :meth:`~Core.get_user_list`.
 
@@ -2703,7 +2731,7 @@ class Players:
         return [p for p in self.sorted if name_or_uuid in (p.name, p.uuid)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Port:
     """Current Port of the related AMP Instance. Tied to :attr:`Updates.ports` and the JSON response
     data from :meth:`Core.get_port_summaries`.
@@ -2737,7 +2765,7 @@ class Port:
     min_listening: Union[int, None] = field(default=None)
 
 
-@dataclass
+@dataclass(slots=True)
 class Provision:
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
@@ -2775,7 +2803,7 @@ class Provision:
     total_services: int
 
 
-@dataclass
+@dataclass(slots=True)
 class ProvisionSettingInfo:
     """Represents the JSON response data from :meth:`ADSModule.get_provision_arguments`.
 
@@ -2816,7 +2844,7 @@ class ProvisionSettingInfo:
     min_listening: int = field(default=0)
 
 
-@dataclass
+@dataclass(slots=True)
 class PortInfo:
     """Represents the JSON response data from :meth:`ADSModule.get_instance_network_info`.
 
@@ -2867,7 +2895,7 @@ class PortInfo:
             self.protocol = Protocols(self.protocol)
 
 
-@dataclass
+@dataclass(slots=True)
 class RemoteTargetInfo:
     """Represents the JSON response data from :meth:`ADSModule.get_target_info`.
 
@@ -2894,7 +2922,7 @@ class RemoteTargetInfo:
     deploys_in_containers: bool
 
 
-@dataclass
+@dataclass(slots=True)
 class TargetDatastore:
     """Represents a datastore in :attr:`RemoteTargetInfo.datastores`, which carries only an ID and a name.
 
@@ -2913,7 +2941,7 @@ class TargetDatastore:
     friendly_name: str
 
 
-@dataclass
+@dataclass(slots=True)
 class Role:
     """Represents the JSON response data from :meth:`Core.get_role`.
 
@@ -2954,7 +2982,7 @@ class Role:
     disable_edits: bool
 
 
-@dataclass
+@dataclass(slots=True)
 class RunningTask:
     """Represents the JSON response data from functions that return RunningTask.
 
@@ -3034,7 +3062,8 @@ class RunningTask:
     support_title: str | None
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self), indent=1)
+        # return pformat(vars(self), indent=1)
+        return pformat(_field_values(self), indent=1)
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.last_update_pushed, str):
@@ -3081,7 +3110,7 @@ class ScheduleData:
                 continue
 
 
-@dataclass
+@dataclass(slots=True)
 class Session:
     """Represents the JSON response data from :meth:`Core.get_active_amp_sessions`.
 
@@ -3116,7 +3145,7 @@ class Session:
             self.last_activity = timestamp_converter(timestamp=self.last_activity)
 
 
-@dataclass
+@dataclass(slots=True)
 class SettingSpec:
     """Represents the JSON response data from :meth:`Core.get_config` or :meth:`Core.get_configs`.
 
@@ -3237,7 +3266,7 @@ class SettingSpec:
         return isinstance(other, self.__class__) and self.name < other.name
 
 
-@dataclass
+@dataclass(slots=True)
 class SettingSpecAction:
     """Represents the JSON response data from :attr:`SettingSpec.actions`.
 
@@ -3266,7 +3295,7 @@ class SettingSpecAction:
     type_id: str
 
 
-@dataclass
+@dataclass(slots=True)
 class SettingsSpecAttribute:
     """Represents the JSON response data from :attr:`SettingSpec.attributes`.
 
@@ -3305,7 +3334,7 @@ class SettingsSpecAttribute:
     key_enum_source: str = ""
 
 
-@dataclass
+@dataclass(slots=True)
 class SettingsSpecParent:
     """Represents the JSON response data from :meth:`Core.get_setting_spec`.
 
@@ -3376,7 +3405,7 @@ class SettingsSpecParent:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class SettingSpecSelectionSource:
     """Represents the JSON response data from :attr:`SettingSpec.selection_source`.
 
@@ -3417,7 +3446,7 @@ class SettingSpecTable:
     }
 
 
-@dataclass
+@dataclass(slots=True)
 class Status:
     """Represents the JSON response data from :meth:`Core.get_status` and :attr:`Updates.status`.
 
@@ -3442,7 +3471,8 @@ class Status:
     ports: list[Port] | list[PortResponse] = field(default_factory=list[Port])
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.state, int):
@@ -3452,7 +3482,7 @@ class Status:
         self.ports = [build(Port, entry) if isinstance(entry, dict) else entry for entry in self.ports]
 
 
-@dataclass
+@dataclass(slots=True)
 class StructuredDiagnostics:
     """Represents the JSON response data from :meth:`Core.get_structured_diagnostics`.
 
@@ -3472,7 +3502,7 @@ class StructuredDiagnostics:
     application: dict[str, Any]
 
 
-@dataclass
+@dataclass(slots=True)
 class Template:
     """A placeholder class for all the parameters to deploy or create a template.
 
@@ -3539,7 +3569,7 @@ class Template:
         return _dataclass_to_dict(self)
 
 
-@dataclass
+@dataclass(slots=True)
 class TimedTrigger:
     """Represents the data of :meth:`Core.get_time_interval_trigger`.
 
@@ -3637,7 +3667,7 @@ class TriggerID:
         return pformat(_temp)
 
 
-@dataclass
+@dataclass(slots=True)
 class Triggers:
     """Represents the JSON reponse data for attributes :attr:`ScheduleData.available_triggers` and :attr:`ScheduleData.populated_triggers`.
 
@@ -3692,7 +3722,7 @@ class Triggers:
         return isinstance(other, self.__class__) and self.description < other.description
 
 
-@dataclass
+@dataclass(slots=True)
 class TriggerTasks:
     """Represents the JSON response for the attribute :attr:`Triggers.tasks`.
 
@@ -3746,7 +3776,7 @@ class TriggerTasks:
     last_error_reason: Union[str, None] = field(default=None)
 
 
-@dataclass
+@dataclass(slots=True)
 class UpdateInfo:
     """Represents the JSON response data from :meth:`Core.get_update_info`.
 
@@ -3775,7 +3805,7 @@ class UpdateInfo:
     patch_only: Union[bool, None] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class Updates:
     """Represents the JSON response data from :meth:`Core.get_updates`.
 
@@ -3804,7 +3834,8 @@ class Updates:
     tasks: list[RunningTask] | list[RunningTaskResponse] = field(default_factory=list[RunningTask])
 
     def __repr__(self) -> str:  # noqa: D105
-        return pformat(vars(self))
+        # return pformat(vars(self))
+        return pformat(_field_values(self))
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.status, dict):
@@ -3815,7 +3846,7 @@ class Updates:
         self.tasks = [build(RunningTask, entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
-@dataclass
+@dataclass(slots=True)
 class UserInfo:
     """Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
 
@@ -3931,7 +3962,7 @@ class UserApplicationData:
         return
 
 
-@dataclass
+@dataclass(slots=True)
 class BuildInfo:
     """Tied to the class attribute for :class:`UpdateInfo.build`
 
