@@ -634,7 +634,7 @@ def _field_types(cls: type[Any]) -> dict[str, Any]:
 def _converter(hint: Any) -> Callable[[Any], Any] | None:
     """The function that turns a response value into what the type hint names, worked out once from the hint.
 
-    Returns None when the hint holds no dataclass or list, the value is then used as sent.
+    Returns None when the hint holds no dataclass or list. The value is then used as sent.
     """
     origin = typing.get_origin(hint)
     # A union tries each member in order and takes the first that converts.

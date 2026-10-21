@@ -89,11 +89,11 @@ _LOWER_UPPER_PATTERN: re.Pattern[str] = re.compile("([a-z0-9])([A-Z])")
 
 
 def _plural_acronym_repl(match: re.Match[str]) -> str:
-    """Lowers an acronym's trailing letters, so `IDs` -> `Ids` and `CPUs` -> `Cpus`."""
+    """Lowers an acronym's trailing letters: `IDs` -> `Ids`, `CPUs` -> `Cpus`."""
     return match.group(1)[0] + match.group(1)[1:].lower() + match.group(2)
 
 
-# Bounded because some answers are keyed by player ID, an unbounded cache would grow without limit.
+# Bounded: some answers are keyed by player ID, and an unbounded cache would grow without limit.
 @functools.lru_cache(maxsize=4096)
 def _snake_key(key: str) -> str:
     """The `snake_case` form of one AMP response key, remembered per key string.
@@ -1218,7 +1218,7 @@ class Base:
             #     if isinstance(entry, dict):
             #         entries[index] = cls.sanitize_json(json=entry)
             # return entries
-            # Only dictionary entries are sanitized; anything else (nested lists included) is kept as is.
+            # Only dictionary entries are sanitized. Anything else (nested lists included) is kept as is.
             return [cls.sanitize_json(json=entry) if isinstance(entry, dict) else entry for entry in source_list]
 
         if isinstance(json, dict):
@@ -1239,7 +1239,7 @@ class Base:
             #     new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
             #     new_map[new_key] = new_value
             # return new_map
-            # Build a fresh dict rather than copying and popping, the key conversion is cached per key string.
+            # Build a fresh dict rather than copying and popping. The key conversion is cached per key string.
             new_map: dict[str, Any] = {}
             for old_key, old_value in source_map.items():
                 new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value

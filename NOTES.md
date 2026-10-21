@@ -67,6 +67,16 @@ An annotation that the runtime does not honour is worse than a loose one; severa
 claiming a nested dataclass that nothing ever built. Where the nested shape is still unconfirmed
 the field is left raw and tagged, rather than annotated aspirationally.
 
+Where a response's time goes (#9, measured 2026-10-21 on vm1 bodies, this box): before 5.0.0's changes, key
+sanitising was 67-77% of decode + sanitise + check + build, because `camel_to_snake_re` ran three `re.sub` per key on
+every response. `format_data=False` only skips the build, and its dict was the heaviest form (a new string per key per
+dict: Updates 36 KB as a dict, 11 KB as dataclasses). `_snake_key` now caches the whole key conversion per key string
+(`lru_cache(maxsize=4096)`, bounded because some answers are keyed by player ID) and `build` works out each class's
+converters once (`_build_plan`). `get_updates` went from ~2.8 ms to ~0.38 ms of library time, PermissionsSpec from
+15.5 ms to 1.7 ms. The cache reads `Base.json_key_mapping` directly: change that mapping at runtime and call
+`_snake_key.cache_clear()`. msgspec would be ~100x faster again but needs per-class rename maps (AMP sends both `ID`
+and `Id`) and a rewrite; orjson is TODO #17.
+
 The response dataclasses are `slots=True` (5.0.0, #9, Kat 2026-10-21). Measured with tracemalloc on vm1 bodies: 11-14%
 less per object on most classes, 40-66% on classes with many defaulted fields (`ParameterMapping` 1860 -> 764 bytes,
 `Triggers` 2857 -> 1680). A slotted dataclass has no `__dict__`: `__repr__` goes through `_field_values` and code
