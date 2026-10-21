@@ -97,7 +97,6 @@ name = "cc-ampapi"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "dataclass-wizard" },
     { name = "pyotp" },
     { name = "typing-extensions" },
 ]
@@ -110,25 +109,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.7.4.post0" },
-    { name = "dataclass-wizard", specifier = ">=0.22.2" },
     { name = "pyotp", specifier = ">=2.6.0" },
     { name = "typing-extensions", specifier = ">=4.12.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [{ name = "asqlite", specifier = ">=2.0.0" }]
-
-[[package]]
-name = "dataclass-wizard"
-version = "0.35.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/64/c5/10f2bd575b4fee1cf26b0ffa5fead2d6525f950a797566437a51fa08a94f/dataclass-wizard-0.35.0.tar.gz", hash = "sha256:8e4b254991bf93416a48e2911bb985e3787cff11f00270c3d1165d2523cb3fb6", size = 295578, upload-time = "2025-01-20T04:09:52.344Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/95/968dff23cfd82806bf0e2d1c155227717046aed5e7afd8bc0fefdc7eaaf3/dataclass_wizard-0.35.0-py2.py3-none-any.whl", hash = "sha256:3bb19292477f0bebb12e9cc9178f1a6b93d133af4ae065abf14b713142b32edf", size = 176558, upload-time = "2025-01-20T04:09:49.563Z" },
-]
 
 [[package]]
 name = "frozenlist"

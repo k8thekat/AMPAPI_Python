@@ -417,7 +417,7 @@ class LocalFileBackupPlugin(Base):
         Endpoint: `LocalFileBackupPlugin/TakeBackup`
 
         .. versionchanged:: 5.0.0
-            Returns a :class:`RunningTask`, which is what AMP sends, not an :class:`ActionResult`.
+            Returns a :class:`RunningTask`, not an :class:`ActionResult`.
 
         Parameters
         ----------

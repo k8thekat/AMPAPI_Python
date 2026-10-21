@@ -124,7 +124,7 @@ INSTANCE_EXCLUDED_KEYS: tuple[str, ...] = ()
 SCHEDULE_DATA_REQUIRED_KEYS: tuple[str, ...] = ("available_methods", "available_triggers")
 SCHEDULE_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# Every category is optional (the VMs send no `branding`, live Instances do), these two are always sent.
+# Every ADS and Instance sends these two. The other categories vary (eg. `branding` only on some Instances).
 SETTINGS_SPEC_PARENT_REQUIRED_KEYS: tuple[str, ...] = ("system_settings", "security_and_privacy")
 SETTINGS_SPEC_PARENT_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -1092,7 +1092,7 @@ class SettingsSpecParentResponse(TypedDict):
     """The raw response from :meth:`Core.get_setting_spec`, one key per settings category in the UI.
 
     Every value is a list of the same shape :meth:`Core.get_config` returns for a single node. Module categories
-    (eg. `valheim:stadiacontroller`) hold a colon in the name, so they can't be keys here.
+    have a colon in their name (eg. `valheim:stadiacontroller`) and are not keys of this TypedDict.
     """
 
     security_and_privacy: list[ConfigResponse]

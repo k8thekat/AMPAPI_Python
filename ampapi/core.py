@@ -2640,7 +2640,7 @@ class Core(Base):
         ):
             raise AMPAPITypeError(end_point="Core/GetSettingsSpec", cur_type=result, expec_type=dict)
         if format_data is True:
-            # A module category name holds a colon (eg. `valheim:stadiacontroller`), so those go into `modules`.
+            # Module categories have a colon in their name (eg. `valheim:stadiacontroller`) and go into `modules`.
             categories = {name: entries for name, entries in result.items() if ":" not in name}
             modules = {name: entries for name, entries in result.items() if ":" in name}
             return build(SettingsSpecParent, {**categories, "modules": modules})

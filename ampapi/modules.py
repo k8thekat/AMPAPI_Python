@@ -505,7 +505,7 @@ class APIParams:
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-# Class/key pairs already reported, so each unknown key AMP sends is logged once, not on every response.
+# Class/key pairs already reported. Each unknown key AMP sends is logged once, not on every response.
 _reported_unknown_keys: set[tuple[str, str]] = set()
 
 
@@ -523,7 +523,7 @@ def _is_json_array(value: object) -> TypeGuard[list[Any]]:
 def _field_types(cls: type[Any]) -> dict[str, Any]:
     """The resolved type of every field on `cls`, read once per class.
 
-    `modules.py` imports its TypedDicts only for type checking, so the `_types` names are added for the hints
+    `modules.py` imports its TypedDicts only for type checking. The `_types` names are added for the hints
     that mention them.
     """
     namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
@@ -533,7 +533,7 @@ def _field_types(cls: type[Any]) -> dict[str, Any]:
 def _convert(hint: Any, value: Any) -> Any:
     """Build `value` into the dataclass its type hint names, recursing into lists, dicts and unions."""
     origin = typing.get_origin(hint)
-    # A union tries each member in order, so `list[DCConsumes] | list[ConsumeResponse]` builds DCConsumes.
+    # A union tries each member in order. `list[DCConsumes] | list[ConsumeResponse]` builds DCConsumes.
     if origin is Union or origin is types.UnionType:
         for option in typing.get_args(hint):
             if option is type(None):
@@ -553,7 +553,7 @@ def _convert(hint: Any, value: Any) -> Any:
 def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> DataclassT:
     """Build a dataclass from an AMP response, converting nested dataclasses from the field type hints.
 
-    Keys the dataclass doesn't declare are dropped and logged once, so a key AMP adds doesn't raise a :exc:`TypeError`.
+    Keys the dataclass doesn't declare are dropped and logged once, instead of raising a :exc:`TypeError`.
 
     Parameters
     ----------
@@ -576,7 +576,7 @@ def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> Datacla
         if (cls.__name__, key) not in _reported_unknown_keys:
             _reported_unknown_keys.add((cls.__name__, key))
             LOGGER.warning(
-                "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet, so it was left out.",
+                "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
                 "build",
                 cls.__name__,
                 key,
@@ -1081,12 +1081,20 @@ class DCConsumes:
         The values to be used for "input_type" if Any, default is "".
     placeholder : :class:`str`, optional
         The placeholder text the web panel shows in the input, default is "".
+
+        .. versionadded:: 5.0.0
     suffix : :class:`str`, optional
         The text shown after the input (eg. a unit), default is "".
+
+        .. versionadded:: 5.0.0
     display_name : Union[:class:`str`, None], optional
         The name the web panel shows, default is None.
+
+        .. versionadded:: 5.0.0
     selection_source : Union[:class:`str`, None], optional
         Where the choices come from, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
     locked : :class:`bool`, optional
         If the argument is locked, default is False.
 
@@ -2337,6 +2345,9 @@ class RemoteTargetInfo:
         The Target's platform, with its :class:`CPUInfo`.
     datastores : list[:class:`TargetDatastore`]
         The datastores, carrying only an ID and a friendly name.
+
+        .. versionchanged:: 5.0.0
+            Holds :class:`TargetDatastore`, not :class:`InstanceDatastore`.
     deploys_in_containers : :class:`bool`
         If the target deploys Instances inside containers.
 
@@ -2352,6 +2363,8 @@ class RemoteTargetInfo:
 @dataclass
 class TargetDatastore:
     """Represents a datastore in :attr:`RemoteTargetInfo.datastores`, which carries only an ID and a name.
+
+    .. versionadded:: 5.0.0
 
     Attributes
     ----------
@@ -2767,7 +2780,6 @@ class SettingsSpecParent:
     backups : list[:class:`SettingSpec`]
         The list of backup settings in the UI, default is an empty list.
 
-
         .. versionadded:: 5.0.0
     branding : list[:class:`SettingSpec`]
         The list of branding settings in the UI, default is an empty list.
@@ -2782,17 +2794,14 @@ class SettingsSpecParent:
     meta_config : list[:class:`SettingSpec`]
         The list of meta config settings in the UI, default is an empty list.
 
-
         .. versionadded:: 5.0.0
     minecraft : list[:class:`SettingSpec`]
         The list of Minecraft settings in the UI, default is an empty list.
 
-
         .. versionadded:: 5.0.0
     modules : dict[:class:`str`, list[:class:`SettingSpec`]]
-        The settings of each module category, keyed by the category name (eg. `valheim:stadiacontroller`). These names
-        hold a colon, so they can't be fields. Default is an empty dict.
-
+        The settings of each module category, keyed by its name, which has a colon (eg. `valheim:stadiacontroller`),
+        default is an empty dict.
 
         .. versionadded:: 5.0.0
     security_and_privacy : list[:class:`SettingSpec`]
@@ -3143,6 +3152,9 @@ class TriggerTasks:
     parameter_mapping : :class:`ParameterMapping`
         The arguments the task passes to its method, keyed by the name of each argument of that method (eg. `seconds`
         for `Event.CommonCorePlugin.Wait`). Kept as the raw response dict.
+
+        .. versionchanged:: 5.0.0
+            The raw dict, not a :class:`DCParameterMapping`.
     enabled_state : :class:`int`
         If the task is enabled or not.
     locked : :class:`bool`
@@ -3288,8 +3300,6 @@ class UserInfo:
         The last login date of the user.
     oidc_sub : Union[:class:`str`, None], optional
         The OIDC subject of the user, default is None.
-
-        .. versionadded:: 5.0.0
 
     """
 
