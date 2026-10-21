@@ -159,6 +159,7 @@ Returned data
 - ``AnalyticsCountryData.session_percent`` is renamed
   :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
+- :attr:`~ampapi.modules.Consumes.enum_values` is None when the argument has no values, not ``""``.
 - :attr:`~ampapi.modules.Module.branding` is a :class:`~ampapi.modules.Branding` dataclass; 4.x left it as a dict.
 - :attr:`~ampapi.modules.AnalyticsSummary.busiest_time`, ``quietest_time`` and ``graph_data`` hold
   :class:`~ampapi.modules.AnalyticsGraphData` (``date``, ``end_date`` and ``count``); 4.x left them as dicts.

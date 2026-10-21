@@ -323,7 +323,7 @@ class ApplicationResponse(TypedDict):
     friendly_name: str
     description: Union[str, None]
     module_name: str
-    settings: dict[str, Any]
+    settings: dict[str, str]
     supported_platforms: int
     container_support: int
     container_reason: Union[str, None]
@@ -514,7 +514,7 @@ class SettingSpecResponse(TypedDict):
     subcategory: str
     current_value: int
     val_type: str
-    enum_values: None
+    enum_values: Union[dict[str, str], None]
     enum_values_are_deferred: bool
     selection_source: None
     node: str
@@ -623,12 +623,12 @@ class DiagnosticsResponse(TypedDict):
     os: str
     platform: str
     system_type: str
-    hardware_platform: Any
+    hardware_platform: str
     cpu_model: str
     cpu_layout: str
     installed_ram: str
     virtualization: str
-    network_mode: Any
+    network_mode: str
     module: str
     module_application: str
     loaded_plugins: str
@@ -904,10 +904,10 @@ class ModuleResponse(TypedDict):
     version_codename: str
     timestamp: str
     build_spec: str
-    branding: dict[str, Any]
+    branding: BrandingResponse
     analytics: bool
     analytics_tag: str
-    feature_set: list[Any]
+    feature_set: list[str]
     instance_id: str
     instance_name: str
     friendly_name: str

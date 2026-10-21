@@ -1226,8 +1226,11 @@ class Consumes:
         The name of the method.
     value_type : :class:`str`
         The type of the value when provided.
-    enum_values : Union[:class:`str`, dict[:class:`str`, :class:`str`], None], optional
-        The values to be used for "input_type" if Any, default is "".
+    enum_values : Union[dict[:class:`str`, :class:`str`], None], optional
+        The values to be used for "input_type" if Any, default is None.
+
+        .. versionchanged:: 5.0.0
+            Is None when the argument has no values, was "".
     placeholder : :class:`str`, optional
         The placeholder text the web panel shows in the input, default is "".
 
@@ -1264,7 +1267,7 @@ class Consumes:
     name: str
     value_type: str
     # AMP sends null for this as well as a dict (captured in getscheduledata.json).
-    enum_values: Union[str, dict[str, str], None] = field(default="")
+    enum_values: Union[dict[str, str], None] = field(default=None)
     placeholder: str = field(default="")
     suffix: str = field(default="")
     display_name: Union[str, None] = field(default=None)
@@ -1710,6 +1713,8 @@ class Diagnostics:
         The name of the CPU.
     codename : :class:`str`
         The release/build code name.
+    hardware_platform : :class:`str`
+        The hardware the system runs on (eg. a motherboard or hypervisor name).
     installed_ram : :class:`str`
         The amount of installed ram on the system.
     instance_id : :class:`str`
@@ -1726,8 +1731,8 @@ class Diagnostics:
         The Instance module. *eg ADSModule, Minecraft, Generic*
     module_application : :class:`str`
         The Instance application.
-    network_mode : Any
-        UNK
+    network_mode : :class:`str`
+        The network mode of the Instance (eg. "Standard").
     platform : :class:`str`
         The machine full name of the Operating System.
     release_stream : :class:`str`
@@ -1754,12 +1759,12 @@ class Diagnostics:
     os: str
     platform: str
     system_type: str
-    hardware_platform: Any
+    hardware_platform: str
     cpu_model: str
     cpu_layout: str
     installed_ram: str
     virtualization: str
-    network_mode: Any
+    network_mode: str
     module: str
     module_application: str
     loaded_plugins: str
@@ -2440,7 +2445,7 @@ class Module:
         The display base URI.
     endpoint_uri : :class:`str`
         The endpoint URI.
-    feature_set : :class:`list[Any]`
+    feature_set : list[:class:`str`]
         The feature set.
     friendly_name : :class:`str`
         The friendly name.
@@ -2492,7 +2497,7 @@ class Module:
     build_spec: str
     display_base_uri: str
     endpoint_uri: str
-    feature_set: list[Any]
+    feature_set: list[str]
     friendly_name: str
     instance_id: str
     instance_name: str
@@ -3131,7 +3136,7 @@ class SettingSpec:
         The current value of the setting, default is "".
     description : :class:`str`, optional
         The text description below the setting name in the UI, default is "".
-    enum_values : :class:`dict`, optional
+    enum_values : Union[dict[:class:`str`, :class:`str`], None], optional
         A dictionary representing the possible enum values for the setting, default is None.
     enum_values_are_deferred : :class:`bool`
         UNK, default is False.
@@ -3191,7 +3196,7 @@ class SettingSpec:
     # TODO: This will need a tighter type definition.
     current_value: Union[list[SettingSpecTableAliases], str, bool, int, dict[Any, Any], SettingSpecTableAliases] = ""
     description: str = ""
-    enum_values: Union[dict[str, Any], None] = field(default=None)
+    enum_values: Union[dict[str, str], None] = field(default=None)
     enum_values_are_deferred: bool = field(default=False)
     input_type: Union[str, None] = field(default=None)
     is_provision_spec: bool = field(default=False)
