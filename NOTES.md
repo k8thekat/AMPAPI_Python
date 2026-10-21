@@ -29,8 +29,8 @@ Response dataclasses are built with `build(Cls, result)` (`modules.py`), never `
 builds nested dataclasses through lists and unions, trying a union's members in order, so the dataclass goes first
 (`list[Consumes] | list[ConsumesResponse]`). A key the dataclass doesn't declare is dropped and logged once per
 class and key at WARNING. 4.x used dataclass-wizard's `fromdict`, which dropped them silently, and the 5.0.0 baseline's
-`Cls(**result)` raised on them. `build` rejects a non-dataclass: `DeploymentTemplate` and `UserApplicationData` are
-still unpacked with `**`.
+`Cls(**result)` raised on them. `build` rejects a non-dataclass: `DeploymentTemplate` is still unpacked with `**`.
+`UserApplicationData` was too until AMP-2.8.0.8's `display_name` made `get_user_info` raise (live, 2026-10-21).
 
 A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
 `TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for

@@ -3960,58 +3960,113 @@ class UserInfo:
             self.last_login = timestamp_converter(timestamp=self.last_login)
 
 
+# The hand-written class before 5.0.0, when it became a dataclass built with `build`.
+# class UserApplicationData:
+#     """Represents the JSON response data from :meth:`Core.get_user_info`."""
+#
+#     id: str
+#     user_session_id: str
+#     session_id: str | None
+#     name: str
+#     join_time: datetime.datetime  # ISO format timestamp.
+#     tags: str | None
+#     uid: str
+#     ip_address: str
+#     port: int
+#     time_logged_in: str  # 00:00:00.00000
+#
+#     __slots__ = (
+#         "id",
+#         "ip_address",
+#         "join_time",
+#         "name",
+#         "port",
+#         "session_id",
+#         "tags",
+#         "time_logged_in",
+#         "uid",
+#         "user_session_id",
+#     )
+#
+#     def __init__(
+#         self,
+#         id: str,  # This is due to id overshadowing Python built-ins, the JSON response data comes in with an id key.
+#         user_session_id: str,
+#         name: str,
+#         join_time: str,
+#         uid: str,
+#         ip_address: str,
+#         port: int,
+#         time_logged_in: str,
+#         session_id: Union[str, None] = None,
+#         tags: Union[str, None] = None,
+#     ) -> None:
+#         self.id = id
+#         self.user_session_id = user_session_id
+#         self.name = name
+#         self.join_time = timestamp_converter(timestamp=join_time)
+#         self.uid = uid
+#         self.ip_address = ip_address
+#         self.port = port
+#         self.time_logged_in = time_logged_in
+#         self.session_id = session_id
+#         self.tags = tags
+#
+#         return
+
+
+@dataclass(slots=True)
 class UserApplicationData:
-    """Represents the JSON response data from :meth:`Core.get_user_info`."""
+    """Represents the JSON response data from :meth:`Core.get_user_info`.
+
+    .. note::
+        This is an in-application user (eg. a connected Minecraft player), not an AMP User.
+
+    .. versionchanged:: 5.0.0
+        Built like the other response dataclasses, with `display_name` added (sent by AMP-2.8.0.8).
+
+    Attributes
+    ----------
+    id : :class:`str`
+        The ID of the player in the application.
+    user_session_id : :class:`str`
+        The ID of the player's current session.
+    name : :class:`str`
+        The player's name.
+    join_time : :class:`datetime.datetime`
+        When the player joined.
+    uid : :class:`str`
+        The player's UID, the same as the keys of :meth:`Core.get_user_list`.
+    ip_address : :class:`str`
+        The IP address the player connected from.
+    port : :class:`int`
+        The port the player connected from.
+    time_logged_in : :class:`str`
+        How long the player has been logged in, as AMP's `hh:mm:ss.fffffff` time span.
+    session_id : Union[:class:`str`, None]
+        UNK, None in every capture, by default None.
+    tags : Union[:class:`str`, None]
+        UNK, None in every capture, by default None.
+    display_name : Union[:class:`str`, None]
+        The player's display name, by default None.
+
+    """
 
     id: str
     user_session_id: str
-    session_id: str | None
     name: str
-    join_time: datetime.datetime  # ISO format timestamp.
-    tags: str | None
+    join_time: str | datetime.datetime
     uid: str
     ip_address: str
     port: int
-    time_logged_in: str  # 00:00:00.00000
+    time_logged_in: str
+    session_id: Union[str, None] = None
+    tags: Union[str, None] = None
+    display_name: Union[str, None] = None
 
-    __slots__ = (
-        "id",
-        "ip_address",
-        "join_time",
-        "name",
-        "port",
-        "session_id",
-        "tags",
-        "time_logged_in",
-        "uid",
-        "user_session_id",
-    )
-
-    def __init__(  # noqa: D107
-        self,
-        id: str,  # noqa: A002 # This is due to id overshadowing Python built-ins, the JSON response data comes in with an id key.
-        user_session_id: str,
-        name: str,
-        join_time: str,
-        uid: str,
-        ip_address: str,
-        port: int,
-        time_logged_in: str,
-        session_id: Union[str, None] = None,
-        tags: Union[str, None] = None,
-    ) -> None:
-        self.id = id
-        self.user_session_id = user_session_id
-        self.name = name
-        self.join_time = timestamp_converter(timestamp=join_time)
-        self.uid = uid
-        self.ip_address = ip_address
-        self.port = port
-        self.time_logged_in = time_logged_in
-        self.session_id = session_id
-        self.tags = tags
-
-        return
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.join_time, str):
+            self.join_time = timestamp_converter(timestamp=self.join_time)
 
 
 @dataclass(slots=True)

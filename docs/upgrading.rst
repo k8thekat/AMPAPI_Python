@@ -162,6 +162,8 @@ Returned data
   name, all AMP sends there); 4.x typed it as ``InstanceDatastore``.
 - ``AnalyticsCountryData.session_percent`` is renamed
   :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
+- :class:`~ampapi.modules.UserApplicationData` is a dataclass with a new ``display_name``. 4.x raised a
+  :exc:`TypeError` on AMP 2.8's ``DisplayName`` key.
 - :attr:`~ampapi.modules.Role.members` holds :class:`~ampapi.modules.RoleMember` (``id`` and ``name``); 4.x hinted it
   ``list[str]``.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.

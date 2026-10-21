@@ -25,13 +25,12 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#5) Confirm `UserApplicationDataResponse` against a live payload; `Core/GetUserInfo` needs a player online.
 
 ## ampapi/analytics.py
 
 ---
 
-- (#6) Confirm the shape of `get_user_details` with a player who has played; AMP answers null otherwise.
+- (#6) Confirm the shape of `get_user_details`; AMP answers null even with a player online, and Analytics lists no players.
 
 ## ampapi/filemanager.py, filebackup.py, emailsender.py, minecraft.py
 

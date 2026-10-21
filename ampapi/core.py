@@ -3096,7 +3096,8 @@ class Core(Base):
         ):
             raise AMPAPITypeError(end_point="Core/GetUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
-            return UserApplicationData(**result)
+            # return UserApplicationData(**result)
+            return build(UserApplicationData, result)
         return result
 
     async def get_user_list(

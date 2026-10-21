@@ -1527,6 +1527,7 @@ class UserApplicationDataResponse(TypedDict):
     time_logged_in: str
     session_id: NotRequired[Union[str, None]]
     tags: NotRequired[Union[str, None]]
+    display_name: NotRequired[str]
 
 
 class UserInfoResponse(TypedDict):
