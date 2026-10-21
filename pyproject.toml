@@ -25,7 +25,6 @@ classifiers = [
 keywords = ["cubecoders", "cube coders", "amp", "api"]
 dependencies = [
     "aiohttp>=3.7.4.post0",
-    "dataclass-wizard>=0.22.2",
     "pyotp>=2.6.0",
     "typing_extensions>=4.12.0",
 ]

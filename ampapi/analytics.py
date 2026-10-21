@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 from ._types import ANALYTICS_SUMMARY_EXCLUDED_KEYS, ANALYTICS_SUMMARY_REQUIRED_KEYS, AnalyticsSummaryResponse, is_response_type
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import AnalyticsFilter, AnalyticsSummary
+from .modules import AnalyticsFilter, AnalyticsSummary, build
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
@@ -104,7 +104,7 @@ class AnalyticsPlugin(Base):
         if not is_response_type(result, AnalyticsSummaryResponse, ANALYTICS_SUMMARY_REQUIRED_KEYS, ANALYTICS_SUMMARY_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
         if format_data is True:
-            return AnalyticsSummary(**result)
+            return build(AnalyticsSummary, result)
         return result
 
     async def get_user_details(

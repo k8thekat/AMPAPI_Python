@@ -91,6 +91,7 @@ from .modules import (
     RemoteTargetInfo,
     RunningTask,
     Template,
+    build,
 )
 
 if TYPE_CHECKING:
@@ -169,7 +170,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/AddDatastore", result)  # noqa: EM101
 
@@ -235,7 +236,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
 
@@ -297,7 +298,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/ApplyTemplate", result)  # noqa: EM101
 
@@ -388,7 +389,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/AttachADS", result)  # noqa: EM101
 
@@ -432,7 +433,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/CancelPairing", result)  # noqa: EM101
 
@@ -536,7 +537,7 @@ class ADSModule(Base):
 
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/CloneInstance", cur_type=result, expec_type=dict)
 
@@ -596,7 +597,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/CloneTemplate", result)  # noqa: EM101
 
@@ -648,7 +649,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/CreateDeploymentTemplate", result)  # noqa: EM101
 
@@ -707,7 +708,7 @@ class ADSModule(Base):
 
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/CreateInstance", cur_type=result, expec_type=dict)
 
@@ -784,7 +785,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
 
@@ -858,7 +859,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/CreateLocalInstance", result)  # noqa: EM101
 
@@ -915,7 +916,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/DeleteDatastore", result)  # noqa: EM101
 
@@ -972,7 +973,7 @@ class ADSModule(Base):
 
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/DeleteDeploymentTemplate", result)  # noqa: EM101
 
@@ -1028,7 +1029,7 @@ class ADSModule(Base):
 
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/DeleteInstance", cur_type=result, expec_type=dict)
 
@@ -1078,7 +1079,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/DeleteInstanceUsers", result)  # noqa: EM101
 
@@ -1129,7 +1130,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/DeployTemplate", result)  # noqa: EM101
 
@@ -1179,7 +1180,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/DetachTarget", result)  # noqa: EM101
 
@@ -1233,7 +1234,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/ExtractEverywhere", result)  # noqa: EM101
 
@@ -1283,7 +1284,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_list(result, EndpointsResponse, ENDPOINTS_REQUIRED_KEYS, ENDPOINTS_EXCLUDED_KEYS):
             if format_data is True:
-                return [Endpoints(**entry) for entry in result]
+                return [build(Endpoints, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetApplicationEndpoints", cur_type=result, expec_type=list)
 
@@ -1337,7 +1338,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, InstanceDatastoreResponse, INSTANCE_DATASTORE_REQUIRED_KEYS, INSTANCE_DATASTORE_EXCLUDED_KEYS):
             if format_data is True:
-                return InstanceDatastore(**result)
+                return build(InstanceDatastore, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetDatastore", cur_type=result, expec_type=dict)
 
@@ -1378,7 +1379,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_list(result, InstanceDatastoreResponse, INSTANCE_DATASTORE_REQUIRED_KEYS, INSTANCE_DATASTORE_EXCLUDED_KEYS):
             if format_data is True:
-                return [InstanceDatastore(**entry) for entry in result]
+                return [build(InstanceDatastore, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetDatastores", cur_type=result, expec_type=list)
 
@@ -1709,7 +1710,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_list(result, PortInfoResponse, PORT_INFO_REQUIRED_KEYS, PORT_INFO_EXCLUDED_KEYS):
             if format_data is True:
-                return [PortInfo(**entry) for entry in result]
+                return [build(PortInfo, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetInstanceNetworkInfo", cur_type=result, expec_type=list)
 
@@ -1754,7 +1755,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_list(result, InstanceStatusResponse, INSTANCE_STATUS_REQUIRED_KEYS, INSTANCE_STATUS_EXCLUDED_KEYS):
             if format_data is True:
-                return [InstanceStatus(**entry) for entry in result]
+                return [build(InstanceStatus, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetInstanceStatuses", cur_type=result, expec_type=list)
 
@@ -1907,7 +1908,7 @@ class ADSModule(Base):
             PROVISION_SETTING_INFO_EXCLUDED_KEYS,
         ):
             if format_data is True:
-                return [ProvisionSettingInfo(**entry) for entry in result]
+                return [build(ProvisionSettingInfo, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetProvisionArguments", cur_type=result, expec_type=list)
 
@@ -1961,7 +1962,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ProvisionResponse, PROVISION_REQUIRED_KEYS, PROVISION_EXCLUDED_KEYS):
             if format_data is True:
-                return Provision(**result)
+                return build(Provision, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetProvisionFitness", cur_type=result, expec_type=dict)
 
@@ -2049,7 +2050,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_list(result, ApplicationResponse, APPLICATION_REQUIRED_KEYS, APPLICATION_EXCLUDED_KEYS):
             if format_data is True:
-                return [Application(**entry) for entry in result]
+                return [build(Application, entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetSupportedApplications", cur_type=result, expec_type=list)
 
@@ -2094,7 +2095,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RemoteTargetInfoResponse, REMOTE_TARGET_INFO_REQUIRED_KEYS, REMOTE_TARGET_INFO_EXCLUDED_KEYS):
             if format_data is True:
-                return RemoteTargetInfo(**result)
+                return build(RemoteTargetInfo, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetTargetInfo", cur_type=result, expec_type=dict)
 
@@ -2139,7 +2140,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/GetTargetPairingCode", result)  # noqa: EM101
 
@@ -2195,7 +2196,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/HandoutInstanceConfigs", result)  # noqa: EM101
 
@@ -2249,7 +2250,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/ManageInstance", result)  # noqa: EM101
 
@@ -2321,7 +2322,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/ModifyCustomFirewallRule", result)  # noqa: EM101
 
@@ -2378,7 +2379,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/MoveInstanceDatastore", cur_type=result, expec_type=dict)
 
@@ -2432,7 +2433,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/PrepareFileTransfer", result)  # noqa: EM101
 
@@ -2481,7 +2482,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/ReactivateInstance", cur_type=result, expec_type=dict)
 
@@ -2526,7 +2527,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/ReactivateLocalInstances", cur_type=result, expec_type=dict)
 
@@ -2609,7 +2610,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/RefreshGroup", result)  # noqa: EM101
 
@@ -2659,7 +2660,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/RefreshInstanceConfig", result)  # noqa: EM101
 
@@ -2769,7 +2770,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/RegisterTarget", result)  # noqa: EM101
 
@@ -2833,7 +2834,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/RegisterTargetWithCode", result)  # noqa: EM101
 
@@ -2887,7 +2888,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/RepairDatastore", cur_type=result, expec_type=dict)
 
@@ -2941,7 +2942,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return RunningTask(**result)
+                return build(RunningTask, result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/RequestDatastoreSizeCalculation", cur_type=result, expec_type=dict)
 
@@ -2995,7 +2996,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/RestartInstance", result)  # noqa: EM101
 
@@ -3110,7 +3111,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/SetInstanceConfig", result)  # noqa: EM101
 
@@ -3173,7 +3174,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/SetInstanceNetworkInfo", result)  # noqa: EM101
 
@@ -3230,7 +3231,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/SetInstanceSuspended", result)  # noqa: EM101
 
@@ -3280,7 +3281,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/StartAllInstances", result)  # noqa: EM101
 
@@ -3334,7 +3335,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/StartInstance", result)  # noqa: EM101
 
@@ -3384,7 +3385,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/StopAllInstances", result)  # noqa: EM101
 
@@ -3438,7 +3439,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/StopInstance", result)  # noqa: EM101
 
@@ -3490,7 +3491,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpdateDatastore", result)  # noqa: EM101
 
@@ -3541,7 +3542,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpdateDeploymentTemplate", result)  # noqa: EM101
 
@@ -3591,7 +3592,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpdateInstanceInfo", result)  # noqa: EM101
 
@@ -3701,7 +3702,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpdateTargetInfo", result)  # noqa: EM101
 
@@ -3754,7 +3755,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpgradeAllInstances", result)  # noqa: EM101
 
@@ -3808,6 +3809,6 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult(**result)
+                return build(ActionResult, result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpgradeInstance", result)  # noqa: EM101

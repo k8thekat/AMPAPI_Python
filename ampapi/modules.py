@@ -22,17 +22,20 @@ from __future__ import annotations
 
 import base64
 import datetime
+import functools
 import logging
 import secrets
+import sys
+import types
+import typing
 from dataclasses import dataclass, field, fields, is_dataclass
 from enum import Enum
 from operator import attrgetter
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self, Union
-
-from dataclass_wizard.errors import MissingFields
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self, TypeGuard, Union
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from typing import Self
 
     from typing_extensions import ParamSpec, TypeVar
@@ -49,12 +52,10 @@ if TYPE_CHECKING:
         MessagesResponse,
         MetricsResponse,
         ParameterMapping,
-        PlatformInfoResponse,
         PortResponse,
         RunningTaskResponse,
         ScheduleDataResponse,
         StatusResponse,
-        TargetDatastoreResponse,
         TriggersResponse,
         TriggersTasksResponse,
     )
@@ -62,6 +63,7 @@ if TYPE_CHECKING:
     T = ParamSpec("T")
     F = TypeVar("F")
 
+from . import _types
 from ._enums import (
     AccessModeState,
     ADSModeState,
@@ -489,6 +491,88 @@ class APIParams:
         """Strips a trailing `/` from :attr:`url`."""
         # We drop any trailing slash once here so every URL built from `url` is right.
         self.url = self.url.rstrip("/")
+
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
+# Class/key pairs already reported, so each unknown key AMP sends is logged once, not on every response.
+_reported_unknown_keys: set[tuple[str, str]] = set()
+
+
+def _is_json_object(value: object) -> TypeGuard[dict[str, Any]]:
+    """If `value` is a decoded JSON object; its keys are always strings."""
+    return isinstance(value, dict)
+
+
+def _is_json_array(value: object) -> TypeGuard[list[Any]]:
+    """If `value` is a decoded JSON array."""
+    return isinstance(value, list)
+
+
+@functools.cache
+def _field_types(cls: type[Any]) -> dict[str, Any]:
+    """The resolved type of every field on `cls`, read once per class.
+
+    `modules.py` imports its TypedDicts only for type checking, so the `_types` names are added for the hints
+    that mention them.
+    """
+    namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
+    return typing.get_type_hints(cls, globalns=namespace)
+
+
+def _convert(hint: Any, value: Any) -> Any:
+    """Build `value` into the dataclass its type hint names, recursing into lists, dicts and unions."""
+    origin = typing.get_origin(hint)
+    # A union tries each member in order, so `list[DCConsumes] | list[ConsumeResponse]` builds DCConsumes.
+    if origin is Union or origin is types.UnionType:
+        for option in typing.get_args(hint):
+            if option is type(None):
+                continue
+            converted = _convert(option, value)
+            if converted is not value:
+                return converted
+        return value
+    if isinstance(hint, type) and is_dataclass(hint) and _is_json_object(value):
+        return build(hint, value)
+    if origin is list and _is_json_array(value):
+        element_hint: Any = (typing.get_args(hint) or (Any,))[0]
+        return [_convert(element_hint, item) for item in value]
+    return value
+
+
+def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> DataclassT:
+    """Build a dataclass from an AMP response, converting nested dataclasses from the field type hints.
+
+    Keys the dataclass doesn't declare are dropped and logged once, so a key AMP adds doesn't raise a :exc:`TypeError`.
+
+    Parameters
+    ----------
+    cls : type[:class:`DataclassT`]
+        The dataclass to build.
+    data : Mapping[:class:`str`, Any]
+        The sanitised AMP response for it.
+
+    Returns
+    -------
+    :class:`DataclassT`
+        The built dataclass, with its nested dataclasses built too.
+
+    """
+    if not is_dataclass(cls):
+        msg = f"build() needs a dataclass, got {cls!r}."
+        raise TypeError(msg)
+    names: set[str] = {entry.name for entry in fields(cls)}
+    for key in data.keys() - names:
+        if (cls.__name__, key) not in _reported_unknown_keys:
+            _reported_unknown_keys.add((cls.__name__, key))
+            LOGGER.warning(
+                "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet, so it was left out.",
+                "build",
+                cls.__name__,
+                key,
+            )
+    field_types = _field_types(cls)
+    return cls(**{key: _convert(field_types[key], value) for key, value in data.items() if key in names})
 
 
 @dataclass
@@ -983,8 +1067,16 @@ class DCConsumes:
         The name of the method.
     value_type : :class:`str`
         The type of the value when provided.
-    enum_values : :class:`str` | dict, optional
+    enum_values : Union[:class:`str`, dict[:class:`str`, :class:`str`], None], optional
         The values to be used for "input_type" if Any, default is "".
+    placeholder : :class:`str`, optional
+        The placeholder text the web panel shows in the input, default is "".
+    suffix : :class:`str`, optional
+        The text shown after the input (eg. a unit), default is "".
+    display_name : Union[:class:`str`, None], optional
+        The name the web panel shows, default is None.
+    selection_source : Union[:class:`str`, None], optional
+        Where the choices come from, default is None. Only seen as null so far.
 
     """
 
@@ -992,7 +1084,12 @@ class DCConsumes:
     input_type: str
     name: str
     value_type: str
-    enum_values: str | dict[str, str] = field(default="")
+    # AMP sends null for this as well as a dict (captured in getscheduledata.json).
+    enum_values: Union[str, dict[str, str], None] = field(default="")
+    placeholder: str = field(default="")
+    suffix: str = field(default="")
+    display_name: Union[str, None] = field(default=None)
+    selection_source: Union[str, None] = field(default=None)
 
     __hash__ = None  # type: ignore[assignment]
     """Mutable dataclass; intentionally unhashable."""
@@ -1570,7 +1667,7 @@ class LoginResults:
 
     def __post_init__(self) -> None:
         if isinstance(self.user_info, dict):
-            self.user_info = LoginUserInfo(**self.user_info)
+            self.user_info = build(LoginUserInfo, self.user_info)
 
 
 @dataclass
@@ -1694,9 +1791,7 @@ class Methods:
     # Confirmed against getscheduledata.json.
     category: str = ""
     display_format: Union[str, None] = field(default=None)
-    # TODO: Convert consumes into DCConsumes in a __post_init__.
-    # Methods(**entry) currently assigns the nested dicts straight through; ConsumeResponse needs
-    # confirming against more Instance types before converting.
+    # `build(Methods, entry)` turns these into DCConsumes.
     consumes: list[DCConsumes] | list[ConsumeResponse] = field(default_factory=list[DCConsumes])
 
     __hash__ = None  # type: ignore[assignment]
@@ -2203,22 +2298,37 @@ class RemoteTargetInfo:
     ----------
     ip_address_list : :class:`list[str]`
         The IP address list.
-    platform_info : :class:`PlatformInfoResponse`
-        The platform info; left as the raw response dict, see the note above.
-    datastores : list[:class:`TargetDatastoreResponse`]
-        The datastores, carrying only an ``id`` and ``friendly_name``.
+    platform_info : :class:`PlatformInfo`
+        The Target's platform, with its :class:`CPUInfo`.
+    datastores : list[:class:`TargetDatastore`]
+        The datastores, carrying only an ID and a friendly name.
     deploys_in_containers : :class:`bool`
         If the target deploys Instances inside containers.
 
     """
 
     ip_address_list: list[str]
-    # TODO: Convert these in a __post_init__ once the nested shapes are confirmed across more AMP targets.
-    # `RemoteTargetInfo(**result)` assigns the nested dicts straight through; each datastore only carries
-    # {id, friendly_name}, which cannot build a full InstanceDatastore.
-    platform_info: PlatformInfoResponse
-    datastores: list[TargetDatastoreResponse]
+    # `build(RemoteTargetInfo, result)` turns these into dataclasses.
+    platform_info: PlatformInfo
+    datastores: list[TargetDatastore]
     deploys_in_containers: bool
+
+
+@dataclass
+class TargetDatastore:
+    """Represents a datastore in :attr:`RemoteTargetInfo.datastores`, which carries only an ID and a name.
+
+    Attributes
+    ----------
+    id : :class:`int`
+        The datastore ID.
+    friendly_name : :class:`str`
+        The datastore name.
+
+    """
+
+    id: int
+    friendly_name: str
 
 
 @dataclass
@@ -2382,10 +2492,10 @@ class ScheduleData:
                 setattr(self, key, [])
                 continue
             if key == "available_methods":
-                self.available_methods = [Methods(**entry) for entry in value]
+                self.available_methods = [build(Methods, entry) for entry in value]
                 continue
             if key == "available_triggers" or key == "populated_triggers":
-                setattr(self, key, [Triggers(**entry) for entry in value])
+                setattr(self, key, [build(Triggers, entry) for entry in value])
                 continue
 
 
@@ -2634,7 +2744,7 @@ class SettingsSpecParent:
     def __post_init__(self) -> None:
         for category in fields(class_or_instance=self):
             entries: list[SettingSpec] | list[ConfigResponse] = getattr(self, category.name)
-            setattr(self, category.name, [SettingSpec(**entry) if isinstance(entry, dict) else entry for entry in entries])
+            setattr(self, category.name, [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries])
 
 
 @dataclass
@@ -2706,23 +2816,9 @@ class Status:
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.state, int):
             self.state = InstanceState(self.state)
-        # Each key is named, so pyright knows every value is a MetricsKeyResponse.
-        # Looping `.items()` types the values as `object`, which `**` cannot unpack.
-        # Any metric AMP sends beyond these is ignored.
         if isinstance(self.metrics, dict):
-            metrics: MetricsResponse = self.metrics
-            physical_ram_usage = metrics.get("physical_ram_usage")
-            swap_usage = metrics.get("swap_usage")
-            tps = metrics.get("tps")
-            self.metrics = Metrics(
-                active_users=MetricsData(**metrics["active_users"]),
-                cpu_usage=MetricsData(**metrics["cpu_usage"]),
-                memory_usage=MetricsData(**metrics["memory_usage"]),
-                physical_ram_usage=MetricsData(**physical_ram_usage) if physical_ram_usage is not None else None,
-                swap_usage=MetricsData(**swap_usage) if swap_usage is not None else None,
-                tps=MetricsData(**tps) if tps is not None else None,
-            )
-        self.ports = [Port(**entry) if isinstance(entry, dict) else entry for entry in self.ports]
+            self.metrics = build(Metrics, self.metrics)
+        self.ports = [build(Port, entry) if isinstance(entry, dict) else entry for entry in self.ports]
 
 
 @dataclass
@@ -2843,7 +2939,7 @@ class TimedTrigger:
     last_executed: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:
-        self.tasks = [TriggerTasks(**entry) if isinstance(entry, dict) else entry for entry in self.tasks]
+        self.tasks = [build(TriggerTasks, entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
 class TriggerID:
@@ -2925,9 +3021,6 @@ class Triggers:
     """
 
     enabled_state: int
-    # TODO: Convert tasks into TriggerTasks in a __post_init__.
-    # Triggers(**entry) currently assigns the nested dicts straight through; getscheduledata.json only
-    # ever captured an empty populated_triggers, so TriggersTasksResponse is unconfirmed.
     tasks: list[TriggerTasks] | list[TriggersTasksResponse] = field(default_factory=list["TriggerTasks"])
     id: str = ""
     type: str = ""
@@ -2976,9 +3069,6 @@ class TriggerTasks:
 
     id: str
     task_method_name: str
-    # TODO: Convert parameter_mapping into DCParameterMapping in a __post_init__.
-    # TriggerTasks(**entry) currently assigns the raw dict straight through. ParameterMapping is
-    # total=False and its keys are still UNK, so converting risks a TypeError on an unknown key.
     parameter_mapping: DCParameterMapping | ParameterMapping
     enabled_state: int
     locked: bool
@@ -3048,11 +3138,11 @@ class Updates:
 
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.status, dict):
-            self.status = Status(**self.status)
-        self.console_entries = [ConsoleEntries(**entry) if isinstance(entry, dict) else entry for entry in self.console_entries]
-        self.messages = [Messages(**entry) if isinstance(entry, dict) else entry for entry in self.messages]
-        self.ports = [Port(**entry) if isinstance(entry, dict) else entry for entry in self.ports]
-        self.tasks = [RunningTask(**entry) if isinstance(entry, dict) else entry for entry in self.tasks]
+            self.status = build(Status, self.status)
+        self.console_entries = [build(ConsoleEntries, entry) if isinstance(entry, dict) else entry for entry in self.console_entries]
+        self.messages = [build(Messages, entry) if isinstance(entry, dict) else entry for entry in self.messages]
+        self.ports = [build(Port, entry) if isinstance(entry, dict) else entry for entry in self.ports]
+        self.tasks = [build(RunningTask, entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
 @dataclass
@@ -3224,7 +3314,7 @@ class BuildInfo:
             temp: Self = cls(*[int(entry) for entry in new_data])
 
         # ValueError for a part that isn't a number, TypeError for too many or too few parts.
-        except (UnboundLocalError, MissingFields, ValueError, TypeError) as e:
+        except (UnboundLocalError, ValueError, TypeError) as e:
             _logger = logging.getLogger(__name__)
             _logger.error("Unable to convert the data %s | Error: %s", data, e)
             return data

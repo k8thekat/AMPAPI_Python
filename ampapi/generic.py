@@ -33,7 +33,7 @@ from ._types import (
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import ActionResult, ImportConfig
+from .modules import ActionResult, ImportConfig, build
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
@@ -91,7 +91,7 @@ class GenericModule(Base):
         if not is_response_type(result, ImportConfigResponse, IMPORT_CONFIG_REQUIRED_KEYS, IMPORT_CONFIG_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="GenericModule/ImportConfig", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ImportConfig(**result)
+            return build(ImportConfig, result)
         return result
 
     @Base.generic_only
@@ -141,7 +141,7 @@ class GenericModule(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="GenericModule/RefreshRemoteOptions", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     @Base.generic_only
@@ -191,7 +191,7 @@ class GenericModule(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="GenericModule/RefreshToolDiscovery", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     @Base.generic_only

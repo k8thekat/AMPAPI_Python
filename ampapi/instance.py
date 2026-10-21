@@ -36,7 +36,7 @@ from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .generic import GenericModule
 from .minecraft import MinecraftModule
-from .modules import ActionResult, BuildInfo, InstanceState, Status, Updates
+from .modules import ActionResult, BuildInfo, InstanceState, Status, Updates, build
 from .steamcmd import SteamCMDPlugin
 
 if TYPE_CHECKING:
@@ -352,7 +352,7 @@ class Instance(
         if isinstance(data["amp_version"], dict):
             try:
                 # reveal_type(data["amp_version"])
-                self.amp_version = BuildInfo(**data["amp_version"])
+                self.amp_version = build(BuildInfo, data["amp_version"])
             except (RuntimeError, TypeError, ValueError) as e:
                 LOGGER.warning("We attempted to unpack <self.amp_version> and failed %s", e)
                 self.amp_version = data["amp_version"]

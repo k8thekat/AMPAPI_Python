@@ -33,7 +33,7 @@ from ._types import (
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import ActionResult, Backup, RunningTask
+from .modules import ActionResult, Backup, RunningTask, build
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
@@ -131,7 +131,7 @@ class LocalFileBackupPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     async def delete_local_backup(
@@ -218,7 +218,7 @@ class LocalFileBackupPlugin(Base):
         if "is_primary_task" not in result:
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DownloadFromS3", cur_type=result, expec_type=dict)
         if format_data is True:
-            return RunningTask(**result)
+            return build(RunningTask, result)
         return result
 
     async def get_backups(
@@ -270,7 +270,7 @@ class LocalFileBackupPlugin(Base):
                 raise AMPAPITypeError(end_point="LocalFileBackupPlugin/GetBackups", cur_type=item, expec_type=dict)
             backups.append(item)
         if format_data is True:
-            return [Backup(**backup) for backup in backups]
+            return [build(Backup, backup) for backup in backups]
         return backups
 
     async def refresh_backup_list(
@@ -354,7 +354,7 @@ class LocalFileBackupPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     async def set_backup_sticky(
@@ -460,7 +460,7 @@ class LocalFileBackupPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     async def upload_to_s3(
@@ -509,5 +509,5 @@ class LocalFileBackupPlugin(Base):
         if "is_primary_task" not in result:
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/UploadToS3", cur_type=result, expec_type=dict)
         if format_data is True:
-            return RunningTask(**result)
+            return build(RunningTask, result)
         return result

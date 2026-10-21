@@ -36,7 +36,7 @@ from ._types import (
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask
+from .modules import ActionResult, BukkitPlugin, MCUser, OPList, OPWhitelist, RunningTask, build
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -163,7 +163,7 @@ class MinecraftModule(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="MinecraftModule/AddOPEntry", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -215,7 +215,7 @@ class MinecraftModule(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="MinecraftModule/AddToWhitelist", cur_type=result, expec_type=dict)
         if format_data is True:
-            return ActionResult(**result)
+            return build(ActionResult, result)
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -303,7 +303,7 @@ class MinecraftModule(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [BukkitPlugin(**item) for item in result]
+            return [build(BukkitPlugin, item) for item in result]
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -355,7 +355,7 @@ class MinecraftModule(Base):
         if "is_primary_task" not in result:
             raise AMPAPITypeError(end_point="MinecraftModule/BukGetInstallUpdatePlugin", cur_type=result, expec_type=dict)
         if format_data is True:
-            return RunningTask(**result)
+            return build(RunningTask, result)
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -454,7 +454,7 @@ class MinecraftModule(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [BukkitPlugin(**item) for item in result]
+            return [build(BukkitPlugin, item) for item in result]
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -499,7 +499,7 @@ class MinecraftModule(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [BukkitPlugin(**item) for item in result]
+            return [build(BukkitPlugin, item) for item in result]
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -595,7 +595,7 @@ class MinecraftModule(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [BukkitPlugin(**item) for item in result]
+            return [build(BukkitPlugin, item) for item in result]
         return result
 
     @mc_only
@@ -809,7 +809,7 @@ class MinecraftModule(Base):
         if not is_response_type(result, OPWhitelistResponse, OP_WHITELIST_REQUIRED_KEYS, OP_WHITELIST_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="MinecraftModule/GetOPWhitelist", cur_type=result, expec_type=dict)
         if format_data is True:
-            return OPWhitelist(**result)
+            return build(OPWhitelist, result)
         return result
 
     # TODO: Removed in AMP API 2.6.5.0
@@ -855,7 +855,7 @@ class MinecraftModule(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [MCUser(**item) for item in result]
+            return [build(MCUser, item) for item in result]
         return result
 
     @mc_only
@@ -984,7 +984,7 @@ class MinecraftModule(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [OPList(**item) for item in result]
+            return [build(OPList, item) for item in result]
         return result
 
     @mc_only
