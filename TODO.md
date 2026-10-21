@@ -43,8 +43,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#16) Review the raw dicts left in responses, and settle the naming of dataclasses and TypedDicts.
-
 
 ## ampapi/util.py
 

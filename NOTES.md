@@ -47,6 +47,14 @@ Naming: a dataclass `X` in `modules.py` pairs with its raw TypedDict `XResponse`
 `Module` dataclass stays out of `modules.__all__`: `ampapi` star-imports `_enums` after `modules`, and
 `_enums.Module` would shadow it. `docs/types.rst` documents it with its own `autoclass`.
 
+Raw dicts that stay raw on purpose (#16, 2026-10-21): maps with dynamic keys and `str` values (`Application.settings`,
+`SettingSpec.enum_values`, `SettingsSpecAttribute.key_enum_values`, `Consumes.enum_values`, `Instance.deployment_args`,
+`get_instance_live_settings`, `get_role_ids`), `StructuredDiagnostics.application` (keys differ per module), and
+`ADSData.available_instances` (an `Instance` needs a bridge, not a dataclass). `APISpec` and `ActionSpec` are type
+aliases over dynamic module and method keys; `automodule` skips aliases, so they are not in the docs. Fields AMP has
+never sent in a capture stay `Any` (Bukkit, `ImportConfig`, `Fitness`, `Backup.meta`, `SettingSpec.warn_when_value`).
+`Core.get_user_list` answers `{}` with no players in every capture; `[]` is handled as empty too.
+
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is
 widened to `Rich | Raw` and `__post_init__` does the conversion. `Port.protocol`, `Status.state`,
 `Updates.status`, `TimedTrigger.tasks` and every `SettingsSpecParent` category follow this shape.
