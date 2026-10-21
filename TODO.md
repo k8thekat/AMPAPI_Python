@@ -30,7 +30,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#6) Confirm the shape of `get_user_details` on an Instance with Analytics and user-specific data enabled; AMP answers null otherwise.
 
 ## ampapi/filemanager.py, filebackup.py, emailsender.py, minecraft.py
 

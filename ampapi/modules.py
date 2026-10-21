@@ -113,6 +113,7 @@ __all__ = (
     "AnalyticsStats",
     "AnalyticsSummary",
     "AnalyticsTopPlayers",
+    "AnalyticsUserDetails",
     "Application",
     "AuditLogEntry",
     "Backup",
@@ -562,6 +563,75 @@ class AnalyticsTopPlayers:
     percent: float
     total_session_time: float
     username: str
+
+
+@dataclass(slots=True)
+class AnalyticsUserDetails:
+    """Represents the JSON response data from :meth:`AnalyticsPlugin.get_user_details`.
+
+    .. note::
+        AMP only has data for a player when the Instance has `AnalyticsPlugin.Privacy.EnableAnalytics` and
+        `AnalyticsPlugin.Privacy.UserSpecificData` turned on.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    username : :class:`str`
+        The player's name, as passed to :meth:`AnalyticsPlugin.get_user_details`.
+    first_session : :class:`datetime.datetime`
+        When the player's first recorded session started, in UTC.
+    last_session : :class:`datetime.datetime`
+        When the player's last recorded session started, in UTC.
+    session_count : :class:`int`
+        The number of recorded sessions.
+    total_session_time : :class:`float`
+        The total time across every session, in minutes.
+    display_total_session_time : :class:`str`
+        :attr:`total_session_time` as AMP displays it. (eg. `"34 mins"`)
+    average_session_time : :class:`float`
+        The average session length, in minutes.
+    display_average_session_time : :class:`str`
+        :attr:`average_session_time` as AMP displays it.
+    longest_session : :class:`float`
+        The longest session, in minutes.
+    display_longest_session : :class:`str`
+        :attr:`longest_session` as AMP displays it.
+    days_active : :class:`int`
+        The number of days the player has a session on.
+    average_time_per_day : :class:`float`
+        The average time played per day, in minutes.
+    average_time_per_week : :class:`float`
+        The average time played per week, in minutes.
+    average_time_per_month : :class:`float`
+        The average time played per month, in minutes.
+    recent_sessions : dict[:class:`str`, :class:`str`]
+        Each recent session's start time (AMP's ISO string) and its length as AMP displays it. (eg. `"34m 10s"`)
+
+    """
+
+    username: str
+    first_session: str | datetime.datetime
+    last_session: str | datetime.datetime
+    session_count: int
+    total_session_time: float
+    display_total_session_time: str
+    average_session_time: float
+    display_average_session_time: str
+    longest_session: float
+    display_longest_session: str
+    days_active: int
+    average_time_per_day: float
+    average_time_per_week: float
+    average_time_per_month: float
+    recent_sessions: dict[str, str]
+
+    def __post_init__(self) -> None:  # noqa: D105
+        # AMP sends these without a timezone. They match `UserApplicationData.join_time`, which AMP marks as UTC.
+        if isinstance(self.first_session, str):
+            self.first_session = timestamp_converter(timestamp=self.first_session).replace(tzinfo=datetime.UTC)
+        if isinstance(self.last_session, str):
+            self.last_session = timestamp_converter(timestamp=self.last_session).replace(tzinfo=datetime.UTC)
 
 
 @dataclass(slots=True)

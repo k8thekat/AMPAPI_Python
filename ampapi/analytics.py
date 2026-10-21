@@ -24,10 +24,18 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
-from ._types import ANALYTICS_SUMMARY_EXCLUDED_KEYS, ANALYTICS_SUMMARY_REQUIRED_KEYS, AnalyticsSummaryResponse, is_response_type
+from ._types import (
+    ANALYTICS_SUMMARY_EXCLUDED_KEYS,
+    ANALYTICS_SUMMARY_REQUIRED_KEYS,
+    ANALYTICS_USER_DETAILS_EXCLUDED_KEYS,
+    ANALYTICS_USER_DETAILS_REQUIRED_KEYS,
+    AnalyticsSummaryResponse,
+    AnalyticsUserDetailsResponse,
+    is_response_type,
+)
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import AnalyticsFilter, AnalyticsSummary, build
+from .modules import AnalyticsFilter, AnalyticsSummary, AnalyticsUserDetails, build
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
@@ -111,9 +119,10 @@ class AnalyticsPlugin(Base):
         self,
         username: str,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[dict[str, Any], None]:
+    ) -> Union[AnalyticsUserDetails, AnalyticsUserDetailsResponse, None]:
         """|coro|
 
         Retrieves the Analytics details of a user.
@@ -129,10 +138,19 @@ class AnalyticsPlugin(Base):
             through the `allow_null` response option. Every other error is raised as normal.
 
 
+        .. note::
+            The Instance needs `AnalyticsPlugin.Privacy.EnableAnalytics` and `AnalyticsPlugin.Privacy.UserSpecificData`
+            turned on. AMP looks the player up by name; a UUID answers null.
+
+
+        .. versionadded:: 5.0.0
+
         Parameters
         ----------
         username : :class:`str`
-            The user name to retrieve the details of.
+            The player name to retrieve the details of.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -140,8 +158,8 @@ class AnalyticsPlugin(Base):
 
         Returns
         -------
-        Union[dict[:class:`str`, Any], None]
-            On success returns the raw dictionary of the user's details, or None when AMP has no data for the player.
+        Union[:class:`AnalyticsUserDetails`, :class:`AnalyticsUserDetailsResponse`, None]
+            On success returns an :class:`AnalyticsUserDetails` dataclass, or None when AMP has no data for the player.
 
         """
         await self._reauth()
@@ -159,6 +177,15 @@ class AnalyticsPlugin(Base):
 
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetUserDetails", cur_type=result, expec_type=dict)
-        # TODO: Confirm the shape of the response with a player who has played.
-        # AMP answers null when the player has no data, so no TypedDict until the keys are seen.
-        return result  # pyright: ignore[reportReturnType]
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(
+            result,
+            AnalyticsUserDetailsResponse,
+            ANALYTICS_USER_DETAILS_REQUIRED_KEYS,
+            ANALYTICS_USER_DETAILS_EXCLUDED_KEYS,
+        ):
+            raise AMPAPITypeError(end_point="AnalyticsPlugin/GetUserDetails", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return build(AnalyticsUserDetails, result)
+        return result

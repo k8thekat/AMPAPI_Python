@@ -71,6 +71,9 @@ ACTION_RESULT_EXCLUDED_KEYS: tuple[str, ...] = ("console_entries", "is_primary_t
 ANALYTICS_SUMMARY_REQUIRED_KEYS: tuple[str, ...] = ("stats", "graph_data")
 ANALYTICS_SUMMARY_EXCLUDED_KEYS: tuple[str, ...] = ()
 
+ANALYTICS_USER_DETAILS_REQUIRED_KEYS: tuple[str, ...] = ("username", "session_count", "recent_sessions")
+ANALYTICS_USER_DETAILS_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 RUNNING_TASK_REQUIRED_KEYS: tuple[str, ...] = ("status", "is_primary_task")
 RUNNING_TASK_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -400,6 +403,26 @@ class AnalyticsSummaryResponse(TypedDict):
     quietest_time: AnalyticsGraphDataResponse
     busiest_time: AnalyticsGraphDataResponse
     is_demo: bool
+
+
+class AnalyticsUserDetailsResponse(TypedDict):
+    """The raw response from :meth:`AnalyticsPlugin.get_user_details`, confirmed live on AMP-2.8.0.8."""
+
+    username: str
+    first_session: str
+    last_session: str
+    session_count: int
+    total_session_time: float
+    display_total_session_time: str
+    average_session_time: float
+    display_average_session_time: str
+    longest_session: float
+    display_longest_session: str
+    days_active: int
+    average_time_per_day: float
+    average_time_per_week: float
+    average_time_per_month: float
+    recent_sessions: dict[str, str]
 
 
 class AppSummaryResponse(TypedDict):
