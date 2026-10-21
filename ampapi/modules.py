@@ -1134,28 +1134,230 @@ class DCConsumes:
         return isinstance(other, self.__class__) and self.name < other.name
 
 
-# TODO: Update the docstring.
 @dataclass
 class DCParameterMapping:
-    """Represents the JSON response data for :attr:`~TriggerTasks.parameter_mapping`
+    """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
+
+    The arguments a task passes to its method. An argument the task's method doesn't take is None.
+    AMP sends every value as a string (eg. `"true"`, `"55"`), which can hold a trigger variable (eg. `{@User}`).
+
+    .. versionchanged:: 5.0.0
+        Holds the arguments of every task method in AMP-2.8.0.8, not only `user`, `reason`, `title` and `subtitle`.
+        An argument the task doesn't hold is None, not "".
 
     Attributes
     ----------
-    user : :class:`str`
-        UNK, default is "".
-    reason : :class:`str`
-        UNK, default is "".
-    title : :class:`str`
-        UNK, default is "".
-    subtitle : :class:`str`
-        UNK, default is "".
+    authorization_header : Union[:class:`str`, None], optional
+        The `Authorization` header of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    avatar_url : Union[:class:`str`, None], optional
+        The URL of the avatar the message is posted with (`WebRequestPlugin.DiscordEmbedMessage`,
+        `WebRequestPlugin.DiscordMessage`), default is None.
+    backup_id : Union[:class:`str`, None], optional
+        The ID of the backup to restore (`LocalFileBackupPlugin.RestoreBackup`), default is None.
+    backup_while_running : Union[:class:`str`, None], optional
+        If the backup is taken while the application is running (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    body : Union[:class:`str`, None], optional
+        The body of the push message (`WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`), default is
+        None.
+    button_label : Union[:class:`str`, None], optional
+        The label of the embed's button (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    button_url : Union[:class:`str`, None], optional
+        The URL the embed's button opens (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    channel : Union[:class:`str`, None], optional
+        The channel the push message is sent to (`WebRequestPlugin.PushMessageChannel`), default is None.
+    color_hex : Union[:class:`str`, None], optional
+        The colour of the embed, as a hex code (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    command : Union[:class:`str`, None], optional
+        The command to run once the warnings have been sent (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    content_type : Union[:class:`str`, None], optional
+        The `Content-Type` header of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    contents : Union[:class:`str`, None], optional
+        The text of the message (`WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
+    description : Union[:class:`str`, None], optional
+        The description of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    dirty_only : Union[:class:`str`, None], optional
+        If the backup is taken only when files have changed since the last one (`LocalFileBackupPlugin.TakeBackup`),
+        default is None.
+    display_username : Union[:class:`str`, None], optional
+        The name the message is posted under (`WebRequestPlugin.DiscordEmbedMessage`,
+        `WebRequestPlugin.DiscordMessage`), default is None.
+    existing_message_id : Union[:class:`str`, None], optional
+        The ID of an existing message to edit in place of posting a new one (`WebRequestPlugin.DiscordEmbedMessage`),
+        default is None.
+    fields : Union[:class:`str`, None], optional
+        The fields of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    five_mins : Union[:class:`str`, None], optional
+        The warning sent five minutes before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    five_secs : Union[:class:`str`, None], optional
+        The warning sent five seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    footer_icon_url : Union[:class:`str`, None], optional
+        The URL of the embed's footer icon (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    footer_text : Union[:class:`str`, None], optional
+        The text of the embed's footer (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    headers : Union[:class:`str`, None], optional
+        The headers of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    image_url : Union[:class:`str`, None], optional
+        The URL of the embed's image (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    input : Union[:class:`str`, None], optional
+        The console input to send (`MinecraftModule.SendConsole`, `MinecraftModule.SendConsoleAdv`,
+        `MinecraftModule.SendMultipleConsole`), default is None.
+    instance_name_or_id : Union[:class:`str`, None], optional
+        The name or ID of the Instance (`ADSModule.RestartInstance`, `ADSModule.StartInstance`,
+        `ADSModule.StopInstance`), default is None.
+    local : Union[:class:`str`, None], optional
+        If the backup is kept locally (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    mac_address : Union[:class:`str`, None], optional
+        The MAC address to send the Wake-on-LAN packet to (`CommonCorePlugin.SendWakeOnLan`), default is None.
+    message : Union[:class:`str`, None], optional
+        The message to send (`EmailSenderPlugin.SendMail`, `GenericModule.WriteLine`,
+        `MinecraftModule.SendServerMessage`, `MinecraftModule.SendUserMessage`), default is None.
+    one_hour : Union[:class:`str`, None], optional
+        The warning sent one hour before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    one_min : Union[:class:`str`, None], optional
+        The warning sent one minute before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    operation : Union[:class:`str`, None], optional
+        How `value_to_check` is compared with `value_to_compare` (an `IfOperators` name)
+        (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
+    payload : Union[:class:`str`, None], optional
+        The body of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    player : Union[:class:`str`, None], optional
+        The player the message is sent to (`MinecraftModule.SendUserMessage`), default is None.
+    priority : Union[:class:`str`, None], optional
+        The priority of the email (a `MailPriority` name) (`EmailSenderPlugin.SendMail`), default is None.
+    quantity : Union[:class:`str`, None], optional
+        The amount of XP to give (`MinecraftModule.GiveXP`), default is None.
+    reason : Union[:class:`str`, None], optional
+        The reason given to the user (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`,
+        `MinecraftModule.KickUser`), default is None.
+    restart_even_if_not_running : Union[:class:`str`, None], optional
+        If the application is started after the backup even when it was not running before
+        (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    s3 : Union[:class:`str`, None], optional
+        If the backup is uploaded to S3 (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    seconds : Union[:class:`str`, None], optional
+        The number of seconds to wait (`CommonCorePlugin.Wait`), default is None.
+    state : Union[:class:`str`, None], optional
+        The application state (an `ApplicationState` name) (`CommonCorePlugin.ElseIfAppState`,
+        `CommonCorePlugin.IfAppState`, `CommonCorePlugin.IfNotAppState`, `CommonCorePlugin.WaitForAppState`), default is
+        None.
+    sticky : Union[:class:`str`, None], optional
+        If the backup is kept when old backups are removed (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    subject : Union[:class:`str`, None], optional
+        The subject of the email (`EmailSenderPlugin.SendMail`), default is None.
+    subtitle : Union[:class:`str`, None], optional
+        The subtitle to show (`MinecraftModule.SendGlobalTitle`, `MinecraftModule.SendTitle`), default is None.
+    target : Union[:class:`str`, None], optional
+        The player to teleport to (`MinecraftModule.TeleportToPlayer`), default is None.
+    thirty_mins : Union[:class:`str`, None], optional
+        The warning sent thirty minutes before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    thirty_secs : Union[:class:`str`, None], optional
+        The warning sent thirty seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    thumbnail_url : Union[:class:`str`, None], optional
+        The URL of the embed's thumbnail (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    timeout_seconds : Union[:class:`str`, None], optional
+        The number of seconds to wait for the state before giving up (`CommonCorePlugin.WaitForAppState`), default is
+        None.
+    title : Union[:class:`str`, None], optional
+        The title to show or send (`MinecraftModule.SendGlobalTitle`, `MinecraftModule.SendTitle`,
+        `WebRequestPlugin.DiscordEmbedMessage`, `WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`),
+        default is None.
+    to : Union[:class:`str`, None], optional
+        The address the email is sent to (`EmailSenderPlugin.SendMail`), default is None.
+    uri : Union[:class:`str`, None], optional
+        The URI the request is sent to (`WebRequestPlugin.MakeGETRequest`, `WebRequestPlugin.MakePOSTRequest`), default
+        is None.
+    url : Union[:class:`str`, None], optional
+        The URL the embed's title links to (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    user : Union[:class:`str`, None], optional
+        The user the task acts on (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`, `MinecraftModule.Fabulous`,
+        `MinecraftModule.GiveXP`, `MinecraftModule.KickUser`, `MinecraftModule.KillPlayer`, `MinecraftModule.SendTitle`,
+        `MinecraftModule.SmitePlayer`, `MinecraftModule.TeleportToCoords`, `MinecraftModule.TeleportToPlayer`,
+        `MinecraftModule.Weaken`), default is None.
+    value_to_check : Union[:class:`str`, None], optional
+        The value to check (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
+    value_to_compare : Union[:class:`str`, None], optional
+        The value `value_to_check` is compared with (`CommonCorePlugin.ElseIfCondition`,
+        `CommonCorePlugin.IfCondition`), default is None.
+    webhook_url : Union[:class:`str`, None], optional
+        The webhook URL the message is posted to (`WebRequestPlugin.DiscordEmbedMessage`,
+        `WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
+    when : Union[:class:`str`, None], optional
+        The in-game time to set (`MinecraftModule.SetGameTime`), default is None.
+    x : Union[:class:`str`, None], optional
+        The X coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
+    y : Union[:class:`str`, None], optional
+        The Y coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
+    y_angle : Union[:class:`str`, None], optional
+        The Y angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
+    z : Union[:class:`str`, None], optional
+        The Z coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
+    z_angle : Union[:class:`str`, None], optional
+        The Z angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
 
     """
 
-    user: str = field(default="")
-    reason: str = field(default="")
-    title: str = field(default="")
-    subtitle: str = field(default="")
+    authorization_header: Union[str, None] = field(default=None)
+    avatar_url: Union[str, None] = field(default=None)
+    backup_id: Union[str, None] = field(default=None)
+    backup_while_running: Union[str, None] = field(default=None)
+    body: Union[str, None] = field(default=None)
+    button_label: Union[str, None] = field(default=None)
+    button_url: Union[str, None] = field(default=None)
+    channel: Union[str, None] = field(default=None)
+    color_hex: Union[str, None] = field(default=None)
+    command: Union[str, None] = field(default=None)
+    content_type: Union[str, None] = field(default=None)
+    contents: Union[str, None] = field(default=None)
+    description: Union[str, None] = field(default=None)
+    dirty_only: Union[str, None] = field(default=None)
+    display_username: Union[str, None] = field(default=None)
+    existing_message_id: Union[str, None] = field(default=None)
+    fields: Union[str, None] = field(default=None)
+    five_mins: Union[str, None] = field(default=None)
+    five_secs: Union[str, None] = field(default=None)
+    footer_icon_url: Union[str, None] = field(default=None)
+    footer_text: Union[str, None] = field(default=None)
+    headers: Union[str, None] = field(default=None)
+    image_url: Union[str, None] = field(default=None)
+    input: Union[str, None] = field(default=None)
+    instance_name_or_id: Union[str, None] = field(default=None)
+    local: Union[str, None] = field(default=None)
+    mac_address: Union[str, None] = field(default=None)
+    message: Union[str, None] = field(default=None)
+    one_hour: Union[str, None] = field(default=None)
+    one_min: Union[str, None] = field(default=None)
+    operation: Union[str, None] = field(default=None)
+    payload: Union[str, None] = field(default=None)
+    player: Union[str, None] = field(default=None)
+    priority: Union[str, None] = field(default=None)
+    quantity: Union[str, None] = field(default=None)
+    reason: Union[str, None] = field(default=None)
+    restart_even_if_not_running: Union[str, None] = field(default=None)
+    s3: Union[str, None] = field(default=None)
+    seconds: Union[str, None] = field(default=None)
+    state: Union[str, None] = field(default=None)
+    sticky: Union[str, None] = field(default=None)
+    subject: Union[str, None] = field(default=None)
+    subtitle: Union[str, None] = field(default=None)
+    target: Union[str, None] = field(default=None)
+    thirty_mins: Union[str, None] = field(default=None)
+    thirty_secs: Union[str, None] = field(default=None)
+    thumbnail_url: Union[str, None] = field(default=None)
+    timeout_seconds: Union[str, None] = field(default=None)
+    title: Union[str, None] = field(default=None)
+    to: Union[str, None] = field(default=None)
+    uri: Union[str, None] = field(default=None)
+    url: Union[str, None] = field(default=None)
+    user: Union[str, None] = field(default=None)
+    value_to_check: Union[str, None] = field(default=None)
+    value_to_compare: Union[str, None] = field(default=None)
+    webhook_url: Union[str, None] = field(default=None)
+    when: Union[str, None] = field(default=None)
+    x: Union[str, None] = field(default=None)
+    y: Union[str, None] = field(default=None)
+    y_angle: Union[str, None] = field(default=None)
+    z: Union[str, None] = field(default=None)
+    z_angle: Union[str, None] = field(default=None)
 
 
 class DeploymentTemplate:
@@ -3149,12 +3351,8 @@ class TriggerTasks:
         The ID of the task, these are unique per Instance.
     task_method_name : :class:`str`
         The name of the task method.
-    parameter_mapping : :class:`ParameterMapping`
-        The arguments the task passes to its method, keyed by the name of each argument of that method (eg. `seconds`
-        for `Event.CommonCorePlugin.Wait`). Kept as the raw response dict.
-
-        .. versionchanged:: 5.0.0
-            The raw dict, not a :class:`DCParameterMapping`.
+    parameter_mapping : :class:`DCParameterMapping`
+        The arguments the task passes to its method (eg. `seconds` for `Event.CommonCorePlugin.Wait`).
     enabled_state : :class:`int`
         If the task is enabled or not.
     locked : :class:`bool`
@@ -3184,7 +3382,7 @@ class TriggerTasks:
 
     id: str
     task_method_name: str
-    parameter_mapping: ParameterMapping
+    parameter_mapping: DCParameterMapping | ParameterMapping
     enabled_state: int
     locked: bool
     created_by: str

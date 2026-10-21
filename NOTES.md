@@ -33,8 +33,12 @@ class and key at WARNING. 4.x used dataclass-wizard's `fromdict`, which dropped 
 still unpacked with `**`.
 
 A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
-`TriggerTasks.parameter_mapping` is the one case: its keys are the snake_cased `consumes` names of the task's method
-(eg. `seconds` for `Event.CommonCorePlugin.Wait`), checked against 117 live tasks. `DCParameterMapping` is unused.
+`TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for
+`Event.CommonCorePlugin.Wait`), checked against 117 live tasks. `DCParameterMapping` declares the union of those names
+across every task method in the 2.8.0.8 captures (`get_schedule_data`'s `available_methods`), 62 of them, all `str`:
+AMP's `ParameterMapping` is a `Dictionary<String, String>`: booleans and numbers arrive as `"true"` / `"55"`. A
+method outside that list (eg. a new plugin) has its arguments dropped and logged. Add them to both `DCParameterMapping`
+and the `ParameterMapping` TypedDict.
 
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is
 widened to `Rich | Raw` and `__post_init__` does the conversion. `Port.protocol`, `Status.state`,

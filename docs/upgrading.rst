@@ -142,8 +142,9 @@ Returned data
   what AMP sends. The wrapper expected an ``ActionResult`` and raised, although the backup was taken.
 - :meth:`~ampapi.instance.Instance.get_updates` and :meth:`~ampapi.instance.Instance.get_application_status` take
   ``request_params`` and the ``**response_params`` the other methods take (eg. ``to_file``).
-- :attr:`~ampapi.modules.TriggerTasks.parameter_mapping` is the raw dict, keyed by the argument names of the task's
-  method; 4.x built it into a ``DCParameterMapping``, which kept only ``user``, ``reason``, ``title`` and ``subtitle``.
+- :class:`~ampapi.modules.DCParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
+  ``seconds``, ``message``, ``input``); 4.x kept only ``user``, ``reason``, ``title`` and ``subtitle``. An argument
+  the task doesn't hold is ``None``, not ``""``.
 - :attr:`~ampapi.modules.RemoteTargetInfo.datastores` holds :class:`~ampapi.modules.TargetDatastore` (an ID and a
   name, all AMP sends there); 4.x typed it as ``InstanceDatastore``.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.

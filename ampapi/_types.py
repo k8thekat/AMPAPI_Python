@@ -887,14 +887,194 @@ class OPWhitelistResponse(TypedDict):
 
 
 class ParameterMapping(TypedDict, total=False):
-    """user : NotRequired[:class:`str`]
+    """authorization_header : NotRequired[:class:`str`]
+
+    avatar_url : NotRequired[:class:`str`]
+
+    backup_id : NotRequired[:class:`str`]
+
+    backup_while_running : NotRequired[:class:`str`]
+
+    body : NotRequired[:class:`str`]
+
+    button_label : NotRequired[:class:`str`]
+
+    button_url : NotRequired[:class:`str`]
+
+    channel : NotRequired[:class:`str`]
+
+    color_hex : NotRequired[:class:`str`]
+
+    command : NotRequired[:class:`str`]
+
+    content_type : NotRequired[:class:`str`]
+
+    contents : NotRequired[:class:`str`]
+
+    description : NotRequired[:class:`str`]
+
+    dirty_only : NotRequired[:class:`str`]
+
+    display_username : NotRequired[:class:`str`]
+
+    existing_message_id : NotRequired[:class:`str`]
+
+    fields : NotRequired[:class:`str`]
+
+    five_mins : NotRequired[:class:`str`]
+
+    five_secs : NotRequired[:class:`str`]
+
+    footer_icon_url : NotRequired[:class:`str`]
+
+    footer_text : NotRequired[:class:`str`]
+
+    headers : NotRequired[:class:`str`]
+
+    image_url : NotRequired[:class:`str`]
+
+    input : NotRequired[:class:`str`]
+
+    instance_name_or_id : NotRequired[:class:`str`]
+
+    local : NotRequired[:class:`str`]
+
+    mac_address : NotRequired[:class:`str`]
+
+    message : NotRequired[:class:`str`]
+
+    one_hour : NotRequired[:class:`str`]
+
+    one_min : NotRequired[:class:`str`]
+
+    operation : NotRequired[:class:`str`]
+
+    payload : NotRequired[:class:`str`]
+
+    player : NotRequired[:class:`str`]
+
+    priority : NotRequired[:class:`str`]
+
+    quantity : NotRequired[:class:`str`]
 
     reason : NotRequired[:class:`str`]
 
+    restart_even_if_not_running : NotRequired[:class:`str`]
+
+    s3 : NotRequired[:class:`str`]
+
+    seconds : NotRequired[:class:`str`]
+
+    state : NotRequired[:class:`str`]
+
+    sticky : NotRequired[:class:`str`]
+
+    subject : NotRequired[:class:`str`]
+
+    subtitle : NotRequired[:class:`str`]
+
+    target : NotRequired[:class:`str`]
+
+    thirty_mins : NotRequired[:class:`str`]
+
+    thirty_secs : NotRequired[:class:`str`]
+
+    thumbnail_url : NotRequired[:class:`str`]
+
+    timeout_seconds : NotRequired[:class:`str`]
+
+    title : NotRequired[:class:`str`]
+
+    to : NotRequired[:class:`str`]
+
+    uri : NotRequired[:class:`str`]
+
+    url : NotRequired[:class:`str`]
+
+    user : NotRequired[:class:`str`]
+
+    value_to_check : NotRequired[:class:`str`]
+
+    value_to_compare : NotRequired[:class:`str`]
+
+    webhook_url : NotRequired[:class:`str`]
+
+    when : NotRequired[:class:`str`]
+
+    x : NotRequired[:class:`str`]
+
+    y : NotRequired[:class:`str`]
+
+    y_angle : NotRequired[:class:`str`]
+
+    z : NotRequired[:class:`str`]
+
+    z_angle : NotRequired[:class:`str`]
+
     """
 
-    user: NotRequired[str]
+    authorization_header: NotRequired[str]
+    avatar_url: NotRequired[str]
+    backup_id: NotRequired[str]
+    backup_while_running: NotRequired[str]
+    body: NotRequired[str]
+    button_label: NotRequired[str]
+    button_url: NotRequired[str]
+    channel: NotRequired[str]
+    color_hex: NotRequired[str]
+    command: NotRequired[str]
+    content_type: NotRequired[str]
+    contents: NotRequired[str]
+    description: NotRequired[str]
+    dirty_only: NotRequired[str]
+    display_username: NotRequired[str]
+    existing_message_id: NotRequired[str]
+    fields: NotRequired[str]
+    five_mins: NotRequired[str]
+    five_secs: NotRequired[str]
+    footer_icon_url: NotRequired[str]
+    footer_text: NotRequired[str]
+    headers: NotRequired[str]
+    image_url: NotRequired[str]
+    input: NotRequired[str]
+    instance_name_or_id: NotRequired[str]
+    local: NotRequired[str]
+    mac_address: NotRequired[str]
+    message: NotRequired[str]
+    one_hour: NotRequired[str]
+    one_min: NotRequired[str]
+    operation: NotRequired[str]
+    payload: NotRequired[str]
+    player: NotRequired[str]
+    priority: NotRequired[str]
+    quantity: NotRequired[str]
     reason: NotRequired[str]
+    restart_even_if_not_running: NotRequired[str]
+    s3: NotRequired[str]
+    seconds: NotRequired[str]
+    state: NotRequired[str]
+    sticky: NotRequired[str]
+    subject: NotRequired[str]
+    subtitle: NotRequired[str]
+    target: NotRequired[str]
+    thirty_mins: NotRequired[str]
+    thirty_secs: NotRequired[str]
+    thumbnail_url: NotRequired[str]
+    timeout_seconds: NotRequired[str]
+    title: NotRequired[str]
+    to: NotRequired[str]
+    uri: NotRequired[str]
+    url: NotRequired[str]
+    user: NotRequired[str]
+    value_to_check: NotRequired[str]
+    value_to_compare: NotRequired[str]
+    webhook_url: NotRequired[str]
+    when: NotRequired[str]
+    x: NotRequired[str]
+    y: NotRequired[str]
+    y_angle: NotRequired[str]
+    z: NotRequired[str]
+    z_angle: NotRequired[str]
 
 
 class PermissionNode(TypedDict):
