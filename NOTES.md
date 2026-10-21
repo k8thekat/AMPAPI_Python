@@ -27,25 +27,32 @@ outside the union cannot.
 Response dataclasses are built with `build(Cls, result)` (`modules.py`), never `Cls(**result)` and never `cast`.
 `sanitize_json` has already snake_cased the keys by then. `build` reads the field type hints (cached per class) and
 builds nested dataclasses through lists and unions, trying a union's members in order, so the dataclass goes first
-(`list[DCConsumes] | list[ConsumeResponse]`). A key the dataclass doesn't declare is dropped and logged once per
+(`list[Consumes] | list[ConsumesResponse]`). A key the dataclass doesn't declare is dropped and logged once per
 class and key at WARNING. 4.x used dataclass-wizard's `fromdict`, which dropped them silently, and the 5.0.0 baseline's
 `Cls(**result)` raised on them. `build` rejects a non-dataclass: `DeploymentTemplate` and `UserApplicationData` are
 still unpacked with `**`.
 
 A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
 `TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for
-`Event.CommonCorePlugin.Wait`), checked against 117 live tasks. `DCParameterMapping` declares the union of those names
-across every task method in the 2.8.0.8 captures (`get_schedule_data`'s `available_methods`), 62 of them, all `str`:
-AMP's `ParameterMapping` is a `Dictionary<String, String>`: booleans and numbers arrive as `"true"` / `"55"`. A
-method outside that list (eg. a new plugin) has its arguments dropped and logged. Add them to both `DCParameterMapping`
-and the `ParameterMapping` TypedDict.
+`Event.CommonCorePlugin.Wait`), checked against 117 live tasks. The `ParameterMapping` dataclass declares the union of
+those names across every task method in the 2.8.0.8 captures (`get_schedule_data`'s `available_methods`), 62 of them.
+AMP's `ParameterMapping` is a `Dictionary<String, String>` and stores whatever a client sends (probed on vm1,
+2026-10-20). `__post_init__` converts by each argument's `value_type`: Boolean, Int32, Double / Single, the enums
+(ApplicationState -> `InstanceState`, `IfOperators`, `MailPriority`, by the numeric key the panel stores) and DateTime
+(`fromisoformat`, then AMP's `%m/%d/%Y %H:%M:%S` rewrite of an ISO time with seconds). An empty string becomes None and
+a value that doesn't parse stays the string, as in Moogles' `Builder.convert_values`. A method outside that list (eg. a
+new plugin) has its arguments dropped and logged. Add them to both the dataclass and `ParameterMappingResponse`.
+
+Naming: a dataclass `X` in `modules.py` pairs with its raw TypedDict `XResponse` in `_types.py` (5.0.0, Kat). The
+`Module` dataclass stays out of `modules.__all__`: `ampapi` star-imports `_enums` after `modules`, and
+`_enums.Module` would shadow it. `docs/types.rst` documents it with its own `autoclass`.
 
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is
 widened to `Rich | Raw` and `__post_init__` does the conversion. `Port.protocol`, `Status.state`,
 `Updates.status`, `TimedTrigger.tasks` and every `SettingsSpecParent` category follow this shape.
 
-Container fields are spelled as a **union of containers** — `list[SettingSpec] | list[ConfigResponse]`,
-not `list[SettingSpec | ConfigResponse]`. `list` and `dict` are invariant in their element type, so
+Container fields are spelled as a **union of containers** — `list[SettingSpec] | list[SettingSpecResponse]`,
+not `list[SettingSpec | SettingSpecResponse]`. `list` and `dict` are invariant in their element type, so
 the raw response is not assignable to the combined form.
 
 An annotation that the runtime does not honour is worse than a loose one; several were found

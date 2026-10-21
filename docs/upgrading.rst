@@ -38,9 +38,10 @@ Renamed attributes: ``Base.url`` -> ``endpoint_url``, ``FileChunk.base_64_data``
 ``InstanceDatastore.sanitized_name`` -> ``sanitised_name``, ``Module.end_point_ur`` -> ``endpoint_uri`` and
 ``PortInfo.us_user_defined`` -> ``is_user_defined``.
 
-- The raw response TypedDicts in ``ampapi._types`` are named after their dataclass: ``Consumes`` ->
-  ``ConsumesResponse``, ``MethodsData`` -> ``MethodsResponse``, ``ParameterMapping`` -> ``ParameterMappingResponse``
-  and ``MCUserData`` -> ``MCUserResponse``.
+- The raw response TypedDicts in ``ampapi._types`` (4.x ``ampapi.types_``) are named after their dataclass, with a
+  ``Response`` suffix: ``types_.Consumes`` -> ``ConsumesResponse``, ``MethodsData`` -> ``MethodsResponse``,
+  ``types_.ParameterMapping`` -> ``ParameterMappingResponse`` and ``MCUserData`` -> ``MCUserResponse``. ``Consumes``
+  and ``ParameterMapping`` are now the dataclasses in :mod:`ampapi.modules`.
 
 
 Moved modules
