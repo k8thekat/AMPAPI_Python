@@ -277,12 +277,11 @@ class AnalyticsCountryData:
         The unique player count per country.
     unique_player_percent : :class:`int`
         The unique player percent out of all countries.
-    session_percent : :class:`int`
+    sessions_percent : :class:`float`
         The percent of total sessions related to this country.
-    sessions_percent : :class:`float`, optional
-        The percent of total sessions related to this country, default is 0.0.
 
-        .. versionadded:: 5.0.0
+        .. versionchanged:: 5.0.0
+            `session_percent` is renamed `sessions_percent`, the key AMP sends.
 
     """
 
@@ -293,8 +292,8 @@ class AnalyticsCountryData:
     total_session_time: float
     unique_player_count: int
     unique_player_percent: float
-    session_percent: float = field(default_factory=float)
-    sessions_percent: float = 0.0
+    # session_percent: float = field(default_factory=float)
+    sessions_percent: float
 
 
 @dataclass

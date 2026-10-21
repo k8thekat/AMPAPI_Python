@@ -60,7 +60,7 @@ go in defaulted so older responses still construct. A dropped-key WARNING from `
 `Core.get_setting_spec` categories vary by ADS, Instance and licence: only `system_settings` and
 `security_and_privacy` are always sent. The VMs send no `branding`, Kat's live Instances do. Module categories have
 a colon in the name (`valheim:stadiacontroller`, `valheim_plus:extension`) and go into `SettingsSpecParent.modules`.
-`AnalyticsCountryData.session_percent` is never sent, AMP's key is `sessions_percent` (both fields exist for now).
+`AnalyticsCountryData.session_percent` was never sent, AMP's key is `sessions_percent` (renamed for 5.0.0).
 
 `Base.sanitize_json` is not safe to run twice on keys: a second pass strips the underscores
 (`active_users` -> `activeusers`). The library sanitizes each response once, in `_response_handler`, and

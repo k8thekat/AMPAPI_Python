@@ -147,6 +147,8 @@ Returned data
   the task doesn't hold is ``None``, not ``""``.
 - :attr:`~ampapi.modules.RemoteTargetInfo.datastores` holds :class:`~ampapi.modules.TargetDatastore` (an ID and a
   name, all AMP sends there); 4.x typed it as ``InstanceDatastore``.
+- ``AnalyticsCountryData.session_percent`` is renamed
+  :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
 - :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. ``ADS01``) out of
   :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the
