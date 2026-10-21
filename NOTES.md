@@ -83,7 +83,7 @@ less per object on most classes, 40-66% on classes with many defaulted fields (`
 reads `fields()` rather than `vars()`. `__post_init__` can only set declared fields. `Instance.__slots__` is
 different: its 28 names are real slots, but `Base` and the mixins have none and an Instance keeps a `__dict__` for its
 8 private attributes. Slotting that whole chain saves 48 bytes per Instance, which isn't worth it. The tuple stays as
-`_parse_instance_data`'s field list. Plan and numbers: `.local_data/plans/memory_overhead/plan.md`.
+`_parse_instance_data`'s field list. Plan and numbers: `.local_data/plans/finished/memory_overhead/plan.md`.
 
 AMP adds keys between versions. AMP 2.8 added `ports` to the status, three keys to each port and five to
 each backup, plus `oidc_sub` (users), `local_login_enabled` (module info), `warn_text` / `warn_when_value` (every

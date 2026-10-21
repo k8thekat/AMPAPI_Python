@@ -63,7 +63,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#9) Implement non-dataclass types to lower overhead and speed via Format_data arg
 - (#17) Offer orjson as an optional extra (`ampapi[speed]`) for `_response_handler`'s JSON decode.
 - (#11) Update function returns and parameters since adding `bool` to `_post`.
 - (#12) Store plugin (17 endpoints) and Webhook plugin (`trigger_webhook_event`) have no wrapper module.
