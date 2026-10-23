@@ -80,6 +80,8 @@ Changed methods
   :meth:`~ampapi.filebackup.LocalFileBackupPlugin.delete_local_backup` and
   :meth:`~ampapi.filebackup.LocalFileBackupPlugin.set_backup_sticky` return an :class:`~ampapi.modules.ActionResult`
   (AMP's reply) and take ``format_data``; 4.x returned None.
+- :meth:`~ampapi.Core.run_security_check` returns a list of :class:`~ampapi.modules.SecurityCheck` and takes
+  ``format_data``; 4.x returned the raw response. AMP's ``Pass`` key is ``passed``, since ``pass`` is a Python keyword.
 - :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
   and no longer take ``format_data``. AMP answers JSON null for both, so the ``ActionResult`` 4.x annotated was never sent.
 - :meth:`~ampapi.adsmodule.ADSModule.create_local_instance` is deprecated. AMP 2.8.0.8 answers a null reference to

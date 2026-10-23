@@ -127,6 +127,9 @@ INSTANCE_EXCLUDED_KEYS: tuple[str, ...] = ()
 SCHEDULE_DATA_REQUIRED_KEYS: tuple[str, ...] = ("available_methods", "available_triggers")
 SCHEDULE_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
+SECURITY_CHECK_REQUIRED_KEYS: tuple[str, ...] = ("title", "resolution", "severity", "passed")
+SECURITY_CHECK_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 # Every ADS and Instance sends these two. The other categories vary (eg. `branding` only on some Instances).
 SETTINGS_SPEC_PARENT_REQUIRED_KEYS: tuple[str, ...] = ("system_settings", "security_and_privacy")
 SETTINGS_SPEC_PARENT_EXCLUDED_KEYS: tuple[str, ...] = ()
@@ -1370,6 +1373,20 @@ class ScheduleDataResponse(TypedDict):
     available_methods: list[MethodsResponse]
     available_triggers: list[TriggersResponse]
     populated_triggers: list[TriggersResponse]
+
+
+class SecurityCheckResponse(TypedDict):
+    """Represents one check from :meth:`Core.run_security_check`.
+
+    AMP sends the result as ``Pass``, which :attr:`Base.json_key_mapping` turns into ``passed`` because ``pass`` is a keyword.
+    """
+
+    title: str
+    description: str
+    resolution: str
+    severity: int
+    passed: bool
+    hidden: bool
 
 
 class SessionResponse(TypedDict):

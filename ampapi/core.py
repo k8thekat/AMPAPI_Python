@@ -34,6 +34,8 @@ from ._types import (
     RUNNING_TASK_REQUIRED_KEYS,
     SCHEDULE_DATA_EXCLUDED_KEYS,
     SCHEDULE_DATA_REQUIRED_KEYS,
+    SECURITY_CHECK_EXCLUDED_KEYS,
+    SECURITY_CHECK_REQUIRED_KEYS,
     SETTINGS_SPEC_PARENT_EXCLUDED_KEYS,
     SETTINGS_SPEC_PARENT_REQUIRED_KEYS,
     STATUS_EXCLUDED_KEYS,
@@ -47,11 +49,13 @@ from ._types import (
     ActionResultResponse,
     RunningTaskResponse,
     ScheduleDataResponse,
+    SecurityCheckResponse,
     SettingsSpecParentResponse,
     StatusResponse,
     TimedTriggerResponse,
     UserApplicationDataResponse,
     WebauthnCredentialIDsResponse,
+    is_response_list,
     is_response_type,
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
@@ -70,6 +74,7 @@ from .modules import (
     Role,
     RunningTask,
     ScheduleData,
+    SecurityCheck,
     Session,
     SettingSpec,
     SettingsSpecParent,
@@ -3973,21 +3978,26 @@ class Core(Base):
             return build(ActionResult, result)
         return result
 
-    # TODO: - Need to get Proper data back.
     async def run_security_check(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Any:
+    ) -> list[SecurityCheck] | list[SecurityCheckResponse]:
         """|coro|
 
         Run a security check on the Instance.
 
         Endpoint: `Core/RunSecurityCheck`
 
+        .. versionchanged:: 5.0.0
+            Returns a list of :class:`SecurityCheck` and takes `format_data`.
+
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -3995,15 +4005,25 @@ class Core(Base):
 
         Returns
         -------
-        Any
+        list[:class:`SecurityCheck`]
+            On success returns a list of :class:`SecurityCheck` dataclasses.
 
         """
         await self._reauth()
-        return await self._post(
+        result: ResponseAliasFull = await self._post(
             url="Core/RunSecurityCheck",
             request_params=request_params,
             **response_params,
         )
+        if not isinstance(result, list):
+            raise AMPAPITypeError(end_point="Core/RunSecurityCheck", cur_type=result, expec_type=list)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_list(result, SecurityCheckResponse, SECURITY_CHECK_REQUIRED_KEYS, SECURITY_CHECK_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/RunSecurityCheck", cur_type=result, expec_type=list)
+        if format_data is True:
+            return [build(SecurityCheck, entry) for entry in result]
+        return result
 
     async def run_event_trigger_immediately(
         self,

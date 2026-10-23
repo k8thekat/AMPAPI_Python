@@ -159,6 +159,7 @@ __all__ = (
     "RoleMember",
     "RunningTask",
     "ScheduleData",
+    "SecurityCheck",
     "Session",
     "SettingSpec",
     "SettingSpecAction",
@@ -3230,6 +3231,37 @@ class ScheduleData:
             if key == "available_triggers" or key == "populated_triggers":
                 setattr(self, key, [build(Triggers, entry) for entry in value])
                 continue
+
+
+@dataclass(slots=True)
+class SecurityCheck:
+    """Represents one check from the JSON response data of :meth:`Core.run_security_check`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    title : :class:`str`
+        The name of the check.
+    description : :class:`str`
+        What the check looks for.
+    resolution : :class:`str`
+        How to fix the check when it fails.
+    severity : :class:`int`
+        How serious a failed check is. Only ``1`` and ``2`` have been seen, so the meaning of each is unconfirmed.
+    passed : :class:`bool`
+        If the check passed or not. AMP sends this as ``Pass``.
+    hidden : :class:`bool`
+        If the check is hidden in the AMP UI or not.
+
+    """
+
+    title: str
+    description: str
+    resolution: str
+    severity: int
+    passed: bool
+    hidden: bool
 
 
 @dataclass(slots=True)
