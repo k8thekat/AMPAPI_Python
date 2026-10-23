@@ -2257,7 +2257,7 @@ class LicenceInfo:
     product_name : :class:`str`
         The name of the product the licence is for. (eg. `"AMP"`)
     expires : Union[:class:`str`, :class:`datetime.datetime`]
-        When the licence expires. AMP sends no timezone, and the time is left as AMP sends it.
+        When the licence expires, converted to a naive :class:`datetime.datetime`. AMP sends no timezone, and none is added.
     usage : :class:`int`
         How many times the licence has been used. Its meaning is unconfirmed. Only one value has been seen.
 

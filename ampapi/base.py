@@ -474,11 +474,14 @@ class Base:
         # Ver. 2.6.2.8 Authorization header key change.
         if request_params is None:
             request_params = {}
+        # A copy, since the headers and data are filled in below. A dict the caller passes again would carry the old ones.
+        request_params = request_params.copy()
 
         # Headers the caller passed are theirs to keep. Only the ones we build here follow a new login.
         library_headers: bool = "headers" not in request_params
 
-        # A dead session gets one login and one resend. The RuntimeError retry below shares this flag, and the two can't loop.
+        # A dead session gets one login and one resend, once per call.
+        # The RuntimeError retry below has no limit of its own, as before #18.
         session_retried: bool = False
 
         while True:
@@ -489,6 +492,8 @@ class Base:
             if self.session is None:
                 self.session = aiohttp.ClientSession()
 
+            # request_params.setdefault("headers", {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"})
+            # Rebuilt on every pass. A resend after a new login carries the new session ID.
             if library_headers is True:
                 request_params["headers"] = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
             request_params.setdefault("data", json.dumps(parameters))
@@ -527,7 +532,7 @@ class Base:
                 #     request_params=request_params,
                 #     **response_params,
                 # )
-                # Same retry as the recursive call above, kept in this loop so `session_retried` carries over.
+                # Same retry as the recursive call above. It stays in this loop, and `session_retried` carries over.
                 continue
 
             # ? Suggestion
@@ -696,7 +701,7 @@ class Base:
             # It is a warning, not an error. Only a second dead answer is a failure, and `_post` raises that one.
             if title == "Unauthorized Access" and "Session.Exists" in str(response_json.get("message", "")):
                 LOGGER.warning(
-                    "<%s.%s> | AMP no longer knows the stored session, logging in again. | URL: %s",
+                    "<%s.%s> | AMP no longer knows the stored session. | URL: %s",
                     __class__.__name__,
                     "_response_handler",
                     response.url,
@@ -925,6 +930,8 @@ class Base:
         .. note::
             Safe to call more than once; the session is cleared once closed.
 
+        .. versionchanged:: 5.0.0
+            `logout` also resets the stored session, and skips `Core/Logout` when there is no session to end.
 
         Parameters
         ----------
@@ -933,7 +940,11 @@ class Base:
             A failed logout is logged as a warning and the session is still closed.
 
         """
-        if logout is True:
+        stored: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+        # Without a stored session the dead-session retry in `_post` would log in only to log out.
+        if logout is True and (stored is None or stored.id == "0"):
+            LOGGER.debug("<%s.%s> | No stored session, skipping `Core/Logout`", __class__.__name__, "clean_up")
+        elif logout is True:
             try:
                 await self._post(url="Core/Logout", no_data=True)
             except Exception:

@@ -29,7 +29,7 @@ raise below it.
 
 `no_data=True` is for an endpoint that answers JSON null (spec `Void`). `_post` still runs `_response_handler` for it
 with `allow_null`, because AMP reports a failure in the body with HTTP 200 (`{"Status": false, ...}` or an error
-`Title`). Before #11 `_post` returned None without reading the body, and so did 4.x's `_call_api`: a bogus backup ID
+`Title`). Before #11 `_post` returned None without reading the body, as 4.x's `_call_api` did: a bogus backup ID
 for `set_backup_sticky` or a removed Minecraft method returned None as if it worked. An endpoint whose spec type is
 `ActionResult` never takes `no_data`, even when the caller only needs success or failure.
 
@@ -99,6 +99,10 @@ return it typed (`TwoFactorSetupInfo`, `LicenceInfo`), since a failure already r
 it carries nothing more. Shapes from vm1, 2026-10-23: `EnableTwoFactor` sends `url` and `manual_key` (the secret).
 `ActivateAMPLicence` sends `licence_key` (the key, echoed back), `grade`, `grade_name`, `product`, `product_name`,
 `expires` (ISO, no timezone) and `usage`. Both dataclasses keep their secret out of `repr`.
+
+`check_key_drift` can't see inside these two. It compares each shape an endpoint narrows to with the whole answer
+and keeps the closest, and `ActionResultResponse` always fits the outer `ActionResult`. A key AMP adds to the
+inner `result` is not reported (#20).
 
 A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
 `TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for
@@ -304,7 +308,7 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - `ADSModule/StartInstance` and its siblings pick the Instance by name, on the ADS the call is sent to. Sent to the
   Controller, `"ADS01"` is the Controller's own ADS even when the caller means a Target's `ADS01` (vm1 logged the
   request, vm2 nothing). So an Instance stores the ADS that holds it (`Instance.ads`): the Controller for its own, the
-  `TargetADS` for a Target's. `start_instance()` / `stop_instance()` / `restart_instance()` / `update_instance()` and
+  `TargetADS` for a Target's. `start_instance()` / `stop_instance()` / `restart_instance()` / `upgrade_instance()` and
   `get_instance_status()` go through it. Checked live (2026-10-19) with a same-named `MCTest01` on vm1 and vm2:
   stopping and starting each one through its object left the other running.
 - A Target's game Instances carry the wrong `target_id` when read through the Controller (2026-10-19). vm2 lists

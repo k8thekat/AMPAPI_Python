@@ -79,7 +79,7 @@ Changed methods
 - :meth:`~ampapi.Core.restart_amp`, :meth:`~ampapi.Core.upgrade_amp`, :meth:`~ampapi.Core.update_amp_instance`,
   :meth:`~ampapi.filebackup.LocalFileBackupPlugin.delete_local_backup` and
   :meth:`~ampapi.filebackup.LocalFileBackupPlugin.set_backup_sticky` return an :class:`~ampapi.modules.ActionResult`
-  (AMP's reply) and take ``format_data``; 4.x returned None.
+  (AMP's reply) and take ``format_data``. 4.x returned None.
 - :meth:`~ampapi.Core.restart_amp` runs on any Instance and restarts that Instance's AMP process. 4.x raised a
   :exc:`RuntimeError` unless it was called on an ADS.
 - ``Instance.update_instance`` is renamed :meth:`~ampapi.instance.Instance.upgrade_instance`, to match
@@ -92,7 +92,7 @@ Changed methods
   :meth:`~ampapi.Core.restart_application` and :meth:`~ampapi.Core.kill_application`. An Instance's own
   ``restart_instance`` is unchanged.
 - :meth:`~ampapi.Core.run_security_check` returns a list of :class:`~ampapi.modules.SecurityCheck` and takes
-  ``format_data``; 4.x returned the raw response. AMP's ``Pass`` key is ``passed``, since ``pass`` is a Python keyword.
+  ``format_data``. 4.x returned the raw response. AMP's ``Pass`` key is ``passed``, since ``pass`` is a Python keyword.
 - :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
   and no longer take ``format_data``. AMP answers JSON null for both, and never sent the ``ActionResult`` 4.x annotated.
 - :meth:`~ampapi.adsmodule.ADSModule.create_local_instance` is deprecated. AMP 2.8.0.8 answers a null reference to

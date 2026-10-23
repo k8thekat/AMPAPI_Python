@@ -64,3 +64,4 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 - (#17) Offer orjson as an optional extra (`ampapi[speed]`) for `_response_handler`'s JSON decode.
 - (#12) Store plugin (17 endpoints) and Webhook plugin (`trigger_webhook_event`) have no wrapper module.
 - (#13) Add the spec parameters our wrappers lack (list in NOTES.md, "Wrapper parameter gaps").
+- (#20) `check_key_drift`: check the inner `result` of an `ActionResult<object>` answer (NOTES.md, "Dataclasses vs. the raw JSON").

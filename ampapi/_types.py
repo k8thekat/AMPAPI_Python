@@ -1550,7 +1550,6 @@ class TriggerTasksResponse(TypedDict):
     last_error_reason: NotRequired[Union[str, None]]
 
 
-# Not total=False, so pyright can narrow the response union to this shape by its keys.
 class TwoFactorSetupInfoResponse(TypedDict):
     """Represents the ``result`` of :meth:`Core.enable_two_factor`."""
 
@@ -1558,6 +1557,7 @@ class TwoFactorSetupInfoResponse(TypedDict):
     manual_key: str
 
 
+# Not total=False, so pyright can narrow the response union to this shape by its keys.
 class UpdateInfoResponse(TypedDict):
     update_available: bool
     version: str

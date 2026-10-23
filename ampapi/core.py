@@ -4593,7 +4593,10 @@ class Core(Base):
 
         Endpoint: `Core/UpgradeAMP`
 
-         .. warning::
+        .. note::
+            AMP restarts, which ends the session. This Instance's stored session is reset and the next call logs in again.
+
+        .. warning::
             The Instance must be an ADS or Controller.
 
         .. versionchanged:: 5.0.0
@@ -4644,6 +4647,9 @@ class Core(Base):
         Updates the ADS Instance.
 
         Endpoint: `Core/UpdateAMPInstance`
+
+        .. note::
+            AMP restarts, which ends the session. This Instance's stored session is reset and the next call logs in again.
 
         .. warning::
             The Instance must be an ADS or Controller.
