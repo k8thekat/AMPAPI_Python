@@ -34,6 +34,28 @@ from operator import attrgetter
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self, TypeGuard, Union
 
+from . import _types
+from ._enums import (
+    AccessModeState,
+    ADSModeState,
+    AMPDownloadMirrorState,
+    AMPTheme,
+    ApplicationUpdatesState,
+    AppStartupModeState,
+    ContainerMemoryPolicyState,
+    DefaultIPBindingState,
+    IfOperators,
+    InstanceState,
+    LoggingLevelState,
+    MailPriority,
+    PortAssignmentState,
+    PostCreateState,
+    Protocols,
+    ReleaseStreamState,
+    TwoFactoryModeState,
+)
+from .errors import AMPAPITypeError
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from typing import Self
@@ -65,43 +87,6 @@ if TYPE_CHECKING:
 
     T = ParamSpec("T")
     F = TypeVar("F")
-
-from . import _types
-from ._enums import (
-    AccessModeState,
-    ADSModeState,
-    AMPDownloadMirrorState,
-    AMPTheme,
-    ApplicationUpdatesState,
-    AppStartupModeState,
-    ContainerMemoryPolicyState,
-    DefaultIPBindingState,
-    IfOperators,
-    InstanceState,
-    LoggingLevelState,
-    MailPriority,
-    PortAssignmentState,
-    PostCreateState,
-    Protocols,
-    ReleaseStreamState,
-    TwoFactoryModeState,
-)
-from .errors import AMPAPITypeError
-
-SettingSpecTableAliases = Union[
-    AccessModeState,
-    PostCreateState,
-    ApplicationUpdatesState,
-    LoggingLevelState,
-    AMPTheme,
-    AppStartupModeState,
-    TwoFactoryModeState,
-    PortAssignmentState,
-    DefaultIPBindingState,
-    AMPDownloadMirrorState,
-    ADSModeState,
-    ReleaseStreamState,
-]
 
 __all__ = (
     "APIParams",
@@ -184,6 +169,26 @@ __all__ = (
     "UserApplicationData",
     "UserInfo",
 )
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
+SettingSpecTableAliases = Union[
+    AccessModeState,
+    PostCreateState,
+    ApplicationUpdatesState,
+    LoggingLevelState,
+    AMPTheme,
+    AppStartupModeState,
+    TwoFactoryModeState,
+    PortAssignmentState,
+    DefaultIPBindingState,
+    AMPDownloadMirrorState,
+    ADSModeState,
+    ReleaseStreamState,
+]
+
+# Class/key pairs already reported. Each unknown key AMP sends is logged once, not on every response.
+_reported_unknown_keys: set[tuple[str, str]] = set()
 
 
 def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
@@ -295,6 +300,110 @@ def timestamp_converter(timestamp: str) -> datetime.datetime:
     if timestamp.startswith("/Date"):
         return datetime.datetime.fromtimestamp(int(timestamp[6:-2]) / 1000, tz=datetime.UTC)
     return datetime.datetime.fromisoformat(timestamp)
+
+
+def _is_json_object(value: object) -> TypeGuard[dict[str, Any]]:
+    """If `value` is a decoded JSON object, whose keys are always strings."""
+    return isinstance(value, dict)
+
+
+def _is_json_array(value: object) -> TypeGuard[list[Any]]:
+    """If `value` is a decoded JSON array."""
+    return isinstance(value, list)
+
+
+@functools.cache
+def _field_types(cls: type[Any]) -> dict[str, Any]:
+    """The resolved type of every field on `cls`, read once per class.
+
+    `modules.py` imports its TypedDicts only for type checking. The `_types` names are added for the hints
+    that mention them.
+    """
+    namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
+    return typing.get_type_hints(cls, globalns=namespace)
+
+
+def _converter(hint: Any) -> Callable[[Any], Any] | None:
+    """The function that turns a response value into what the type hint names, worked out once from the hint.
+
+    Returns None when the hint holds no dataclass or list. The value is then used as sent.
+    """
+    origin = typing.get_origin(hint)
+    # A union tries each member in order and takes the first that converts.
+    # `list[Consumes] | list[ConsumesResponse]` builds Consumes.
+    if origin is Union or origin is types.UnionType:
+        options: list[Callable[[Any], Any]] = []
+        for option in typing.get_args(hint):
+            if option is type(None):
+                continue
+            option_converter = _converter(option)
+            if option_converter is not None:
+                options.append(option_converter)
+        if not options:
+            return None
+
+        def convert_union(value: Any) -> Any:
+            for option_converter in options:
+                converted = option_converter(value)
+                if converted is not value:
+                    return converted
+            return value
+
+        return convert_union
+    if isinstance(hint, type) and is_dataclass(hint):
+        return lambda value: build(hint, value) if _is_json_object(value) else value
+    if origin is list:
+        element_converter = _converter((typing.get_args(hint) or (Any,))[0])
+        if element_converter is None:
+            return lambda value: list(value) if _is_json_array(value) else value
+        return lambda value: [element_converter(item) for item in value] if _is_json_array(value) else value
+    return None
+
+
+@functools.cache
+def _build_plan(cls: type[Any]) -> dict[str, Callable[[Any], Any] | None]:
+    """Each field name of the dataclass `cls` and the converter for its value, worked out once per class."""
+    field_types = _field_types(cls)
+    return {entry.name: _converter(field_types[entry.name]) for entry in fields(cls)}
+
+
+def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> DataclassT:
+    """Build a dataclass from an AMP response, converting nested dataclasses from the field type hints.
+
+    Keys the dataclass doesn't declare are dropped and logged once, instead of raising a :exc:`TypeError`.
+
+    Parameters
+    ----------
+    cls : type[:class:`DataclassT`]
+        The dataclass to build.
+    data : Mapping[:class:`str`, Any]
+        The sanitised AMP response for it.
+
+    Returns
+    -------
+    :class:`DataclassT`
+        The built dataclass, with its nested dataclasses built too.
+
+    """
+    if not is_dataclass(cls):
+        msg = f"build() needs a dataclass, got {cls!r}."
+        raise TypeError(msg)
+    plan = _build_plan(cls)
+    values: dict[str, Any] = {}
+    for key, value in data.items():
+        if key not in plan:
+            if (cls.__name__, key) not in _reported_unknown_keys:
+                _reported_unknown_keys.add((cls.__name__, key))
+                LOGGER.warning(
+                    "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
+                    "build",
+                    cls.__name__,
+                    key,
+                )
+            continue
+        convert = plan[key]
+        values[key] = value if convert is None else convert(value)
+    return cls(**values)
 
 
 @dataclass(slots=True)
@@ -680,116 +789,6 @@ class APIParams:
         self.url = self.url.rstrip("/")
 
 
-LOGGER: logging.Logger = logging.getLogger(__name__)
-
-# Class/key pairs already reported. Each unknown key AMP sends is logged once, not on every response.
-_reported_unknown_keys: set[tuple[str, str]] = set()
-
-
-def _is_json_object(value: object) -> TypeGuard[dict[str, Any]]:
-    """If `value` is a decoded JSON object, whose keys are always strings."""
-    return isinstance(value, dict)
-
-
-def _is_json_array(value: object) -> TypeGuard[list[Any]]:
-    """If `value` is a decoded JSON array."""
-    return isinstance(value, list)
-
-
-@functools.cache
-def _field_types(cls: type[Any]) -> dict[str, Any]:
-    """The resolved type of every field on `cls`, read once per class.
-
-    `modules.py` imports its TypedDicts only for type checking. The `_types` names are added for the hints
-    that mention them.
-    """
-    namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
-    return typing.get_type_hints(cls, globalns=namespace)
-
-
-def _converter(hint: Any) -> Callable[[Any], Any] | None:
-    """The function that turns a response value into what the type hint names, worked out once from the hint.
-
-    Returns None when the hint holds no dataclass or list. The value is then used as sent.
-    """
-    origin = typing.get_origin(hint)
-    # A union tries each member in order and takes the first that converts.
-    # `list[Consumes] | list[ConsumesResponse]` builds Consumes.
-    if origin is Union or origin is types.UnionType:
-        options: list[Callable[[Any], Any]] = []
-        for option in typing.get_args(hint):
-            if option is type(None):
-                continue
-            option_converter = _converter(option)
-            if option_converter is not None:
-                options.append(option_converter)
-        if not options:
-            return None
-
-        def convert_union(value: Any) -> Any:
-            for option_converter in options:
-                converted = option_converter(value)
-                if converted is not value:
-                    return converted
-            return value
-
-        return convert_union
-    if isinstance(hint, type) and is_dataclass(hint):
-        return lambda value: build(hint, value) if _is_json_object(value) else value
-    if origin is list:
-        element_converter = _converter((typing.get_args(hint) or (Any,))[0])
-        if element_converter is None:
-            return lambda value: list(value) if _is_json_array(value) else value
-        return lambda value: [element_converter(item) for item in value] if _is_json_array(value) else value
-    return None
-
-
-@functools.cache
-def _build_plan(cls: type[Any]) -> dict[str, Callable[[Any], Any] | None]:
-    """Each field name of the dataclass `cls` and the converter for its value, worked out once per class."""
-    field_types = _field_types(cls)
-    return {entry.name: _converter(field_types[entry.name]) for entry in fields(cls)}
-
-
-def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> DataclassT:
-    """Build a dataclass from an AMP response, converting nested dataclasses from the field type hints.
-
-    Keys the dataclass doesn't declare are dropped and logged once, instead of raising a :exc:`TypeError`.
-
-    Parameters
-    ----------
-    cls : type[:class:`DataclassT`]
-        The dataclass to build.
-    data : Mapping[:class:`str`, Any]
-        The sanitised AMP response for it.
-
-    Returns
-    -------
-    :class:`DataclassT`
-        The built dataclass, with its nested dataclasses built too.
-
-    """
-    if not is_dataclass(cls):
-        msg = f"build() needs a dataclass, got {cls!r}."
-        raise TypeError(msg)
-    plan = _build_plan(cls)
-    values: dict[str, Any] = {}
-    for key, value in data.items():
-        if key not in plan:
-            if (cls.__name__, key) not in _reported_unknown_keys:
-                _reported_unknown_keys.add((cls.__name__, key))
-                LOGGER.warning(
-                    "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
-                    "build",
-                    cls.__name__,
-                    key,
-                )
-            continue
-        convert = plan[key]
-        values[key] = value if convert is None else convert(value)
-    return cls(**values)
-
-
 @dataclass(slots=True)
 class APISession:
     """Stores the Session ID and the TTL usage for :attr:`APIParams._sessions`.
@@ -1054,6 +1053,96 @@ class Branding:
 
 
 @dataclass(slots=True)
+class BuildInfo:
+    """Tied to the class attribute for :class:`UpdateInfo.build`
+
+    .. note::
+        * Currently has a converter function ``v2.6.0.0``
+        * `__repr__` has been overridden to display in a joined string with build at the end.
+
+
+    Attributes
+    ----------
+    major : :class:`int`
+        The major version number of the AMP build.
+    minor : :class:`int`
+        The minor version number of the AMP build.
+    revision : :class:`int`
+        The revision number of the AMP build.
+    minor_revision : :class:`int`
+        The minor revision number of the AMP build.
+    build : Union[:class:`int`, None]
+        The build number, defaults to None.
+
+    """
+
+    major: int
+    minor: int
+    revision: int
+    minor_revision: int = 0
+    major_revision: Union[int, None] = None
+    build: Union[int, None] = None
+
+    @classmethod
+    def to_dataclass(cls, data: str, sep: str = ".") -> Union[str, BuildInfo]:
+        """Parse a string type of the Version into a dataclass.
+
+        .. note::
+            Assumes structure is ``"2.6.0.0"``
+
+
+        Parameters
+        ----------
+        data : :class:`str`
+            The string type of the Version to parse.
+        sep : :class:`str`
+            The separator to split the string by.
+
+        Returns
+        -------
+        :class:`str` | :class:`BuildInfo`
+            Returns the built dataclass if it succeeds. Otherwise you will get the data passed in back.
+
+        """
+        new_data: list[str] = data.split(sep=sep)
+        # Unpack the data converted into ints.
+        try:
+            temp: Self = cls(*[int(entry) for entry in new_data])
+
+        # ValueError for a part that isn't a number, TypeError for too many or too few parts.
+        except (UnboundLocalError, ValueError, TypeError) as e:
+            _logger = logging.getLogger(__name__)
+            _logger.error("Unable to convert the data %s | Error: %s", data, e)
+            return data
+        return temp
+
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
+        return (
+            isinstance(other, self.__class__)
+            and self.major == other.major
+            and self.minor == other.minor
+            and self.revision == other.revision
+            and self.minor_revision == other.minor_revision
+        )
+
+    def __lt__(self, other: object) -> bool:  # noqa: D105
+        # Compared part by part like any version number, so 2.5.0.0 is older than 2.6.0.0.
+        return isinstance(other, self.__class__) and (self.major, self.minor, self.revision, self.minor_revision) < (
+            other.major,
+            other.minor,
+            other.revision,
+            other.minor_revision,
+        )
+
+    def __repr__(self) -> str:  # noqa: D105
+        base = f"{self.major}.{self.minor}.{self.revision}.{self.minor_revision}"
+        return base if self.build is None else f"{base}.{self.build}"
+
+
+@dataclass(slots=True)
 class BukkitPlugin:
     """Represents the JSON response data from any Bukkit function call. Related to :class:`MinecraftModule`.
 
@@ -1173,6 +1262,83 @@ class ConsoleEntries:
     def __repr__(self) -> str:  # noqa: D105
         # return pformat(vars(self))
         return pformat(_field_values(self))
+
+
+@dataclass(slots=True)
+class Consumes:
+    """Represents the JSON response data from :attr:`~Methods.consumes`.
+
+    .. versionchanged:: 5.0.0
+        Renamed from `DCConsumes`.
+
+    Attributes
+    ----------
+    description : :class:`str`
+        The description of the consumes method.
+    input_type : :class:`str`
+        The type of var that is provided by the User.
+    name : :class:`str`
+        The name of the method.
+    value_type : :class:`str`
+        The type of the value when provided.
+    enum_values : Union[dict[:class:`str`, :class:`str`], None], optional
+        The values to be used for "input_type" if Any, default is None.
+
+        .. versionchanged:: 5.0.0
+            Is None when the argument has no values, was "".
+    placeholder : :class:`str`, optional
+        The placeholder text the web panel shows in the input, default is "".
+
+        .. versionadded:: 5.0.0
+    suffix : :class:`str`, optional
+        The text shown after the input (eg. a unit), default is "".
+
+        .. versionadded:: 5.0.0
+    display_name : Union[:class:`str`, None], optional
+        The name the web panel shows, default is None.
+
+        .. versionadded:: 5.0.0
+    selection_source : Union[:class:`str`, None], optional
+        Where the choices come from, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
+    locked : :class:`bool`, optional
+        If the argument is locked, default is False.
+
+        .. versionadded:: 5.0.0
+    locked_value : Union[:class:`str`, None], optional
+        The value the argument is locked to, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
+    locked_reason : Union[:class:`str`, None], optional
+        Why the argument is locked, default is None. Only seen as null so far.
+
+        .. versionadded:: 5.0.0
+
+    """
+
+    description: str
+    input_type: str
+    name: str
+    value_type: str
+    # AMP sends null for this as well as a dict (captured in getscheduledata.json).
+    enum_values: Union[dict[str, str], None] = field(default=None)
+    placeholder: str = field(default="")
+    suffix: str = field(default="")
+    display_name: Union[str, None] = field(default=None)
+    selection_source: Union[str, None] = field(default=None)
+    locked: bool = field(default=False)
+    locked_value: Union[str, None] = field(default=None)
+    locked_reason: Union[str, None] = field(default=None)
+
+    __hash__ = None  # type: ignore[assignment]
+    """Mutable dataclass; intentionally unhashable."""
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
+        return isinstance(other, self.__class__) and self.name == other.name
+
+    def __lt__(self, other: object) -> bool:  # noqa: D105
+        return isinstance(other, self.__class__) and self.name < other.name
 
 
 @dataclass(slots=True)
@@ -1308,421 +1474,6 @@ class CreateInstance:
         if self.group is not None:
             data["Group"] = self.group
         return data
-
-
-@dataclass(slots=True)
-class FolderUploadFile:
-    """Represents one file for :meth:`FileManagerPlugin.upload_folder`.
-
-    Attributes
-    ----------
-    relative_path : :class:`str`
-        The path of the file relative to the target directory. Subfolders in the path are created by AMP.
-    data : :class:`bytes`
-        The raw content of the file.
-
-    """
-
-    relative_path: str
-    data: bytes
-
-    def to_dict(self) -> dict[str, str]:
-        """Converts the class to a dict for use as an API parameter.
-
-        Returns
-        -------
-        dict[:class:`str`, :class:`str`]
-            The class attributes keyed by their AMP API parameter names, with `data` as base64.
-
-        """
-        return {
-            "RelativePath": self.relative_path,
-            "Base64Data": base64.b64encode(self.data).decode(),
-        }
-
-
-@dataclass(slots=True)
-class Consumes:
-    """Represents the JSON response data from :attr:`~Methods.consumes`.
-
-    .. versionchanged:: 5.0.0
-        Renamed from `DCConsumes`.
-
-    Attributes
-    ----------
-    description : :class:`str`
-        The description of the consumes method.
-    input_type : :class:`str`
-        The type of var that is provided by the User.
-    name : :class:`str`
-        The name of the method.
-    value_type : :class:`str`
-        The type of the value when provided.
-    enum_values : Union[dict[:class:`str`, :class:`str`], None], optional
-        The values to be used for "input_type" if Any, default is None.
-
-        .. versionchanged:: 5.0.0
-            Is None when the argument has no values, was "".
-    placeholder : :class:`str`, optional
-        The placeholder text the web panel shows in the input, default is "".
-
-        .. versionadded:: 5.0.0
-    suffix : :class:`str`, optional
-        The text shown after the input (eg. a unit), default is "".
-
-        .. versionadded:: 5.0.0
-    display_name : Union[:class:`str`, None], optional
-        The name the web panel shows, default is None.
-
-        .. versionadded:: 5.0.0
-    selection_source : Union[:class:`str`, None], optional
-        Where the choices come from, default is None. Only seen as null so far.
-
-        .. versionadded:: 5.0.0
-    locked : :class:`bool`, optional
-        If the argument is locked, default is False.
-
-        .. versionadded:: 5.0.0
-    locked_value : Union[:class:`str`, None], optional
-        The value the argument is locked to, default is None. Only seen as null so far.
-
-        .. versionadded:: 5.0.0
-    locked_reason : Union[:class:`str`, None], optional
-        Why the argument is locked, default is None. Only seen as null so far.
-
-        .. versionadded:: 5.0.0
-
-    """
-
-    description: str
-    input_type: str
-    name: str
-    value_type: str
-    # AMP sends null for this as well as a dict (captured in getscheduledata.json).
-    enum_values: Union[dict[str, str], None] = field(default=None)
-    placeholder: str = field(default="")
-    suffix: str = field(default="")
-    display_name: Union[str, None] = field(default=None)
-    selection_source: Union[str, None] = field(default=None)
-    locked: bool = field(default=False)
-    locked_value: Union[str, None] = field(default=None)
-    locked_reason: Union[str, None] = field(default=None)
-
-    __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
-
-    def __eq__(self, other: object) -> bool:  # noqa: D105
-        return isinstance(other, self.__class__) and self.name == other.name
-
-    def __lt__(self, other: object) -> bool:  # noqa: D105
-        return isinstance(other, self.__class__) and self.name < other.name
-
-
-@dataclass(slots=True)
-class ParameterMapping:
-    """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
-
-    The arguments a task passes to its method. An argument the task's method doesn't take is None.
-    AMP sends every value as a string (eg. `"true"`, `"55"`), which can hold a trigger variable (eg. `{@User}`).
-    An empty string in a converted field becomes None.
-
-    .. versionchanged:: 5.0.0
-        Renamed from `DCParameterMapping`.
-        Holds the arguments of every task method in AMP-2.8.0.8, not only `user`, `reason`, `title` and `subtitle`.
-        An argument the task doesn't hold is None, not "".
-        Booleans, numbers, `state`, `operation`, `priority` and `when` are converted from AMP's strings.
-        A value that doesn't parse stays a string.
-
-    Attributes
-    ----------
-    authorization_header : Union[:class:`str`, None], optional
-        The `Authorization` header of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
-    avatar_url : Union[:class:`str`, None], optional
-        The URL of the avatar the message is posted with (`WebRequestPlugin.DiscordEmbedMessage`,
-        `WebRequestPlugin.DiscordMessage`), default is None.
-    backup_id : Union[:class:`str`, None], optional
-        The ID of the backup to restore (`LocalFileBackupPlugin.RestoreBackup`), default is None.
-    backup_while_running : Union[:class:`bool`, :class:`str`, None], optional
-        If the backup is taken while the application is running (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    body : Union[:class:`str`, None], optional
-        The body of the push message (`WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`), default is
-        None.
-    button_label : Union[:class:`str`, None], optional
-        The label of the embed's button (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    button_url : Union[:class:`str`, None], optional
-        The URL the embed's button opens (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    channel : Union[:class:`str`, None], optional
-        The channel the push message is sent to (`WebRequestPlugin.PushMessageChannel`), default is None.
-    color_hex : Union[:class:`str`, None], optional
-        The colour of the embed, as a hex code (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    command : Union[:class:`str`, None], optional
-        The command to run once the warnings have been sent (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    content_type : Union[:class:`str`, None], optional
-        The `Content-Type` header of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
-    contents : Union[:class:`str`, None], optional
-        The text of the message (`WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
-    description : Union[:class:`str`, None], optional
-        The description of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    dirty_only : Union[:class:`bool`, :class:`str`, None], optional
-        If the backup is taken only when files have changed since the last one (`LocalFileBackupPlugin.TakeBackup`),
-        default is None.
-    display_username : Union[:class:`str`, None], optional
-        The name the message is posted under (`WebRequestPlugin.DiscordEmbedMessage`,
-        `WebRequestPlugin.DiscordMessage`), default is None.
-    existing_message_id : Union[:class:`str`, None], optional
-        The ID of an existing message to edit in place of posting a new one (`WebRequestPlugin.DiscordEmbedMessage`),
-        default is None.
-    fields : Union[:class:`str`, None], optional
-        The fields of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    five_mins : Union[:class:`str`, None], optional
-        The warning sent five minutes before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    five_secs : Union[:class:`str`, None], optional
-        The warning sent five seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    footer_icon_url : Union[:class:`str`, None], optional
-        The URL of the embed's footer icon (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    footer_text : Union[:class:`str`, None], optional
-        The text of the embed's footer (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    headers : Union[:class:`str`, None], optional
-        The headers of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
-    image_url : Union[:class:`str`, None], optional
-        The URL of the embed's image (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    input : Union[:class:`str`, None], optional
-        The console input to send (`MinecraftModule.SendConsole`, `MinecraftModule.SendConsoleAdv`,
-        `MinecraftModule.SendMultipleConsole`), default is None.
-    instance_name_or_id : Union[:class:`str`, None], optional
-        The name or ID of the Instance (`ADSModule.RestartInstance`, `ADSModule.StartInstance`,
-        `ADSModule.StopInstance`), default is None.
-    local : Union[:class:`bool`, :class:`str`, None], optional
-        If the backup is kept locally (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    mac_address : Union[:class:`str`, None], optional
-        The MAC address to send the Wake-on-LAN packet to (`CommonCorePlugin.SendWakeOnLan`), default is None.
-    message : Union[:class:`str`, None], optional
-        The message to send (`EmailSenderPlugin.SendMail`, `GenericModule.WriteLine`,
-        `MinecraftModule.SendServerMessage`, `MinecraftModule.SendUserMessage`), default is None.
-    one_hour : Union[:class:`str`, None], optional
-        The warning sent one hour before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    one_min : Union[:class:`str`, None], optional
-        The warning sent one minute before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    operation : Union[:class:`IfOperators`, :class:`str`, None], optional
-        How `value_to_check` is compared with `value_to_compare`, as an :class:`IfOperators`
-        (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
-    payload : Union[:class:`str`, None], optional
-        The body of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
-    player : Union[:class:`str`, None], optional
-        The player the message is sent to (`MinecraftModule.SendUserMessage`), default is None.
-    priority : Union[:class:`MailPriority`, :class:`str`, None], optional
-        The priority of the email, as a :class:`MailPriority` (`EmailSenderPlugin.SendMail`), default is None.
-    quantity : Union[:class:`int`, :class:`str`, None], optional
-        The amount of XP to give (`MinecraftModule.GiveXP`), default is None.
-    reason : Union[:class:`str`, None], optional
-        The reason given to the user (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`,
-        `MinecraftModule.KickUser`), default is None.
-    restart_even_if_not_running : Union[:class:`bool`, :class:`str`, None], optional
-        If the application is started after the backup even when it was not running before
-        (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    s3 : Union[:class:`bool`, :class:`str`, None], optional
-        If the backup is uploaded to S3 (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    seconds : Union[:class:`float`, :class:`str`, None], optional
-        The number of seconds to wait (`CommonCorePlugin.Wait`), default is None.
-    state : Union[:class:`InstanceState`, :class:`str`, None], optional
-        The application state to check for, as an :class:`InstanceState` (`CommonCorePlugin.ElseIfAppState`,
-        `CommonCorePlugin.IfAppState`, `CommonCorePlugin.IfNotAppState`, `CommonCorePlugin.WaitForAppState`), default is
-        None.
-    sticky : Union[:class:`bool`, :class:`str`, None], optional
-        If the backup is kept when old backups are removed (`LocalFileBackupPlugin.TakeBackup`), default is None.
-    subject : Union[:class:`str`, None], optional
-        The subject of the email (`EmailSenderPlugin.SendMail`), default is None.
-    subtitle : Union[:class:`str`, None], optional
-        The subtitle to show (`MinecraftModule.SendGlobalTitle`, `MinecraftModule.SendTitle`), default is None.
-    target : Union[:class:`str`, None], optional
-        The player to teleport to (`MinecraftModule.TeleportToPlayer`), default is None.
-    thirty_mins : Union[:class:`str`, None], optional
-        The warning sent thirty minutes before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    thirty_secs : Union[:class:`str`, None], optional
-        The warning sent thirty seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
-    thumbnail_url : Union[:class:`str`, None], optional
-        The URL of the embed's thumbnail (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    timeout_seconds : Union[:class:`int`, :class:`str`, None], optional
-        The number of seconds to wait for the state before giving up (`CommonCorePlugin.WaitForAppState`), default is
-        None.
-    title : Union[:class:`str`, None], optional
-        The title to show or send (`MinecraftModule.SendGlobalTitle`, `MinecraftModule.SendTitle`,
-        `WebRequestPlugin.DiscordEmbedMessage`, `WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`),
-        default is None.
-    to : Union[:class:`str`, None], optional
-        The address the email is sent to (`EmailSenderPlugin.SendMail`), default is None.
-    uri : Union[:class:`str`, None], optional
-        The URI the request is sent to (`WebRequestPlugin.MakeGETRequest`, `WebRequestPlugin.MakePOSTRequest`), default
-        is None.
-    url : Union[:class:`str`, None], optional
-        The URL the embed's title links to (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
-    user : Union[:class:`str`, None], optional
-        The user the task acts on (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`, `MinecraftModule.Fabulous`,
-        `MinecraftModule.GiveXP`, `MinecraftModule.KickUser`, `MinecraftModule.KillPlayer`, `MinecraftModule.SendTitle`,
-        `MinecraftModule.SmitePlayer`, `MinecraftModule.TeleportToCoords`, `MinecraftModule.TeleportToPlayer`,
-        `MinecraftModule.Weaken`), default is None.
-    value_to_check : Union[:class:`str`, None], optional
-        The value to check (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
-    value_to_compare : Union[:class:`str`, None], optional
-        The value `value_to_check` is compared with (`CommonCorePlugin.ElseIfCondition`,
-        `CommonCorePlugin.IfCondition`), default is None.
-    webhook_url : Union[:class:`str`, None], optional
-        The webhook URL the message is posted to (`WebRequestPlugin.DiscordEmbedMessage`,
-        `WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
-    when : Union[:class:`datetime`, :class:`str`, None], optional
-        The time to set, as a naive :class:`datetime` (`MinecraftModule.SetGameTime`), default is None.
-    x : Union[:class:`float`, :class:`str`, None], optional
-        The X coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
-    y : Union[:class:`float`, :class:`str`, None], optional
-        The Y coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
-    y_angle : Union[:class:`float`, :class:`str`, None], optional
-        The Y angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
-    z : Union[:class:`float`, :class:`str`, None], optional
-        The Z coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
-    z_angle : Union[:class:`float`, :class:`str`, None], optional
-        The Z angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
-
-    """
-
-    _bool_fields: ClassVar[tuple[str, ...]] = (
-        "backup_while_running",
-        "dirty_only",
-        "local",
-        "restart_even_if_not_running",
-        "s3",
-        "sticky",
-    )
-    _int_fields: ClassVar[tuple[str, ...]] = ("quantity", "timeout_seconds")
-    _float_fields: ClassVar[tuple[str, ...]] = ("seconds", "x", "y", "z", "y_angle", "z_angle")
-
-    authorization_header: Union[str, None] = field(default=None)
-    avatar_url: Union[str, None] = field(default=None)
-    backup_id: Union[str, None] = field(default=None)
-    backup_while_running: Union[bool, str, None] = field(default=None)
-    body: Union[str, None] = field(default=None)
-    button_label: Union[str, None] = field(default=None)
-    button_url: Union[str, None] = field(default=None)
-    channel: Union[str, None] = field(default=None)
-    color_hex: Union[str, None] = field(default=None)
-    command: Union[str, None] = field(default=None)
-    content_type: Union[str, None] = field(default=None)
-    contents: Union[str, None] = field(default=None)
-    description: Union[str, None] = field(default=None)
-    dirty_only: Union[bool, str, None] = field(default=None)
-    display_username: Union[str, None] = field(default=None)
-    existing_message_id: Union[str, None] = field(default=None)
-    fields: Union[str, None] = field(default=None)
-    five_mins: Union[str, None] = field(default=None)
-    five_secs: Union[str, None] = field(default=None)
-    footer_icon_url: Union[str, None] = field(default=None)
-    footer_text: Union[str, None] = field(default=None)
-    headers: Union[str, None] = field(default=None)
-    image_url: Union[str, None] = field(default=None)
-    input: Union[str, None] = field(default=None)
-    instance_name_or_id: Union[str, None] = field(default=None)
-    local: Union[bool, str, None] = field(default=None)
-    mac_address: Union[str, None] = field(default=None)
-    message: Union[str, None] = field(default=None)
-    one_hour: Union[str, None] = field(default=None)
-    one_min: Union[str, None] = field(default=None)
-    operation: Union[IfOperators, str, None] = field(default=None)
-    payload: Union[str, None] = field(default=None)
-    player: Union[str, None] = field(default=None)
-    priority: Union[MailPriority, str, None] = field(default=None)
-    quantity: Union[int, str, None] = field(default=None)
-    reason: Union[str, None] = field(default=None)
-    restart_even_if_not_running: Union[bool, str, None] = field(default=None)
-    s3: Union[bool, str, None] = field(default=None)
-    seconds: Union[float, str, None] = field(default=None)
-    state: Union[InstanceState, str, None] = field(default=None)
-    sticky: Union[bool, str, None] = field(default=None)
-    subject: Union[str, None] = field(default=None)
-    subtitle: Union[str, None] = field(default=None)
-    target: Union[str, None] = field(default=None)
-    thirty_mins: Union[str, None] = field(default=None)
-    thirty_secs: Union[str, None] = field(default=None)
-    thumbnail_url: Union[str, None] = field(default=None)
-    timeout_seconds: Union[int, str, None] = field(default=None)
-    title: Union[str, None] = field(default=None)
-    to: Union[str, None] = field(default=None)
-    uri: Union[str, None] = field(default=None)
-    url: Union[str, None] = field(default=None)
-    user: Union[str, None] = field(default=None)
-    value_to_check: Union[str, None] = field(default=None)
-    value_to_compare: Union[str, None] = field(default=None)
-    webhook_url: Union[str, None] = field(default=None)
-    when: Union[datetime.datetime, str, None] = field(default=None)
-    x: Union[float, str, None] = field(default=None)
-    y: Union[float, str, None] = field(default=None)
-    y_angle: Union[float, str, None] = field(default=None)
-    z: Union[float, str, None] = field(default=None)
-    z_angle: Union[float, str, None] = field(default=None)
-
-    def __post_init__(self) -> None:  # noqa: D105
-        # AMP sends every value as a string. An empty one becomes None, a value that doesn't parse stays as sent.
-        for name in self._bool_fields:
-            raw_value = getattr(self, name)
-            if raw_value == "":
-                setattr(self, name, None)
-            elif isinstance(raw_value, str) and raw_value.lower() in ("true", "false"):
-                setattr(self, name, raw_value.lower() == "true")
-
-        for name in self._int_fields:
-            raw_value = getattr(self, name)
-            if raw_value == "":
-                setattr(self, name, None)
-            elif isinstance(raw_value, str):
-                try:
-                    setattr(self, name, int(raw_value))
-                except ValueError:
-                    pass
-
-        for name in self._float_fields:
-            raw_value = getattr(self, name)
-            if raw_value == "":
-                setattr(self, name, None)
-            elif isinstance(raw_value, str):
-                try:
-                    setattr(self, name, float(raw_value))
-                except ValueError:
-                    pass
-
-        if self.state == "":
-            self.state = None
-        elif isinstance(self.state, str):
-            try:
-                self.state = InstanceState(int(self.state))
-            except ValueError:
-                pass
-
-        if self.operation == "":
-            self.operation = None
-        elif isinstance(self.operation, str):
-            try:
-                self.operation = IfOperators(int(self.operation))
-            except ValueError:
-                pass
-
-        if self.priority == "":
-            self.priority = None
-        elif isinstance(self.priority, str):
-            try:
-                self.priority = MailPriority(int(self.priority))
-            except ValueError:
-                pass
-
-        if self.when == "":
-            self.when = None
-        elif isinstance(self.when, str):
-            raw_when = self.when
-            # AMP keeps an ISO value as sent, and rewrites one with seconds as month/day/year.
-            try:
-                self.when = datetime.datetime.fromisoformat(raw_when)
-            except ValueError:
-                try:
-                    self.when = datetime.datetime.strptime(raw_when, "%m/%d/%Y %H:%M:%S")  # noqa: DTZ007
-                except ValueError:
-                    pass
 
 
 class DeploymentTemplate:
@@ -2060,6 +1811,37 @@ class Fitness:
 
 
 @dataclass(slots=True)
+class FolderUploadFile:
+    """Represents one file for :meth:`FileManagerPlugin.upload_folder`.
+
+    Attributes
+    ----------
+    relative_path : :class:`str`
+        The path of the file relative to the target directory. Subfolders in the path are created by AMP.
+    data : :class:`bytes`
+        The raw content of the file.
+
+    """
+
+    relative_path: str
+    data: bytes
+
+    def to_dict(self) -> dict[str, str]:
+        """Converts the class to a dict for use as an API parameter.
+
+        Returns
+        -------
+        dict[:class:`str`, :class:`str`]
+            The class attributes keyed by their AMP API parameter names, with `data` as base64.
+
+        """
+        return {
+            "RelativePath": self.relative_path,
+            "Base64Data": base64.b64encode(self.data).decode(),
+        }
+
+
+@dataclass(slots=True)
 class ImportConfig:
     """Represents the JSON response data from :meth:`GenericModule.import_config`.
 
@@ -2376,31 +2158,6 @@ class MCUser:
 
     name: str
     uuid: str
-
-
-@dataclass(slots=True)
-class Uptime:
-    """Represents the JSON response data from :attr:`MessageParameters.uptime`.
-
-    .. versionadded:: 5.0.0
-
-    Attributes
-    ----------
-    days : :class:`int`
-        The days the Instance has been running.
-    hours : :class:`int`
-        The hours part of the uptime.
-    minutes : :class:`int`
-        The minutes part of the uptime.
-    seconds : :class:`int`
-        The seconds part of the uptime.
-
-    """
-
-    days: int
-    hours: int
-    minutes: int
-    seconds: int
 
 
 @dataclass(slots=True)
@@ -2732,6 +2489,313 @@ class OPWhitelist:
 
 
 @dataclass(slots=True)
+class ParameterMapping:
+    """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
+
+    The arguments a task passes to its method. An argument the task's method doesn't take is None.
+    AMP sends every value as a string (eg. `"true"`, `"55"`), which can hold a trigger variable (eg. `{@User}`).
+    An empty string in a converted field becomes None.
+
+    .. versionchanged:: 5.0.0
+        Renamed from `DCParameterMapping`.
+        Holds the arguments of every task method in AMP-2.8.0.8, not only `user`, `reason`, `title` and `subtitle`.
+        An argument the task doesn't hold is None, not "".
+        Booleans, numbers, `state`, `operation`, `priority` and `when` are converted from AMP's strings.
+        A value that doesn't parse stays a string.
+
+    Attributes
+    ----------
+    authorization_header : Union[:class:`str`, None], optional
+        The `Authorization` header of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    avatar_url : Union[:class:`str`, None], optional
+        The URL of the avatar the message is posted with (`WebRequestPlugin.DiscordEmbedMessage`,
+        `WebRequestPlugin.DiscordMessage`), default is None.
+    backup_id : Union[:class:`str`, None], optional
+        The ID of the backup to restore (`LocalFileBackupPlugin.RestoreBackup`), default is None.
+    backup_while_running : Union[:class:`bool`, :class:`str`, None], optional
+        If the backup is taken while the application is running (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    body : Union[:class:`str`, None], optional
+        The body of the push message (`WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`), default is
+        None.
+    button_label : Union[:class:`str`, None], optional
+        The label of the embed's button (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    button_url : Union[:class:`str`, None], optional
+        The URL the embed's button opens (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    channel : Union[:class:`str`, None], optional
+        The channel the push message is sent to (`WebRequestPlugin.PushMessageChannel`), default is None.
+    color_hex : Union[:class:`str`, None], optional
+        The colour of the embed, as a hex code (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    command : Union[:class:`str`, None], optional
+        The command to run once the warnings have been sent (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    content_type : Union[:class:`str`, None], optional
+        The `Content-Type` header of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    contents : Union[:class:`str`, None], optional
+        The text of the message (`WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
+    description : Union[:class:`str`, None], optional
+        The description of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    dirty_only : Union[:class:`bool`, :class:`str`, None], optional
+        If the backup is taken only when files have changed since the last one (`LocalFileBackupPlugin.TakeBackup`),
+        default is None.
+    display_username : Union[:class:`str`, None], optional
+        The name the message is posted under (`WebRequestPlugin.DiscordEmbedMessage`,
+        `WebRequestPlugin.DiscordMessage`), default is None.
+    existing_message_id : Union[:class:`str`, None], optional
+        The ID of an existing message to edit in place of posting a new one (`WebRequestPlugin.DiscordEmbedMessage`),
+        default is None.
+    fields : Union[:class:`str`, None], optional
+        The fields of the embed (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    five_mins : Union[:class:`str`, None], optional
+        The warning sent five minutes before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    five_secs : Union[:class:`str`, None], optional
+        The warning sent five seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    footer_icon_url : Union[:class:`str`, None], optional
+        The URL of the embed's footer icon (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    footer_text : Union[:class:`str`, None], optional
+        The text of the embed's footer (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    headers : Union[:class:`str`, None], optional
+        The headers of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    image_url : Union[:class:`str`, None], optional
+        The URL of the embed's image (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    input : Union[:class:`str`, None], optional
+        The console input to send (`MinecraftModule.SendConsole`, `MinecraftModule.SendConsoleAdv`,
+        `MinecraftModule.SendMultipleConsole`), default is None.
+    instance_name_or_id : Union[:class:`str`, None], optional
+        The name or ID of the Instance (`ADSModule.RestartInstance`, `ADSModule.StartInstance`,
+        `ADSModule.StopInstance`), default is None.
+    local : Union[:class:`bool`, :class:`str`, None], optional
+        If the backup is kept locally (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    mac_address : Union[:class:`str`, None], optional
+        The MAC address to send the Wake-on-LAN packet to (`CommonCorePlugin.SendWakeOnLan`), default is None.
+    message : Union[:class:`str`, None], optional
+        The message to send (`EmailSenderPlugin.SendMail`, `GenericModule.WriteLine`,
+        `MinecraftModule.SendServerMessage`, `MinecraftModule.SendUserMessage`), default is None.
+    one_hour : Union[:class:`str`, None], optional
+        The warning sent one hour before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    one_min : Union[:class:`str`, None], optional
+        The warning sent one minute before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    operation : Union[:class:`IfOperators`, :class:`str`, None], optional
+        How `value_to_check` is compared with `value_to_compare`, as an :class:`IfOperators`
+        (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
+    payload : Union[:class:`str`, None], optional
+        The body of the request (`WebRequestPlugin.MakePOSTRequest`), default is None.
+    player : Union[:class:`str`, None], optional
+        The player the message is sent to (`MinecraftModule.SendUserMessage`), default is None.
+    priority : Union[:class:`MailPriority`, :class:`str`, None], optional
+        The priority of the email, as a :class:`MailPriority` (`EmailSenderPlugin.SendMail`), default is None.
+    quantity : Union[:class:`int`, :class:`str`, None], optional
+        The amount of XP to give (`MinecraftModule.GiveXP`), default is None.
+    reason : Union[:class:`str`, None], optional
+        The reason given to the user (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`,
+        `MinecraftModule.KickUser`), default is None.
+    restart_even_if_not_running : Union[:class:`bool`, :class:`str`, None], optional
+        If the application is started after the backup even when it was not running before
+        (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    s3 : Union[:class:`bool`, :class:`str`, None], optional
+        If the backup is uploaded to S3 (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    seconds : Union[:class:`float`, :class:`str`, None], optional
+        The number of seconds to wait (`CommonCorePlugin.Wait`), default is None.
+    state : Union[:class:`InstanceState`, :class:`str`, None], optional
+        The application state to check for, as an :class:`InstanceState` (`CommonCorePlugin.ElseIfAppState`,
+        `CommonCorePlugin.IfAppState`, `CommonCorePlugin.IfNotAppState`, `CommonCorePlugin.WaitForAppState`), default is
+        None.
+    sticky : Union[:class:`bool`, :class:`str`, None], optional
+        If the backup is kept when old backups are removed (`LocalFileBackupPlugin.TakeBackup`), default is None.
+    subject : Union[:class:`str`, None], optional
+        The subject of the email (`EmailSenderPlugin.SendMail`), default is None.
+    subtitle : Union[:class:`str`, None], optional
+        The subtitle to show (`MinecraftModule.SendGlobalTitle`, `MinecraftModule.SendTitle`), default is None.
+    target : Union[:class:`str`, None], optional
+        The player to teleport to (`MinecraftModule.TeleportToPlayer`), default is None.
+    thirty_mins : Union[:class:`str`, None], optional
+        The warning sent thirty minutes before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    thirty_secs : Union[:class:`str`, None], optional
+        The warning sent thirty seconds before the command (`CommonCorePlugin.CommandWithWarnings`), default is None.
+    thumbnail_url : Union[:class:`str`, None], optional
+        The URL of the embed's thumbnail (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    timeout_seconds : Union[:class:`int`, :class:`str`, None], optional
+        The number of seconds to wait for the state before giving up (`CommonCorePlugin.WaitForAppState`), default is
+        None.
+    title : Union[:class:`str`, None], optional
+        The title to show or send (`MinecraftModule.SendGlobalTitle`, `MinecraftModule.SendTitle`,
+        `WebRequestPlugin.DiscordEmbedMessage`, `WebRequestPlugin.PushMessage`, `WebRequestPlugin.PushMessageChannel`),
+        default is None.
+    to : Union[:class:`str`, None], optional
+        The address the email is sent to (`EmailSenderPlugin.SendMail`), default is None.
+    uri : Union[:class:`str`, None], optional
+        The URI the request is sent to (`WebRequestPlugin.MakeGETRequest`, `WebRequestPlugin.MakePOSTRequest`), default
+        is None.
+    url : Union[:class:`str`, None], optional
+        The URL the embed's title links to (`WebRequestPlugin.DiscordEmbedMessage`), default is None.
+    user : Union[:class:`str`, None], optional
+        The user the task acts on (`MinecraftModule.BanUser`, `MinecraftModule.BanUserIP`, `MinecraftModule.Fabulous`,
+        `MinecraftModule.GiveXP`, `MinecraftModule.KickUser`, `MinecraftModule.KillPlayer`, `MinecraftModule.SendTitle`,
+        `MinecraftModule.SmitePlayer`, `MinecraftModule.TeleportToCoords`, `MinecraftModule.TeleportToPlayer`,
+        `MinecraftModule.Weaken`), default is None.
+    value_to_check : Union[:class:`str`, None], optional
+        The value to check (`CommonCorePlugin.ElseIfCondition`, `CommonCorePlugin.IfCondition`), default is None.
+    value_to_compare : Union[:class:`str`, None], optional
+        The value `value_to_check` is compared with (`CommonCorePlugin.ElseIfCondition`,
+        `CommonCorePlugin.IfCondition`), default is None.
+    webhook_url : Union[:class:`str`, None], optional
+        The webhook URL the message is posted to (`WebRequestPlugin.DiscordEmbedMessage`,
+        `WebRequestPlugin.DiscordMessage`, `WebRequestPlugin.SlackMessage`), default is None.
+    when : Union[:class:`datetime`, :class:`str`, None], optional
+        The time to set, as a naive :class:`datetime` (`MinecraftModule.SetGameTime`), default is None.
+    x : Union[:class:`float`, :class:`str`, None], optional
+        The X coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
+    y : Union[:class:`float`, :class:`str`, None], optional
+        The Y coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
+    y_angle : Union[:class:`float`, :class:`str`, None], optional
+        The Y angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
+    z : Union[:class:`float`, :class:`str`, None], optional
+        The Z coordinate to teleport to (`MinecraftModule.TeleportToCoords`), default is None.
+    z_angle : Union[:class:`float`, :class:`str`, None], optional
+        The Z angle to face after the teleport (`MinecraftModule.TeleportToCoords`), default is None.
+
+    """
+
+    _bool_fields: ClassVar[tuple[str, ...]] = (
+        "backup_while_running",
+        "dirty_only",
+        "local",
+        "restart_even_if_not_running",
+        "s3",
+        "sticky",
+    )
+    _int_fields: ClassVar[tuple[str, ...]] = ("quantity", "timeout_seconds")
+    _float_fields: ClassVar[tuple[str, ...]] = ("seconds", "x", "y", "z", "y_angle", "z_angle")
+
+    authorization_header: Union[str, None] = field(default=None)
+    avatar_url: Union[str, None] = field(default=None)
+    backup_id: Union[str, None] = field(default=None)
+    backup_while_running: Union[bool, str, None] = field(default=None)
+    body: Union[str, None] = field(default=None)
+    button_label: Union[str, None] = field(default=None)
+    button_url: Union[str, None] = field(default=None)
+    channel: Union[str, None] = field(default=None)
+    color_hex: Union[str, None] = field(default=None)
+    command: Union[str, None] = field(default=None)
+    content_type: Union[str, None] = field(default=None)
+    contents: Union[str, None] = field(default=None)
+    description: Union[str, None] = field(default=None)
+    dirty_only: Union[bool, str, None] = field(default=None)
+    display_username: Union[str, None] = field(default=None)
+    existing_message_id: Union[str, None] = field(default=None)
+    fields: Union[str, None] = field(default=None)
+    five_mins: Union[str, None] = field(default=None)
+    five_secs: Union[str, None] = field(default=None)
+    footer_icon_url: Union[str, None] = field(default=None)
+    footer_text: Union[str, None] = field(default=None)
+    headers: Union[str, None] = field(default=None)
+    image_url: Union[str, None] = field(default=None)
+    input: Union[str, None] = field(default=None)
+    instance_name_or_id: Union[str, None] = field(default=None)
+    local: Union[bool, str, None] = field(default=None)
+    mac_address: Union[str, None] = field(default=None)
+    message: Union[str, None] = field(default=None)
+    one_hour: Union[str, None] = field(default=None)
+    one_min: Union[str, None] = field(default=None)
+    operation: Union[IfOperators, str, None] = field(default=None)
+    payload: Union[str, None] = field(default=None)
+    player: Union[str, None] = field(default=None)
+    priority: Union[MailPriority, str, None] = field(default=None)
+    quantity: Union[int, str, None] = field(default=None)
+    reason: Union[str, None] = field(default=None)
+    restart_even_if_not_running: Union[bool, str, None] = field(default=None)
+    s3: Union[bool, str, None] = field(default=None)
+    seconds: Union[float, str, None] = field(default=None)
+    state: Union[InstanceState, str, None] = field(default=None)
+    sticky: Union[bool, str, None] = field(default=None)
+    subject: Union[str, None] = field(default=None)
+    subtitle: Union[str, None] = field(default=None)
+    target: Union[str, None] = field(default=None)
+    thirty_mins: Union[str, None] = field(default=None)
+    thirty_secs: Union[str, None] = field(default=None)
+    thumbnail_url: Union[str, None] = field(default=None)
+    timeout_seconds: Union[int, str, None] = field(default=None)
+    title: Union[str, None] = field(default=None)
+    to: Union[str, None] = field(default=None)
+    uri: Union[str, None] = field(default=None)
+    url: Union[str, None] = field(default=None)
+    user: Union[str, None] = field(default=None)
+    value_to_check: Union[str, None] = field(default=None)
+    value_to_compare: Union[str, None] = field(default=None)
+    webhook_url: Union[str, None] = field(default=None)
+    when: Union[datetime.datetime, str, None] = field(default=None)
+    x: Union[float, str, None] = field(default=None)
+    y: Union[float, str, None] = field(default=None)
+    y_angle: Union[float, str, None] = field(default=None)
+    z: Union[float, str, None] = field(default=None)
+    z_angle: Union[float, str, None] = field(default=None)
+
+    def __post_init__(self) -> None:  # noqa: D105
+        # AMP sends every value as a string. An empty one becomes None, a value that doesn't parse stays as sent.
+        for name in self._bool_fields:
+            raw_value = getattr(self, name)
+            if raw_value == "":
+                setattr(self, name, None)
+            elif isinstance(raw_value, str) and raw_value.lower() in ("true", "false"):
+                setattr(self, name, raw_value.lower() == "true")
+
+        for name in self._int_fields:
+            raw_value = getattr(self, name)
+            if raw_value == "":
+                setattr(self, name, None)
+            elif isinstance(raw_value, str):
+                try:
+                    setattr(self, name, int(raw_value))
+                except ValueError:
+                    pass
+
+        for name in self._float_fields:
+            raw_value = getattr(self, name)
+            if raw_value == "":
+                setattr(self, name, None)
+            elif isinstance(raw_value, str):
+                try:
+                    setattr(self, name, float(raw_value))
+                except ValueError:
+                    pass
+
+        if self.state == "":
+            self.state = None
+        elif isinstance(self.state, str):
+            try:
+                self.state = InstanceState(int(self.state))
+            except ValueError:
+                pass
+
+        if self.operation == "":
+            self.operation = None
+        elif isinstance(self.operation, str):
+            try:
+                self.operation = IfOperators(int(self.operation))
+            except ValueError:
+                pass
+
+        if self.priority == "":
+            self.priority = None
+        elif isinstance(self.priority, str):
+            try:
+                self.priority = MailPriority(int(self.priority))
+            except ValueError:
+                pass
+
+        if self.when == "":
+            self.when = None
+        elif isinstance(self.when, str):
+            raw_when = self.when
+            # AMP keeps an ISO value as sent, and rewrites one with seconds as month/day/year.
+            try:
+                self.when = datetime.datetime.fromisoformat(raw_when)
+            except ValueError:
+                try:
+                    self.when = datetime.datetime.strptime(raw_when, "%m/%d/%Y %H:%M:%S")  # noqa: DTZ007
+                except ValueError:
+                    pass
+
+
+@dataclass(slots=True)
 class PermissionNode:
     """Represents the JSON response data from :meth:`Core.get_permissions_spec`.
 
@@ -2916,6 +2980,57 @@ class Port:
 
 
 @dataclass(slots=True)
+class PortInfo:
+    """Represents the JSON response data from :meth:`ADSModule.get_instance_network_info`.
+
+    Attributes
+    ----------
+    description : :class:`str`
+        The description.
+    is_user_defined : :class:`bool`
+        Whether the port is user defined.
+    port_number : :class:`int`
+        The port number.
+    protocol : :class:`int`
+        The protocol number.
+        ```
+        0 = TCP
+        1 = UDP
+        2 = TCP & UDP
+        ```
+    provision_node_name : :class:`str`
+        The provision node name.
+    range : :class:`int`
+        The range.
+    verified : :class:`bool`
+        Whether the port is verified.
+    is_firewall_target : :class:`bool`
+        Whether the port is targeted by a firewall rule, defaults to False.
+
+    """
+
+    description: str
+    is_user_defined: bool
+    port_number: int
+    protocol: Protocols | int
+    provision_node_name: str
+    range: int
+    verified: bool
+    is_firewall_target: bool = field(default=False)
+    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    is_child: bool = field(default=False)
+    min_listening: int = field(default=0)
+    offset: int = field(default=0)
+    parent_node: Union[str, None] = field(default=None)
+    parent_ref: Union[str, None] = field(default=None)
+
+    def __post_init__(self) -> None:  # noqa: D105
+        # AMP sends the protocol as an int; convert it so the annotation holds true.
+        if isinstance(self.protocol, int):
+            self.protocol = Protocols(self.protocol)
+
+
+@dataclass(slots=True)
 class Provision:
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
@@ -2995,57 +3110,6 @@ class ProvisionSettingInfo:
 
 
 @dataclass(slots=True)
-class PortInfo:
-    """Represents the JSON response data from :meth:`ADSModule.get_instance_network_info`.
-
-    Attributes
-    ----------
-    description : :class:`str`
-        The description.
-    is_user_defined : :class:`bool`
-        Whether the port is user defined.
-    port_number : :class:`int`
-        The port number.
-    protocol : :class:`int`
-        The protocol number.
-        ```
-        0 = TCP
-        1 = UDP
-        2 = TCP & UDP
-        ```
-    provision_node_name : :class:`str`
-        The provision node name.
-    range : :class:`int`
-        The range.
-    verified : :class:`bool`
-        Whether the port is verified.
-    is_firewall_target : :class:`bool`
-        Whether the port is targeted by a firewall rule, defaults to False.
-
-    """
-
-    description: str
-    is_user_defined: bool
-    port_number: int
-    protocol: Protocols | int
-    provision_node_name: str
-    range: int
-    verified: bool
-    is_firewall_target: bool = field(default=False)
-    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
-    is_child: bool = field(default=False)
-    min_listening: int = field(default=0)
-    offset: int = field(default=0)
-    parent_node: Union[str, None] = field(default=None)
-    parent_ref: Union[str, None] = field(default=None)
-
-    def __post_init__(self) -> None:  # noqa: D105
-        # AMP sends the protocol as an int; convert it so the annotation holds true.
-        if isinstance(self.protocol, int):
-            self.protocol = Protocols(self.protocol)
-
-
-@dataclass(slots=True)
 class RemoteTargetInfo:
     """Represents the JSON response data from :meth:`ADSModule.get_target_info`.
 
@@ -3070,25 +3134,6 @@ class RemoteTargetInfo:
     platform_info: PlatformInfo
     datastores: list[TargetDatastore]
     deploys_in_containers: bool
-
-
-@dataclass(slots=True)
-class TargetDatastore:
-    """Represents a datastore in :attr:`RemoteTargetInfo.datastores`, which carries only an ID and a name.
-
-    .. versionadded:: 5.0.0
-
-    Attributes
-    ----------
-    id : :class:`int`
-        The datastore ID.
-    friendly_name : :class:`str`
-        The datastore name.
-
-    """
-
-    id: int
-    friendly_name: str
 
 
 @dataclass(slots=True)
@@ -3500,6 +3545,47 @@ class SettingSpecAction:
 
 
 @dataclass(slots=True)
+class SettingSpecSelectionSource:
+    """Represents the JSON response data from :attr:`SettingSpec.selection_source`.
+
+    Attributes
+    ----------
+    deferred : :class:`bool`
+        If the selection source is deferred or not.
+    must_validate : :class:`bool`
+        If the selection source must validate or not.
+    type_id : :class:`str`
+        The type ID of the selection source.
+
+    """
+
+    deferred: bool
+    must_validate: bool
+    type_id: str
+
+
+class SettingSpecTable:
+    """Maps a setting node to the Enum :class:`SettingSpec.current_value` is converted into."""
+
+    table: ClassVar[dict[str, type[SettingSpecTableAliases]]] = {
+        "ADSModule.Network.AccessMode": AccessModeState,
+        "ADSModule.Defaults.DefaultPostCreate": PostCreateState,
+        "steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod": ApplicationUpdatesState,
+        "Core.Monitoring.LogLevel": LoggingLevelState,
+        "Core.AMP.Theme": AMPTheme,
+        "Core.AMP.AppStartupMode": AppStartupModeState,
+        "Core.Security.TwoFactorMode": TwoFactoryModeState,
+        "ADSModule.Network.PortAssignment": PortAssignmentState,
+        "ADSModule.Network.DefaultIPBinding": DefaultIPBindingState,
+        "ADSModule.Network.DefaultAppIPBinding": DefaultIPBindingState,
+        "ADSModule.Network.DockerExternalIPBinding": DefaultIPBindingState,
+        "ADSModule.ADS.DownloadMirror": AMPDownloadMirrorState,
+        "ADSModule.ADS.Mode": ADSModeState,
+        "ADSModule.Defaults.DefaultReleaseStream": ReleaseStreamState,
+    }
+
+
+@dataclass(slots=True)
 class SettingsSpecAttribute:
     """Represents the JSON response data from :attr:`SettingSpec.attributes`.
 
@@ -3610,47 +3696,6 @@ class SettingsSpecParent:
 
 
 @dataclass(slots=True)
-class SettingSpecSelectionSource:
-    """Represents the JSON response data from :attr:`SettingSpec.selection_source`.
-
-    Attributes
-    ----------
-    deferred : :class:`bool`
-        If the selection source is deferred or not.
-    must_validate : :class:`bool`
-        If the selection source must validate or not.
-    type_id : :class:`str`
-        The type ID of the selection source.
-
-    """
-
-    deferred: bool
-    must_validate: bool
-    type_id: str
-
-
-class SettingSpecTable:
-    """Maps a setting node to the Enum :class:`SettingSpec.current_value` is converted into."""
-
-    table: ClassVar[dict[str, type[SettingSpecTableAliases]]] = {
-        "ADSModule.Network.AccessMode": AccessModeState,
-        "ADSModule.Defaults.DefaultPostCreate": PostCreateState,
-        "steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod": ApplicationUpdatesState,
-        "Core.Monitoring.LogLevel": LoggingLevelState,
-        "Core.AMP.Theme": AMPTheme,
-        "Core.AMP.AppStartupMode": AppStartupModeState,
-        "Core.Security.TwoFactorMode": TwoFactoryModeState,
-        "ADSModule.Network.PortAssignment": PortAssignmentState,
-        "ADSModule.Network.DefaultIPBinding": DefaultIPBindingState,
-        "ADSModule.Network.DefaultAppIPBinding": DefaultIPBindingState,
-        "ADSModule.Network.DockerExternalIPBinding": DefaultIPBindingState,
-        "ADSModule.ADS.DownloadMirror": AMPDownloadMirrorState,
-        "ADSModule.ADS.Mode": ADSModeState,
-        "ADSModule.Defaults.DefaultReleaseStream": ReleaseStreamState,
-    }
-
-
-@dataclass(slots=True)
 class Status:
     """Represents the JSON response data from :meth:`Core.get_status` and :attr:`Updates.status`.
 
@@ -3704,6 +3749,25 @@ class StructuredDiagnostics:
 
     core: Diagnostics | DiagnosticsResponse
     application: dict[str, Any]
+
+
+@dataclass(slots=True)
+class TargetDatastore:
+    """Represents a datastore in :attr:`RemoteTargetInfo.datastores`, which carries only an ID and a name.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    id : :class:`int`
+        The datastore ID.
+    friendly_name : :class:`str`
+        The datastore name.
+
+    """
+
+    id: int
+    friendly_name: str
 
 
 @dataclass(slots=True)
@@ -4077,65 +4141,28 @@ class Updates:
 
 
 @dataclass(slots=True)
-class UserInfo:
-    """Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
+class Uptime:
+    """Represents the JSON response data from :attr:`MessageParameters.uptime`.
+
+    .. versionadded:: 5.0.0
 
     Attributes
     ----------
-    cannot_change_password : :class:`bool`
-        If the user cannot change their password or not.
-    disable : :class:`bool`
-        If the user is disabled or not.
-    gravatar_hash : :class:`str`
-        The gravatar hash of the user.
-    id : :class:`str`
-        The ID of the user.
-    is_ldap_user : :class:`bool`
-        If the user is an LDAP user or not.
-    is_super_user : :class:`bool`
-        If the user has the Super User role or not.
-    is_two_factor_enabled : :class:`bool`
-        If the user has 2FA enabled or not.
-    must_change_password : :class:`bool`
-        If the user must change their password or not when they log in next.
-    name : :class:`str`
-        The name of the user.
-    password_expires : :class:`bool`
-        If the user password expires or not when they log in next.
-    permissions : :class:`list[str]`
-        The list of permissions the user has.
-    roles : :class:`list[str]`
-        The list of AMP roles the user has.
-    email_address : :class:`str`
-        The email address of the user.
-    last_login : :class:`datetime`
-        The last login date of the user.
-    oidc_sub : Union[:class:`str`, None], optional
-        The OIDC subject of the user, default is None.
+    days : :class:`int`
+        The days the Instance has been running.
+    hours : :class:`int`
+        The hours part of the uptime.
+    minutes : :class:`int`
+        The minutes part of the uptime.
+    seconds : :class:`int`
+        The seconds part of the uptime.
 
     """
 
-    id: str
-    name: str
-    email_address: None
-    disabled: bool
-    permissions: None
-    is_super_user: bool
-    last_login: str | datetime.datetime
-    password_expires: bool
-    cannot_change_password: bool
-    must_change_password: bool
-    is_two_factor_enabled: bool
-    roles: list[str]
-    is_ldap_user: bool
-    is_oidc_user: bool
-    gravatar_hash: str
-    avatar_base64: None
-    oidc_sub: Union[str, None] = field(default=None)
-
-    def __post_init__(self) -> None:  # noqa: D105
-        if isinstance(self.last_login, str):
-            self.last_login = timestamp_converter(timestamp=self.last_login)
+    days: int
+    hours: int
+    minutes: int
+    seconds: int
 
 
 # The hand-written class before 5.0.0, when it became a dataclass built with `build`.
@@ -4248,90 +4275,62 @@ class UserApplicationData:
 
 
 @dataclass(slots=True)
-class BuildInfo:
-    """Tied to the class attribute for :class:`UpdateInfo.build`
-
-    .. note::
-        * Currently has a converter function ``v2.6.0.0``
-        * ``__repr__`` has been overridden to display in a joined string with build at the end.
-
+class UserInfo:
+    """Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
 
     Attributes
     ----------
-    major : :class:`int`
-        The major version number of the AMP build.
-    minor : :class:`int`
-        The minor version number of the AMP build.
-    revision : :class:`int`
-        The revision number of the AMP build.
-    minor_revision : :class:`int`
-        The minor revision number of the AMP build.
-    build : Union[:class:`int`, None]
-        The build number, defaults to None.
+    cannot_change_password : :class:`bool`
+        If the user cannot change their password or not.
+    disable : :class:`bool`
+        If the user is disabled or not.
+    gravatar_hash : :class:`str`
+        The gravatar hash of the user.
+    id : :class:`str`
+        The ID of the user.
+    is_ldap_user : :class:`bool`
+        If the user is an LDAP user or not.
+    is_super_user : :class:`bool`
+        If the user has the Super User role or not.
+    is_two_factor_enabled : :class:`bool`
+        If the user has 2FA enabled or not.
+    must_change_password : :class:`bool`
+        If the user must change their password or not when they log in next.
+    name : :class:`str`
+        The name of the user.
+    password_expires : :class:`bool`
+        If the user password expires or not when they log in next.
+    permissions : :class:`list[str]`
+        The list of permissions the user has.
+    roles : :class:`list[str]`
+        The list of AMP roles the user has.
+    email_address : :class:`str`
+        The email address of the user.
+    last_login : :class:`datetime`
+        The last login date of the user.
+    oidc_sub : Union[:class:`str`, None], optional
+        The OIDC subject of the user, default is None.
 
     """
 
-    major: int
-    minor: int
-    revision: int
-    minor_revision: int = 0
-    major_revision: Union[int, None] = None
-    build: Union[int, None] = None
+    id: str
+    name: str
+    email_address: None
+    disabled: bool
+    permissions: None
+    is_super_user: bool
+    last_login: str | datetime.datetime
+    password_expires: bool
+    cannot_change_password: bool
+    must_change_password: bool
+    is_two_factor_enabled: bool
+    roles: list[str]
+    is_ldap_user: bool
+    is_oidc_user: bool
+    gravatar_hash: str
+    avatar_base64: None
+    oidc_sub: Union[str, None] = field(default=None)
 
-    @classmethod
-    def to_dataclass(cls, data: str, sep: str = ".") -> Union[str, BuildInfo]:
-        """Parse a string type of the Version into a dataclass.
-
-        .. note::
-            Assumes structure is ``"2.6.0.0"``
-
-
-        Parameters
-        ----------
-        data : :class:`str`
-            The string type of the Version to parse.
-        sep : :class:`str`
-            The separator to split the string by.
-
-        Returns
-        -------
-        :class:`str` | :class:`BuildInfo`
-            Returns the built dataclass if it succeeds. Otherwise you will get the data passed in back.
-
-        """
-        new_data: list[str] = data.split(sep=sep)
-        # Unpack the data converted into ints.
-        try:
-            temp: Self = cls(*[int(entry) for entry in new_data])
-
-        # ValueError for a part that isn't a number, TypeError for too many or too few parts.
-        except (UnboundLocalError, ValueError, TypeError) as e:
-            _logger = logging.getLogger(__name__)
-            _logger.error("Unable to convert the data %s | Error: %s", data, e)
-            return data
-        return temp
-
-    __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
-
-    def __eq__(self, other: object) -> bool:  # noqa: D105
-        return (
-            isinstance(other, self.__class__)
-            and self.major == other.major
-            and self.minor == other.minor
-            and self.revision == other.revision
-            and self.minor_revision == other.minor_revision
-        )
-
-    def __lt__(self, other: object) -> bool:  # noqa: D105
-        # Compared part by part like any version number, so 2.5.0.0 is older than 2.6.0.0.
-        return isinstance(other, self.__class__) and (self.major, self.minor, self.revision, self.minor_revision) < (
-            other.major,
-            other.minor,
-            other.revision,
-            other.minor_revision,
-        )
-
-    def __repr__(self) -> str:  # noqa: D105
-        base = f"{self.major}.{self.minor}.{self.revision}.{self.minor_revision}"
-        return base if self.build is None else f"{base}.{self.build}"
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.last_login, str):
+            self.last_login = timestamp_converter(timestamp=self.last_login)
