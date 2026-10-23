@@ -133,6 +133,9 @@ Errors
 API errors are now raised (see ``ampapi.errors``) instead of an ``ActionResultError`` being returned. Every error
 class can be imported from ``ampapi`` directly (eg. ``from ampapi import AMPAPIResponseError``).
 
+Methods that return None now raise :exc:`~ampapi.AMPAPIResponseError` when AMP reports a failure in the reply (an error
+title or ``Status: false``), which 4.x dropped. AMP answers those with HTTP 200, so 4.x returned None as if the call worked.
+
 
 Returned data
 -------------

@@ -224,6 +224,7 @@ class Base:
         "FreeRAMMB": "free_ram_mb",
         "AvailableIPs": "available_ips",
         "SecurityandPrivacy": "security_and_privacy",
+        "Pass": "passed",
     }
 
     @property
@@ -234,8 +235,8 @@ class Base:
 
         Returns
         -------
-        :class:`str`
-            The AMP Instance ``type`` as a string.
+        :class:`Module` | :class:`str`
+            The AMP Instance ``type`` as a :class:`Module`, or the raw string when it is not a known one.
 
         """
         try:
@@ -427,7 +428,7 @@ class Base:
         parameters : Union[None, dict[:class:`str`, Any]], optional
             The parameters to supply to the endpoint, by default None.
         no_data : :class:`bool`, optional
-            Skip processing the :class:`ClientResponse` body when the endpoint returns no data, by default False.
+            If the endpoint answers JSON null or not. The body is still checked for errors, by default False.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded directly to :meth:`aiohttp.ClientSession.post`. The ``headers``
             and ``data`` keys are populated automatically when ``None``, by default None.
@@ -517,7 +518,11 @@ class Base:
         match response.status:
             case status if 200 <= status < 300:
                 if no_data is True:
-                    response.release()
+                    # response.release()
+                    # return None
+                    # A Void endpoint answers JSON null, but AMP still reports a failure in the body with a 200.
+                    response_params["allow_null"] = True
+                    await self._response_handler(response=response, **response_params)
                     return None
                 return await self._response_handler(response=response, **response_params)
 
@@ -628,15 +633,16 @@ class Base:
         if sanitize_json is True:
             response_json = self.sanitize_json(response_json)
 
-        if isinstance(response_json, bool):
-            return response_json
-
         if to_file is True and path is not None and response_json is not None:
             # ? SUGGESTION: May have to make this async in the future if it becomes blocking.
             if path.exists() is False:
                 msg = "The path provided does not exist. %s"
                 raise FileNotFoundError(msg, path)
             self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
+
+        # A bool has no title or status to check.
+        if isinstance(response_json, bool):
+            return response_json
 
         # This is the logic gate for when we have an "EndpointResponseError" typically.
         if isinstance(response_json, dict) and "title" in response_json:
@@ -1204,7 +1210,7 @@ class Base:
 
         Returns
         -------
-        Iterable[Any]
+        Any
             The JSON response data cleaned up.
 
         """
@@ -1347,8 +1353,7 @@ class Base:
         )
 
         if (
-            isinstance(result, (str, bool))
-            or result is None
+            not isinstance(result, dict)
             or not is_response_type(result, DiagnosticsResponse, DIAGNOSTICS_REQUIRED_KEYS, DIAGNOSTICS_EXCLUDED_KEYS)
         ):
             LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
@@ -1370,7 +1375,7 @@ class Base:
     def write_data_to_file(
         self,
         file_name: str,
-        data: EndpointResponseError | ResponseTypeAlias | str,
+        data: EndpointResponseError | ResponseTypeAlias | str | bool,
         path: Path = Path(__file__).parent,
         *,
         mode: str = "w+",
@@ -1386,7 +1391,7 @@ class Base:
             The Path to write the data, default's to `Path(__file__).parent`.
         file_name : :class:`str`
             The name of the file, include the file extension.
-        data : :class:`bytes | dict | str | list`
+        data : :class:`bytes | dict | str | list | bool`
             The data to write out to the path and file_name provided.
         mode : :class:`str`, optional
             The mode to open the provided file path with using `<Path.open()>`.
