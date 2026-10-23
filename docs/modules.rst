@@ -90,7 +90,7 @@ Calculates the delay between retries, growing exponentially with each attempt.
 
 Error Classes
 ~~~~~~~~~~~~~
-Every error the library raises inherits from :class:`~ampapi.errors.AMPAPIError`, and all of them are importable from ``ampapi``.
+Every error the library raises inherits from :class:`~ampapi.errors.AMPAPIError`, and all of them are importable from `ampapi`.
 
 .. automodule:: ampapi.errors
    :members:

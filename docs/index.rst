@@ -37,8 +37,8 @@ To install run the below command in a Terminal.
 
 Basic Usage
 ===========
-1. First you need to fill out the :py:class:`~ampapi.modules.APIParams` class with the required fields (``url``, ``user`` and ``password``).
-2. Pass the :py:class:`~ampapi.modules.APIParams` class into the :py:class:`~ampapi.Bridge` class parameter ``api_params``.
+1. First you need to fill out the :py:class:`~ampapi.modules.APIParams` class with the required fields (`url`, `user` and `password`).
+2. Pass the :py:class:`~ampapi.modules.APIParams` class into the :py:class:`~ampapi.Bridge` class parameter `api_params`.
     - You only need to make **ONE** :py:class:`~ampapi.Bridge` class; the rest of the API classes will get the same object and handle logging in for you.
 3. You can then use the Parent :py:class:`~ampapi.instance.Controller` or the smaller class :py:class:`~ampapi.instance.Instance` or any of the API classes as a stand alone.
     - See `Quick Example`_ for a visual example.
