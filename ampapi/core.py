@@ -29,6 +29,8 @@ from typing_extensions import deprecated
 from ._types import (
     ACTION_RESULT_EXCLUDED_KEYS,
     ACTION_RESULT_REQUIRED_KEYS,
+    LICENCE_INFO_EXCLUDED_KEYS,
+    LICENCE_INFO_REQUIRED_KEYS,
     RUNNING_TASK_EXCLUDED_KEYS,
     RUNNING_TASK_REQUIRED_KEYS,
     SCHEDULE_DATA_EXCLUDED_KEYS,
@@ -41,17 +43,21 @@ from ._types import (
     STATUS_REQUIRED_KEYS,
     TIMED_TRIGGER_EXCLUDED_KEYS,
     TIMED_TRIGGER_REQUIRED_KEYS,
+    TWO_FACTOR_SETUP_INFO_EXCLUDED_KEYS,
+    TWO_FACTOR_SETUP_INFO_REQUIRED_KEYS,
     USER_APPLICATION_DATA_EXCLUDED_KEYS,
     USER_APPLICATION_DATA_REQUIRED_KEYS,
     WEBAUTHN_CREDENTIAL_IDS_EXCLUDED_KEYS,
     WEBAUTHN_CREDENTIAL_IDS_REQUIRED_KEYS,
     ActionResultResponse,
+    LicenceInfoResponse,
     RunningTaskResponse,
     ScheduleDataResponse,
     SecurityCheckResponse,
     SettingsSpecParentResponse,
     StatusResponse,
     TimedTriggerResponse,
+    TwoFactorSetupInfoResponse,
     UserApplicationDataResponse,
     WebauthnCredentialIDsResponse,
     is_response_list,
@@ -64,6 +70,7 @@ from .modules import (
     AuditLogEntry,
     BuildInfo,
     Diagnostics,
+    LicenceInfo,
     LoginResults,
     LoginUserInfo,
     Module,
@@ -81,6 +88,7 @@ from .modules import (
     StructuredDiagnostics,
     TimedTrigger,
     TriggerID,
+    TwoFactorSetupInfo,
     UpdateInfo,
     Updates,
     UserApplicationData,
@@ -226,12 +234,18 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> LicenceInfo | LicenceInfoResponse:
         """|coro|
 
         Activate an AMP License key.
 
         Endpoint: `Core/ActivateAMPLicence`
+
+        .. warning::
+            AMP sends the licence key back in the answer.
+
+        .. versionchanged:: 5.0.0
+            Returns the :class:`LicenceInfo` AMP sends, not the :class:`ActionResult` around it.
 
         Parameters
         ----------
@@ -248,8 +262,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`LicenceInfo`
+            On success returns a :class:`LicenceInfo` dataclass.
 
         """
         await self._reauth()
@@ -269,9 +283,14 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=result, expec_type=dict)
+
+        # The spec types this `ActionResult<JObject>`. The licence is in `result`, and a failure has already raised.
+        licence: Any = result.get("result")
+        if not is_response_type(licence, LicenceInfoResponse, LICENCE_INFO_REQUIRED_KEYS, LICENCE_INFO_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=licence, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
-        return result
+            return build(LicenceInfo, licence)
+        return licence
 
     async def add_event_trigger(
         self,
@@ -1499,7 +1518,7 @@ class Core(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> TwoFactorSetupInfo | TwoFactorSetupInfoResponse:
         """|coro|
 
         Sets up two-factor authentication for the given user.
@@ -1508,6 +1527,9 @@ class Core(Base):
 
         .. warning::
             ConfirmTwoFactorSetup must be invoked to complete setup.
+
+        .. versionchanged:: 5.0.0
+            Returns the :class:`TwoFactorSetupInfo` AMP sends, not the :class:`ActionResult` around it.
 
 
         Parameters
@@ -1525,8 +1547,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`TwoFactorSetupInfo`
+            On success returns a :class:`TwoFactorSetupInfo` dataclass.
 
         """
         await self._reauth()
@@ -1546,9 +1568,19 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/EnableTwoFactor", cur_type=result, expec_type=dict)
+
+        # The spec types this `ActionResult<TwoFactorSetupInfo>`. The setup data is in `result`, and a failure has already raised.
+        setup: Any = result.get("result")
+        if not is_response_type(
+            setup,
+            TwoFactorSetupInfoResponse,
+            TWO_FACTOR_SETUP_INFO_REQUIRED_KEYS,
+            TWO_FACTOR_SETUP_INFO_EXCLUDED_KEYS,
+        ):
+            raise AMPAPITypeError(end_point="Core/EnableTwoFactor", cur_type=setup, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
-        return result
+            return build(TwoFactorSetupInfo, setup)
+        return setup
 
     @Base.ads_only
     async def end_user_session(

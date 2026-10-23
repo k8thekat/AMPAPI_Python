@@ -84,6 +84,10 @@ Changed methods
   :exc:`RuntimeError` unless it was called on an ADS.
 - ``Instance.update_instance`` is renamed :meth:`~ampapi.instance.Instance.upgrade_instance`, to match
   :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance` and ``ADSModule/UpgradeInstance``.
+- :meth:`~ampapi.Core.enable_two_factor` returns a :class:`~ampapi.modules.TwoFactorSetupInfo` (``url`` and
+  ``manual_key``), and :meth:`~ampapi.Core.activate_amp_license` returns a :class:`~ampapi.modules.LicenceInfo`. 4.x
+  returned the ``ActionResult`` around them, with the data in ``result``.
+- :attr:`ActionResult.result <ampapi.modules.ActionResult.result>` can be a dict, where AMP answers an object.
 - ``Core.restart_instance`` and ``Core.kill_instance`` are removed (deprecated in 4.6.0). Use
   :meth:`~ampapi.Core.restart_application` and :meth:`~ampapi.Core.kill_application`. An Instance's own
   ``restart_instance`` is unchanged.

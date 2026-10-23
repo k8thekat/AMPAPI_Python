@@ -91,6 +91,15 @@ class and key at WARNING. 4.x used dataclass-wizard's `fromdict`, which dropped 
 `Cls(**result)` raised on them. `build` rejects a non-dataclass: `DeploymentTemplate` is still unpacked with `**`.
 `UserApplicationData` was too until AMP-2.8.0.8's `display_name` made `get_user_info` raise (live, 2026-10-21).
 
+`build` checks nothing for a plain hint: a dict AMP sends for a `str` field is stored as is. That is how
+`ActionResult.result` (typed `str` until #19) held a dict for two endpoints. The spec types the result per endpoint as
+`ActionResult<T>`. In 2.8.0.8, T is `String` (8 endpoints), `Guid` (`create_role`, `create_user`), `TwoFactorSetupInfo`
+(`enable_two_factor`) and `JObject` (`activate_amp_license`). The last two answer an object, and their wrappers
+return it typed (`TwoFactorSetupInfo`, `LicenceInfo`), since a failure already raises and the `ActionResult` around
+it carries nothing more. Shapes from vm1, 2026-10-23: `EnableTwoFactor` sends `url` and `manual_key` (the secret).
+`ActivateAMPLicence` sends `licence_key` (the key, echoed back), `grade`, `grade_name`, `product`, `product_name`,
+`expires` (ISO, no timezone) and `usage`. Both dataclasses keep their secret out of `repr`.
+
 A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
 `TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for
 `Event.CommonCorePlugin.Wait`), checked against 117 live tasks. The `ParameterMapping` dataclass declares the union of

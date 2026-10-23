@@ -135,6 +135,7 @@ __all__ = (
     "InstanceDatastore",
     "InstanceInfo",
     "InstanceStatus",
+    "LicenceInfo",
     "LoginResults",
     "LoginUserInfo",
     "MCUser",
@@ -176,6 +177,7 @@ __all__ = (
     "TriggerID",
     "TriggerTasks",
     "Triggers",
+    "TwoFactorSetupInfo",
     "UpdateInfo",
     "Updates",
     "Uptime",
@@ -305,8 +307,11 @@ class ActionResult:
         If the API call was successful.
     reason : Union[str, None]
         If :attr:`~ActionResult.status` is ``False`` this will typically have a :class:`str` response.
-    result : Union[str, None]
+    result : Union[:class:`str`, dict[:class:`str`, Any], None]
         If :attr:`~ActionResult.status` is ``True`` this will contain data related to the API call.
+
+        .. versionchanged:: 5.0.0
+            Can be a dict, for the endpoints that answer an object (eg. :meth:`Core.enable_two_factor`).
     support_url : Union[str, None], optional
         A link AMP offers for help with a failure, default is None.
     support_title : Union[str, None], optional
@@ -316,7 +321,7 @@ class ActionResult:
 
     status: bool
     reason: Union[str, None] = field(default=None)
-    result: Union[str, None] = field(default=None)
+    result: Union[str, dict[str, Any], None] = field(default=None)
     # Added in AMP 2.8 (confirmed against 2.8.0.8); defaulted so older responses still construct.
     support_url: Union[str, None] = field(default=None)
     support_title: Union[str, None] = field(default=None)
@@ -2231,6 +2236,51 @@ class InstanceStatus:
 
 
 @dataclass(slots=True)
+class LicenceInfo:
+    """Represents the licence AMP reports from :meth:`Core.activate_amp_license`.
+
+    .. warning::
+        AMP sends the licence key back in :attr:`licence_key`. Keep it out of logs and files.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    licence_key : :class:`str`
+        The licence key, as AMP sends it back.
+    grade : :class:`str`
+        The ID of the licence grade.
+    grade_name : :class:`str`
+        The name of the licence grade. (eg. `"Professional"`)
+    product : :class:`str`
+        The ID of the product the licence is for.
+    product_name : :class:`str`
+        The name of the product the licence is for. (eg. `"AMP"`)
+    expires : Union[:class:`str`, :class:`datetime.datetime`]
+        When the licence expires. AMP sends no timezone, and the time is left as AMP sends it.
+    usage : :class:`int`
+        How many times the licence has been used. Its meaning is unconfirmed. Only one value has been seen.
+
+    """
+
+    licence_key: str
+    grade: str
+    grade_name: str
+    product: str
+    product_name: str
+    expires: str | datetime.datetime
+    usage: int
+
+    def __post_init__(self) -> None:  # noqa: D105
+        if isinstance(self.expires, str):
+            self.expires = timestamp_converter(timestamp=self.expires)
+
+    def __repr__(self) -> str:  # noqa: D105
+        # The licence key stays out of the repr, which is what ends up in logs.
+        return pformat({key: value for key, value in _field_values(self).items() if key != "licence_key"})
+
+
+@dataclass(slots=True)
 class LoginResults:
     """Represents the JSON response data from the AMP Login response.
 
@@ -3928,6 +3978,32 @@ class TriggerTasks:
     wait_for_complete: bool = False
     last_execute_error: bool = False
     last_error_reason: Union[str, None] = field(default=None)
+
+
+@dataclass(slots=True)
+class TwoFactorSetupInfo:
+    """Represents the setup data from :meth:`Core.enable_two_factor`, to finish with :meth:`Core.confirm_two_factor_setup`.
+
+    .. warning::
+        :attr:`manual_key` is the user's two-factor secret. Keep it out of logs and files.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    url : :class:`str`
+        The authenticator link, usually shown as a QR code.
+    manual_key : :class:`str`
+        The two-factor secret, for typing into an authenticator by hand.
+
+    """
+
+    url: str
+    manual_key: str
+
+    def __repr__(self) -> str:  # noqa: D105
+        # The secret is in both fields, and the repr is what ends up in logs.
+        return "TwoFactorSetupInfo(url=<hidden>, manual_key=<hidden>)"
 
 
 @dataclass(slots=True)

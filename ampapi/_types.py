@@ -124,6 +124,10 @@ PORT_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
 INSTANCE_REQUIRED_KEYS: tuple[str, ...] = ("instance_id", "instance_name", "module")
 INSTANCE_EXCLUDED_KEYS: tuple[str, ...] = ()
 
+# The `result` of Core/ActivateAMPLicence, confirmed against vm1 (AMP 2.8.0.8, QueryOnly).
+LICENCE_INFO_REQUIRED_KEYS: tuple[str, ...] = ("licence_key", "grade", "product", "expires")
+LICENCE_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 SCHEDULE_DATA_REQUIRED_KEYS: tuple[str, ...] = ("available_methods", "available_triggers")
 SCHEDULE_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -140,6 +144,10 @@ WEBAUTHN_CREDENTIAL_IDS_EXCLUDED_KEYS: tuple[str, ...] = ()
 # The match_* keys are what separates a time interval trigger from the event triggers in TriggersResponse.
 TIMED_TRIGGER_REQUIRED_KEYS: tuple[str, ...] = ("match_days", "match_minutes")
 TIMED_TRIGGER_EXCLUDED_KEYS: tuple[str, ...] = ()
+
+# The `result` of Core/EnableTwoFactor, confirmed against vm1 (AMP 2.8.0.8).
+TWO_FACTOR_SETUP_INFO_REQUIRED_KEYS: tuple[str, ...] = ("url", "manual_key")
+TWO_FACTOR_SETUP_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
 
 # user_session_id is the in-application user key; AMP Users (UserInfoResponse) never carry one.
 USER_APPLICATION_DATA_REQUIRED_KEYS: tuple[str, ...] = ("user_session_id", "join_time")
@@ -231,7 +239,8 @@ def is_response_list[ResponseT](
 class ActionResultResponse(TypedDict, total=False):
     status: Required[bool]
     reason: str
-    result: str
+    # A dict for the endpoints the spec types `ActionResult<T>` with an object (eg. `TwoFactorSetupInfo`).
+    result: Union[str, dict[str, Any]]
     # Added in AMP 2.8.
     support_url: Union[str, None]
     support_title: Union[str, None]
@@ -838,6 +847,18 @@ class KeyDrift(TypedDict):
     "Each required key some payloads lacked, with how many lacked it. A nested key is dotted (`metrics.tps`)."
     unexpected: dict[str, int]
     "Each key the shape does not declare, with how many payloads carried it."
+
+
+class LicenceInfoResponse(TypedDict):
+    """Represents the ``result`` of :meth:`Core.activate_amp_license`."""
+
+    licence_key: str
+    grade: str
+    grade_name: str
+    product: str
+    product_name: str
+    expires: str
+    usage: int
 
 
 class LoginResultsResponse(TypedDict):
@@ -1530,6 +1551,13 @@ class TriggerTasksResponse(TypedDict):
 
 
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
+class TwoFactorSetupInfoResponse(TypedDict):
+    """Represents the ``result`` of :meth:`Core.enable_two_factor`."""
+
+    url: str
+    manual_key: str
+
+
 class UpdateInfoResponse(TypedDict):
     update_available: bool
     version: str
