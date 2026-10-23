@@ -21,6 +21,27 @@ the first is identified by excluding the other two's unique keys rather than by 
 Adding a TypedDict to `ResponseTypeAlias` can force an existing excluded tuple to grow; adding one
 outside the union cannot.
 
+The first check after `_post` is on the container type the endpoint sends: `if not isinstance(result, dict):` for an
+object, `if not isinstance(result, list):` for an array. Until #11, adsmodule used `isinstance(result, (str, bool)) or
+result is None`, which let both through. Swapping all of them to the dict form broke the 11 list endpoints
+(`get_instances` rejected every answer, caught live on vm1, 2026-10-23), so match the check to the `expec_type` of the
+raise below it.
+
+`no_data=True` is for an endpoint that answers JSON null (spec `Void`). `_post` still runs `_response_handler` for it
+with `allow_null`, because AMP reports a failure in the body with HTTP 200 (`{"Status": false, ...}` or an error
+`Title`). Before #11 `_post` returned None without reading the body, and so did 4.x's `_call_api`: a bogus backup ID
+for `set_backup_sticky` or a removed Minecraft method returned None as if it worked. An endpoint whose spec type is
+`ActionResult` never takes `no_data`, even when the caller only needs success or failure.
+
+A bool answer (spec `Boolean`, AMP sends a bare `true`) is written by `to_file` before `_response_handler` returns it.
+
+`Core/RunSecurityCheck` sends `Pass`, which snake_cases to the keyword `pass`. `Base.json_key_mapping` renames it to
+`passed` for every endpoint. It is the only keyword key seen in the specs and captures so far. A new one goes in the
+same mapping.
+
+`restart_amp` is `@Base.ads_only`, but AMP accepted `Core/RestartAMP` on an Instance (vm1's CustomTest01,
+2026-10-22) and restarted that Instance's AMP process. Unconfirmed whether the guard is wanted.
+
 
 ## Dataclasses vs. the raw JSON
 
