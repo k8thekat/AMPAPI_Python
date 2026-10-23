@@ -42,10 +42,41 @@ same mapping.
 `Core/RestartAMP` restarts the AMP process of whichever Instance gets the call. `restart_amp` is no longer
 `@Base.ads_only` (4.x and the 5.0.0 baseline had it). Checked on vm1, 2026-10-23, by the process ID on the VM:
 CustomTest01 and MCTest01 each got a new process, and the ADS01 holding them kept its own. A running application
-(MCTest01's Minecraft server) is stopped and was still stopped 80 seconds later. The session dies with the process:
-the first call after it raises "Unauthorized Access", which clears the stored session, and the call after that logs
-in. The application inside an Instance is restarted with `restart_application` (`Core/Restart`), which
-`Core.restart_instance` is the deprecated name of.
+(MCTest01's Minecraft server) is stopped and was still stopped 80 seconds later. The session dies with the process
+(see "Sessions"). The application inside an Instance is restarted with `restart_application` (`Core/Restart`).
+
+
+## Sessions
+
+Stored per Bridge in `_sessions`, keyed by the object's `_instance_id` (the Controller's key is "0"). Each holds the
+session ID and its login time. `_reauth` logs in when the key is missing, its ID is "0", or it is older than
+`session_ttl` (240 seconds from login, not from the last call).
+
+**A session lives and dies with the one AMP process that issued it** (vm1 + vm2, 2026-10-23, process IDs over SSH):
+- An Instance reached through the Controller's proxy (`/API/ADSModule/Servers/<InstanceID>/`) logs in through it and
+  gets its own session. That session doesn't depend on the session of whoever is logged in to the ADS.
+- Restarting the Controller's AMP kills only the Controller's session. Its Instances, the Target and the Target's
+  Instances keep theirs, even across the second hop. The same holds for restarting a Target.
+- Restarting an Instance (`restart_amp`, the ADS's `restart_instance`, `ampinstmgr -r`) kills only that Instance's.
+- `logout` ends the session on AMP's side.
+
+**A dead session** answers "Unauthorized Access" with "This method requires the Session.Exists permission".
+`Session.Exists` is the node for having a session at all. A missing permission names its own node instead (a vm1
+user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
+- `_response_handler` resets the stored session for that answer, logs a warning and raises a private
+  `_SessionDeadError`. `_post` logs in again and resends the request once. A second dead answer raises
+  `AMPAPIResponseError`, and `Core/Login` is never resent. AMP refuses the call before running it. A resend
+  can't run anything twice.
+- `restart_amp`, `upgrade_amp`, `update_amp_instance`, `logout` and `clean_up(logout=True)` reset the caller's own
+  session when they finish. The next call logs in first instead of sending one that fails.
+- A permission error raises at once, with no login and the session untouched. "Instance Unavailable" (an ADS
+  booting, or a stopped Instance) raises and keeps the session, since it is still alive.
+- No lock: several calls that hit a dead session at once each log in, and the last one stored wins. It is harmless
+  so far (Kat, 2026-10-23, #18).
+- Measured after #18 (vm1/vm2): a reset recovers in two requests (login, then the call) with no log line, and a
+  retry in three (the call, login, the resend) with one warning.
+- Not seen yet: with `use_2fa`, a retry logs in with a fresh TOTP code. AMP may refuse it if it lands within the same
+  30 seconds as the last login. The VMs have no 2FA.
 
 
 ## Dataclasses vs. the raw JSON
