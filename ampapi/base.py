@@ -586,7 +586,7 @@ class Base:
                                 url=dead_session.url,
                                 reason=dead_session.reason,
                             ) from dead_session
-                        # The handler no longer resets the session, it could wipe one another call just stored.
+                        # The handler no longer resets the session. It could wipe one another call just stored.
                         # Reset only if the stored session is still the one this pass sent.
                         # The login below is a fresh one and the loop resends with the new ID.
                         stored_session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
@@ -842,7 +842,7 @@ class Base:
 
         """
         # A login is in progress on this object. Wait, then check the stored session again.
-        # If the login failed there is still none, so this call tries its own, one at a time.
+        # If the login failed there is still none. This call then tries its own, one at a time.
         while self._login_pending is not None:
             await asyncio.shield(self._login_pending)
 
@@ -897,7 +897,7 @@ class Base:
                 api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
                 self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
                 return result
-            # Resolved with None even when the login raised, only the call that logged in sees the error.
+            # Resolved with None even when the login raised. Only the call that logged in sees the error.
             finally:
                 self._login_pending = None
                 if not pending.done():

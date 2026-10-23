@@ -63,16 +63,21 @@ session ID and its login time. `_reauth` logs in when the key is missing, its ID
 **A dead session** answers "Unauthorized Access" with "This method requires the Session.Exists permission".
 `Session.Exists` is the node for having a session at all. A missing permission names its own node instead (a vm1
 user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
-- `_response_handler` resets the stored session for that answer, logs a warning and raises a private
-  `_SessionDeadError`. `_post` logs in again and resends the request once. A second dead answer raises
+- `_response_handler` logs a warning for that answer and raises a private `_SessionDeadError`. `_post` resets the
+  stored session only when it is still the one it sent (#22), logs in again and resends the request once. A late
+  dead answer from a slow call therefore can't wipe a session another call just stored. A second dead answer raises
   `AMPAPIResponseError`, and `Core/Login` is never resent. AMP refuses the call before running it. A resend
   can't run anything twice.
 - `restart_amp`, `upgrade_amp`, `update_amp_instance`, `logout` and `clean_up(logout=True)` reset the caller's own
   session when they finish. The next call logs in first instead of sending one that fails.
 - A permission error raises at once, with no login and the session untouched. "Instance Unavailable" (an ADS
   booting, or a stopped Instance) raises and keeps the session, since it is still alive.
-- No lock: several calls that hit a dead session at once each log in, and the last one stored wins. It is harmless
-  so far (Kat, 2026-10-23, #18).
+- One login for concurrent calls (#22, Kat's idea of checking the object's own state): a call that logs in sets
+  `_login_pending` on the object, and the other calls on it wait for that login and use the session it stored.
+  There's no lock to outlive an event loop, since the marker only exists while a login runs. If that login fails,
+  each waiting call tries its own login, one at a time (Kat's choice). Live on vm1 after an `ampinstmgr -r`: 20
+  concurrent calls made 20 logins before, and 1 after. With a wrong password, 5 calls made 5 failed logins, one at
+  a time, and all raised.
 - Measured after #18 (vm1/vm2): a reset recovers in two requests (login, then the call) with no log line, and a
   retry in three (the call, login, the resend) with one warning.
 - With `use_2fa`, a retry logs in again with a fresh TOTP code, often the same code as the login before it. AMP
