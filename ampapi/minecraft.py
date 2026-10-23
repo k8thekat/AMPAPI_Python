@@ -1052,6 +1052,10 @@ class MinecraftModule(Base):
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
+        Returns
+        -------
+        None
+
         """
         await self._reauth()
         parameters: dict[str, str] = {"UserOrUUID": user}
@@ -1091,6 +1095,10 @@ class MinecraftModule(Base):
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        None
 
         """
         await self._reauth()

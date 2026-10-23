@@ -76,6 +76,12 @@ Changed methods
   and :meth:`~ampapi.adsmodule.ADSModule.apply_instance_configuration` return a :class:`~ampapi.modules.RunningTask`,
   which is what AMP sends. 4.x returned an ``ActionResult``, and the last two raised on AMP 2.8's reply.
 - :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like ``mc_accept_eula``; 4.x returned None.
+- :meth:`~ampapi.Core.restart_amp`, :meth:`~ampapi.Core.upgrade_amp`, :meth:`~ampapi.Core.update_amp_instance`,
+  :meth:`~ampapi.filebackup.LocalFileBackupPlugin.delete_local_backup` and
+  :meth:`~ampapi.filebackup.LocalFileBackupPlugin.set_backup_sticky` return an :class:`~ampapi.modules.ActionResult`
+  (AMP's reply) and take ``format_data``; 4.x returned None.
+- :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
+  and no longer take ``format_data``. AMP answers JSON null for both, so the ``ActionResult`` 4.x annotated was never sent.
 - :meth:`~ampapi.adsmodule.ADSModule.create_local_instance` is deprecated. AMP 2.8.0.8 answers a null reference to
   every Instance shape sent, and its ``LocalAMPInstance`` is undocumented. Use ``create_instance`` or
   ``create_instance_from_spec``.

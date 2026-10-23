@@ -164,7 +164,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/AddDatastore", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -230,7 +230,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -292,7 +292,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ApplyTemplate", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -381,7 +381,7 @@ class ADSModule(Base):
                 request_params=request_params,
                 **response_params,
             )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/AttachADS", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -397,20 +397,20 @@ class ADSModule(Base):
     async def cancel_pairing(
         self,
         *,
-        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> None:
         """|coro|
 
         Cancel an ongoing ADS Pairing session.
 
         Endpoint: `ADSModule/CancelPairing`
 
+        .. versionchanged:: 5.0.0
+            Returns None and no longer takes `format_data`.
+
         Parameters
         ----------
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -418,24 +418,11 @@ class ADSModule(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        None
 
         """
         await self._reauth()
-        result: ResponseAliasFull = await self._post(url="ADSModule/CancelPairing", request_params=request_params, **response_params)
-
-        if isinstance(result, (str, bool)) or result is None:
-            raise AMPAPITypeError(end_point="ADSModule/CancelPairing", cur_type=result, expec_type=dict)
-
-        if format_data is None:
-            format_data = self.format_data
-
-        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            if format_data is True:
-                return build(ActionResult, result)
-            return result
-        raise AMPAPIKeyError("status", "ADSModule/CancelPairing", result)  # noqa: EM101
+        return await self._post(url="ADSModule/CancelPairing", no_data=True, request_params=request_params, **response_params)
 
     @Base.ads_only
     async def clone_instance(
@@ -529,7 +516,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CloneInstance", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -589,7 +576,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CloneTemplate", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -641,7 +628,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CreateDeploymentTemplate", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -700,7 +687,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CreateInstance", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -779,7 +766,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -851,7 +838,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CreateLocalInstance", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -908,7 +895,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeleteDatastore", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -965,7 +952,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeleteDeploymentTemplate", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -1021,7 +1008,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeleteInstance", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -1073,7 +1060,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeleteInstanceUsers", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -1124,7 +1111,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeployTemplate", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -1174,7 +1161,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DetachTarget", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -1228,7 +1215,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ExtractEverywhere", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -1278,7 +1265,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetApplicationEndpoints", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1332,7 +1319,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastore", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -1373,7 +1360,7 @@ class ADSModule(Base):
         """
         await self._reauth()
         result: ResponseAliasFull = await self._post(url="ADSModule/GetDatastores", request_params=request_params, **response_params)
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastores", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1424,7 +1411,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastoreInstances", cur_type=result, expec_type=list)
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
@@ -1465,7 +1452,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetDeploymentTemplates", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1522,7 +1509,7 @@ class ADSModule(Base):
         if result is None:
             return None
 
-        if isinstance(result, (str, bool)):
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetGroup", cur_type=result, expec_type=dict)
         if is_response_type(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
             return result
@@ -1564,7 +1551,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstance", cur_type=result, expec_type=dict)
         if is_response_type(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
@@ -1608,7 +1595,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
         if is_response_list(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
             return result
@@ -1704,7 +1691,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceNetworkInfo", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1749,7 +1736,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceStatuses", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1791,7 +1778,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
@@ -1897,7 +1884,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetProvisionArguments", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1956,7 +1943,7 @@ class ADSModule(Base):
         if result is None:
             return None
 
-        if isinstance(result, (str, bool)):
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetProvisionFitness", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2005,7 +1992,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -2050,7 +2037,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedApplications", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -2095,7 +2082,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetTargetInfo", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2140,7 +2127,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetTargetPairingCode", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2196,7 +2183,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/HandoutInstanceConfigs", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2250,7 +2237,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ManageInstance", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2322,7 +2309,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ModifyCustomFirewallRule", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2379,7 +2366,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/MoveInstanceDatastore", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2433,7 +2420,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/PrepareFileTransfer", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2482,7 +2469,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ReactivateInstance", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2527,7 +2514,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ReactivateLocalInstances", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2610,7 +2597,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RefreshGroup", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2660,7 +2647,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RefreshInstanceConfig", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2770,7 +2757,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RegisterTarget", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2834,7 +2821,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RegisterTargetWithCode", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2888,7 +2875,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RepairDatastore", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2942,7 +2929,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RequestDatastoreSizeCalculation", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -2996,7 +2983,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RestartInstance", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3111,7 +3098,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/SetInstanceConfig", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3174,7 +3161,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/SetInstanceNetworkInfo", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3231,7 +3218,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/SetInstanceSuspended", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3281,7 +3268,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StartAllInstances", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3335,7 +3322,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StartInstance", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3385,7 +3372,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StopAllInstances", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3439,7 +3426,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StopInstance", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3491,7 +3478,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateDatastore", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3542,7 +3529,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateDeploymentTemplate", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3592,7 +3579,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateInstanceInfo", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3702,7 +3689,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateTargetInfo", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3755,7 +3742,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpgradeAllInstances", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
@@ -3809,7 +3796,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if isinstance(result, (str, bool)) or result is None:
+        if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpgradeInstance", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data

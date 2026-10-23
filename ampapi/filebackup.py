@@ -139,19 +139,25 @@ class LocalFileBackupPlugin(Base):
         self,
         backup_id: str,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Delete a local backup.
 
         Endpoint: `LocalFileBackupPlugin/DeleteLocalBackup`
 
+        .. versionchanged:: 5.0.0
+            Returns an :class:`ActionResult` and takes `format_data`.
+
         Parameters
         ----------
         backup_id : :class:`str`
             The backup ID to delete.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -159,18 +165,27 @@ class LocalFileBackupPlugin(Base):
 
         Returns
         -------
-        None
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
 
         """
         await self._reauth()
         parameters: dict[str, str] = {"BackupId": backup_id}
-        return await self._post(
+        result: ResponseAliasFull = await self._post(
             url="LocalFileBackupPlugin/DeleteLocalBackup",
             parameters=parameters,
-            no_data=True,
             request_params=request_params,
             **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteLocalBackup", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteLocalBackup", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return build(ActionResult, result)
+        return result
 
     async def download_from_s3(
         self,
@@ -363,14 +378,18 @@ class LocalFileBackupPlugin(Base):
         backup_id: str,
         sticky: bool = False,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Set a backup as sticky.
 
         Endpoint: `LocalFileBackupPlugin/SetBackupSticky`
+
+        .. versionchanged:: 5.0.0
+            Returns an :class:`ActionResult` and takes `format_data`.
 
         Parameters
         ----------
@@ -378,6 +397,8 @@ class LocalFileBackupPlugin(Base):
             The backup ID to set as sticky.
         sticky : :class:`bool`, optional
             Set the backup as sticky, defaults to False.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -385,18 +406,27 @@ class LocalFileBackupPlugin(Base):
 
         Returns
         -------
-        None
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
 
         """
         await self._reauth()
         parameters: dict[str, Any] = {"BackupId": backup_id, "Sticky": sticky}
-        return await self._post(
+        result: ResponseAliasFull = await self._post(
             url="LocalFileBackupPlugin/SetBackupSticky",
             parameters=parameters,
-            no_data=True,
             request_params=request_params,
             **response_params,
         )
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/SetBackupSticky", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/SetBackupSticky", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return build(ActionResult, result)
+        return result
 
     async def take_backup(
         self,

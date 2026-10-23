@@ -90,6 +90,10 @@ class FileManagerPlugin(Base):
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
+        Returns
+        -------
+        None
+
         """
         await self._reauth()
         parameters: dict[str, Any] = {"Filename": self.sanitize_path(path=file_path), "Data": data, "Delete": delete}

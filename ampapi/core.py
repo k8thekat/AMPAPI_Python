@@ -1573,6 +1573,10 @@ class Core(Base):
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
+        Returns
+        -------
+        None
+
         """
         await self._reauth()
         parameters: dict[str, str] = {"Id": session_id}
@@ -1614,8 +1618,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`Session`
-            On success returns a :class:`Session` dataclass.
+        list[:class:`Session`]
+            On success returns a list of :class:`Session` dataclasses.
 
         """
         await self._reauth()
@@ -1658,8 +1662,8 @@ class Core(Base):
 
         Returns
         -------
-        list[:class:`User`]
-            On success returns a list of :class:`User` dataclasses.
+        list[:class:`UserInfo`]
+            On success returns a list of :class:`UserInfo` dataclasses.
 
         """
         await self._reauth()
@@ -1702,7 +1706,7 @@ class Core(Base):
 
         Returns
         -------
-        list[:class:`str`]:
+        list[:class:`str`]
             On success returns a list of strings containing all the permission nodes for the provided role ID.
 
         """
@@ -1745,8 +1749,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`User`
-            On success returns a :class:`User` dataclass.
+        :class:`UserInfo`
+            On success returns a :class:`UserInfo` dataclass.
 
         """
         await self._reauth()
@@ -1791,8 +1795,8 @@ class Core(Base):
 
         Returns
         -------
-        list[:class:`UserInfoSummary`]
-            On success returns a list of :class:`UserInfoSummary` dataclass.
+        list[:class:`LoginUserInfo`]
+            On success returns a list of :class:`LoginUserInfo` dataclasses.
 
         """
         await self._reauth()
@@ -2161,8 +2165,8 @@ class Core(Base):
 
         Returns
         -------
-        dict[:class:`str`, Any]
-            On success returns a dictionary containing the new GUID.
+        :class:`str`
+            On success returns the new GUID.
 
         """
         await self._reauth()
@@ -3421,8 +3425,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`LoginResults`
-            On success returns a :class:`LoginResults` dataclass.
+        :class:`LoginResults` | None
+            On success returns a :class:`LoginResults` dataclass, None if AMP sent no login token.
 
         """
         # No token means no 2FA, so send an empty code rather than one generated from an empty secret.
@@ -3470,17 +3474,23 @@ class Core(Base):
     async def restart_amp(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Restart the AMP Instance
 
         Endpoint: `Core/RestartAMP`
 
+        .. versionchanged:: 5.0.0
+            Returns an :class:`ActionResult` and takes `format_data`.
+
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -3488,11 +3498,21 @@ class Core(Base):
 
         Returns
         -------
-        None
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
 
         """
         await self._reauth()
-        return await self._post(url="Core/RestartAMP", no_data=True, request_params=request_params, **response_params)
+        result: ResponseAliasFull = await self._post(url="Core/RestartAMP", request_params=request_params, **response_params)
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/RestartAMP", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/RestartAMP", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return build(ActionResult, result)
+        return result
 
     async def resume_instance(
         self,
@@ -3625,20 +3645,20 @@ class Core(Base):
     async def refresh_settings_source_cache(
         self,
         *,
-        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> None:
         """|coro|
 
         Refreshes the settings source cache.
 
         Endpoint: `Core/RefreshSettingsSourceCache`
 
+        .. versionchanged:: 5.0.0
+            Returns None and no longer takes `format_data`.
+
         Parameters
         ----------
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -3646,28 +3666,11 @@ class Core(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        None
 
         """
         await self._reauth()
-        result: ResponseAliasFull = await self._post(
-            url="Core/RefreshSettingsSourceCache",
-            request_params=request_params,
-            **response_params,
-        )
-
-        if not isinstance(result, dict):
-            raise AMPAPITypeError(end_point="Core/RefreshSettingsSourceCache", cur_type=result, expec_type=dict)
-
-        if format_data is None:
-            format_data = self.format_data
-
-        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="Core/RefreshSettingsSourceCache", cur_type=result, expec_type=dict)
-        if format_data is True:
-            return build(ActionResult, result)
-        return result
+        return await self._post(url="Core/RefreshSettingsSourceCache", no_data=True, request_params=request_params, **response_params)
 
     async def rename_role(
         self,
@@ -4576,9 +4579,10 @@ class Core(Base):
     async def upgrade_amp(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Upgrade the current AMP Instance.
@@ -4588,8 +4592,13 @@ class Core(Base):
          .. warning::
             The Instance must be an ADS or Controller.
 
+        .. versionchanged:: 5.0.0
+            Returns an :class:`ActionResult` and takes `format_data`.
+
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -4597,19 +4606,30 @@ class Core(Base):
 
         Returns
         -------
-        None
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
 
         """
         await self._reauth()
-        return await self._post(url="Core/UpgradeAMP", no_data=True, request_params=request_params, **response_params)
+        result: ResponseAliasFull = await self._post(url="Core/UpgradeAMP", request_params=request_params, **response_params)
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/UpgradeAMP", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/UpgradeAMP", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return build(ActionResult, result)
+        return result
 
     @Base.ads_only
     async def update_amp_instance(
         self,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Updates the ADS Instance.
@@ -4619,8 +4639,13 @@ class Core(Base):
         .. warning::
             The Instance must be an ADS or Controller.
 
+        .. versionchanged:: 5.0.0
+            Returns an :class:`ActionResult` and takes `format_data`.
+
         Parameters
         ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -4628,11 +4653,21 @@ class Core(Base):
 
         Returns
         -------
-        None
+        :class:`ActionResult`
+            On success returns a :class:`ActionResult` dataclass.
 
         """
         await self._reauth()
-        return await self._post(url="Core/UpdateAMPInstance", no_data=True, request_params=request_params, **response_params)
+        result: ResponseAliasFull = await self._post(url="Core/UpdateAMPInstance", request_params=request_params, **response_params)
+        if not isinstance(result, dict):
+            raise AMPAPITypeError(end_point="Core/UpdateAMPInstance", cur_type=result, expec_type=dict)
+        if format_data is None:
+            format_data = self.format_data
+        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            raise AMPAPITypeError(end_point="Core/UpdateAMPInstance", cur_type=result, expec_type=dict)
+        if format_data is True:
+            return build(ActionResult, result)
+        return result
 
     async def update_application(
         self,
