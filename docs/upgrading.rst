@@ -180,7 +180,7 @@ Returned data
 - :meth:`~ampapi.instance.Instance.get_updates` and :meth:`~ampapi.instance.Instance.get_application_status` take
   `request_params` and the ``**response_params`` the other methods take (eg. `to_file`).
 - :class:`~ampapi.modules.ParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
-  `seconds`, `message`, `input`); 4.x kept only `user`, `reason`, `title` and `subtitle`. An argument
+  `seconds`, `message`, `!input`); 4.x kept only `user`, `reason`, `title` and `subtitle`. An argument
   the task doesn't hold is `None`, not ``""``. Booleans, numbers, `state`, `operation` (:class:`~ampapi.IfOperators`),
   `priority` (:class:`~ampapi.MailPriority`) and `when` (a naive `datetime`) are converted from AMP's strings
   (a value that doesn't parse stays a string).
@@ -190,7 +190,7 @@ Returned data
   :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
 - :class:`~ampapi.modules.UserApplicationData` is a dataclass with a new `display_name`. 4.x raised a
   :exc:`TypeError` on AMP 2.8's `DisplayName` key.
-- :attr:`~ampapi.modules.Role.members` holds :class:`~ampapi.modules.RoleMember` (`id` and `name`); 4.x hinted it
+- :attr:`~ampapi.modules.Role.members` holds :class:`~ampapi.modules.RoleMember` (`!id` and `name`); 4.x hinted it
   ``list[str]``.
 - :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
 - :attr:`~ampapi.modules.Consumes.enum_values` is None when the argument has no values, not ``""``.
@@ -245,7 +245,7 @@ Target ADS
 - :meth:`~ampapi.instance.TargetADS.get_instances` returns the Instances on that Target, leaving out the Target's own
   ADS Instance, and keeps them on `TargetADS.instances`. The Target's own data in the reply refreshes the
   `TargetADS` itself, and each returned Instance has the `TargetADS` as its `ads`.
-- A `TargetADS` carries its Target's data flat on itself like the `Controller` does (`platform`, `url`,
+- A `TargetADS` carries its Target's data flat on itself like the `Controller` does (`!platform`, `url`,
   `state`, `datastores`, `available_instances` and the rest). `friendly_name`, `description` and `tags`
   stay the Instance's values. The data arrives with :meth:`~ampapi.instance.Controller.get_instances` (the
   Controller's copy), then the `TargetADS`'s own :meth:`~ampapi.instance.TargetADS.get_instances` replaces it with
