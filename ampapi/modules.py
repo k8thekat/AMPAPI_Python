@@ -3248,7 +3248,7 @@ class SecurityCheck:
     resolution : :class:`str`
         How to fix the check when it fails.
     severity : :class:`int`
-        How serious a failed check is. Only ``1`` and ``2`` have been seen, so the meaning of each is unconfirmed.
+        How serious a failed check is. Only ``1`` and ``2`` have been seen, and the meaning of each is unconfirmed.
     passed : :class:`bool`
         If the check passed or not. AMP sends this as ``Pass``.
     hidden : :class:`bool`

@@ -90,7 +90,7 @@ Changed methods
 - :meth:`~ampapi.Core.run_security_check` returns a list of :class:`~ampapi.modules.SecurityCheck` and takes
   ``format_data``; 4.x returned the raw response. AMP's ``Pass`` key is ``passed``, since ``pass`` is a Python keyword.
 - :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
-  and no longer take ``format_data``. AMP answers JSON null for both, so the ``ActionResult`` 4.x annotated was never sent.
+  and no longer take ``format_data``. AMP answers JSON null for both, and never sent the ``ActionResult`` 4.x annotated.
 - :meth:`~ampapi.adsmodule.ADSModule.create_local_instance` is deprecated. AMP 2.8.0.8 answers a null reference to
   every Instance shape sent, and its ``LocalAMPInstance`` is undocumented. Use ``create_instance`` or
   ``create_instance_from_spec``.
@@ -149,7 +149,7 @@ API errors are now raised (see ``ampapi.errors``) instead of an ``ActionResultEr
 class can be imported from ``ampapi`` directly (eg. ``from ampapi import AMPAPIResponseError``).
 
 Methods that return None now raise :exc:`~ampapi.AMPAPIResponseError` when AMP reports a failure in the reply (an error
-title or ``Status: false``), which 4.x dropped. AMP answers those with HTTP 200, so 4.x returned None as if the call worked.
+title or ``Status: false``), which 4.x dropped. AMP answers those with HTTP 200, and 4.x returned None as if the call worked.
 
 
 Returned data

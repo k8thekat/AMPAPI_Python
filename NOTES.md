@@ -24,7 +24,7 @@ outside the union cannot.
 The first check after `_post` is on the container type the endpoint sends: `if not isinstance(result, dict):` for an
 object, `if not isinstance(result, list):` for an array. Until #11, adsmodule used `isinstance(result, (str, bool)) or
 result is None`, which let both through. Swapping all of them to the dict form broke the 11 list endpoints
-(`get_instances` rejected every answer, caught live on vm1, 2026-10-23), so match the check to the `expec_type` of the
+(`get_instances` rejected every answer, caught live on vm1, 2026-10-23). Match the check to the `expec_type` of the
 raise below it.
 
 `no_data=True` is for an endpoint that answers JSON null (spec `Void`). `_post` still runs `_response_handler` for it
@@ -39,7 +39,7 @@ A bool answer (spec `Boolean`, AMP sends a bare `true`) is written by `to_file` 
 `passed` for every endpoint. It is the only keyword key seen in the specs and captures so far. A new one goes in the
 same mapping.
 
-`Core/RestartAMP` restarts the AMP process of whichever Instance gets the call, so `restart_amp` is no longer
+`Core/RestartAMP` restarts the AMP process of whichever Instance gets the call. `restart_amp` is no longer
 `@Base.ads_only` (4.x and the 5.0.0 baseline had it). Checked on vm1, 2026-10-23, by the process ID on the VM:
 CustomTest01 and MCTest01 each got a new process, and the ADS01 holding them kept its own. A running application
 (MCTest01's Minecraft server) is stopped and was still stopped 80 seconds later. The session dies with the process:
