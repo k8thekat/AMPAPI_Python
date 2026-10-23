@@ -51,6 +51,7 @@ from ._types import (
     WEBAUTHN_CREDENTIAL_IDS_REQUIRED_KEYS,
     ActionResultResponse,
     LicenceInfoResponse,
+    LicenceResultResponse,
     RunningTaskResponse,
     ScheduleDataResponse,
     SecurityCheckResponse,
@@ -58,6 +59,7 @@ from ._types import (
     StatusResponse,
     TimedTriggerResponse,
     TwoFactorSetupInfoResponse,
+    TwoFactorSetupResultResponse,
     UserApplicationDataResponse,
     WebauthnCredentialIDsResponse,
     is_response_list,
@@ -281,7 +283,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        if not is_response_type(result, LicenceResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=result, expec_type=dict)
 
         # The spec types this `ActionResult<JObject>`. The licence is in `result`, and a failure has already raised.
@@ -1566,7 +1568,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        if not is_response_type(result, TwoFactorSetupResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/EnableTwoFactor", cur_type=result, expec_type=dict)
 
         # The spec types this `ActionResult<TwoFactorSetupInfo>`. The setup data is in `result`, and a failure has already raised.

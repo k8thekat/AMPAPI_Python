@@ -100,9 +100,11 @@ it carries nothing more. Shapes from vm1, 2026-10-23: `EnableTwoFactor` sends `u
 `ActivateAMPLicence` sends `licence_key` (the key, echoed back), `grade`, `grade_name`, `product`, `product_name`,
 `expires` (ISO, no timezone) and `usage`. Both dataclasses keep their secret out of `repr`.
 
-`check_key_drift` can't see inside these two. It compares each shape an endpoint narrows to with the whole answer
-and keeps the closest, and `ActionResultResponse` always fits the outer `ActionResult`. A key AMP adds to the
-inner `result` is not reported (#20).
+`check_key_drift` compares each shape an endpoint narrows to with the whole answer and keeps the closest. Narrowed
+to `ActionResultResponse`, whose `result` names no TypedDict, the inner keys were never compared. The two wrappers
+narrow to `TwoFactorSetupResultResponse` and `LicenceResultResponse` instead (#20), whose `result` names the inner
+shape, and `key_drift` follows it like any nested TypedDict (`result.manual_key`). A new `ActionResult<object>`
+wrapper wants the same envelope.
 
 A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
 `TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for

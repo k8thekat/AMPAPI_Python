@@ -483,6 +483,8 @@ class Base:
         # A dead session gets one login and one resend, once per call.
         # The RuntimeError retry below has no limit of its own, as before #18.
         session_retried: bool = False
+        # Counts the RuntimeError retries, for the log line.
+        runtime_retries: int = 0
 
         while True:
             api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
@@ -516,11 +518,22 @@ class Base:
                 if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
                     self.session = aiohttp.ClientSession()
 
-                retry: int | float = self._backoff.delay()
+                # retry: int | float = self._backoff.delay()
+                # The backoff can hand back 0 seconds (half of all first retries do). One second is the least we wait.
+                retry: int | float = max(1, self._backoff.delay())
+                runtime_retries += 1
+                # LOGGER.error(
+                #     "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
+                #     __class__.__name__,
+                #     "_post",
+                #     retry,
+                #     e,
+                # )
                 LOGGER.error(
-                    "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
+                    "<%s.%s> encountered an <RuntimeError>, retry %s in %ss. | Exception: %s",
                     __class__.__name__,
                     "_post",
+                    runtime_retries,
                     retry,
                     e,
                 )

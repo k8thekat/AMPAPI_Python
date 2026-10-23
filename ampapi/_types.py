@@ -861,6 +861,20 @@ class LicenceInfoResponse(TypedDict):
     usage: int
 
 
+class LicenceResultResponse(TypedDict, total=False):
+    """Represents the full answer of :meth:`Core.activate_amp_license`, an :class:`ActionResultResponse` around a
+    :class:`LicenceInfoResponse`.
+
+    Naming the inner shape lets :class:`KeyDriftCheck` compare the keys inside ``result`` too.
+    """
+
+    status: Required[bool]
+    reason: str
+    result: Required[LicenceInfoResponse]
+    support_url: Union[str, None]
+    support_title: Union[str, None]
+
+
 class LoginResultsResponse(TypedDict):
     # A failed login sends None for these four (confirmed against AMP 2.8.0.8).
     permissions: Union[list[str], None]
@@ -1555,6 +1569,20 @@ class TwoFactorSetupInfoResponse(TypedDict):
 
     url: str
     manual_key: str
+
+
+class TwoFactorSetupResultResponse(TypedDict, total=False):
+    """Represents the full answer of :meth:`Core.enable_two_factor`, an :class:`ActionResultResponse` around a
+    :class:`TwoFactorSetupInfoResponse`.
+
+    Naming the inner shape lets :class:`KeyDriftCheck` compare the keys inside ``result`` too.
+    """
+
+    status: Required[bool]
+    reason: str
+    result: Required[TwoFactorSetupInfoResponse]
+    support_url: Union[str, None]
+    support_title: Union[str, None]
 
 
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
