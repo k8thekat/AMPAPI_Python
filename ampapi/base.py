@@ -150,6 +150,20 @@ class BaseArgs(TypedDict):
     session: Optional[aiohttp.ClientSession]
 
 
+class _SessionDeadError(AMPAPIResponseError):
+    """Raised by :meth:`Base._response_handler` when AMP says the stored session no longer exists.
+
+    :meth:`Base._post` catches it once to log in again and resend. It is private, so anything that gets past
+    :meth:`Base._post` is a plain :exc:`AMPAPIResponseError`.
+    """
+
+    def __init__(self, title: str, url: str, reason: str) -> None:
+        self.title: str = title
+        self.url: str = url
+        self.reason: str = reason
+        super().__init__(title=title, url=url, reason=reason)
+
+
 class Base:
     """Contains the base functions for all AMP API endpoints and handles the parsing of Bridge data.
 
@@ -420,6 +434,10 @@ class Base:
         .. warning::
             Will raise :exc:`AMPAPINetworkError` or :exc:`AMPAPIResponseError` if any errors occur when attempting to call the API.
 
+        .. note::
+            When AMP answers that the stored session no longer exists, this logs in again and sends the request once more.
+            A second dead answer raises, and ``Core/Login`` itself is never sent again.
+
 
         Parameters
         ----------
@@ -447,13 +465,6 @@ class Base:
             The processed response on a successful (2xx) status, ``None`` if ``no_data`` is ``True``.
 
         """
-        api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
-            self._instance_id,
-            APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC)),
-        )
-        if self.session is None:
-            self.session = aiohttp.ClientSession()
-
         _url: str = self._endpoint_url + "/API/" + url
 
         if parameters is None:
@@ -463,91 +474,122 @@ class Base:
         if request_params is None:
             request_params = {}
 
-        request_params.setdefault("headers", {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"})
-        request_params.setdefault("data", json.dumps(parameters))
+        # Headers the caller passed are theirs to keep. Only the ones we build here follow a new login.
+        library_headers: bool = "headers" not in request_params
 
-        try:
-            response: ClientResponse = await self.session.post(url=_url, **request_params)
-            LOGGER.debug(
-                "<%s.%s> | POST URL: %s | API_SESSION: %s | INSTANCE_ID: %s",
-                __class__.__name__,
-                "_post",
-                _url,
-                api_session,
+        # A dead session gets one login and one resend, shared with the RuntimeError retry below so the two can't loop.
+        session_retried: bool = False
+
+        while True:
+            api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
                 self._instance_id,
+                APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC)),
             )
-            LOGGER.debug("<%s.%s> | REQ_PARAMS: %s", __class__.__name__, "_post", request_params)
-            LOGGER.debug("<%s.%s> | RESP_PARAMS: %s", __class__.__name__, "_post", response_params)
-
-        except RuntimeError as e:
-            # Attempting to re-open the session if it is somehow closed during usage.
-            if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
+            if self.session is None:
                 self.session = aiohttp.ClientSession()
 
-            retry: int | float = self._backoff.delay()
-            LOGGER.error(
-                "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
-                __class__.__name__,
-                "_post",
-                retry,
-                e,
-            )
-            await asyncio.sleep(delay=retry)
-            return await self._post(
-                url=url,
-                parameters=parameters,
-                no_data=no_data,
-                request_params=request_params,
-                **response_params,
-            )
+            if library_headers is True:
+                request_params["headers"] = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
+            request_params.setdefault("data", json.dumps(parameters))
 
-        # ? Suggestion
-        # Further see what exceptions may be raised to narrow this comparison as the noqa can be avoided.
-        except Exception as e:
-            LOGGER.error(
-                "<%s.%s> encountered an <Exception> | Exception: %s",
-                __class__.__name__,
-                "_post",
-                e,
-            )
-            raise AMPAPINetworkError(status=0, url=_url, reason=str(e)) from e
+            try:
+                response: ClientResponse = await self.session.post(url=_url, **request_params)
+                LOGGER.debug(
+                    "<%s.%s> | POST URL: %s | API_SESSION: %s | INSTANCE_ID: %s",
+                    __class__.__name__,
+                    "_post",
+                    _url,
+                    api_session,
+                    self._instance_id,
+                )
+                LOGGER.debug("<%s.%s> | REQ_PARAMS: %s", __class__.__name__, "_post", request_params)
+                LOGGER.debug("<%s.%s> | RESP_PARAMS: %s", __class__.__name__, "_post", response_params)
 
-        if response.content_length == 0:
-            raise AMPAPINetworkError(status=response.status, url=_url, reason="The HTTP Header content length was 0.")
+            except RuntimeError as e:
+                # Attempting to re-open the session if it is somehow closed during usage.
+                if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
+                    self.session = aiohttp.ClientSession()
 
-        match response.status:
-            case status if 200 <= status < 300:
-                if no_data is True:
-                    # response.release()
-                    # return None
-                    # A Void endpoint answers JSON null, but AMP still reports a failure in the body with a 200.
-                    response_params["allow_null"] = True
-                    await self._response_handler(response=response, **response_params)
-                    return None
-                return await self._response_handler(response=response, **response_params)
+                retry: int | float = self._backoff.delay()
+                LOGGER.error(
+                    "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
+                    __class__.__name__,
+                    "_post",
+                    retry,
+                    e,
+                )
+                await asyncio.sleep(delay=retry)
+                # return await self._post(
+                #     url=url,
+                #     parameters=parameters,
+                #     no_data=no_data,
+                #     request_params=request_params,
+                #     **response_params,
+                # )
+                # Same retry as the recursive call above, kept in this loop so `session_retried` carries over.
+                continue
 
-            case 400:
-                raise AMPAPINetworkError(status=400, url=_url, reason="Bad Request")
-            case 401:
-                raise AMPAPINetworkError(status=401, url=_url, reason="Unauthorized")
-            case 403:
-                raise AMPAPINetworkError(status=403, url=_url, reason="Forbidden")
-            case 404:
-                raise AMPAPINetworkError(status=404, url=_url, reason="Not Found")
-            case 408:
-                raise AMPAPINetworkError(status=408, url=_url, reason="Request Timeout")
-            case 429:
-                raise AMPAPINetworkError(status=429, url=_url, reason="Too Many Requests")
-            case 500:
-                raise AMPAPINetworkError(status=500, url=_url, reason="Internal Server Error")
-            case 502:
-                raise AMPAPINetworkError(status=502, url=_url, reason="Bad Gateway")
-            case 503:
-                raise AMPAPINetworkError(status=503, url=_url, reason="Service Unavailable")
-            case 504:
-                raise AMPAPINetworkError(status=504, url=_url, reason="Gateway Timeout")
-            case _:
-                raise AMPAPINetworkError(status=response.status, url=_url, reason=f"Unexpected status [{response.status}]")
+            # ? Suggestion
+            # Further see what exceptions may be raised to narrow this comparison as the noqa can be avoided.
+            except Exception as e:
+                LOGGER.error(
+                    "<%s.%s> encountered an <Exception> | Exception: %s",
+                    __class__.__name__,
+                    "_post",
+                    e,
+                )
+                raise AMPAPINetworkError(status=0, url=_url, reason=str(e)) from e
+
+            if response.content_length == 0:
+                raise AMPAPINetworkError(status=response.status, url=_url, reason="The HTTP Header content length was 0.")
+
+            match response.status:
+                case status if 200 <= status < 300:
+                    try:
+                        if no_data is True:
+                            # response.release()
+                            # return None
+                            # A Void endpoint answers JSON null, but AMP still reports a failure in the body with a 200.
+                            response_params["allow_null"] = True
+                            await self._response_handler(response=response, **response_params)
+                            return None
+                        return await self._response_handler(response=response, **response_params)
+
+                    except _SessionDeadError as dead_session:
+                        # A second dead answer, or a dead answer to the login itself, is a real failure.
+                        if session_retried is True or url == "Core/Login":
+                            raise AMPAPIResponseError(
+                                title=dead_session.title,
+                                url=dead_session.url,
+                                reason=dead_session.reason,
+                            ) from dead_session
+                        # The handler already reset the stored session, so this logs in fresh and the loop resends with the new ID.
+                        session_retried = True
+                        await self._reauth()
+                        continue
+
+                case 400:
+                    raise AMPAPINetworkError(status=400, url=_url, reason="Bad Request")
+                case 401:
+                    raise AMPAPINetworkError(status=401, url=_url, reason="Unauthorized")
+                case 403:
+                    raise AMPAPINetworkError(status=403, url=_url, reason="Forbidden")
+                case 404:
+                    raise AMPAPINetworkError(status=404, url=_url, reason="Not Found")
+                case 408:
+                    raise AMPAPINetworkError(status=408, url=_url, reason="Request Timeout")
+                case 429:
+                    raise AMPAPINetworkError(status=429, url=_url, reason="Too Many Requests")
+                case 500:
+                    raise AMPAPINetworkError(status=500, url=_url, reason="Internal Server Error")
+                case 502:
+                    raise AMPAPINetworkError(status=502, url=_url, reason="Bad Gateway")
+                case 503:
+                    raise AMPAPINetworkError(status=503, url=_url, reason="Service Unavailable")
+                case 504:
+                    raise AMPAPINetworkError(status=504, url=_url, reason="Gateway Timeout")
+                case _:
+                    raise AMPAPINetworkError(status=response.status, url=_url, reason=f"Unexpected status [{response.status}]")
 
     async def _response_handler(
         self,
@@ -656,8 +698,14 @@ class Base:
                     response_json,
                     response.url,
                 )
-                api_session = APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC))
-                self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+                # api_session = APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC))
+                # self._bridge._sessions.update({self._instance_id: api_session})
+
+                # `Session.Exists` is the permission for having a session at all. That marks a dead session apart from a missing permission.
+                # The call never ran, so `_post` can log in again and send it once more.
+                if title == "Unauthorized Access" and "Session.Exists" in str(response_json.get("message", "")):
+                    self._reset_session()
+                    raise _SessionDeadError(title=title, url=str(response.url), reason=response_json.get("message", ""))
 
             # This will be our default catch all for any "invalid" Responses.
             raise AMPAPIResponseError(title=response_json["title"], url=str(response.url), reason=response_json.get("message", ""))
@@ -721,6 +769,16 @@ class Base:
         )
         report: dict[str, object] = {"endpoint": endpoint, "shape": shape.__name__, **drift}
         path.joinpath(response.url.name.lower() + ".key_drift.json").write_text(json.dumps(report, indent=4))
+
+    def _reset_session(self) -> None:
+        """Forget this object's stored session, so the next call logs in again.
+
+        .. note::
+            Only this object's own entry is reset. Other Instances on the same :class:`Bridge` keep theirs.
+
+        """
+        api_session = APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC))
+        self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
 
     async def _reauth(self) -> Any:
         """|coro|
@@ -872,6 +930,8 @@ class Base:
                 await self._post(url="Core/Logout", no_data=True)
             except Exception:
                 LOGGER.warning("<%s.%s> | `Core/Logout` failed, closing the session anyway", __class__.__name__, "clean_up", exc_info=True)
+            # Logged out or not, the stored session is no use to the next call.
+            self._reset_session()
         LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
         if self.session is not None:
             await self.session.close()
