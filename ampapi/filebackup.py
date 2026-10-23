@@ -177,10 +177,13 @@ class LocalFileBackupPlugin(Base):
             request_params=request_params,
             **response_params,
         )
+
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteLocalBackup", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteLocalBackup", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -418,10 +421,13 @@ class LocalFileBackupPlugin(Base):
             request_params=request_params,
             **response_params,
         )
+
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/SetBackupSticky", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/SetBackupSticky", cur_type=result, expec_type=dict)
         if format_data is True:
