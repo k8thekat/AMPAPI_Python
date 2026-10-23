@@ -39,8 +39,13 @@ A bool answer (spec `Boolean`, AMP sends a bare `true`) is written by `to_file` 
 `passed` for every endpoint. It is the only keyword key seen in the specs and captures so far. A new one goes in the
 same mapping.
 
-`restart_amp` is `@Base.ads_only`, but AMP accepted `Core/RestartAMP` on an Instance (vm1's CustomTest01,
-2026-10-22) and restarted that Instance's AMP process. Unconfirmed whether the guard is wanted.
+`Core/RestartAMP` restarts the AMP process of whichever Instance gets the call, so `restart_amp` is no longer
+`@Base.ads_only` (4.x and the 5.0.0 baseline had it). Checked on vm1, 2026-10-23, by the process ID on the VM:
+CustomTest01 and MCTest01 each got a new process, and the ADS01 holding them kept its own. A running application
+(MCTest01's Minecraft server) is stopped and was still stopped 80 seconds later. The session dies with the process:
+the first call after it raises "Unauthorized Access", which clears the stored session, and the call after that logs
+in. The application inside an Instance is restarted with `restart_application` (`Core/Restart`), which
+`Core.restart_instance` is the deprecated name of.
 
 
 ## Dataclasses vs. the raw JSON

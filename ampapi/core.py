@@ -3475,7 +3475,9 @@ class Core(Base):
         await self._reauth()
         return await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
 
-    @Base.ads_only
+    # AMP restarts the AMP process of whichever Instance gets the call, an ADS or not.
+    # The application inside an Instance is `restart_application`.
+    # @Base.ads_only
     async def restart_amp(
         self,
         *,
@@ -3485,12 +3487,22 @@ class Core(Base):
     ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Restart the AMP Instance
+        Restart the AMP process of this Instance.
 
         Endpoint: `Core/RestartAMP`
 
+        .. note::
+            A running application is stopped and is not started again. The session ends with the process. The first
+            call after it raises :exc:`AMPAPIResponseError` ("Unauthorized Access"), and the call after that logs in
+            again.
+
+        .. note::
+            This restarts AMP itself, not the application it runs. To restart the application (eg. a Minecraft server),
+            use :meth:`restart_application`.
+
         .. versionchanged:: 5.0.0
             Returns an :class:`ActionResult` and takes `format_data`.
+            Runs on any Instance, not only an ADS.
 
         Parameters
         ----------
