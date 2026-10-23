@@ -850,7 +850,7 @@ class KeyDrift(TypedDict):
 
 
 class LicenceInfoResponse(TypedDict):
-    """Represents the ``result`` of :meth:`Core.activate_amp_license`."""
+    """Represents the `result` of :meth:`Core.activate_amp_license`."""
 
     licence_key: str
     grade: str
@@ -865,7 +865,7 @@ class LicenceResultResponse(TypedDict, total=False):
     """Represents the full answer of :meth:`Core.activate_amp_license`, an :class:`ActionResultResponse` around a
     :class:`LicenceInfoResponse`.
 
-    Naming the inner shape lets :class:`KeyDriftCheck` compare the keys inside ``result`` too.
+    Naming the inner shape lets :class:`KeyDriftCheck` compare the keys inside `result` too.
     """
 
     status: Required[bool]
@@ -1413,7 +1413,7 @@ class ScheduleDataResponse(TypedDict):
 class SecurityCheckResponse(TypedDict):
     """Represents one check from :meth:`Core.run_security_check`.
 
-    AMP sends the result as ``Pass``, which :attr:`Base.json_key_mapping` turns into ``passed`` because ``pass`` is a keyword.
+    AMP sends the result as `Pass`, which :attr:`Base.json_key_mapping` turns into `passed` because `pass` is a keyword.
     """
 
     title: str
@@ -1565,7 +1565,7 @@ class TriggerTasksResponse(TypedDict):
 
 
 class TwoFactorSetupInfoResponse(TypedDict):
-    """Represents the ``result`` of :meth:`Core.enable_two_factor`."""
+    """Represents the `result` of :meth:`Core.enable_two_factor`."""
 
     url: str
     manual_key: str
@@ -1575,7 +1575,7 @@ class TwoFactorSetupResultResponse(TypedDict, total=False):
     """Represents the full answer of :meth:`Core.enable_two_factor`, an :class:`ActionResultResponse` around a
     :class:`TwoFactorSetupInfoResponse`.
 
-    Naming the inner shape lets :class:`KeyDriftCheck` compare the keys inside ``result`` too.
+    Naming the inner shape lets :class:`KeyDriftCheck` compare the keys inside `result` too.
     """
 
     status: Required[bool]

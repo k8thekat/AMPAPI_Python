@@ -3300,7 +3300,7 @@ class SecurityCheck:
     severity : :class:`int`
         How serious a failed check is. Only ``1`` and ``2`` have been seen, and the meaning of each is unconfirmed.
     passed : :class:`bool`
-        If the check passed or not. AMP sends this as ``Pass``.
+        If the check passed or not. AMP sends this as `Pass`.
     hidden : :class:`bool`
         If the check is hidden in the AMP UI or not.
 

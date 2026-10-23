@@ -254,7 +254,7 @@ class Base:
         Returns
         -------
         :class:`Module` | :class:`str`
-            The AMP Instance ``type`` as a :class:`Module`, or the raw string when it is not a known one.
+            The AMP Instance `type` as a :class:`Module`, or the raw string when it is not a known one.
 
         """
         try:
