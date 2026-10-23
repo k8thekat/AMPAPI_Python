@@ -21,7 +21,6 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import datetime
-import warnings
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
 from pyotp import TOTP
@@ -3362,40 +3361,6 @@ class Core(Base):
         await self._reauth()
         return await self._post(url="Core/Kill", no_data=True, request_params=request_params, **response_params)
 
-    @deprecated(
-        "Function overlap with `ADSModule.kill_instance()`, please use `Core.kill_application()` instead.",
-        stacklevel=2,
-    )
-    async def kill_instance(
-        self,
-        *,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
-        """|coro|
-
-        Kills the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
-
-        Parameters
-        ----------
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            message="Core.kill_instance() is deprecated and scheduled for "
-            "removal in a future version. Use Core.kill_application() instead to kill your Instance application.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return await self.kill_application(request_params=request_params, **response_params)
-
     async def login(
         self,
         amp_user: str,
@@ -3746,44 +3711,6 @@ class Core(Base):
         if format_data is True:
             return build(ActionResult, result)
         return result
-
-    @deprecated(
-        "Function overlap with `ADSModule.restart_instance()`, please use `restart_application()` instead.",
-        stacklevel=2,
-    )
-    async def restart_instance(
-        self,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Restarts the Instances Application (eg. Minecraft Server, Source Server, Palworld Server, etc.)
-
-        Parameters
-        ----------
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
-
-        """
-        warnings.warn(
-            message="Core.restart_instance() is deprecated and scheduled for "
-            "removal in a future version. Use Core.restart_application() instead to restart your Instance application.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return await self.restart_application(format_data=format_data, request_params=request_params, **response_params)
 
     async def restart_application(
         self,

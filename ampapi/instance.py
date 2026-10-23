@@ -207,7 +207,7 @@ class Instance(
         """The ADS that holds this Instance, the :class:`Controller` or the :class:`TargetADS` of a remote Target.
 
         .. note::
-            :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance`, :meth:`update_instance` and
+            :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance`, :meth:`upgrade_instance` and
             :meth:`get_instance_status` go through this ADS. An Instance built without one falls back to its
             :class:`Controller`.
 
@@ -623,9 +623,9 @@ class Instance(
         return await self.ads.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
     @has_controller
-    async def update_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def upgrade_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
         """|coro|
-        Update the AMP Instance.
+        Upgrade the AMP version of this Instance.
 
         .. note::
             The call goes to :attr:`ads`, the ADS that holds this Instance.
@@ -633,6 +633,9 @@ class Instance(
         .. warning::
             This only applies if you are manually creating these classes.\n
             - You must have a :class:`Controller` generated and set to :attr:`_controller` first. See ``__init__()``
+
+        .. versionchanged:: 5.0.0
+            Renamed from `update_instance`, to match :meth:`ADSModule.upgrade_instance`.
 
 
         Parameters
@@ -646,7 +649,7 @@ class Instance(
             On success returns an :class:`ActionResult` dataclass.
 
         """
-        # This function is to mimic the `ADSModule.update_instance()` which we call on the ADS holding this Instance.
+        # This function is to mimic the `ADSModule.upgrade_instance()` which we call on the ADS holding this Instance.
         assert self.ads is not None  # noqa: S101
         return await self.ads.upgrade_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
 
@@ -1107,6 +1110,51 @@ class TargetADS(ADSData, ADSModule, Instance):
 
         """
         return await ADSModule.restart_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def upgrade_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Upgrade the AMP version of an Instance of this Target, picked by its name on this Target.
+
+        .. note::
+            To upgrade this Target ADS itself, use :meth:`Core.upgrade_amp`.
+
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and upgrades that Instance of this Target. 4.x's `AMPADSInstance.update_instance`
+            upgraded the Target ADS itself.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.upgrade_instance(
             self,
             instance_name=instance_name,
             format_data=format_data,

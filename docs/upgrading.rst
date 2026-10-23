@@ -82,6 +82,11 @@ Changed methods
   (AMP's reply) and take ``format_data``; 4.x returned None.
 - :meth:`~ampapi.Core.restart_amp` runs on any Instance and restarts that Instance's AMP process. 4.x raised a
   :exc:`RuntimeError` unless it was called on an ADS.
+- ``Instance.update_instance`` is renamed :meth:`~ampapi.instance.Instance.upgrade_instance`, to match
+  :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance` and ``ADSModule/UpgradeInstance``.
+- ``Core.restart_instance`` and ``Core.kill_instance`` are removed (deprecated in 4.6.0). Use
+  :meth:`~ampapi.Core.restart_application` and :meth:`~ampapi.Core.kill_application`. An Instance's own
+  ``restart_instance`` is unchanged.
 - :meth:`~ampapi.Core.run_security_check` returns a list of :class:`~ampapi.modules.SecurityCheck` and takes
   ``format_data``; 4.x returned the raw response. AMP's ``Pass`` key is ``passed``, since ``pass`` is a Python keyword.
 - :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
@@ -104,7 +109,7 @@ Changed methods
 - Every :class:`~ampapi.instance.Instance` knows the ADS that holds it, :attr:`~ampapi.instance.Instance.ads`: the
   :class:`~ampapi.instance.Controller` for its own Instances, the :class:`~ampapi.instance.TargetADS` for a remote
   Target's. :meth:`~ampapi.instance.Instance.start_instance`, ``stop_instance``, ``restart_instance``,
-  ``update_instance`` and ``get_instance_status`` go through that ADS, so the name is looked up on the right one. 4.x
+  ``upgrade_instance`` and ``get_instance_status`` go through that ADS, so the name is looked up on the right one. 4.x
   sent them to the Controller, which acts on its own Instance when two ADSs share a name (every ADS is ``ADS01``).
 - :attr:`~ampapi.instance.Controller.instances` is no longer flat. It holds only the Instances the Controller itself
   holds (its local Target), and the remote Targets are in the new :attr:`~ampapi.instance.Controller.targets`, keyed by
@@ -222,6 +227,9 @@ Target ADS
   :meth:`~ampapi.instance.TargetADS.restart_instance` now take an ``instance_name`` and act on an Instance on that
   Target. In 4.6.0 they took no argument and went through the Controller by name, so for an ADS named like the
   Controller's (eg. ``ADS01``) they acted on the Controller's own ADS.
+- :meth:`~ampapi.instance.TargetADS.upgrade_instance` (4.6.0's ``update_instance``) does the same: it takes an
+  ``instance_name`` and upgrades that Instance on the Target. To upgrade the Target ADS itself, use
+  :meth:`~ampapi.Core.upgrade_amp`.
 - :meth:`~ampapi.instance.Controller.get_instance` on the Controller's own ADS ID (and
   :meth:`~ampapi.instance.TargetADS.get_instance` on a ``TargetADS``'s own ID) returns that object itself. The
   Controller learns its own ADS ID from :meth:`~ampapi.instance.Controller.get_instances`, or from the new
