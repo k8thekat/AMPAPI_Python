@@ -194,6 +194,9 @@ class Base:
     _endpoint_url: str
     _instance_id: str
     _session_ttl: ClassVar[int] = 240
+    # A login in progress on this object is waited for by the other calls, and the session it stores is used.
+    # It only exists while a login runs. It is set in `__init__`.
+    _login_pending: Union[asyncio.Future[None], None]
 
     # Cache state for classes whose attributes are populated from an API response rather than __init__.
     # `_is_cached` flips once data has been applied; `_cached_at` stamps when, so staleness can be told
@@ -306,6 +309,7 @@ class Base:
     def __init__(self, *, bridge: Optional[Bridge] = None, session: Optional[aiohttp.ClientSession] = None) -> None:  # noqa: D107
         self._endpoint_url = ""
         self._instance_id = "0"
+        self._login_pending = None
 
         if bridge is None:
             try:
@@ -582,7 +586,12 @@ class Base:
                                 url=dead_session.url,
                                 reason=dead_session.reason,
                             ) from dead_session
-                        # The handler already reset the stored session. The login below is a fresh one and the loop resends with the new ID.
+                        # The handler no longer resets the session, it could wipe one another call just stored.
+                        # Reset only if the stored session is still the one this pass sent.
+                        # The login below is a fresh one and the loop resends with the new ID.
+                        stored_session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+                        if stored_session is not None and stored_session.id == api_session.id:
+                            self._reset_session()
                         session_retried = True
                         await self._reauth()
                         continue
@@ -719,7 +728,8 @@ class Base:
                     "_response_handler",
                     response.url,
                 )
-                self._reset_session()
+                # self._reset_session()
+                # `_post` resets it, and only when the stored session is still the one it sent.
                 raise _SessionDeadError(title=title, url=str(response.url), reason=response_json.get("message", ""))
 
             if title == "Unauthorized Access" or title == "Instance Unavailable":
@@ -831,6 +841,11 @@ class Base:
             If the login request itself failed.
 
         """
+        # A login is in progress on this object. Wait, then check the stored session again.
+        # If the login failed there is still none, so this call tries its own, one at a time.
+        while self._login_pending is not None:
+            await asyncio.shield(self._login_pending)
+
         code: Union[str, TOTP] = ""
 
         # get our InstanceID and use it to key for session_id
@@ -843,38 +858,50 @@ class Base:
             session_id: str = session.id
 
         if session_id == "0":
-            if self._bridge.use_2fa is True:
-                try:
-                    # Handles time based 2Factory Auth Key/Code
-                    code = TOTP(self._bridge.token).now()
+            # Set with no `await` since the check above. Other calls wait on it until the login is done.
+            pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._login_pending = pending
+            try:
+                if self._bridge.use_2fa is True:
+                    try:
+                        # Handles time based 2Factory Auth Key/Code
+                        code = TOTP(self._bridge.token).now()
 
-                # pyotp raises binascii.Error, a ValueError, for a token that is not valid base32.
-                except ValueError as error:
-                    msg = "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
-                    raise ValueError(msg) from error
+                    # pyotp raises binascii.Error, a ValueError, for a token that is not valid base32.
+                    except ValueError as error:
+                        msg = (
+                            "Please check your 2 Factor Code, should not contain spaces, escape characters "
+                            "and it must be enclosed in quotes!"
+                        )
+                        raise ValueError(msg) from error
 
-            parameters: dict[str, Any] = {
-                "username": self._bridge.user,
-                "password": self._bridge.password,
-                "token": code,
-                "rememberMe": True,
-            }
-            # Network and response errors raise straight through; their URL already names Core/Login.
-            # We post directly, since `_call_end_point` logs in first and would call us again.
-            result = await self._post(url="Core/Login", parameters=parameters)
-            if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
-                # AMP sends no reason; a wrong password and a wrong 2FA code both answer `result: 40`.
-                amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
-                if isinstance(amp_result, int) and not isinstance(amp_result, bool) and amp_result in self._login_result_names:
-                    amp_result = f"{amp_result}, {self._login_result_names[amp_result]}"
-                reason: str = self._login_failed % (self._bridge.user, amp_result)
-                LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
-                raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
+                parameters: dict[str, Any] = {
+                    "username": self._bridge.user,
+                    "password": self._bridge.password,
+                    "token": code,
+                    "rememberMe": True,
+                }
+                # Network and response errors raise straight through; their URL already names Core/Login.
+                # We post directly, since `_call_end_point` logs in first and would call us again.
+                result = await self._post(url="Core/Login", parameters=parameters)
+                if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
+                    # AMP sends no reason; a wrong password and a wrong 2FA code both answer `result: 40`.
+                    amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
+                    if isinstance(amp_result, int) and not isinstance(amp_result, bool) and amp_result in self._login_result_names:
+                        amp_result = f"{amp_result}, {self._login_result_names[amp_result]}"
+                    reason: str = self._login_failed % (self._bridge.user, amp_result)
+                    LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
+                    raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
 
-            # This is our new sessions table to correlate InstanceID to a sessionID.
-            api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
-            self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
-            return result
+                # This is our new sessions table to correlate InstanceID to a sessionID.
+                api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
+                self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+                return result
+            # Resolved with None even when the login raised, only the call that logged in sees the error.
+            finally:
+                self._login_pending = None
+                if not pending.done():
+                    pending.set_result(None)
         return None
 
     @property
