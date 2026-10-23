@@ -3425,6 +3425,9 @@ class Core(Base):
 
         Endpoint: `Core/Logout`
 
+        .. versionchanged:: 5.0.0
+            The stored session is cleared, and the next call logs in again.
+
         Parameters
         ----------
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3438,7 +3441,10 @@ class Core(Base):
 
         """
         await self._reauth()
-        return await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
+        # return await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
+        await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
+        # AMP ended the session. The stored one is no use to the next call.
+        self._reset_session()
 
     # AMP restarts the AMP process of whichever Instance gets the call, an ADS or not.
     # The application inside an Instance is `restart_application`.
@@ -3457,9 +3463,8 @@ class Core(Base):
         Endpoint: `Core/RestartAMP`
 
         .. note::
-            A running application is stopped and is not started again. The session ends with the process. The first
-            call after it raises :exc:`AMPAPIResponseError` ("Unauthorized Access"), and the call after that logs in
-            again.
+            A running application is stopped and is not started again. The session ends with the process. This
+            Instance's stored session is reset and the next call logs in again by itself.
 
         .. note::
             This restarts AMP itself, not the application it runs. To restart the application (eg. a Minecraft server),
@@ -3495,6 +3500,8 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RestartAMP", cur_type=result, expec_type=dict)
+        # The restart ended our session. Resetting it lets the next call log in instead of sending one that fails.
+        self._reset_session()
         if format_data is True:
             return build(ActionResult, result)
         return result
@@ -4586,6 +4593,8 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpgradeAMP", cur_type=result, expec_type=dict)
+        # The upgrade restarts AMP and ends our session.
+        self._reset_session()
         if format_data is True:
             return build(ActionResult, result)
         return result
@@ -4636,6 +4645,8 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateAMPInstance", cur_type=result, expec_type=dict)
+        # The update restarts AMP and ends our session.
+        self._reset_session()
         if format_data is True:
             return build(ActionResult, result)
         return result

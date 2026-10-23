@@ -151,6 +151,10 @@ class can be imported from ``ampapi`` directly (eg. ``from ampapi import AMPAPIR
 Methods that return None now raise :exc:`~ampapi.AMPAPIResponseError` when AMP reports a failure in the reply (an error
 title or ``Status: false``), which 4.x dropped. AMP answers those with HTTP 200, and 4.x returned None as if the call worked.
 
+A session that AMP no longer knows (after an AMP restart, a logout or the panel) is logged in again and the call is sent
+once more. A second refusal raises :exc:`~ampapi.AMPAPIResponseError`, as does a permission error, which is never retried.
+"Instance Unavailable" raises as before but no longer forces a new login.
+
 
 Returned data
 -------------

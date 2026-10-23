@@ -153,7 +153,7 @@ class BaseArgs(TypedDict):
 class _SessionDeadError(AMPAPIResponseError):
     """Raised by :meth:`Base._response_handler` when AMP says the stored session no longer exists.
 
-    :meth:`Base._post` catches it once to log in again and resend. It is private, so anything that gets past
+    :meth:`Base._post` catches it once to log in again and resend. It is private. Anything that gets past
     :meth:`Base._post` is a plain :exc:`AMPAPIResponseError`.
     """
 
@@ -563,7 +563,7 @@ class Base:
                                 url=dead_session.url,
                                 reason=dead_session.reason,
                             ) from dead_session
-                        # The handler already reset the stored session, so this logs in fresh and the loop resends with the new ID.
+                        # The handler already reset the stored session. The login below is a fresh one and the loop resends with the new ID.
                         session_retried = True
                         await self._reauth()
                         continue
@@ -702,7 +702,7 @@ class Base:
                 # self._bridge._sessions.update({self._instance_id: api_session})
 
                 # `Session.Exists` is the permission for having a session at all. That marks a dead session apart from a missing permission.
-                # The call never ran, so `_post` can log in again and send it once more.
+                # The call never ran. `_post` can log in again and send it once more.
                 if title == "Unauthorized Access" and "Session.Exists" in str(response_json.get("message", "")):
                     self._reset_session()
                     raise _SessionDeadError(title=title, url=str(response.url), reason=response_json.get("message", ""))
@@ -771,7 +771,7 @@ class Base:
         path.joinpath(response.url.name.lower() + ".key_drift.json").write_text(json.dumps(report, indent=4))
 
     def _reset_session(self) -> None:
-        """Forget this object's stored session, so the next call logs in again.
+        """Forget this object's stored session. The next call logs in again.
 
         .. note::
             Only this object's own entry is reset. Other Instances on the same :class:`Bridge` keep theirs.
