@@ -53,7 +53,7 @@ from ._types import (
 )
 from .backoff import ExponentialBackoff
 from .bridge import Bridge
-from .errors import AMPAPINetworkError, AMPAPIResponseError
+from .errors import AMPAPIError, AMPAPINetworkError, AMPAPIResponseError
 from .key_drift import KeyDriftCheck
 from .modules import APISession, BuildInfo, Status, timestamp_converter
 
@@ -161,7 +161,8 @@ class _SessionDeadError(AMPAPIResponseError):
         self.title: str = title
         self.url: str = url
         self.reason: str = reason
-        super().__init__(title=title, url=url, reason=reason)
+        # Skips `AMPAPIResponseError`'s error log. A dead session is expected, and `_post` logs in again.
+        AMPAPIError.__init__(self, f"{title} | URL: {url} | Reason: {reason}")
 
 
 class Base:
@@ -477,7 +478,7 @@ class Base:
         # Headers the caller passed are theirs to keep. Only the ones we build here follow a new login.
         library_headers: bool = "headers" not in request_params
 
-        # A dead session gets one login and one resend, shared with the RuntimeError retry below so the two can't loop.
+        # A dead session gets one login and one resend. The RuntimeError retry below shares this flag, and the two can't loop.
         session_retried: bool = False
 
         while True:
@@ -690,6 +691,19 @@ class Base:
         if isinstance(response_json, dict) and "title" in response_json:
             title: str = response_json.get("title")
 
+            # `Session.Exists` is the permission for having a session at all. That marks a dead session apart from a missing permission.
+            # The call never ran. `_post` can log in again and send it once more.
+            # It is a warning, not an error. Only a second dead answer is a failure, and `_post` raises that one.
+            if title == "Unauthorized Access" and "Session.Exists" in str(response_json.get("message", "")):
+                LOGGER.warning(
+                    "<%s.%s> | AMP no longer knows the stored session, logging in again. | URL: %s",
+                    __class__.__name__,
+                    "_response_handler",
+                    response.url,
+                )
+                self._reset_session()
+                raise _SessionDeadError(title=title, url=str(response.url), reason=response_json.get("message", ""))
+
             if title == "Unauthorized Access" or title == "Instance Unavailable":
                 LOGGER.error(
                     "<%s.%s> failed because of %s. | URL: %s",
@@ -700,12 +714,6 @@ class Base:
                 )
                 # api_session = APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC))
                 # self._bridge._sessions.update({self._instance_id: api_session})
-
-                # `Session.Exists` is the permission for having a session at all. That marks a dead session apart from a missing permission.
-                # The call never ran. `_post` can log in again and send it once more.
-                if title == "Unauthorized Access" and "Session.Exists" in str(response_json.get("message", "")):
-                    self._reset_session()
-                    raise _SessionDeadError(title=title, url=str(response.url), reason=response_json.get("message", ""))
 
             # This will be our default catch all for any "invalid" Responses.
             raise AMPAPIResponseError(title=response_json["title"], url=str(response.url), reason=response_json.get("message", ""))
@@ -1412,9 +1420,11 @@ class Base:
             url="Core/GetDiagnosticsInfo",
         )
 
-        if (
-            not isinstance(result, dict)
-            or not is_response_type(result, DiagnosticsResponse, DIAGNOSTICS_REQUIRED_KEYS, DIAGNOSTICS_EXCLUDED_KEYS)
+        if not isinstance(result, dict) or not is_response_type(
+            result,
+            DiagnosticsResponse,
+            DIAGNOSTICS_REQUIRED_KEYS,
+            DIAGNOSTICS_EXCLUDED_KEYS,
         ):
             LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
             return
