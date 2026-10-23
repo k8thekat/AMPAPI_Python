@@ -1265,7 +1265,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetApplicationEndpoints", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1360,7 +1360,7 @@ class ADSModule(Base):
         """
         await self._reauth()
         result: ResponseAliasFull = await self._post(url="ADSModule/GetDatastores", request_params=request_params, **response_params)
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastores", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1411,7 +1411,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastoreInstances", cur_type=result, expec_type=list)
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
@@ -1452,7 +1452,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetDeploymentTemplates", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1595,7 +1595,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
         if is_response_list(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
             return result
@@ -1691,7 +1691,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceNetworkInfo", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1736,7 +1736,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceStatuses", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1778,7 +1778,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
@@ -1884,7 +1884,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetProvisionArguments", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -1992,7 +1992,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
@@ -2037,7 +2037,7 @@ class ADSModule(Base):
             request_params=request_params,
             **response_params,
         )
-        if not isinstance(result, dict):
+        if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedApplications", cur_type=result, expec_type=list)
         if format_data is None:
             format_data = self.format_data
