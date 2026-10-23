@@ -75,8 +75,10 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   so far (Kat, 2026-10-23, #18).
 - Measured after #18 (vm1/vm2): a reset recovers in two requests (login, then the call) with no log line, and a
   retry in three (the call, login, the resend) with one warning.
-- Not seen yet: with `use_2fa`, a retry logs in with a fresh TOTP code. AMP may refuse it if it lands within the same
-  30 seconds as the last login. The VMs have no 2FA.
+- With `use_2fa`, a retry logs in again with a fresh TOTP code, often the same code as the login before it. AMP
+  takes the same code twice in one 30-second window. Checked on vm1, 2026-10-23, with a throwaway 2FA user: a
+  login right after `logout` and a retry's login after a dead session both worked in the window of the login
+  before them. `EnableTwoFactor` answers `result` with `url` (the authenticator link) and `manual_key` (the secret).
 
 
 ## Dataclasses vs. the raw JSON
