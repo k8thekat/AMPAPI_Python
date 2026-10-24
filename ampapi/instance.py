@@ -1223,7 +1223,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         """|coro|
 
         Returns a set of converted :class:`Instance` and :class:`MinecraftInstance` objects
-        and updates our ``self`` object with the Controller's data.
+        and updates our `self` object with the Controller's data.
 
         .. note::
             The set holds only the Instances the Controller itself holds (its local Target), and the Controller's own
@@ -1241,7 +1241,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
             new ones are added and the ones AMP no longer lists are dropped.
 
         .. note::
-            If ``format_data`` is False this will return the raw list of Target dicts instead and nothing is updated.
+            If `format_data` is False this will return the raw list of Target dicts instead and nothing is updated.
 
 
         .. warning::
@@ -1260,7 +1260,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         Returns
         -------
         Union[set[Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`]], list[:class:`ControllerResponse`]]
-            On success returns the set of converted Instances, or the raw list of Target dicts if ``format_data`` is False.
+            On success returns the set of converted Instances, or the raw list of Target dicts if `format_data` is False.
 
         """
         # result: list[Union[Controller, Instance]] = await super().get_instances(

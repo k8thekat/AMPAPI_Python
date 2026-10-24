@@ -1,3 +1,23 @@
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
+
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
 from __future__ import annotations
 
 import ast
@@ -29,7 +49,10 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 # static strings for documentation
 _instance_id_note = """.. note::\n\tReplace ``instance-id`` with the something like the :py:class:`~Instance.instance_id` value.\n\n"""
 _parent_node_note: str = '.. note::\n\tAll nodes in this section will be prefixed with "%s.", see examples :ref:`Permission Nodes`\n\n'
-_wildcard_nodes: str = """.. note::\n\tAny node with a '*' at the end of it is a wild card and using that will make all permissions nodes in that section equal to the value set, treat it like parent inheritance.\n\n"""
+_wildcard_nodes: str = (
+    """.. note::\n\tAny node with a '*' at the end of it is a wild card and using that will make all permissions nodes """
+    """in that section equal to the value set, treat it like parent inheritance.\n\n"""
+)
 
 _trigger_note: str = """"""
 
@@ -163,7 +186,7 @@ async def _parse_get_api_spec_to_file(
     mode = "x"
     if _dir.exists():
         mode = "w"
-    # TODO - turn these into .rst files instead.
+    # TODO: turn these into .rst files instead.
     with Path.open(_dir, mode) as file:
         file.write(f"INSTANCE TYPE: {instance_type}\n")
         file.write(f"APP VERSION: {diag_info.application_version}\n")
@@ -791,9 +814,8 @@ def _permission_node_parse(
     path: str | None = None,
     file: Union[TextIOWrapper, None] = None,
 ) -> None:
-    from docs.samples.permission_node_usage import example_note
+    from docs.samples.permission_node_usage import example_note  # noqa: PLC0415
 
-    index = index
     used_keys: list[Any] = []
 
     file_name: str = title.lower().replace(" ", "_")
@@ -921,9 +943,7 @@ def _settings_node_parse(
     path: str | None = None,
     file: Union[TextIOWrapper, None] = None,
 ) -> None:
-    from docs.samples.settings_node_usage import example_note
-
-    index = index
+    from docs.samples.settings_node_usage import example_note  # noqa: PLC0415
 
     file_name: str = title.lower().replace(" ", "_")
     _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
@@ -970,7 +990,7 @@ def _trigger_event_parse(
     title_body: str = "",
     path: str | None = None,
 ) -> None:
-    """This assumes you have acquired the ScheduleData already and are passing in :attr:`~scheduleData.available_triggers`
+    """Assumes you have acquired the ScheduleData already and are passing in :attr:`~scheduleData.available_triggers`
 
     .. note::
         All of these triggers will have a unique ID field that is generated from :meth:`~Core.get_triggers` due to uniqueness.
@@ -988,7 +1008,7 @@ def _trigger_event_parse(
         The path to save the .rst file., by default None.
 
     """
-    from docs.samples.trigger_event_usage import example_note
+    from docs.samples.trigger_event_usage import example_note  # noqa: PLC0415
 
     file_name: str = title.lower().replace(" ", "_")
     _dir: Path = Path(__file__).parent.joinpath(f"{file_name}.rst") if path is None else Path(path).joinpath(f"{file_name}.rst")
@@ -1145,7 +1165,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     # As far as I know settings spec information is the same for all Instances
     try:
         _settings_node_parse(data=spec, title="Setting Nodes", title_body="", path=_path.as_posix())
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
     # As far as I know Permission spec information is the same for all Instances
     permission_nodes = await instance.get_permissions_spec(format_data=False)
@@ -1153,7 +1173,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     logger.info("Generating Permission Nodes.rst...")
     try:
         _permission_node_parse(data=perms, title="Permission Nodes", title_body="", path=_path.as_posix())
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.error(
             "Ran into a <Exception> when attempting to generate the Permission Nodes.rst.\n %s",
             traceback.print_exc(),
@@ -1245,6 +1265,8 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
     ----------
     string : :class:`str`
         The string with the special_char.
+    special_chars : tuple[:class:`str`, ...]
+        The characters that open a literal, which the next space closes.
 
     Returns
     -------
@@ -1254,13 +1276,23 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
     """
     _temp = ""
     found_special: bool = False
+    # for char in string:
+    #     if found_special is False and char in special_chars:
+    #         char = "``" + char
+    #         found_special = True
+    #         continue
+    #     if found_special is True and char == " ":
+    #         char = "``" + char
+    #         found_special = False
+    #     _temp += char
     for char in string:
+        piece: str = char
         if found_special is False and char in special_chars:
-            char = "``" + char
+            piece = "``" + char
             found_special = True
             continue
         if found_special is True and char == " ":
-            char = "``" + char
+            piece = "``" + char
             found_special = False
-        _temp += char
+        _temp += piece
     return _temp
