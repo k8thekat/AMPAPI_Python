@@ -165,10 +165,13 @@ class ADSModule(Base):
             raise AMPAPITypeError(end_point="ADSModule/AddDatastore", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
+
             return result
+
         raise AMPAPIKeyError("status", "ADSModule/AddDatastore", result)  # noqa: EM101
 
     @Base.ads_only
@@ -229,12 +232,16 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
+
             return result
+
         raise AMPAPITypeError(end_point="ADSModule/ApplyInstanceConfiguration", cur_type=result, expec_type=dict)
 
     @Base.ads_only
@@ -299,12 +306,16 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"InstanceID": instance_id, "TemplateID": template_id}
+
         if new_friendly_name is not None:
             parameters["NewFriendlyName"] = new_friendly_name
+
         if secret is not None:
             parameters["Secret"] = secret
+
         if restart_if_previously_running is not None:
             parameters["RestartIfPreviouslyRunning"] = restart_if_previously_running
+
         result: ResponseAliasFull = await self._post(
             url="ADSModule/ApplyTemplate",
             parameters=parameters,
@@ -313,12 +324,16 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ApplyTemplate", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
+
             return result
+
         raise AMPAPIKeyError("status", "ADSModule/ApplyTemplate", result)  # noqa: EM101
 
     @Base.ads_only
@@ -1575,7 +1590,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetInstanceLiveSettings`
 
         .. note::
-            Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
+            Requires the `ADS.InstanceManagement.CreateInstance` permission.
 
 
         Parameters
@@ -1758,8 +1773,6 @@ class ADSModule(Base):
 
         .. note::
             This reads the `ADSModule.ADS.Mode` setting, so any logged in user can read it on the ADS they log in to.
-            On a :class:`TargetADS` the Target must accept the login. On AMP Professional that means an admin, as a
-            plain user gets result 5 (NoInstanceAccess).
 
         .. note::
             The mode is not cached, so every call asks AMP.
@@ -1873,8 +1886,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetProvisionFitness`
 
         .. note::
-            AMP answers with JSON null when it has no fitness data (AMP 2.8.0.8 did on a Controller with one Target).
-            This method returns None for that, through the `allow_null` response option. Every other error is raised as normal.
+            AMP answers with JSON `null` when it has no fitness data.
 
         Parameters
         ----------
@@ -2351,7 +2363,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/PrepareFileTransfer`
 
         .. note::
-            Requires the ``ADS.InstanceManagement.CreateInstance`` permission.
+            Requires the `ADS.InstanceManagement.CreateInstance` permission.
 
 
         Parameters
