@@ -25,6 +25,8 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
+- (#25) `get_remote_login_token` sends `IsTemporary` as null when `is_temporary` isn't given, and AMP rejects it, so a call without it always fails.
+
 
 ## ampapi/analytics.py
 
@@ -40,6 +42,8 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 ## ampapi/modules.py
 
 ---
+
+- (#26) `Messages.parameters` depends on the message: a `refreshTask` task dict is built as `MessageParameters` and loses its keys (NOTES.md, "Dataclasses vs. the raw JSON").
 
 
 ## ampapi/util.py

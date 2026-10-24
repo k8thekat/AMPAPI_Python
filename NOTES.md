@@ -84,6 +84,13 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   takes the same code twice in one 30-second window. Checked on vm1, 2026-10-23, with a throwaway 2FA user: a
   login right after `logout` and a retry's login after a dead session both worked in the window of the login
   before them. `EnableTwoFactor` answers `result` with `url` (the authenticator link) and `manual_key` (the secret).
+- Every call sent through the ADS proxy (`ADSModule/Servers/<id>/...`) logs a Core warning on the ADS: the client
+  "tried to use session ID ... but that session belongs to 127.0.0.1" (an Instance on the same ADS) or to the
+  Target's address (an Instance on vm2), "while attempting to call Servers". The proxied login is made by the ADS, so
+  AMP ties that session to the ADS's address. The calls still succeed. vm1's ADS01 log had 290 of these in one
+  7-minute sweep (2026-10-24 01:05-01:12 UTC).
+- `Core/GetRemoteLoginToken` without `is_temporary` fails (#25). AMP logs "Unable to convert parameter
+  'IsTemporary' with value '' to type 'Boolean'" and "Can not convert Null to Boolean" (vm1 ADS01, 2026-10-24).
 
 
 ## Dataclasses vs. the raw JSON
@@ -106,9 +113,16 @@ calls `super(TheClass, cls)`: a bare `super()` in a classmethod of a `slots=True
 `Core.get_time_interval_trigger` sends `tasks` as a dict keyed by task ID (each task carries its `id` too), in every
 2.8.0.8 capture; the other `tasks` keys AMP sends are lists. Moving `build` onto the class first cost ~4%; reading the
 plan cache inline and binding each nested `from_response` once made it ~5% faster than `build` (Updates 210 -> 199 us).
-Unconfirmed: one `Messages.parameters` came back as a string in a live `get_updates` on vm1 (2026-10-23), where the hint
-allows a `MessageParameters`, its raw dict or None. The converter leaves a non-dict as sent, as `build` did, so the
-next capture with a string there should be kept to see what AMP puts in it.
+`Messages` are AMP's push events, and what `parameters` holds depends on `message` (#26). Live on vm1, 2026-10-23,
+by starting a backup on MCTest01 and `refresh_remote_config_stores` on the Controller, then polling `get_updates`:
+`ADSModule/metrics` sends the `MessageParameters` dict, `Core/refreshTask` sends a whole running task (the
+`RunningTask` keys), `Core/removeTask` sends the finished task's ID as a string, `ADSModule/refreshGroup` sends a GUID
+string, and `Core/sessionslistchanged` and `ADSModule/refreshAppList` send null. The panel's handler for the Core ones
+is `handleNotify` in `WebRoot/Scripts/AMP.js`, which also lists `schedulemodified`, `userlistchanged`, `enumrefresh`
+and `settingValueUpdate` (`node` plus `newValues` / `newValue`), `ConsoleEntry` (a console entry),
+`PermissionsNodeCacheInvalidated` and `Metrics`. Other sources go to each plugin's own handler. The hint allows only
+`MessageParameters`, so a `refreshTask` is built as one: 20 task keys are dropped with a warning each, and `name`,
+`reason` and `state` land in the wrong class. A string is left as sent. AMP's logs record none of these events.
 
 `from_response` checks nothing for a plain hint: a dict AMP sends for a `str` field is stored as is. That is how
 `ActionResult.result` (typed `str` until #19) held a dict for two endpoints. The spec types the result per endpoint as
