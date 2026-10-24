@@ -58,57 +58,6 @@ class AMPDownloadMirrorState(Enum):
     us_central_texas = "US Central - Texas"
 
 
-class InstanceState(Enum):
-    """Represents the state of an Instance and or Application inside an Instance."""
-
-    undefined = -1
-    stopped = 0
-    pre_start = 5
-    configuring = 7  # the server is performing some first-time-start configuration.
-    starting = 10
-    ready = 20
-    restarting = 30  # server is in the middle of stopping, but once shutdown has finished it will automatically restart.
-    stopping = 40
-    preparing_for_sleep = 45
-    sleeping = 50  # the application should be able to be resumed quickly if using this state. otherwise use stopped.
-    waiting = 60  # the application is waiting for some external service/application to respond/become available.
-    installing = 70
-    updating = 75
-    awaiting_user_input = 80  # used during installation, means that some user input is required to complete setup (authentication etc).
-    failed = 100
-    suspended = 200
-    maintenance = 250
-    indeterminate = 999  # The state is unknown, or doesn't apply (for modules that don't start an external process)
-
-
-class IfOperators(Enum):
-    """The comparison a task's `CommonCorePlugin.IfCondition` and `CommonCorePlugin.ElseIfCondition` make.
-
-    .. versionadded:: 5.0.0
-    """
-
-    equals = 0
-    not_equals = 1
-    contains = 2
-    does_not_contain = 3
-    greater_than = 4
-    less_than = 5
-    greater_than_or_equal = 6
-    less_than_or_equal = 7
-    regex_match = 8
-
-
-class MailPriority(Enum):
-    """The priority of an email sent by `EmailSenderPlugin.SendMail`.
-
-    .. versionadded:: 5.0.0
-    """
-
-    normal = 0
-    low = 1
-    high = 2
-
-
 class AMPTheme(Enum):
     """Related to Node: Core.AMP.Theme"""
 
@@ -154,6 +103,46 @@ class DefaultIPBindingState(Enum):
     any_ipv6_address = "::"
 
 
+class IfOperators(Enum):
+    """The comparison a task's `CommonCorePlugin.IfCondition` and `CommonCorePlugin.ElseIfCondition` make.
+
+    .. versionadded:: 5.0.0
+    """
+
+    equals = 0
+    not_equals = 1
+    contains = 2
+    does_not_contain = 3
+    greater_than = 4
+    less_than = 5
+    greater_than_or_equal = 6
+    less_than_or_equal = 7
+    regex_match = 8
+
+
+class InstanceState(Enum):
+    """Represents the state of an Instance and or Application inside an Instance."""
+
+    undefined = -1
+    stopped = 0
+    pre_start = 5
+    configuring = 7  # the server is performing some first-time-start configuration.
+    starting = 10
+    ready = 20
+    restarting = 30  # server is in the middle of stopping, but once shutdown has finished it will automatically restart.
+    stopping = 40
+    preparing_for_sleep = 45
+    sleeping = 50  # the application should be able to be resumed quickly if using this state. otherwise use stopped.
+    waiting = 60  # the application is waiting for some external service/application to respond/become available.
+    installing = 70
+    updating = 75
+    awaiting_user_input = 80  # used during installation, means that some user input is required to complete setup (authentication etc).
+    failed = 100
+    suspended = 200
+    maintenance = 250
+    indeterminate = 999  # The state is unknown, or doesn't apply (for modules that don't start an external process)
+
+
 class LoggingLevelState(Enum):
     """Related to Node: Core.Monitoring.LogLevel"""
 
@@ -167,6 +156,17 @@ class LoggingLevelState(Enum):
     fatal = 50
     event = 7
     audit = 8
+
+
+class MailPriority(Enum):
+    """The priority of an email sent by `EmailSenderPlugin.SendMail`.
+
+    .. versionadded:: 5.0.0
+    """
+
+    normal = 0
+    low = 1
+    high = 2
 
 
 class Module(StrEnum):

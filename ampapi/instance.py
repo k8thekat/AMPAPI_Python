@@ -63,6 +63,96 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 InstanceTypeAliases = Union["Instance", "MinecraftInstance", "TargetADS"]
 
 
+class ADSData(Base):
+    """The Target data of an ADS, kept flat on the object. Shared by :class:`Controller` and :class:`TargetADS`.
+
+    .. note::
+        Each subclass sets `__cached__` to the Target fields it holds. Reading one before :meth:`_parse_target_data`
+        has run raises :exc:`AttributeError`, and reading one after the cache timeout logs a warning.
+        A :class:`TargetADS` leaves out `friendly_name`, `description` and `tags`, which keep the Instance's values.
+
+    """
+
+    # These stay unset until `get_instances()` populates them, see __getattribute__ below.
+    id: int
+    disabled: bool
+    is_remote: bool
+    platform: PlatformInfo
+    datastores: list[TargetDatastore]
+    creates_in_containers: bool
+    can_create: bool
+    available_instances: list[InstanceResponse]
+    available_ips: list[str]
+    url: Union[str, None]
+    last_updated: datetime.datetime | str
+    state: InstanceState
+    fitness: Union[dict[str, Any], None]
+    state_reason: Union[str, None]
+    tags_list: Union[str, None]
+
+    __cached__: ClassVar[tuple[str, ...]] = ()
+
+    # O(1) membership for the __getattribute__ guard, which runs on every attribute access.
+    _cached_names: ClassVar[frozenset[str]] = frozenset()
+
+    # What the cache messages tell a user to call. Anything populated by a different endpoint gets an
+    # entry in `_cache_sources`, everything else falls back to `_cache_source`.
+    _cache_source: ClassVar[str] = "get_instances()"
+    _cache_sources: ClassVar[dict[str, str]] = {}
+
+    def __getattribute__(self, name: str) -> Any:
+        """Guard the cached attributes, raising when unpopulated and warning when stale.
+
+        .. note::
+            This has to be `__getattribute__` rather than `__getattr__`, so the stale warning also fires on
+            populated attributes.
+
+        """
+        # Cheap frozenset test first so uncached names and every method call fall straight through.
+        # `_is_cached` only flips in `_parse_target_data`, so it alone says if our own data was applied.
+        cls: type[ADSData] = type(self)
+        if name in cls._cached_names:
+            if not object.__getattribute__(self, "_is_cached"):
+                raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
+
+            # Inlined staleness check. Monotonic subtraction keeps this off the datetime path.
+            stamped: Optional[float] = object.__getattribute__(self, "_cached_monotonic")
+            timeout: int = object.__getattribute__(self, "_cache_timeout")
+            if stamped is not None:
+                age: float = time.monotonic() - stamped
+                if age > timeout:
+                    LOGGER.warning(
+                        Base._stale_cache,
+                        cls.__name__,
+                        name,
+                        int(age),
+                        timeout,
+                        cls.__name__,
+                        cls._cache_hint(name),
+                    )
+        return object.__getattribute__(self, name)
+
+    def _parse_target_data(self, data: ControllerResponse) -> None:
+        # Only the names this class guards get set. A TargetADS keeps the Instance's own values for the rest.
+        # Every one of them is set, even when AMP sends null.
+        for key in self.__cached__:
+            setattr(self, key, data.get(key))
+
+        # The Target's platform and datastores are held as dataclasses.
+        if "platform" in self.__cached__:
+            self.platform = PlatformInfo.from_response(data["platform"])
+        if "datastores" in self.__cached__:
+            self.datastores = [TargetDatastore.from_response(entry) for entry in data.get("datastores") or []]
+
+        # AMP sends last_updated as an ISO string, so we convert it here.
+        self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])
+        try:
+            self.state = InstanceState(data["state"])
+        except ValueError:
+            self.state = InstanceState.undefined
+        self._mark_cached()
+
+
 class Instance(
     Core,
     EmailSenderPlugin,
@@ -652,753 +742,6 @@ class Instance(
         # This function is to mimic the `ADSModule.upgrade_instance()` which we call on the ADS holding this Instance.
         assert self.ads is not None  # noqa: S101
         return await self.ads.upgrade_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
-
-
-class MinecraftInstance(MinecraftModule, Instance):
-    """Represents a Minecraft Instance from AMP containing all relevant API Endpoints specific to Minecraft Instances.
-
-    Attributes
-    ----------
-    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
-        The version of the AMP, default is None.
-    application_endpoints : list[:class:`Endpoints`]
-        The list of application endpoints for the Instance.
-    container_cpus : :class:`float`
-        The amount of CPU cores allocated to the container, default is 0.0.
-    container_memory_mb : :class:`int`
-        The amount of memory allocated to the container in MB.
-    container_memory_policy : :class:`ContainerMemoryPolicyState`
-        The memory policy of the Instance.
-    daemon : :class:`bool`
-        If the Instance is a daemon.
-    daemon_autostart : :class:`bool`
-        If the Instance should be autostart on boot.
-    deployment_args : dict[:class:`str`, :class:`str`]
-        The deployment arguments of the Instance.
-    description : :class:`str`
-        The description of the Instance, default is "".
-    disk_usage_mb : :class:`int`
-        The disk usage of the Instance in MB.
-    display_image_source : :class:`str`
-        The source of the display image, default is "".
-    exclude_from_firewall : :class:`bool`
-        If the Instance should be excluded from the firewall.
-    friendly_name : :class:`str`
-        The friendly name of the Instance.
-    ip : :class:`str`
-        The IP address of the Instance.
-    instance_id : :class:`str`
-        The Instance GUID.
-    instance_name : :class:`str`
-        The Instance name.
-    is_container_instance : :class:`bool`
-        If the Instance is a container Instance.
-    is_https : :class:`bool`
-        If the Instance is using HTTPS.
-    management_mode : :class:`int`
-        The management mode of the Instance.
-    metrics : Union[:class:`Metrics`, None]
-        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
-    module : :class:`str`
-        The module of the Instance, default is "Minecraft".
-    module_display_name : :class:`str`
-        The display name of the module, default is "".
-    port : :class:`str`
-        The port of the Instance.
-    release_stream : :class:`int`
-        The release stream of the Instance.
-    running : :class:`bool`
-        If the Instance is running.
-    suspended : :class:`bool`
-        If the Instance is suspended.
-    tags : Union[:class:`None`, :class:`list`]
-        The list of tags of the Instance, default is None.
-    target_id : :class:`str`
-        The target ID of the Instance.
-    url : Union[:class:`str`, None]
-        The URL of the Instance. AMP doesn't send one, by default None.
-
-    """
-
-    module: str = "Minecraft"
-
-
-class ADSData(Base):
-    """The Target data of an ADS, kept flat on the object. Shared by :class:`Controller` and :class:`TargetADS`.
-
-    .. note::
-        Each subclass sets `__cached__` to the Target fields it holds. Reading one before :meth:`_parse_target_data`
-        has run raises :exc:`AttributeError`, and reading one after the cache timeout logs a warning.
-        A :class:`TargetADS` leaves out `friendly_name`, `description` and `tags`, which keep the Instance's values.
-
-    """
-
-    # These stay unset until `get_instances()` populates them, see __getattribute__ below.
-    id: int
-    disabled: bool
-    is_remote: bool
-    platform: PlatformInfo
-    datastores: list[TargetDatastore]
-    creates_in_containers: bool
-    can_create: bool
-    available_instances: list[InstanceResponse]
-    available_ips: list[str]
-    url: Union[str, None]
-    last_updated: datetime.datetime | str
-    state: InstanceState
-    fitness: Union[dict[str, Any], None]
-    state_reason: Union[str, None]
-    tags_list: Union[str, None]
-
-    __cached__: ClassVar[tuple[str, ...]] = ()
-
-    # O(1) membership for the __getattribute__ guard, which runs on every attribute access.
-    _cached_names: ClassVar[frozenset[str]] = frozenset()
-
-    # What the cache messages tell a user to call. Anything populated by a different endpoint gets an
-    # entry in `_cache_sources`, everything else falls back to `_cache_source`.
-    _cache_source: ClassVar[str] = "get_instances()"
-    _cache_sources: ClassVar[dict[str, str]] = {}
-
-    def __getattribute__(self, name: str) -> Any:
-        """Guard the cached attributes, raising when unpopulated and warning when stale.
-
-        .. note::
-            This has to be `__getattribute__` rather than `__getattr__`, so the stale warning also fires on
-            populated attributes.
-
-        """
-        # Cheap frozenset test first so uncached names and every method call fall straight through.
-        # `_is_cached` only flips in `_parse_target_data`, so it alone says if our own data was applied.
-        cls: type[ADSData] = type(self)
-        if name in cls._cached_names:
-            if not object.__getattribute__(self, "_is_cached"):
-                raise AttributeError(Base._no_cache % (cls.__name__, name, cls.__name__, cls._cache_hint(name)))
-
-            # Inlined staleness check. Monotonic subtraction keeps this off the datetime path.
-            stamped: Optional[float] = object.__getattribute__(self, "_cached_monotonic")
-            timeout: int = object.__getattribute__(self, "_cache_timeout")
-            if stamped is not None:
-                age: float = time.monotonic() - stamped
-                if age > timeout:
-                    LOGGER.warning(
-                        Base._stale_cache,
-                        cls.__name__,
-                        name,
-                        int(age),
-                        timeout,
-                        cls.__name__,
-                        cls._cache_hint(name),
-                    )
-        return object.__getattribute__(self, name)
-
-    def _parse_target_data(self, data: ControllerResponse) -> None:
-        # Only the names this class guards get set. A TargetADS keeps the Instance's own values for the rest.
-        # Every one of them is set, even when AMP sends null.
-        for key in self.__cached__:
-            setattr(self, key, data.get(key))
-
-        # The Target's platform and datastores are held as dataclasses.
-        if "platform" in self.__cached__:
-            self.platform = PlatformInfo.from_response(data["platform"])
-        if "datastores" in self.__cached__:
-            self.datastores = [TargetDatastore.from_response(entry) for entry in data.get("datastores") or []]
-
-        # AMP sends last_updated as an ISO string, so we convert it here.
-        self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])
-        try:
-            self.state = InstanceState(data["state"])
-        except ValueError:
-            self.state = InstanceState.undefined
-        self._mark_cached()
-
-
-class TargetADS(ADSData, ADSModule, Instance):
-    """Typically referred to the "Target ADS", the ADS Instance of a remote Target held by the :class:`Controller`
-    in :attr:`~Controller.targets`.
-
-    .. note::
-        The Instances this Target holds belong to it, see :attr:`instances`. Each one has this object as its
-        :attr:`~Instance.ads`, so its start, stop, restart and update calls go through this Target.
-
-    .. note::
-        A Target ADS serves the ADSModule endpoints, so this class is an :class:`Instance` that also has every
-        :class:`ADSModule` method. Those calls go to this Target and act on the Instances it holds.
-
-    .. note::
-        :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance` and :meth:`delete_instance_users`
-        take the :class:`ADSModule` signature (an `instance_name` or `instance_id`) and act on an Instance of this
-        Target, not on the Target ADS itself.
-
-    .. note::
-        The Target's own data is kept flat on this object, the same as :class:`Controller`. Reading it before
-        :meth:`~Controller.get_instances` has run raises :exc:`AttributeError`. `friendly_name`, `description` and `tags`
-        keep the Instance's values.
-
-
-    Attributes
-    ----------
-    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
-        The version of the AMP, default is None.
-    application_endpoints : list[:class:`Endpoints`]
-        The list of application endpoints for the Instance.
-    container_cpus : :class:`float`
-        The amount of CPU cores allocated to the container, default is 0.0.
-    container_memory_mb : :class:`int`
-        The amount of memory allocated to the container in MB.
-    container_memory_policy : :class:`ContainerMemoryPolicyState`
-        The memory policy of the Instance.
-    daemon : :class:`bool`
-        If the Instance is a daemon.
-    daemon_autostart : :class:`bool`
-        If the Instance should be autostart on boot.
-    deployment_args : dict[:class:`str`, :class:`str`]
-        The deployment arguments of the Instance.
-    description : :class:`str`
-        The description of the Instance, default is "".
-    disk_usage_mb : :class:`int`
-        The disk usage of the Instance in MB.
-    display_image_source : :class:`str`
-        The source of the display image, default is "".
-    exclude_from_firewall : :class:`bool`
-        If the Instance should be excluded from the firewall.
-    friendly_name : :class:`str`
-        The friendly name of the Instance.
-    ip : :class:`str`
-        The IP address of the Instance.
-    instance_id : :class:`str`
-        The Instance GUID.
-    instance_name : :class:`str`
-        The Instance name.
-    is_container_instance : :class:`bool`
-        If the Instance is a container Instance.
-    is_https : :class:`bool`
-        If the Instance is using HTTPS.
-    management_mode : :class:`int`
-        The management mode of the Instance.
-    metrics : Union[:class:`Metrics`, None]
-        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
-    module : :class:`str`
-        The module of the Instance, default is "ADS".
-    module_display_name : :class:`str`
-        The display name of the module, default is "".
-    port : :class:`str`
-        The port of the Instance.
-    release_stream : :class:`int`
-        The release stream of the Instance.
-    running : :class:`bool`
-        If the Instance is running.
-    suspended : :class:`bool`
-        If the Instance is suspended.
-    tags : Union[:class:`None`, :class:`list`]
-        The list of tags of the Instance, default is None.
-    target_id : :class:`str`
-        The target ID of the Instance.
-    url : Union[:class:`str`, None]
-        The URL of the Target.
-    id : :class:`int`
-        The Target's ID.
-    disabled : :class:`bool`
-        If the Target is Disabled or not.
-    is_remote : :class:`bool`
-        If the Target is remote or not.
-    platform : :class:`PlatformInfo`
-        Platform information related to the Target.
-    datastores : list[:class:`TargetDatastore`]
-        The Datastores that the Target has access to.
-    creates_in_containers : :class:`bool`
-        The Target will create the Instances in containers.
-    can_create : :class:`bool`
-        If the Target can create Instances or not.
-    available_instances : list[:class:`InstanceResponse`]
-        The raw Instances the Target lists.
-    available_ips : list[:class:`str`]
-        The list of available IPs the Target has.
-    last_updated : Union[:class:`str`, :class:`datetime`]
-        When the Target last updated, converted into a datetime object.
-    state : :class:`InstanceState`
-        The state the Target is in.
-    fitness : Union[dict[:class:`str`, Any], None]
-        UNK.
-    state_reason : Union[:class:`str`, None]
-        UNK.
-    tags_list : Union[:class:`str`, None]
-        The tags related to the Target if any.
-
-    """
-
-    module: str = "ADS"
-
-    _instances: set[InstanceTypeAliases]
-
-    # The Target fields minus `friendly_name`, `description` and `tags`, which stay the Instance's values.
-    __cached__ = (
-        "available_instances",
-        "available_ips",
-        "can_create",
-        "creates_in_containers",
-        "datastores",
-        "disabled",
-        "fitness",
-        "id",
-        "is_remote",
-        "last_updated",
-        "platform",
-        "state",
-        "state_reason",
-        "tags_list",
-        "url",
-    )
-    _cached_names: ClassVar[frozenset[str]] = frozenset(__cached__)
-
-    @property
-    def instances(self) -> set[InstanceTypeAliases]:
-        """The Instances this Target holds, set by :meth:`get_instances`.
-
-        .. note::
-            This Target's own ADS Instance is left out, since that Instance is this object.
-
-
-        Returns
-        -------
-        set[Union[:class:`InstanceTypeAliases`]]
-            The converted Instances from the last :meth:`get_instances` call, empty until it has run.
-
-        """
-        return self._instances
-
-    def __init__(
-        self,
-        data: InstanceResponse,
-        controller: Optional[Controller] = None,
-        ads: Optional[Union[Controller, TargetADS]] = None,
-        **kwargs: Any,
-    ) -> None:
-        """Build a Target ADS, unpacking an API response onto its attributes.
-
-        Parameters
-        ----------
-        data : :class:`InstanceResponse`
-            The Instance data to unpack onto this class.
-        controller : Union[:class:`Controller`, None], optional
-            The Controller that holds this Target, used to convert the Instances this Target returns, by default None.
-        ads : Union[:class:`Controller`, :class:`TargetADS`, None], optional
-            The ADS that holds this Target ADS, None means the Controller, by default None.
-        **kwargs : Any
-            Keyword arguments forwarded to :meth:`Instance.__init__`.
-
-        """
-        super().__init__(data=data, controller=controller, ads=ads, **kwargs)
-        self._instances = set()
-
-    @override
-    async def start_instance(
-        self,
-        instance_name: str,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Start an Instance of this Target, picked by its name on this Target.
-
-        .. versionchanged:: 5.0.0
-            Takes an `instance_name` and started that Instance of this Target. 4.x's `AMPADSInstance.start_instance`
-            started the Target ADS itself.
-
-        Parameters
-        ----------
-        instance_name : :class:`str`
-            The name of the Instance on this Target.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
-
-        """
-        return await ADSModule.start_instance(
-            self,
-            instance_name=instance_name,
-            format_data=format_data,
-            request_params=request_params,
-            **response_params,
-        )
-
-    @override
-    async def stop_instance(
-        self,
-        instance_name: str,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Stop an Instance of this Target, picked by its name on this Target.
-
-        .. versionchanged:: 5.0.0
-            Takes an `instance_name` and stopped that Instance of this Target. 4.x's `AMPADSInstance.stop_instance`
-            stopped the Target ADS itself.
-
-        Parameters
-        ----------
-        instance_name : :class:`str`
-            The name of the Instance on this Target.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
-
-        """
-        return await ADSModule.stop_instance(
-            self,
-            instance_name=instance_name,
-            format_data=format_data,
-            request_params=request_params,
-            **response_params,
-        )
-
-    @override
-    async def restart_instance(
-        self,
-        instance_name: str,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Restart an Instance of this Target, picked by its name on this Target.
-
-        .. versionchanged:: 5.0.0
-            Takes an `instance_name` and restarted that Instance of this Target. 4.x's `AMPADSInstance.restart_instance`
-            restarted the Target ADS itself.
-
-        Parameters
-        ----------
-        instance_name : :class:`str`
-            The name of the Instance on this Target.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
-
-        """
-        return await ADSModule.restart_instance(
-            self,
-            instance_name=instance_name,
-            format_data=format_data,
-            request_params=request_params,
-            **response_params,
-        )
-
-    @override
-    async def upgrade_instance(
-        self,
-        instance_name: str,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Upgrade the AMP version of an Instance of this Target, picked by its name on this Target.
-
-        .. note::
-            To upgrade this Target ADS itself, use :meth:`Core.upgrade_amp`.
-
-        .. versionchanged:: 5.0.0
-            Takes an `instance_name` and upgrades that Instance of this Target. 4.x's `AMPADSInstance.update_instance`
-            upgraded the Target ADS itself.
-
-        Parameters
-        ----------
-        instance_name : :class:`str`
-            The name of the Instance on this Target.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
-
-        """
-        return await ADSModule.upgrade_instance(
-            self,
-            instance_name=instance_name,
-            format_data=format_data,
-            request_params=request_params,
-            **response_params,
-        )
-
-    @override
-    async def delete_instance_users(
-        self,
-        instance_id: str,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Delete all Users from an Instance of this Target, picked by its ID on this Target.
-
-        Parameters
-        ----------
-        instance_id : :class:`str`
-            The ID of the Instance on this Target.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
-
-        """
-        return await ADSModule.delete_instance_users(
-            self,
-            instance_id=instance_id,
-            format_data=format_data,
-            request_params=request_params,
-            **response_params,
-        )
-
-    @overload
-    async def get_instance(
-        self,
-        instance_id: str,
-        *,
-        format_data: Literal[True],
-        request_params: Optional[AioHTTPRequestOptions] = ...,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[InstanceTypeAliases, Self]: ...
-    @overload
-    async def get_instance(
-        self,
-        instance_id: str,
-        *,
-        format_data: Literal[False],
-        request_params: Optional[AioHTTPRequestOptions] = ...,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> InstanceResponse: ...
-
-    # None falls back to the global `format_data`, which we can't know until runtime.
-    @overload
-    async def get_instance(
-        self,
-        instance_id: str,
-        *,
-        format_data: None = ...,
-        request_params: Optional[AioHTTPRequestOptions] = ...,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]: ...
-
-    @override
-    async def get_instance(
-        self,
-        instance_id: str,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]:
-        """|coro|
-
-        Retrieve a single Instance of this Target by ID and convert the Instance.
-
-        .. note::
-            This Target's own ADS ID returns `self`, refreshed with the Target's own data. AMP answers null for an ID
-            that is not on this Target.
-
-        Parameters
-        ----------
-        instance_id : :class:`str`
-            The Instance ID to retrieve.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Raises
-        ------
-        :exc:`RuntimeError`
-            If the Instance needs converting and the :attr:`_controller` attribute has not been set.
-
-        Returns
-        -------
-        Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`, :class:`InstanceResponse`]
-            On success returns the converted Instance, `self` for this Target's own ADS, or the raw Instance dict
-            if `format_data` is False.
-
-        """
-        result: InstanceResponse = await ADSModule.get_instance(
-            self,
-            instance_id=instance_id,
-            request_params=request_params,
-            **response_params,
-        )
-        if format_data is None:
-            format_data = self.format_data
-        if format_data is False:
-            return result
-        if result["instance_id"] == self.instance_id:
-            self._parse_instance_data(data=result)
-            return self
-
-        # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
-        if self._controller is None:
-            raise RuntimeError(self._no_controller)
-        return self._controller.instance_conversion(instances=result, ads=self)
-
-    @overload
-    async def get_instances(
-        self,
-        *,
-        format_data: Literal[True],
-        request_params: Optional[AioHTTPRequestOptions] = ...,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> set[InstanceTypeAliases]: ...
-
-    @overload
-    async def get_instances(
-        self,
-        *,
-        format_data: Literal[False],
-        request_params: Optional[AioHTTPRequestOptions] = ...,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[ControllerResponse]: ...
-
-    # None falls back to the global `format_data`, which we can't know until runtime.
-    @overload
-    async def get_instances(
-        self,
-        *,
-        format_data: None = ...,
-        request_params: Optional[AioHTTPRequestOptions] = ...,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]: ...
-
-    @override
-    async def get_instances(
-        self,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]:
-        """|coro|
-
-        Returns the Instances this Target holds as a set of converted :class:`Instance` and :class:`MinecraftInstance`
-        objects, and keeps them on :attr:`instances`.
-
-        .. note::
-            This Target's own ADS Instance is `self`, so it is left out of the set. The Target's own data from the
-            response is copied onto `self`. The Instances in the set have `self` as their :attr:`~Instance.ads`.
-
-        .. note::
-            The set is :attr:`instances`, updated in place by Instance ID. Instances already in it are refreshed and
-            keep their identity, new ones are added and the ones this Target no longer lists are dropped.
-
-        .. note::
-            If `format_data` is False this will return the raw list of Target dicts instead and nothing is stored.
-
-        Parameters
-        ----------
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Raises
-        ------
-        :exc:`RuntimeError`
-            If `format_data` is True and the :attr:`_controller` attribute has not been set.
-
-        Returns
-        -------
-        Union[set[Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`]], list[:class:`ControllerResponse`]]
-            On success returns the set of converted Instances, or the raw list of Target dicts if `format_data` is False.
-
-        """
-        result: list[ControllerResponse] = await ADSModule.get_instances(
-            self,
-            request_params=request_params,
-            **response_params,
-        )
-        if format_data is None:
-            format_data = self.format_data
-        if format_data is False:
-            return result
-
-        # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
-        if self._controller is None:
-            raise RuntimeError(self._no_controller)
-
-        available_instances: list[InstanceResponse] = []
-        for target in result:
-            # Our own view of the Target is the entry whose ID is ours, and it wins over the Controller's copy.
-            if target["instance_id"] == self.instance_id:
-                # From the Target itself `url` is localhost, `is_remote` is False and `id` is its own numbering.
-                # We keep the Controller's for those three once we have them.
-                own_view: ControllerResponse = target.copy()
-                if object.__getattribute__(self, "_is_cached") is True:
-                    if self.url is not None:
-                        own_view["url"] = self.url
-                    own_view["is_remote"] = self.is_remote
-                    own_view["id"] = self.id
-                self._parse_target_data(data=own_view)
-
-            for instance in target["available_instances"]:
-                # The Target lists its own ADS Instance, that is us, so we refresh ourselves from it.
-                if instance["instance_id"] == self.instance_id:
-                    self._parse_instance_data(data=instance)
-                    continue
-                available_instances.append(instance)
-
-        # Updated in place, matched by ID.
-        self._controller._sync_instances(current=self._instances, available=available_instances, ads=self)  # pyright: ignore[reportPrivateUsage]
-        return self._instances
 
 
 class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
@@ -2053,4 +1396,661 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
                     outcome,
                 )
 
+        return self._instances
+
+
+class MinecraftInstance(MinecraftModule, Instance):
+    """Represents a Minecraft Instance from AMP containing all relevant API Endpoints specific to Minecraft Instances.
+
+    Attributes
+    ----------
+    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints : list[:class:`Endpoints`]
+        The list of application endpoints for the Instance.
+    container_cpus : :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb : :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy : :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon : :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart : :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args : dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description : :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb : :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source : :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall : :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name : :class:`str`
+        The friendly name of the Instance.
+    ip : :class:`str`
+        The IP address of the Instance.
+    instance_id : :class:`str`
+        The Instance GUID.
+    instance_name : :class:`str`
+        The Instance name.
+    is_container_instance : :class:`bool`
+        If the Instance is a container Instance.
+    is_https : :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode : :class:`int`
+        The management mode of the Instance.
+    metrics : Union[:class:`Metrics`, None]
+        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
+    module : :class:`str`
+        The module of the Instance, default is "Minecraft".
+    module_display_name : :class:`str`
+        The display name of the module, default is "".
+    port : :class:`str`
+        The port of the Instance.
+    release_stream : :class:`int`
+        The release stream of the Instance.
+    running : :class:`bool`
+        If the Instance is running.
+    suspended : :class:`bool`
+        If the Instance is suspended.
+    tags : Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id : :class:`str`
+        The target ID of the Instance.
+    url : Union[:class:`str`, None]
+        The URL of the Instance. AMP doesn't send one, by default None.
+
+    """
+
+    module: str = "Minecraft"
+
+
+class TargetADS(ADSData, ADSModule, Instance):
+    """Typically referred to the "Target ADS", the ADS Instance of a remote Target held by the :class:`Controller`
+    in :attr:`~Controller.targets`.
+
+    .. note::
+        The Instances this Target holds belong to it, see :attr:`instances`. Each one has this object as its
+        :attr:`~Instance.ads`, so its start, stop, restart and update calls go through this Target.
+
+    .. note::
+        A Target ADS serves the ADSModule endpoints, so this class is an :class:`Instance` that also has every
+        :class:`ADSModule` method. Those calls go to this Target and act on the Instances it holds.
+
+    .. note::
+        :meth:`start_instance`, :meth:`stop_instance`, :meth:`restart_instance` and :meth:`delete_instance_users`
+        take the :class:`ADSModule` signature (an `instance_name` or `instance_id`) and act on an Instance of this
+        Target, not on the Target ADS itself.
+
+    .. note::
+        The Target's own data is kept flat on this object, the same as :class:`Controller`. Reading it before
+        :meth:`~Controller.get_instances` has run raises :exc:`AttributeError`. `friendly_name`, `description` and `tags`
+        keep the Instance's values.
+
+
+    Attributes
+    ----------
+    amp_version : Union[:class:`str`, :class:`dict`, :class:`AMPVersionInfo`, None]
+        The version of the AMP, default is None.
+    application_endpoints : list[:class:`Endpoints`]
+        The list of application endpoints for the Instance.
+    container_cpus : :class:`float`
+        The amount of CPU cores allocated to the container, default is 0.0.
+    container_memory_mb : :class:`int`
+        The amount of memory allocated to the container in MB.
+    container_memory_policy : :class:`ContainerMemoryPolicyState`
+        The memory policy of the Instance.
+    daemon : :class:`bool`
+        If the Instance is a daemon.
+    daemon_autostart : :class:`bool`
+        If the Instance should be autostart on boot.
+    deployment_args : dict[:class:`str`, :class:`str`]
+        The deployment arguments of the Instance.
+    description : :class:`str`
+        The description of the Instance, default is "".
+    disk_usage_mb : :class:`int`
+        The disk usage of the Instance in MB.
+    display_image_source : :class:`str`
+        The source of the display image, default is "".
+    exclude_from_firewall : :class:`bool`
+        If the Instance should be excluded from the firewall.
+    friendly_name : :class:`str`
+        The friendly name of the Instance.
+    ip : :class:`str`
+        The IP address of the Instance.
+    instance_id : :class:`str`
+        The Instance GUID.
+    instance_name : :class:`str`
+        The Instance name.
+    is_container_instance : :class:`bool`
+        If the Instance is a container Instance.
+    is_https : :class:`bool`
+        If the Instance is using HTTPS.
+    management_mode : :class:`int`
+        The management mode of the Instance.
+    metrics : Union[:class:`Metrics`, None]
+        The metrics of the Instance, None when AMP sends none (eg. a stopped Instance), default is None.
+    module : :class:`str`
+        The module of the Instance, default is "ADS".
+    module_display_name : :class:`str`
+        The display name of the module, default is "".
+    port : :class:`str`
+        The port of the Instance.
+    release_stream : :class:`int`
+        The release stream of the Instance.
+    running : :class:`bool`
+        If the Instance is running.
+    suspended : :class:`bool`
+        If the Instance is suspended.
+    tags : Union[:class:`None`, :class:`list`]
+        The list of tags of the Instance, default is None.
+    target_id : :class:`str`
+        The target ID of the Instance.
+    url : Union[:class:`str`, None]
+        The URL of the Target.
+    id : :class:`int`
+        The Target's ID.
+    disabled : :class:`bool`
+        If the Target is Disabled or not.
+    is_remote : :class:`bool`
+        If the Target is remote or not.
+    platform : :class:`PlatformInfo`
+        Platform information related to the Target.
+    datastores : list[:class:`TargetDatastore`]
+        The Datastores that the Target has access to.
+    creates_in_containers : :class:`bool`
+        The Target will create the Instances in containers.
+    can_create : :class:`bool`
+        If the Target can create Instances or not.
+    available_instances : list[:class:`InstanceResponse`]
+        The raw Instances the Target lists.
+    available_ips : list[:class:`str`]
+        The list of available IPs the Target has.
+    last_updated : Union[:class:`str`, :class:`datetime`]
+        When the Target last updated, converted into a datetime object.
+    state : :class:`InstanceState`
+        The state the Target is in.
+    fitness : Union[dict[:class:`str`, Any], None]
+        UNK.
+    state_reason : Union[:class:`str`, None]
+        UNK.
+    tags_list : Union[:class:`str`, None]
+        The tags related to the Target if any.
+
+    """
+
+    module: str = "ADS"
+
+    _instances: set[InstanceTypeAliases]
+
+    # The Target fields minus `friendly_name`, `description` and `tags`, which stay the Instance's values.
+    __cached__ = (
+        "available_instances",
+        "available_ips",
+        "can_create",
+        "creates_in_containers",
+        "datastores",
+        "disabled",
+        "fitness",
+        "id",
+        "is_remote",
+        "last_updated",
+        "platform",
+        "state",
+        "state_reason",
+        "tags_list",
+        "url",
+    )
+    _cached_names: ClassVar[frozenset[str]] = frozenset(__cached__)
+
+    @property
+    def instances(self) -> set[InstanceTypeAliases]:
+        """The Instances this Target holds, set by :meth:`get_instances`.
+
+        .. note::
+            This Target's own ADS Instance is left out, since that Instance is this object.
+
+
+        Returns
+        -------
+        set[Union[:class:`InstanceTypeAliases`]]
+            The converted Instances from the last :meth:`get_instances` call, empty until it has run.
+
+        """
+        return self._instances
+
+    def __init__(
+        self,
+        data: InstanceResponse,
+        controller: Optional[Controller] = None,
+        ads: Optional[Union[Controller, TargetADS]] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Build a Target ADS, unpacking an API response onto its attributes.
+
+        Parameters
+        ----------
+        data : :class:`InstanceResponse`
+            The Instance data to unpack onto this class.
+        controller : Union[:class:`Controller`, None], optional
+            The Controller that holds this Target, used to convert the Instances this Target returns, by default None.
+        ads : Union[:class:`Controller`, :class:`TargetADS`, None], optional
+            The ADS that holds this Target ADS, None means the Controller, by default None.
+        **kwargs : Any
+            Keyword arguments forwarded to :meth:`Instance.__init__`.
+
+        """
+        super().__init__(data=data, controller=controller, ads=ads, **kwargs)
+        self._instances = set()
+
+    @override
+    async def start_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Start an Instance of this Target, picked by its name on this Target.
+
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and started that Instance of this Target. 4.x's `AMPADSInstance.start_instance`
+            started the Target ADS itself.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.start_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def stop_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Stop an Instance of this Target, picked by its name on this Target.
+
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and stopped that Instance of this Target. 4.x's `AMPADSInstance.stop_instance`
+            stopped the Target ADS itself.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.stop_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def restart_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Restart an Instance of this Target, picked by its name on this Target.
+
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and restarted that Instance of this Target. 4.x's `AMPADSInstance.restart_instance`
+            restarted the Target ADS itself.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.restart_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def upgrade_instance(
+        self,
+        instance_name: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Upgrade the AMP version of an Instance of this Target, picked by its name on this Target.
+
+        .. note::
+            To upgrade this Target ADS itself, use :meth:`Core.upgrade_amp`.
+
+        .. versionchanged:: 5.0.0
+            Takes an `instance_name` and upgrades that Instance of this Target. 4.x's `AMPADSInstance.update_instance`
+            upgraded the Target ADS itself.
+
+        Parameters
+        ----------
+        instance_name : :class:`str`
+            The name of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.upgrade_instance(
+            self,
+            instance_name=instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @override
+    async def delete_instance_users(
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
+        """|coro|
+
+        Delete all Users from an Instance of this Target, picked by its ID on this Target.
+
+        Parameters
+        ----------
+        instance_id : :class:`str`
+            The ID of the Instance on this Target.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Returns
+        -------
+        :class:`ActionResult`
+            On success returns an :class:`ActionResult` dataclass.
+
+        """
+        return await ADSModule.delete_instance_users(
+            self,
+            instance_id=instance_id,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
+
+    @overload
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: Literal[True],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[InstanceTypeAliases, Self]: ...
+    @overload
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: Literal[False],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> InstanceResponse: ...
+
+    # None falls back to the global `format_data`, which we can't know until runtime.
+    @overload
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: None = ...,
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]: ...
+
+    @override
+    async def get_instance(
+        self,
+        instance_id: str,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[InstanceTypeAliases, InstanceResponse, Self]:
+        """|coro|
+
+        Retrieve a single Instance of this Target by ID and convert the Instance.
+
+        .. note::
+            This Target's own ADS ID returns `self`, refreshed with the Target's own data. AMP answers null for an ID
+            that is not on this Target.
+
+        Parameters
+        ----------
+        instance_id : :class:`str`
+            The Instance ID to retrieve.
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If the Instance needs converting and the :attr:`_controller` attribute has not been set.
+
+        Returns
+        -------
+        Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`, :class:`InstanceResponse`]
+            On success returns the converted Instance, `self` for this Target's own ADS, or the raw Instance dict
+            if `format_data` is False.
+
+        """
+        result: InstanceResponse = await ADSModule.get_instance(
+            self,
+            instance_id=instance_id,
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is False:
+            return result
+        if result["instance_id"] == self.instance_id:
+            self._parse_instance_data(data=result)
+            return self
+
+        # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
+        if self._controller is None:
+            raise RuntimeError(self._no_controller)
+        return self._controller.instance_conversion(instances=result, ads=self)
+
+    @overload
+    async def get_instances(
+        self,
+        *,
+        format_data: Literal[True],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> set[InstanceTypeAliases]: ...
+
+    @overload
+    async def get_instances(
+        self,
+        *,
+        format_data: Literal[False],
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> list[ControllerResponse]: ...
+
+    # None falls back to the global `format_data`, which we can't know until runtime.
+    @overload
+    async def get_instances(
+        self,
+        *,
+        format_data: None = ...,
+        request_params: Optional[AioHTTPRequestOptions] = ...,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]: ...
+
+    @override
+    async def get_instances(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> Union[set[InstanceTypeAliases], list[ControllerResponse]]:
+        """|coro|
+
+        Returns the Instances this Target holds as a set of converted :class:`Instance` and :class:`MinecraftInstance`
+        objects, and keeps them on :attr:`instances`.
+
+        .. note::
+            This Target's own ADS Instance is `self`, so it is left out of the set. The Target's own data from the
+            response is copied onto `self`. The Instances in the set have `self` as their :attr:`~Instance.ads`.
+
+        .. note::
+            The set is :attr:`instances`, updated in place by Instance ID. Instances already in it are refreshed and
+            keep their identity, new ones are added and the ones this Target no longer lists are dropped.
+
+        .. note::
+            If `format_data` is False this will return the raw list of Target dicts instead and nothing is stored.
+
+        Parameters
+        ----------
+        format_data : Union[:class:`bool`, None], optional
+            Format the JSON response data, by default None.
+        request_params : Union[:class:`AioHTTPRequestOptions`, None], optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If `format_data` is True and the :attr:`_controller` attribute has not been set.
+
+        Returns
+        -------
+        Union[set[Union[:class:`Instance`, :class:`MinecraftInstance`, :class:`TargetADS`]], list[:class:`ControllerResponse`]]
+            On success returns the set of converted Instances, or the raw list of Target dicts if `format_data` is False.
+
+        """
+        result: list[ControllerResponse] = await ADSModule.get_instances(
+            self,
+            request_params=request_params,
+            **response_params,
+        )
+        if format_data is None:
+            format_data = self.format_data
+        if format_data is False:
+            return result
+
+        # The Controller builds every Instance object, so these match the ones `Controller.get_instances` returns.
+        if self._controller is None:
+            raise RuntimeError(self._no_controller)
+
+        available_instances: list[InstanceResponse] = []
+        for target in result:
+            # Our own view of the Target is the entry whose ID is ours, and it wins over the Controller's copy.
+            if target["instance_id"] == self.instance_id:
+                # From the Target itself `url` is localhost, `is_remote` is False and `id` is its own numbering.
+                # We keep the Controller's for those three once we have them.
+                own_view: ControllerResponse = target.copy()
+                if object.__getattribute__(self, "_is_cached") is True:
+                    if self.url is not None:
+                        own_view["url"] = self.url
+                    own_view["is_remote"] = self.is_remote
+                    own_view["id"] = self.id
+                self._parse_target_data(data=own_view)
+
+            for instance in target["available_instances"]:
+                # The Target lists its own ADS Instance, that is us, so we refresh ourselves from it.
+                if instance["instance_id"] == self.instance_id:
+                    self._parse_instance_data(data=instance)
+                    continue
+                available_instances.append(instance)
+
+        # Updated in place, matched by ID.
+        self._controller._sync_instances(current=self._instances, available=available_instances, ads=self)  # pyright: ignore[reportPrivateUsage]
         return self._instances

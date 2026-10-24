@@ -29,11 +29,11 @@ class AMPAPIError(Exception):
     pass
 
 
-class AMPAPIResponseError(AMPAPIError):
-    def __init__(self, title: str, url: str, reason: str) -> None:  # noqa: D107
-        message = "We encountered an error handling a response from an AMP API Endpoint. Reason: %s | URL: %s | Title: %s"
-        super().__init__(message % (reason, url, title))
-        LOGGER.error(message, reason, url, title)
+class AMPAPIKeyError(AMPAPIError):
+    def __init__(self, key_name: str, end_point: str, *args: object) -> None:  # noqa: D107
+        message = "We encountered an KeyError in our response data from the AMP API Endpoint %s. | Missing Key Name: %s | Args: %s"
+        super().__init__(message % (end_point, key_name, args))
+        LOGGER.error(message, end_point, key_name, *args)
 
 
 class AMPAPINetworkError(AMPAPIError):
@@ -43,11 +43,11 @@ class AMPAPINetworkError(AMPAPIError):
         LOGGER.error(message, reason, url, status)
 
 
-class AMPAPIKeyError(AMPAPIError):
-    def __init__(self, key_name: str, end_point: str, *args: object) -> None:  # noqa: D107
-        message = "We encountered an KeyError in our response data from the AMP API Endpoint %s. | Missing Key Name: %s | Args: %s"
-        super().__init__(message % (end_point, key_name, args))
-        LOGGER.error(message, end_point, key_name, *args)
+class AMPAPIResponseError(AMPAPIError):
+    def __init__(self, title: str, url: str, reason: str) -> None:  # noqa: D107
+        message = "We encountered an error handling a response from an AMP API Endpoint. Reason: %s | URL: %s | Title: %s"
+        super().__init__(message % (reason, url, title))
+        LOGGER.error(message, reason, url, title)
 
 
 class AMPAPITypeError(AMPAPIError):

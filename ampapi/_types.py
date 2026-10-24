@@ -252,17 +252,50 @@ then by method name, with the caption of the action as the value. A module witho
 """
 
 
-class APISpecEndpointParameters(TypedDict):
-    """Represents a single parameter of an endpoint in :data:`APISpec`."""
+class AnalyticsGraphDataResponse(TypedDict):
+    date: str
+    end_date: str
+    count: int
 
+
+class AnalyticsStatsResponse(TypedDict):
+    raw_name: str
     name: str
-    type_name: str
+    display_value: Union[int, float, str]
+    current: Union[int, float]
+    previous: Union[int, float]
+    difference: float
     description: str
-    placeholder: str
-    suffix: str
-    optional: bool
-    # The values an enum parameter accepts, None for any other parameter.
-    param_enum_values: Union[dict[str, int], None]
+
+
+class AnalyticsSummaryResponse(TypedDict):
+    stats: list[AnalyticsStatsResponse]
+    graph_data: list[AnalyticsGraphDataResponse]
+    country_data: list[Any]
+    top_players: list[Any]
+    quietest_time: AnalyticsGraphDataResponse
+    busiest_time: AnalyticsGraphDataResponse
+    is_demo: bool
+
+
+class AnalyticsUserDetailsResponse(TypedDict):
+    """The raw response from :meth:`AnalyticsPlugin.get_user_details`, confirmed live on AMP-2.8.0.8."""
+
+    username: str
+    first_session: str
+    last_session: str
+    session_count: int
+    total_session_time: float
+    display_total_session_time: str
+    average_session_time: float
+    display_average_session_time: str
+    longest_session: float
+    display_longest_session: str
+    days_active: int
+    average_time_per_day: float
+    average_time_per_week: float
+    average_time_per_month: float
+    recent_sessions: dict[str, str]
 
 
 class APISpecEndpointData(TypedDict):
@@ -275,6 +308,19 @@ class APISpecEndpointData(TypedDict):
     is_complex_type: bool
     # The permission nodes the endpoint needs, empty when it needs none.
     required_permissions: list[str]
+
+
+class APISpecEndpointParameters(TypedDict):
+    """Represents a single parameter of an endpoint in :data:`APISpec`."""
+
+    name: str
+    type_name: str
+    description: str
+    placeholder: str
+    suffix: str
+    optional: bool
+    # The values an enum parameter accepts, None for any other parameter.
+    param_enum_values: Union[dict[str, int], None]
 
 
 APISpec = dict[str, dict[str, APISpecEndpointData]]
@@ -391,52 +437,6 @@ class ApplicationResponse(TypedDict):
     resource_usage_info: NotRequired[Union[str, None]]
 
 
-class AnalyticsGraphDataResponse(TypedDict):
-    date: str
-    end_date: str
-    count: int
-
-
-class AnalyticsStatsResponse(TypedDict):
-    raw_name: str
-    name: str
-    display_value: Union[int, float, str]
-    current: Union[int, float]
-    previous: Union[int, float]
-    difference: float
-    description: str
-
-
-class AnalyticsSummaryResponse(TypedDict):
-    stats: list[AnalyticsStatsResponse]
-    graph_data: list[AnalyticsGraphDataResponse]
-    country_data: list[Any]
-    top_players: list[Any]
-    quietest_time: AnalyticsGraphDataResponse
-    busiest_time: AnalyticsGraphDataResponse
-    is_demo: bool
-
-
-class AnalyticsUserDetailsResponse(TypedDict):
-    """The raw response from :meth:`AnalyticsPlugin.get_user_details`, confirmed live on AMP-2.8.0.8."""
-
-    username: str
-    first_session: str
-    last_session: str
-    session_count: int
-    total_session_time: float
-    display_total_session_time: str
-    average_session_time: float
-    display_average_session_time: str
-    longest_session: float
-    display_longest_session: str
-    days_active: int
-    average_time_per_day: float
-    average_time_per_week: float
-    average_time_per_month: float
-    recent_sessions: dict[str, str]
-
-
 class AppSummaryResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_supported_app_summaries`.
 
@@ -472,28 +472,6 @@ class AuditLogEntryResponse(TypedDict):
     acknowledged: bool
 
 
-class MethodsResponse(TypedDict):
-    id: str
-    name: str
-    description: str
-    category: str
-    display_format: str | None
-    consumes: list[ConsumesResponse]
-    notice: NotRequired[Union[str, None]]
-
-
-# Replaced by TriggersResponse, which matches the AMP-2.8.0.8 captures.
-# class AvailableTriggersResponse(TypedDict):
-#     id: str
-#     type: str
-#     description: str
-#     emits: list[str]
-#     tasks: list[Any]
-#     trigger_type: str
-#     enabled_state: int
-#     last_run: None
-
-
 class BackupResponse(TypedDict):
     created_automatically: bool
     description: str
@@ -514,6 +492,26 @@ class BackupResponse(TypedDict):
     remote_store_id: NotRequired[Union[str, None]]
 
 
+class BrandingResponse(TypedDict):
+    """Represents the JSON response data for `branding` from :meth:`Core.get_module_info`."""
+
+    display_branding: bool
+    page_title: str
+    company_name: str
+    welcome_message: str
+    branding_message: str
+    short_branding_message: str
+    url: str
+    support_url: str
+    support_text: str
+    submit_ticket_url: str
+    logo_url: str
+    background_url: str
+    splash_frame_url: str
+    forgot_password_url: str
+    hosted_analytics_tag: str
+
+
 class BukkitCategories(TypedDict):
     """id : :class:`int`
 
@@ -523,6 +521,32 @@ class BukkitCategories(TypedDict):
 
     id: int
     name: str
+
+
+class ConsoleEntriesResponse(TypedDict):
+    """Represents the JSON response data for each entry of :attr:`UpdatesResponse.console_entries`."""
+
+    timestamp: str
+    source: str
+    # Confirmed against getupdates.json; only ever seen as None.
+    source_id: Union[str, None]
+    type: str
+    contents: str
+
+
+class ConsumesResponse(TypedDict):
+    name: str
+    display_name: None
+    description: str
+    placeholder: str
+    suffix: str
+    value_type: str
+    enum_values: dict[str, str] | None
+    selection_source: None
+    input_type: str
+    locked: NotRequired[bool]
+    locked_value: NotRequired[Union[str, None]]
+    locked_reason: NotRequired[Union[str, None]]
 
 
 class ControllerResponse(TypedDict):
@@ -577,87 +601,6 @@ class CPUInfoResponse(TypedDict):
     total_threads: int
 
 
-class SettingSpecResponse(TypedDict):
-    """Current response structure from :meth:`get_config()`."""
-
-    read_only: bool
-    name: str
-    description: str
-    category: str
-    subcategory: str
-    current_value: int
-    val_type: str
-    enum_values: Union[dict[str, str], None]
-    enum_values_are_deferred: bool
-    selection_source: None
-    node: str
-    input_type: str
-    is_provision_spec: bool
-    read_only_provision: bool
-    actions: list[Any]
-    keywords: str
-    always_allow_read: bool
-    tag: str
-    min_value: None
-    max_value: None
-    max_length: int
-    placeholder: str
-    suffix: str
-    meta: str
-    requires_restart: bool
-    required: bool
-    attributes: None
-    order: int
-    warn_when_value: NotRequired[Any]
-    warn_text: NotRequired[Union[str, None]]
-
-
-class BrandingResponse(TypedDict):
-    """Represents the JSON response data for `branding` from :meth:`Core.get_module_info`."""
-
-    display_branding: bool
-    page_title: str
-    company_name: str
-    welcome_message: str
-    branding_message: str
-    short_branding_message: str
-    url: str
-    support_url: str
-    support_text: str
-    submit_ticket_url: str
-    logo_url: str
-    background_url: str
-    splash_frame_url: str
-    forgot_password_url: str
-    hosted_analytics_tag: str
-
-
-class ConsoleEntriesResponse(TypedDict):
-    """Represents the JSON response data for each entry of :attr:`UpdatesResponse.console_entries`."""
-
-    timestamp: str
-    source: str
-    # Confirmed against getupdates.json; only ever seen as None.
-    source_id: Union[str, None]
-    type: str
-    contents: str
-
-
-class ConsumesResponse(TypedDict):
-    name: str
-    display_name: None
-    description: str
-    placeholder: str
-    suffix: str
-    value_type: str
-    enum_values: dict[str, str] | None
-    selection_source: None
-    input_type: str
-    locked: NotRequired[bool]
-    locked_value: NotRequired[Union[str, None]]
-    locked_reason: NotRequired[Union[str, None]]
-
-
 # Confirmed live on AMP 2.8.0.8: AMP spells the mapping key `setting_mappings`, and sends null for
 # `description`, `module`, `template_instance`, `template_role` and `template_base_app` on a bare template.
 class DeploymentTemplateResponse(TypedDict):
@@ -676,20 +619,6 @@ class DeploymentTemplateResponse(TypedDict):
     setting_mappings: dict[str, str]
     tags: list[str]
     start_on_boot: bool
-
-
-class DirectoryResponse(TypedDict):
-    is_directory: bool
-    is_virtual_directory: bool
-    filename: str
-    size_bytes: int
-    created: str
-    modified: str
-    is_downloadable: bool
-    is_editable: bool
-    is_archive: bool
-    is_excluded_from_backups: bool
-    is_smart_excluded_from_backups: NotRequired[bool]
 
 
 class DiagnosticsResponse(TypedDict):
@@ -722,12 +651,25 @@ class DiagnosticsResponse(TypedDict):
     config_version: NotRequired[str]
 
 
-class StructuredDiagnosticsResponse(TypedDict):
-    """Represents the response of :meth:`Core.get_structured_diagnostics`."""
+class DirectoryResponse(TypedDict):
+    is_directory: bool
+    is_virtual_directory: bool
+    filename: str
+    size_bytes: int
+    created: str
+    modified: str
+    is_downloadable: bool
+    is_editable: bool
+    is_archive: bool
+    is_excluded_from_backups: bool
+    is_smart_excluded_from_backups: NotRequired[bool]
 
-    core: DiagnosticsResponse
-    # Depends on the module, eg. a Minecraft Instance sends `server_type` as an int.
-    application: dict[str, Any]
+
+class EndpointResponseError(TypedDict, total=False):
+    title: Required[str]
+    status: bool
+    message: str
+    stackTrace: Required[Any]
 
 
 class EndpointsResponse(TypedDict):
@@ -743,13 +685,6 @@ class FileChunkResponse(TypedDict):
     bytes_length: int
 
 
-class EndpointResponseError(TypedDict, total=False):
-    title: Required[str]
-    status: bool
-    message: str
-    stackTrace: Required[Any]
-
-
 class ImportConfigResponse(TypedDict):
     """The raw response from :meth:`GenericModule.import_config`."""
 
@@ -760,6 +695,24 @@ class ImportConfigResponse(TypedDict):
     not_imported: list[Any]
     unrecognised: list[Any]
     rejected: list[Any]
+
+
+class InstanceDatastoreResponse(TypedDict):
+    """Represents the JSON response data from :meth:`ADSModule.get_datastore`, or a single entry from :meth:`ADSModule.get_datastores`."""
+
+    id: int
+    friendly_name: str
+    description: str
+    directory: str
+    soft_limit_mb: int
+    current_usage_mb: int
+    instance_limit: int
+    priority: int
+    active: bool
+    tags: list[str]
+    is_internal: bool
+    # Note the British spelling; this is what AMP sends on the wire.
+    sanitised_name: str
 
 
 class InstanceResponse(TypedDict):
@@ -815,29 +768,19 @@ class InstanceResponse(TypedDict):
     welcome_message: Union[str, None]
 
 
-class InstanceDatastoreResponse(TypedDict):
-    """Represents the JSON response data from :meth:`ADSModule.get_datastore`, or a single entry from :meth:`ADSModule.get_datastores`."""
-
-    id: int
-    friendly_name: str
-    description: str
-    directory: str
-    soft_limit_mb: int
-    current_usage_mb: int
-    instance_limit: int
-    priority: int
-    active: bool
-    tags: list[str]
-    is_internal: bool
-    # Note the British spelling; this is what AMP sends on the wire.
-    sanitised_name: str
-
-
 class InstanceStatusResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_instance_statuses`."""
 
     instance_id: str
     running: bool
+
+
+class InstanceUpdateResponse(TypedDict):
+    """Represents the JSON response data for `parameters` of an ADSModule "instupdate" message."""
+
+    id: str
+    target: str
+    instance: InstanceResponse
 
 
 class KeyDrift(TypedDict):
@@ -912,15 +855,6 @@ class MCUserResponse(TypedDict):
     uuid: str
 
 
-class UptimeResponse(TypedDict):
-    """Represents the JSON response data for `uptime` in :class:`MessageParametersResponse`."""
-
-    days: int
-    hours: int
-    minutes: int
-    seconds: int
-
-
 class MessageParametersResponse(TypedDict, total=False):
     """Represents the JSON response data for `parameters` in :class:`MessagesResponse`."""
 
@@ -932,21 +866,6 @@ class MessageParametersResponse(TypedDict, total=False):
     state: int
     name: str
     reason: str
-
-
-class SettingValueUpdateResponse(TypedDict):
-    """Represents the JSON response data for `parameters` of a Core "settingValueUpdate" message."""
-
-    node: str
-    new_value: str
-
-
-class InstanceUpdateResponse(TypedDict):
-    """Represents the JSON response data for `parameters` of an ADSModule "instupdate" message."""
-
-    id: str
-    target: str
-    instance: InstanceResponse
 
 
 class MessagesResponse(TypedDict):
@@ -990,16 +909,14 @@ class MessagesResponse(TypedDict):
 #     notice: NotRequired[Union[str, None]]
 
 
-class MetricsResponse(TypedDict):
-    """Represents the data inside the JSON key `metrics` for :meth:`get_status()`."""
-
-    cpu_usage: MetricsDataResponse
-    memory_usage: MetricsDataResponse
-    active_users: MetricsDataResponse
-    # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft Instances send tps.
-    physical_ram_usage: NotRequired[MetricsDataResponse]
-    swap_usage: NotRequired[MetricsDataResponse]
-    tps: NotRequired[MetricsDataResponse]
+class MethodsResponse(TypedDict):
+    id: str
+    name: str
+    description: str
+    category: str
+    display_format: str | None
+    consumes: list[ConsumesResponse]
+    notice: NotRequired[Union[str, None]]
 
 
 class MetricsDataResponse(TypedDict):
@@ -1014,6 +931,18 @@ class MetricsDataResponse(TypedDict):
     color3: Optional[str]
     # Confirmed against getstatus.json; AMP sends a short label for the metric tile (eg "CPU", "RAM").
     short_name: NotRequired[str]
+
+
+class MetricsResponse(TypedDict):
+    """Represents the data inside the JSON key `metrics` for :meth:`get_status()`."""
+
+    cpu_usage: MetricsDataResponse
+    memory_usage: MetricsDataResponse
+    active_users: MetricsDataResponse
+    # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft Instances send tps.
+    physical_ram_usage: NotRequired[MetricsDataResponse]
+    swap_usage: NotRequired[MetricsDataResponse]
+    tps: NotRequired[MetricsDataResponse]
 
 
 class ModuleResponse(TypedDict):
@@ -1333,23 +1262,6 @@ class PortResponse(TypedDict):
     min_listening: NotRequired[int]
 
 
-class ProvisionSettingInfoResponse(TypedDict):
-    """Represents a single entry from :meth:`ADSModule.get_provision_arguments`."""
-
-    node: str
-    type: str
-    description: str
-    default_value: Union[str, int, None]
-    value_range: Union[int, str]
-    custom_field_type: Union[str, None]
-    related_setting: Union[str, None]
-    endpoint_name: str
-    endpoint_format: Union[str, None]
-    # Added in 2.8.0.4; absent on 2.6.5.0.
-    hidden: NotRequired[bool]
-    min_listening: NotRequired[int]
-
-
 # TODO: Verify these keys against a live response.
 # Derived from the `Provision` dataclass and docs; the endpoint returns a null body on the ADS and Controller.
 class ProvisionResponse(TypedDict):
@@ -1370,6 +1282,23 @@ class ProvisionResponse(TypedDict):
     score: float
     thread_queue_length: int
     total_services: int
+
+
+class ProvisionSettingInfoResponse(TypedDict):
+    """Represents a single entry from :meth:`ADSModule.get_provision_arguments`."""
+
+    node: str
+    type: str
+    description: str
+    default_value: Union[str, int, None]
+    value_range: Union[int, str]
+    custom_field_type: Union[str, None]
+    related_setting: Union[str, None]
+    endpoint_name: str
+    endpoint_format: Union[str, None]
+    # Added in 2.8.0.4; absent on 2.6.5.0.
+    hidden: NotRequired[bool]
+    min_listening: NotRequired[int]
 
 
 class RemoteTargetInfoResponse(TypedDict):
@@ -1459,6 +1388,41 @@ class SessionResponse(TypedDict):
     session_type: str
 
 
+class SettingSpecResponse(TypedDict):
+    """Current response structure from :meth:`get_config()`."""
+
+    read_only: bool
+    name: str
+    description: str
+    category: str
+    subcategory: str
+    current_value: int
+    val_type: str
+    enum_values: Union[dict[str, str], None]
+    enum_values_are_deferred: bool
+    selection_source: None
+    node: str
+    input_type: str
+    is_provision_spec: bool
+    read_only_provision: bool
+    actions: list[Any]
+    keywords: str
+    always_allow_read: bool
+    tag: str
+    min_value: None
+    max_value: None
+    max_length: int
+    placeholder: str
+    suffix: str
+    meta: str
+    requires_restart: bool
+    required: bool
+    attributes: None
+    order: int
+    warn_when_value: NotRequired[Any]
+    warn_text: NotRequired[Union[str, None]]
+
+
 class SettingsSpecParentResponse(TypedDict):
     """The raw response from :meth:`Core.get_setting_spec`, one key per settings category in the UI.
 
@@ -1479,6 +1443,13 @@ class SettingsSpecParentResponse(TypedDict):
     updates: NotRequired[list[SettingSpecResponse]]
 
 
+class SettingValueUpdateResponse(TypedDict):
+    """Represents the JSON response data for `parameters` of a Core "settingValueUpdate" message."""
+
+    node: str
+    new_value: str
+
+
 # Not total=False, so pyright can narrow the response union to this shape by its keys.
 class StatusResponse(TypedDict):
     state: int
@@ -1488,11 +1459,12 @@ class StatusResponse(TypedDict):
     ports: NotRequired[list[PortResponse]]
 
 
-class WebauthnCredentialIDsResponse(TypedDict):
-    """The raw response from :meth:`Core.get_webauthn_credential_ids`."""
+class StructuredDiagnosticsResponse(TypedDict):
+    """Represents the response of :meth:`Core.get_structured_diagnostics`."""
 
-    ids: list[Any]
-    challenge: Union[str, None]
+    core: DiagnosticsResponse
+    # Depends on the module, eg. a Minecraft Instance sends `server_type` as an int.
+    application: dict[str, Any]
 
 
 class TargetDatastoreResponse(TypedDict):
@@ -1525,6 +1497,18 @@ class TimedTriggerResponse(TypedDict):
     tasks: dict[str, TriggerTasksResponse]
     # Confirmed live on AMP 2.8.0.8; an ISO timestamp once the trigger has fired, null before.
     last_executed: NotRequired[Union[str, None]]
+
+
+# Replaced by TriggersResponse, which matches the AMP-2.8.0.8 captures.
+# class AvailableTriggersResponse(TypedDict):
+#     id: str
+#     type: str
+#     description: str
+#     emits: list[str]
+#     tasks: list[Any]
+#     trigger_type: str
+#     enabled_state: int
+#     last_run: None
 
 
 class TriggersResponse(TypedDict):
@@ -1631,6 +1615,15 @@ class UpdatesResponse(TypedDict):
     ports: list[PortResponse]
 
 
+class UptimeResponse(TypedDict):
+    """Represents the JSON response data for `uptime` in :class:`MessageParametersResponse`."""
+
+    days: int
+    hours: int
+    minutes: int
+    seconds: int
+
+
 class UserApplicationDataResponse(TypedDict):
     """The raw response from :meth:`Core.get_user_info`.
 
@@ -1671,3 +1664,10 @@ class UserInfoResponse(TypedDict):
     gravatar_hash: str
     avatar_base64: None
     oidc_sub: NotRequired[Union[str, None]]
+
+
+class WebauthnCredentialIDsResponse(TypedDict):
+    """The raw response from :meth:`Core.get_webauthn_credential_ids`."""
+
+    ids: list[Any]
+    challenge: Union[str, None]
