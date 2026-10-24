@@ -847,6 +847,8 @@ class Core(Base):
         self,
         username: str,
         *,
+        is_oidc_user: Union[bool, None] = None,
+        oidc_sub: Union[str, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -861,6 +863,14 @@ class Core(Base):
         ----------
         username : :class:`str`
             The AMP User name.
+        is_oidc_user : Union[:class:`bool`, None], optional
+            If the user signs in through OIDC, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
+        oidc_sub : Union[:class:`str`, None], optional
+            The OIDC subject (`sub`) claim that identifies the user, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -875,7 +885,13 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"Username": username}
+        # parameters: dict[str, str] = {"Username": username}
+        # `IsOIDCUser` is a Boolean, so the values are no longer all strings.
+        parameters: dict[str, Any] = {"Username": username}
+        if is_oidc_user is not None:
+            parameters["IsOIDCUser"] = is_oidc_user
+        if oidc_sub is not None:
+            parameters["OIDCSub"] = oidc_sub
         result: ResponseAliasFull = await self._post(
             url="Core/CreateUser",
             parameters=parameters,
@@ -2710,6 +2726,7 @@ class Core(Base):
         self,
         setting_node: str,
         *,
+        with_refresh: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> dict[str, str] | dict[str, Any]:
@@ -2727,6 +2744,10 @@ class Core(Base):
         ----------
         setting_node : :class:`str`
             The setting node name.
+        with_refresh : Union[:class:`bool`, None], optional
+            Refresh the setting's value list before reading it, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -2739,7 +2760,11 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"SettingNode": setting_node}
+        # parameters: dict[str, str] = {"SettingNode": setting_node}
+        # `WithRefresh` is a Boolean, so the values are no longer all strings.
+        parameters: dict[str, Any] = {"SettingNode": setting_node}
+        if with_refresh is not None:
+            parameters["WithRefresh"] = with_refresh
         result: ResponseAliasFull = await self._post(
             url="Core/GetSettingValues",
             parameters=parameters,
@@ -3581,6 +3606,7 @@ class Core(Base):
         code: str,
         redirect_uri: str,
         instance_id: str,
+        state: str,
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -3593,6 +3619,9 @@ class Core(Base):
 
         __EndPoint__: /API/Core/OIDCLogin
 
+        .. versionchanged:: 5.0.0
+            Takes the required `state` parameter after `instance_id`. 4.x never sent it, and AMP requires it.
+
         Parameters
         ----------
         code : :class:`str`
@@ -3601,6 +3630,8 @@ class Core(Base):
             UNK.
         instance_id : :class:`str`
             The Instance ID, see :attr:`~Instance.instance_id`
+        state : :class:`str`
+            The OIDC `state` value AMP requires.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -3613,7 +3644,13 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
+        # parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
+        parameters: dict[str, str] = {
+            "code": code,
+            "state": state,
+            "redirect_uri": redirect_uri,
+            "serverId": instance_id,
+        }
         result: ResponseAliasFull = await self._post(
             url="Core/OIDCLogin",
             parameters=parameters,

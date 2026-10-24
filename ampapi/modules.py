@@ -2051,6 +2051,8 @@ class InstanceInfo:
 
     .. versionchanged:: 5.0.0
         Only `instance_id` is required. A field left as None is not sent, so AMP leaves that value unchanged.
+        Gains `container_swap`, `container_cpu_set`, `custom_mount_bindings`, `extra_container_packages`,
+        `is_multi_ip_aware`, `use_host_mode_network`, `display_group` and `save_only`.
 
     Attributes
     ----------
@@ -2078,6 +2080,22 @@ class InstanceInfo:
         If the Instance should start on boot; default is None, which leaves the value unchanged.
     welcome_message : Union[:class:`str`, None], optional
         The welcome message of the Instance; default is None, which leaves the value unchanged.
+    container_swap : Union[:class:`int`, None], optional
+        The swap memory allocated to the container in MB; default is None, which leaves the value unchanged.
+    container_cpu_set : Union[:class:`str`, None], optional
+        The CPU cores the container is pinned to; default is None, which leaves the value unchanged.
+    custom_mount_bindings : Union[dict[:class:`str`, :class:`str`], None], optional
+        The custom mount bindings of the container; default is None, which leaves the value unchanged.
+    extra_container_packages : Union[list[:class:`str`], None], optional
+        The extra packages installed in the container; default is None, which leaves the value unchanged.
+    is_multi_ip_aware : Union[:class:`bool`, None], optional
+        If the Instance is aware of multiple IP addresses; default is None, which leaves the value unchanged.
+    use_host_mode_network : Union[:class:`bool`, None], optional
+        If the container uses the host's network mode; default is None, which leaves the value unchanged.
+    display_group : Union[:class:`str`, None], optional
+        The group the Instance is displayed under; default is None, which leaves the value unchanged.
+    save_only : Union[:class:`bool`, None], optional
+        Save the changes without applying them to the Instance; default is None, which leaves AMP's default.
 
     """
 
@@ -2103,6 +2121,14 @@ class InstanceInfo:
     memory_policy: Union[ContainerMemoryPolicyState, None] = field(default=None)
     start_on_boot: Union[bool, None] = field(default=None)
     welcome_message: Union[str, None] = field(default=None)
+    container_swap: Union[int, None] = field(default=None)
+    container_cpu_set: Union[str, None] = field(default=None)
+    custom_mount_bindings: Union[dict[str, str], None] = field(default=None)
+    extra_container_packages: Union[list[str], None] = field(default=None)
+    is_multi_ip_aware: Union[bool, None] = field(default=None)
+    use_host_mode_network: Union[bool, None] = field(default=None)
+    display_group: Union[str, None] = field(default=None)
+    save_only: Union[bool, None] = field(default=None)
 
     def to_dict(self) -> dict[str, Any]:
         """As the function name implies; converts the class to a dict for use as an API parameter.
@@ -2130,6 +2156,14 @@ class InstanceInfo:
             "MemoryPolicy": self.memory_policy.value if self.memory_policy is not None else None,
             "StartOnBoot": self.start_on_boot,
             "WelcomeMessage": self.welcome_message,
+            "ContainerSwap": self.container_swap,
+            "ContainerCPUSet": self.container_cpu_set,
+            "CustomMountBindings": self.custom_mount_bindings,
+            "ExtraContainerPackages": self.extra_container_packages,
+            "IsMultiIPAware": self.is_multi_ip_aware,
+            "UseHostModeNetwork": self.use_host_mode_network,
+            "DisplayGroup": self.display_group,
+            "SaveOnly": self.save_only,
         }
         return {key: value for key, value in data.items() if value is not None}
 

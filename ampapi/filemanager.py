@@ -224,6 +224,7 @@ class FileManagerPlugin(Base):
         self,
         file_path: str,
         *,
+        overwrite_existing: Union[bool, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -238,6 +239,10 @@ class FileManagerPlugin(Base):
         ----------
         file_path : :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
+        overwrite_existing : Union[:class:`bool`, None], optional
+            Overwrite an archive that already exists, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -252,7 +257,11 @@ class FileManagerPlugin(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"PathToArchive": self.sanitize_path(file_path)}
+        # parameters: dict[str, str] = {"PathToArchive": self.sanitize_path(file_path)}
+        # `OverwriteExisting` is a Boolean, so the values are no longer all strings.
+        parameters: dict[str, Any] = {"PathToArchive": self.sanitize_path(file_path)}
+        if overwrite_existing is not None:
+            parameters["OverwriteExisting"] = overwrite_existing
         result: ResponseAliasFull = await self._post(
             url="FileManagerPlugin/CreateArchive",
             parameters=parameters,

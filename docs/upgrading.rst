@@ -118,6 +118,26 @@ Changed methods
 - :class:`~ampapi.modules.InstanceInfo` needs only `instance_id`. Every other field defaults to None and is left out of
   the call, so AMP leaves that value unchanged. In 4.x nine fields were required, and `memory_policy` and
   `start_on_boot` defaulted to real values that overwrote the Instance's own.
+- :class:`~ampapi.modules.InstanceInfo` gains `container_swap`, `container_cpu_set`, `custom_mount_bindings`,
+  `extra_container_packages`, `is_multi_ip_aware`, `use_host_mode_network`, `display_group` and `save_only`, which AMP's
+  `UpdateInstanceInfo` takes. 4.x could not send them.
+- :meth:`~ampapi.Core.oidc_login` takes the `state` parameter after `instance_id`. AMP requires it, and 4.x never sent
+  it, so the call always failed.
+- These methods gain keyword-only parameters from AMP's API spec. Each defaults to None and is left out of the call
+  when None, so AMP keeps its own default and no existing call changes:
+
+  - :meth:`~ampapi.adsmodule.ADSModule.apply_template`: `new_friendly_name`, `secret` and
+    `restart_if_previously_running`.
+  - :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance`: `restart_if_running`.
+  - :meth:`~ampapi.adsmodule.ADSModule.set_instance_suspended`: `suspend_reason`.
+  - :meth:`~ampapi.adsmodule.ADSModule.set_instance_network_info`: `advertised_address` and
+    `advertised_address_includes_port`.
+  - :meth:`~ampapi.Core.create_user`: `is_oidc_user` and `oidc_sub`.
+  - :meth:`~ampapi.Core.get_setting_values`: `with_refresh`.
+  - :meth:`~ampapi.analytics.AnalyticsPlugin.get_analytics_summary`: `player_count`.
+  - :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup`: `was_created_automatically`, `dirty_only` and
+    `backup_while_running`.
+  - :meth:`~ampapi.filemanager.FileManagerPlugin.create_archive`: `overwrite_existing`.
 - :meth:`~ampapi.adsmodule.ADSModule.deploy_template` sends AMP's parameter names (eg. `TemplateID` and `NewUsername`)
   from :meth:`Template.to_dict <ampapi.modules.Template.to_dict>`, and it returns a
   :class:`~ampapi.modules.RunningTask`, which is what AMP's spec names. 4.x sent the attribute names.

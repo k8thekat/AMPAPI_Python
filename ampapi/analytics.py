@@ -58,6 +58,7 @@ class AnalyticsPlugin(Base):
         start_date: Optional[datetime] = None,
         filters: Union[AnalyticsFilter, None] = None,
         *,
+        player_count: Union[int, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -77,6 +78,10 @@ class AnalyticsPlugin(Base):
             The date to start from, by default None which uses :meth:`~datetime.datetime.now`.
         filters : Union[:class:`AnalyticsFilter`, None], optional
             Filters results based upon the supplied dataclass values. See :class:`AnalyticsFilter`, by default None.
+        player_count : Union[:class:`int`, None], optional
+            The player count AMP uses for the summary, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -99,6 +104,8 @@ class AnalyticsPlugin(Base):
             "StartDate": start_date.timestamp(),
             "Filters": asdict(filters) if filters is not None else {},
         }
+        if player_count is not None:
+            parameters["PlayerCount"] = player_count
         result: ResponseAliasFull = await self._post(
             url="AnalyticsPlugin/GetAnalyticsSummary",
             parameters=parameters,

@@ -243,6 +243,9 @@ class ADSModule(Base):
         instance_id: str,
         template_id: int,
         *,
+        new_friendly_name: Union[str, None] = None,
+        secret: Union[str, None] = None,
+        restart_if_previously_running: Union[bool, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -268,6 +271,19 @@ class ADSModule(Base):
             The Instance ID to apply the template to.
         template_id : :class:`int`
             The Template ID to apply.
+        new_friendly_name : Union[:class:`str`, None], optional
+            The new friendly name for the Instance, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
+        secret : Union[:class:`str`, None], optional
+            The secret AMP uses when applying the template, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
+        restart_if_previously_running : Union[:class:`bool`, None], optional
+            Restart the Instance after applying the template if it was running before, by default None, which leaves
+            AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -283,6 +299,12 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"InstanceID": instance_id, "TemplateID": template_id}
+        if new_friendly_name is not None:
+            parameters["NewFriendlyName"] = new_friendly_name
+        if secret is not None:
+            parameters["Secret"] = secret
+        if restart_if_previously_running is not None:
+            parameters["RestartIfPreviouslyRunning"] = restart_if_previously_running
         result: ResponseAliasFull = await self._post(
             url="ADSModule/ApplyTemplate",
             parameters=parameters,
@@ -3048,6 +3070,8 @@ class ADSModule(Base):
         application_ip: str | None = None,
         must_stop: bool | None = None,
         *,
+        advertised_address: Union[str, None] = None,
+        advertised_address_includes_port: Union[bool, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -3068,6 +3092,14 @@ class ADSModule(Base):
             The IP the application will be bound to, by default None.
         must_stop : :class:`bool | None`, optional
             UNK, by default None.
+        advertised_address : Union[:class:`str`, None], optional
+            The address AMP advertises for the Instance, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
+        advertised_address_includes_port : Union[:class:`bool`, None], optional
+            If `advertised_address` already includes the port, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3087,6 +3119,10 @@ class ADSModule(Base):
             parameters["ApplicationIP"] = application_ip
         if must_stop is not None:
             parameters["mustStop"] = must_stop
+        if advertised_address is not None:
+            parameters["AdvertisedAddress"] = advertised_address
+        if advertised_address_includes_port is not None:
+            parameters["AdvertisedAddressIncludesPort"] = advertised_address_includes_port
         result: ResponseAliasFull = await self._post(
             url="ADSModule/SetInstanceNetworkInfo",
             parameters=parameters,
@@ -3109,6 +3145,7 @@ class ADSModule(Base):
         instance_name: str,
         suspended: bool = False,
         *,
+        suspend_reason: Union[str, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -3129,6 +3166,10 @@ class ADSModule(Base):
             The Instance name.
         suspended : :class:`bool`, optional
             Set the Instance to be suspended, by default False.
+        suspend_reason : Union[:class:`str`, None], optional
+            The reason the Instance is suspended, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3144,6 +3185,8 @@ class ADSModule(Base):
         """
         await self._reauth()
         parameters: dict[str, Any] = {"InstanceName": instance_name, "Suspended": suspended}
+        if suspend_reason is not None:
+            parameters["SuspendReason"] = suspend_reason
         result: ResponseAliasFull = await self._post(
             url="ADSModule/SetInstanceSuspended",
             parameters=parameters,
@@ -3699,6 +3742,7 @@ class ADSModule(Base):
         self,
         instance_name: str,
         *,
+        restart_if_running: Union[bool, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -3717,6 +3761,10 @@ class ADSModule(Base):
         ----------
         instance_name : :class:`str`
             The Instance name.
+        restart_if_running : Union[:class:`bool`, None], optional
+            Restart the Instance after the upgrade if it is running, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -3731,7 +3779,11 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"InstanceName": instance_name}
+        # parameters: dict[str, str] = {"InstanceName": instance_name}
+        # `RestartIfRunning` is a Boolean, so the values are no longer all strings.
+        parameters: dict[str, Any] = {"InstanceName": instance_name}
+        if restart_if_running is not None:
+            parameters["RestartIfRunning"] = restart_if_running
         result: ResponseAliasFull = await self._post(
             url="ADSModule/UpgradeInstance",
             parameters=parameters,

@@ -442,6 +442,9 @@ class LocalFileBackupPlugin(Base):
         local: bool | None = None,
         s3: bool | None = None,
         *,
+        was_created_automatically: Union[bool, None] = None,
+        dirty_only: Union[bool, None] = None,
+        backup_while_running: Union[bool, None] = None,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -467,6 +470,18 @@ class LocalFileBackupPlugin(Base):
             If the backup should be local or not.
         s3 : :class:`bool`, optional
             If the backup should be on S3 or not.
+        was_created_automatically : Union[:class:`bool`, None], optional
+            Mark the backup as one AMP created automatically, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
+        dirty_only : Union[:class:`bool`, None], optional
+            Back up only the files that changed, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
+        backup_while_running : Union[:class:`bool`, None], optional
+            Take the backup while the Instance is running, by default None, which leaves AMP's default.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -486,6 +501,12 @@ class LocalFileBackupPlugin(Base):
             parameters["Local"] = local
         if s3 is not None:
             parameters["S3"] = s3
+        if was_created_automatically is not None:
+            parameters["WasCreatedAutomatically"] = was_created_automatically
+        if dirty_only is not None:
+            parameters["DirtyOnly"] = dirty_only
+        if backup_while_running is not None:
+            parameters["BackupWhileRunning"] = backup_while_running
 
         result: ResponseAliasFull = await self._post(
             url="LocalFileBackupPlugin/TakeBackup",
