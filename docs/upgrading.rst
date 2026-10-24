@@ -107,6 +107,8 @@ Changed methods
   :class:`~ampapi.PostCreateState`, whose values are AMP's.
 - :class:`~ampapi.modules.CreateInstance` fills `new_instance_id` with the zero GUID (AMP picks the ID),
   `admin_username` with ``"admin"`` and `admin_password` with a generated password, since AMP rejects empty values.
+- :class:`~ampapi.modules.CreateInstance` defaults `ip_binding` to ``"0.0.0.0"`` (every IPv4 address). 4.x used
+  ``"192.168.0.1"``, which AMP rejects on a machine without that address.
 - :meth:`~ampapi.adsmodule.ADSModule.update_instance_info` sends AMP's parameter names (eg. `InstanceId` and
   `FriendlyName`) from :meth:`InstanceInfo.to_dict <ampapi.modules.InstanceInfo.to_dict>`. 4.x sent the attribute names,
   so AMP always answered that the call requires `InstanceId`.

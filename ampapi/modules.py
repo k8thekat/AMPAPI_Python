@@ -1428,7 +1428,11 @@ class CreateInstance:
     instance_name : :class:`str`
         The name for the Instance, similar to :attr:`friendly_name`.
     ip_binding : :class:`str`
-        The IP to assign to the Instance. See :attr:`Controller.available_ips`.
+        The IP to assign to the Instance, default is ``"0.0.0.0"``, which binds every IPv4 address.
+        See :attr:`Controller.available_ips`.
+
+        .. versionchanged:: 5.0.0
+            The default is ``"0.0.0.0"``, it was ``"192.168.0.1"``.
     port_number : :class:`int`
         The Port to assign to the Instance.
     admin_username : :class:`str`
@@ -1458,7 +1462,7 @@ class CreateInstance:
     module: str  # Tied to Auto Configure
     new_instance_id: str = field(default="00000000-0000-0000-0000-000000000000")
     instance_name: str = field(default="")
-    ip_binding: str = field(default="192.168.0.1")
+    ip_binding: str = field(default="0.0.0.0")  # noqa: S104
     port_number: int = field(default=8001)
     admin_username: str = field(default="admin")
     admin_password: str = field(default_factory=lambda: secrets.token_urlsafe(18))
