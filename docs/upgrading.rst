@@ -136,7 +136,8 @@ Changed methods
   - :meth:`~ampapi.Core.get_setting_values`: `with_refresh`.
   - :meth:`~ampapi.analytics.AnalyticsPlugin.get_analytics_summary`: `player_count`.
   - :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup`: `was_created_automatically`, `dirty_only` and
-    `backup_while_running`.
+    `backup_while_running`. With `dirty_only` and no file changed, it returns an :class:`~ampapi.modules.ActionResult`
+    instead of a :class:`~ampapi.modules.RunningTask`, because AMP takes no backup.
   - :meth:`~ampapi.filemanager.FileManagerPlugin.create_archive`: `overwrite_existing`.
 
 - :meth:`~ampapi.Core.edit_interval_trigger` takes lists of ints for `months`, `days`, `hours`, `minutes` and

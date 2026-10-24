@@ -448,7 +448,7 @@ class LocalFileBackupPlugin(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> RunningTask | RunningTaskResponse:
+    ) -> RunningTask | RunningTaskResponse | ActionResult | ActionResultResponse:
         """|coro|
 
         Takes a backup of the AMP Server.
@@ -475,7 +475,8 @@ class LocalFileBackupPlugin(Base):
 
             .. versionadded:: 5.0.0
         dirty_only : Union[:class:`bool`, None], optional
-            Back up only the files that changed, by default None, which leaves AMP's default.
+            Back up only if files changed since the last backup, by default None, which leaves AMP's default. When
+            nothing changed, AMP takes no backup and answers an :class:`ActionResult`.
 
             .. versionadded:: 5.0.0
         backup_while_running : Union[:class:`bool`, None], optional
@@ -491,8 +492,9 @@ class LocalFileBackupPlugin(Base):
 
         Returns
         -------
-        :class:`RunningTask` | :class:`RunningTaskResponse`
+        :class:`RunningTask` | :class:`RunningTaskResponse` | :class:`ActionResult` | :class:`ActionResultResponse`
             On success returns a :class:`RunningTask` dataclass, unless format_data is False which returns the raw dict.
+            With `dirty_only` True and no file changed, AMP takes no backup and answers an :class:`ActionResult`.
 
         """
         await self._reauth()
@@ -518,11 +520,22 @@ class LocalFileBackupPlugin(Base):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if not is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
-            raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
-        if format_data is True:
-            return RunningTask.from_response(result)
-        return result
+        # if not is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+        #     raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
+        # if format_data is True:
+        #     return RunningTask.from_response(result)
+        # return result
+        # A running task carries the ActionResult keys too, so it is checked first.
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if format_data is True:
+                return RunningTask.from_response(result)
+            return result
+        # With `DirtyOnly` and nothing changed, AMP takes no backup and answers an ActionResult (vm1, 2026-10-24).
+        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+            if format_data is True:
+                return ActionResult.from_response(result)
+            return result
+        raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
 
     async def upload_to_s3(
         self,

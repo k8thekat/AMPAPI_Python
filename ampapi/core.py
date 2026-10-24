@@ -1946,14 +1946,13 @@ class Core(Base):
 
 
         .. versionchanged:: 5.0.0
-            `before` is a :class:`~datetime.datetime`, sent as an ISO 8601 string. 4.x took a POSIX timestamp, which AMP
-            ignores, so it always answered the newest entries. The default is now the time of the call; 4.x used the
-            time the module was imported.
+            `before` is a :class:`~datetime.datetime`, sent as an ISO 8601 string, and its default is the time of the
+            call.
 
         Parameters
         ----------
-        before : Union[:class:`~datetime.datetime`, None]
-            Return the entries before this time, by default None which uses the time of the call.
+        before : Union[:class:`~datetime.datetime`, None], optional
+            Return the entries before this time, by default None, which uses the time of the call.
         count : :class:`int`
             Number of entries to return, default is 10.
         format_data : Union[:class:`bool`, None], optional
@@ -3649,7 +3648,7 @@ class Core(Base):
         __EndPoint__: /API/Core/OIDCLogin
 
         .. versionchanged:: 5.0.0
-            Takes the required `state` parameter after `instance_id`. 4.x never sent it, and AMP requires it.
+            Takes the required `state` parameter after `instance_id`.
 
         Parameters
         ----------
@@ -3705,7 +3704,7 @@ class Core(Base):
         Endpoint: `Core/RefreshSettingValueList`
 
         .. versionchanged:: 5.0.0
-            Sends AMP's `Node` parameter. 4.x sent `Name`, so AMP always answered that the call requires `Node`.
+            Sends AMP's `Node` parameter instead of `Name`.
 
         Parameters
         ----------

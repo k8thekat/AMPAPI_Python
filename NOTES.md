@@ -513,16 +513,29 @@ Surveyed 2026-10-19 on TF2, Valheim, ET: Legacy, Custom Application and CS:Sourc
 
 ## Wrapper parameter gaps
 
-`find_parameter_mismatches(spec_path=docs/api_spec_sheets/2.8.0.8)`, 2026-10-19. Leave out `spec_path` and it merges
-every version with "first file seen wins", so 2.6.2.0 shadows 2.8.0.8. It also lists `request_params` everywhere.
-Renames like `file_path` and `instance_id` are on purpose (`ForceIncludeSelf` is always True). The real gaps:
-- core: `create_user` (IsOIDCUser, OIDCSub), `disable_two_factor` (Password, TwoFactorCode), `get_setting_values`
-  (WithRefresh), `oidc_login` (state, serverId).
-- ads_module: `apply_template` (NewFriendlyName, Secret, RestartIfPreviouslyRunning), `upgrade_instance`
-  (RestartIfRunning), `set_instance_suspended` (SuspendReason), `set_instance_network_info` (AdvertisedAddress,
-  AdvertisedAddressIncludesPort). `create_instance_from_spec` types `target_datastore` as str, the spec says Int32.
-- `get_analytics_summary` (PlayerCount), `take_backup` (BackupWhileRunning, DirtyOnly, WasCreatedAutomatically, and
-  Title vs `name`), `write_file_chunk` (FinalChunk), `create_archive` (OverwriteExisting).
+`find_parameter_mismatches(spec_path=docs/api_spec_sheets/2.8.0.8)` compares argument names with the spec's, so most
+of what it lists is a rename (`file_path`, `instance_id`) or a parameter carried by a dataclass (`create_instance`,
+`deploy_template`). Leave out `spec_path` and it merges every version with "first file seen wins", so 2.6.2.0 shadows
+2.8.0.8. #13 (2026-10-24) compared the keys each method actually posts with the 2.8.0.8 spec instead, and added the
+26 parameters that were missing in 12 methods. A new optional parameter is keyword-only, defaults to None, and isn't
+sent when None.
+
+What the live checks on vm1 showed (2026-10-24):
+- **AMP matches parameter names regardless of case.** `groupId`, `GroupId` and `groupid` all worked on `GetGroup`, so
+  the nine methods whose keys differ from the spec only in case are left as they are. A wrong name fails with
+  "<Method> method requires <Name>(<Type>) argument".
+- **Fixed, because they always failed:** `refresh_setting_value_list` sent `Name` for `Node`, and
+  `edit_interval_trigger` sent single ints where AMP takes `Int32[]`.
+- **Fixed, because AMP ignored the value:** a `DateTime` parameter sent as a POSIX timestamp is ignored, and an ISO 8601
+  string is honoured. `get_audit_log_entries(before=...)` answered the newest entries whatever `before` was, and
+  `get_analytics_summary` sent `StartDate` the same way. Both send `isoformat()` now.
+- **`take_backup(dirty_only=True)`** answers an `ActionResult` and takes no backup when no file changed, instead of a
+  `RunningTask`.
+- **`update_instance_info` can't clear a value back to null:** None isn't sent, so restoring an empty `group` sends
+  `""`, which AMP stores as `""`.
+- Left alone: `ADSModule.servers` is AMP's proxy route and already warns that calling it fails.
+- Not checked against a spec: the sixteen `mc_*` wrappers in `minecraft.py`, whose endpoints the 2.8.0.8 Minecraft
+  spec doesn't list.
 
 ## Non-admin users
 
@@ -559,7 +572,7 @@ Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and f
   in the body or nested under a parameter's description, and `:attr:` / `:meth:` references inside them resolve.
 - `docs/_static/styles/furo.css` already styles `div.versionadded`, `div.versionchanged` and `div.versionremoved`.
   They render as "Added in version 5.0.0:", "Changed in version 5.0.0:" and "Removed in version 5.0.0:".
-- Already in use: `Bridge` (`versionadded`) and `create_local_instance` (`deprecated`).
+- Already in use: `Bridge` (`versionadded`). `create_local_instance` was the one `deprecated` until #4 removed it.
 - `docs/extensions/prettyversion.py` (from dpy/Umbra, commented out in `conf.py`) swaps them for boxes with
   Font Awesome icons. The docs don't load Font Awesome, so the icons would be blank without it.
 - The version is compared against the last release (4.6.0). Things added and changed inside the 5.0.0 work
