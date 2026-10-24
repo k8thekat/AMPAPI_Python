@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import base64
 import datetime
-import functools
 import logging
 import secrets
 import sys
@@ -141,6 +140,7 @@ __all__ = (
     "Provision",
     "ProvisionSettingInfo",
     "RemoteTargetInfo",
+    "ResponseData",
     "Role",
     "RoleMember",
     "RunningTask",
@@ -186,9 +186,6 @@ SettingSpecTableAliases = Union[
     ADSModeState,
     ReleaseStreamState,
 ]
-
-# Class/key pairs already reported. Each unknown key AMP sends is logged once, not on every response.
-_reported_unknown_keys: set[tuple[str, str]] = set()
 
 
 def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
@@ -312,102 +309,132 @@ def _is_json_array(value: object) -> TypeGuard[list[Any]]:
     return isinstance(value, list)
 
 
-@functools.cache
-def _field_types(cls: type[Any]) -> dict[str, Any]:
-    """The resolved type of every field on `cls`, read once per class.
+# TODO: Remove once every caller uses `from_response` (#24 phase C).
+def build[ResponseT: ResponseData](cls: type[ResponseT], data: Mapping[str, Any]) -> ResponseT:
+    """Forward to :meth:`ResponseData.from_response`, kept until the callers are converted."""
+    return cls.from_response(data)
 
-    `modules.py` imports its TypedDicts only for type checking. The `_types` names are added for the hints
-    that mention them.
+
+class ResponseData:
+    """The base of every dataclass that holds an AMP response.
+
+    .. note::
+        A subclass is a dataclass that declares one field per key AMP sends. Nested dataclasses are built from the
+        type hints of those fields.
+
+    .. versionadded:: 5.0.0
+
     """
-    namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
-    return typing.get_type_hints(cls, globalns=namespace)
 
+    # Empty, so a `slots=True` subclass doesn't get a `__dict__` back from this base.
+    __slots__ = ()
 
-def _converter(hint: Any) -> Callable[[Any], Any] | None:
-    """The function that turns a response value into what the type hint names, worked out once from the hint.
+    # Class/key pairs already reported. Each unknown key AMP sends is logged once, not on every response.
+    _reported_unknown_keys: ClassVar[set[tuple[str, str]]] = set()
+    # The converter of every field of each class, worked out once per class.
+    _build_plans: ClassVar[dict[type, dict[str, Any]]] = {}
 
-    Returns None when the hint holds no dataclass or list. The value is then used as sent.
-    """
-    origin = typing.get_origin(hint)
-    # A union tries each member in order and takes the first that converts.
-    # `list[Consumes] | list[ConsumesResponse]` builds Consumes.
-    if origin is Union or origin is types.UnionType:
-        options: list[Callable[[Any], Any]] = []
-        for option in typing.get_args(hint):
-            if option is type(None):
+    @staticmethod
+    def _converter(hint: Any) -> Callable[[Any], Any] | None:
+        """The function that turns a response value into what the type hint names, worked out once from the hint.
+
+        Returns None when the hint holds no dataclass or list. The value is then used as sent.
+        """
+        origin = typing.get_origin(hint)
+        # A union tries each member in order and takes the first that converts.
+        # `list[Consumes] | list[ConsumesResponse]` builds Consumes.
+        if origin is Union or origin is types.UnionType:
+            options: list[Callable[[Any], Any]] = []
+            for option in typing.get_args(hint):
+                if option is type(None):
+                    continue
+                option_converter = ResponseData._converter(option)
+                if option_converter is not None:
+                    options.append(option_converter)
+            if not options:
+                return None
+
+            def convert_union(value: Any) -> Any:
+                for option_converter in options:
+                    converted = option_converter(value)
+                    if converted is not value:
+                        return converted
+                return value
+
+            return convert_union
+        if isinstance(hint, type) and issubclass(hint, ResponseData):
+            return lambda value: hint.from_response(value) if _is_json_object(value) else value
+        if origin is list:
+            element_converter = ResponseData._converter((typing.get_args(hint) or (Any,))[0])
+            if element_converter is None:
+                return lambda value: list(value) if _is_json_array(value) else value
+            return lambda value: [element_converter(item) for item in value] if _is_json_array(value) else value
+        return None
+
+    @classmethod
+    def _build_plan(cls) -> dict[str, Callable[[Any], Any] | None]:
+        """Each field name of this dataclass and the converter for its value, worked out once per class."""
+        plan = cls._build_plans.get(cls)
+        if plan is None:
+            # `modules.py` imports its TypedDicts only for type checking. The `_types` names are added for the hints
+            # that mention them.
+            namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
+            field_types = typing.get_type_hints(cls, globalns=namespace)
+            # Only `from_response` calls this, after it has checked the class is a dataclass.
+            plan = {
+                entry.name: ResponseData._converter(field_types[entry.name])
+                for entry in fields(cls)  # pyright: ignore[reportArgumentType]
+            }
+            cls._build_plans[cls] = plan
+        return plan
+
+    @classmethod
+    def from_response(cls, data: Mapping[str, Any]) -> Self:
+        """Build this dataclass from an AMP response, converting nested dataclasses from the field type hints.
+
+        Keys the dataclass doesn't declare are dropped and logged once, instead of raising a :exc:`TypeError`.
+
+        .. versionadded:: 5.0.0
+
+        Parameters
+        ----------
+        data : Mapping[:class:`str`, Any]
+            The sanitised AMP response for it.
+
+        Returns
+        -------
+        :class:`Self`
+            The built dataclass, with its nested dataclasses built too.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            When the class isn't a dataclass.
+
+        """
+        if not is_dataclass(cls):
+            msg = f"from_response() needs a dataclass, got {cls!r}."
+            raise TypeError(msg)
+        plan = cls._build_plan()
+        values: dict[str, Any] = {}
+        for key, value in data.items():
+            if key not in plan:
+                if (cls.__name__, key) not in cls._reported_unknown_keys:
+                    cls._reported_unknown_keys.add((cls.__name__, key))
+                    LOGGER.warning(
+                        "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
+                        "from_response",
+                        cls.__name__,
+                        key,
+                    )
                 continue
-            option_converter = _converter(option)
-            if option_converter is not None:
-                options.append(option_converter)
-        if not options:
-            return None
-
-        def convert_union(value: Any) -> Any:
-            for option_converter in options:
-                converted = option_converter(value)
-                if converted is not value:
-                    return converted
-            return value
-
-        return convert_union
-    if isinstance(hint, type) and is_dataclass(hint):
-        return lambda value: build(hint, value) if _is_json_object(value) else value
-    if origin is list:
-        element_converter = _converter((typing.get_args(hint) or (Any,))[0])
-        if element_converter is None:
-            return lambda value: list(value) if _is_json_array(value) else value
-        return lambda value: [element_converter(item) for item in value] if _is_json_array(value) else value
-    return None
-
-
-@functools.cache
-def _build_plan(cls: type[Any]) -> dict[str, Callable[[Any], Any] | None]:
-    """Each field name of the dataclass `cls` and the converter for its value, worked out once per class."""
-    field_types = _field_types(cls)
-    return {entry.name: _converter(field_types[entry.name]) for entry in fields(cls)}
-
-
-def build[DataclassT](cls: type[DataclassT], data: Mapping[str, Any]) -> DataclassT:
-    """Build a dataclass from an AMP response, converting nested dataclasses from the field type hints.
-
-    Keys the dataclass doesn't declare are dropped and logged once, instead of raising a :exc:`TypeError`.
-
-    Parameters
-    ----------
-    cls : type[:class:`DataclassT`]
-        The dataclass to build.
-    data : Mapping[:class:`str`, Any]
-        The sanitised AMP response for it.
-
-    Returns
-    -------
-    :class:`DataclassT`
-        The built dataclass, with its nested dataclasses built too.
-
-    """
-    if not is_dataclass(cls):
-        msg = f"build() needs a dataclass, got {cls!r}."
-        raise TypeError(msg)
-    plan = _build_plan(cls)
-    values: dict[str, Any] = {}
-    for key, value in data.items():
-        if key not in plan:
-            if (cls.__name__, key) not in _reported_unknown_keys:
-                _reported_unknown_keys.add((cls.__name__, key))
-                LOGGER.warning(
-                    "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
-                    "build",
-                    cls.__name__,
-                    key,
-                )
-            continue
-        convert = plan[key]
-        values[key] = value if convert is None else convert(value)
-    return cls(**values)
+            convert = plan[key]
+            values[key] = value if convert is None else convert(value)
+        return cls(**values)
 
 
 @dataclass(slots=True)
-class ActionResult:
+class ActionResult(ResponseData):
     """Represents the JSON response data from most API Endpoints.
 
     Attributes
@@ -441,7 +468,7 @@ class ActionResult:
 
 
 @dataclass(slots=True)
-class AnalyticsCountryData:
+class AnalyticsCountryData(ResponseData):
     """Represents the JSON response data from :attr:`~AnalyticsSummary.country_data`.
 
     Attributes
@@ -545,7 +572,7 @@ class AnalyticsFilter:
 
 
 @dataclass(slots=True)
-class AnalyticsGraphData:
+class AnalyticsGraphData(ResponseData):
     """Represents the JSON response data for the entries of :attr:`AnalyticsSummary.graph_data` and for
     :attr:`AnalyticsSummary.busiest_time` and :attr:`AnalyticsSummary.quietest_time`.
 
@@ -568,7 +595,7 @@ class AnalyticsGraphData:
 
 
 @dataclass(slots=True)
-class AnalyticsStats:
+class AnalyticsStats(ResponseData):
     """Represents the JSON response data from :attr:`AnalyticsSummary.stats`.
 
     .. note::
@@ -609,7 +636,7 @@ class AnalyticsStats:
 
 
 @dataclass(slots=True)
-class AnalyticsSummary:
+class AnalyticsSummary(ResponseData):
     """Represents the JSON response data from :meth:`~AnalyticsPlugin.get_analytics_summary`.
 
     Attributes
@@ -658,7 +685,7 @@ class AnalyticsSummary:
 
 
 @dataclass(slots=True)
-class AnalyticsTopPlayers:
+class AnalyticsTopPlayers(ResponseData):
     """Represents the JSON Response data from :attr:`~Analytics_Summary.top_players`.
 
     Attributes
@@ -681,7 +708,7 @@ class AnalyticsTopPlayers:
 
 
 @dataclass(slots=True)
-class AnalyticsUserDetails:
+class AnalyticsUserDetails(ResponseData):
     """Represents the JSON response data from :meth:`AnalyticsPlugin.get_user_details`.
 
     .. note::
@@ -810,7 +837,7 @@ class APISession:
 
 
 @dataclass(slots=True)
-class Application:
+class Application(ResponseData):
     """Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`
     and :meth:`ADSModule.get_supported_app_summaries`.
 
@@ -881,7 +908,7 @@ class Application:
 
 
 @dataclass(slots=True)
-class AuditLogEntry:
+class AuditLogEntry(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_audit_log_entries`
 
     Attributes
@@ -924,7 +951,7 @@ class AuditLogEntry:
 
 
 @dataclass(slots=True)
-class Backup:
+class Backup(ResponseData):
     """Represents the JSON response data from :meth:`LocalFileBackupPlugin.get_backups`.
 
     Attributes
@@ -995,7 +1022,7 @@ class Backup:
 
 
 @dataclass(slots=True)
-class Branding:
+class Branding(ResponseData):
     """Represents the JSON response data from :attr:`Module.branding`.
 
     .. versionadded:: 5.0.0
@@ -1053,7 +1080,7 @@ class Branding:
 
 
 @dataclass(slots=True)
-class BuildInfo:
+class BuildInfo(ResponseData):
     """Tied to the class attribute for :class:`UpdateInfo.build`
 
     .. note::
@@ -1143,7 +1170,7 @@ class BuildInfo:
 
 
 @dataclass(slots=True)
-class BukkitPlugin:
+class BukkitPlugin(ResponseData):
     """Represents the JSON response data from any Bukkit function call. Related to :class:`MinecraftModule`.
 
     Attributes
@@ -1230,7 +1257,7 @@ class BukkitPlugin:
 
 
 @dataclass(slots=True)
-class ConsoleEntries:
+class ConsoleEntries(ResponseData):
     """Represents the JSON response data from :attr:`Updates.console_entries`.
 
     Attributes
@@ -1265,7 +1292,7 @@ class ConsoleEntries:
 
 
 @dataclass(slots=True)
-class Consumes:
+class Consumes(ResponseData):
     """Represents the JSON response data from :attr:`~Methods.consumes`.
 
     .. versionchanged:: 5.0.0
@@ -1342,7 +1369,7 @@ class Consumes:
 
 
 @dataclass(slots=True)
-class CPUInfo:
+class CPUInfo(ResponseData):
     """Represents the JSON response data from :class:`~PlatformInfo.cpu_info` attribute.\n
     Original Author: p0t4t0sandwich
     :class:`CPUInfo` : https://github.com/p0t4t0sandwich/ampapi-py/blob/7a28af9b640efab329cf9ca2bf39c4112a13b287/ampapi/types.py#L151
@@ -1476,12 +1503,115 @@ class CreateInstance:
         return data
 
 
-class DeploymentTemplate:
+# The hand-written class before 5.0.0, when it became a dataclass built with `from_response`.
+# class DeploymentTemplate:
+#     """Used for :meth:`ADSModule.update_deployment_template` function call.
+#
+#     .. note::
+#         Your pre-created data structure to be parsed for the required API parameters.
+#
+#
+#     Attributes
+#     ----------
+#     clone_role_into_user : :class:`bool`
+#         Clone the :attr:`template_role` to the users of this template.
+#     description : Union[:class:`str`, None]
+#         The description of the deployment template.
+#     id : :class:`int`
+#         The ID of the deployment template.
+#     module : Union[:class:`str`, None]
+#         The AMP Instance module type. eg. "Generic", "Minecraft"
+#     name : :class:`str`
+#         The deployment template name.
+#     template_base_app : Union[:class:`str`, None]
+#         The application that is template is used for.
+#     template_instance : Any
+#         UNK
+#     template_role : Union[:class:`str`, None]
+#         The template role name, similar to the AMP User Roles.
+#     match_datastore_tags : :class:`bool`
+#         To force match the datastore tags; if any.
+#     setting_mappings : dict[:class:`str`, :class:`str`]
+#         A dictionary of setting mappings.
+#     start_on_boot : :class:`bool`
+#         If the Instance should start on ADS01/Controller boot or not, default is False.
+#     tags : list[:class:`str`]
+#         The list of tags to assign to the template or that belong to the template.
+#     zip_overlay_path : :class:`bool`
+#         To zip the overlay path.
+#
+#     """
+#
+#     __slots__ = (
+#         "clone_role_into_user",
+#         "description",
+#         "id",
+#         "match_datastore_tags",
+#         "module",
+#         "name",
+#         "setting_mappings",
+#         "start_on_boot",
+#         "tags",
+#         "template_base_app",
+#         "template_instance",
+#         "template_role",
+#         "zip_overlay_path",
+#     )
+#
+#     def __init__(
+#         self,
+#         id: int,  # This is due to id overshadowing Python built-ins.
+#         name: str,
+#         description: Union[str, None],
+#         module: Union[str, None],
+#         template_instance: Any,
+#         template_role: Union[str, None],
+#         template_base_app: Union[str, None],
+#         clone_role_into_user: bool,
+#         zip_overlay_path: str,
+#         match_datastore_tags: bool,
+#         setting_mappings: dict[str, str],
+#         tags: list[str],
+#         start_on_boot: bool = False,
+#     ) -> None:
+#         self.id: int = id
+#         self.name: str = name
+#         self.description: Union[str, None] = description
+#         self.module: Union[str, None] = module
+#         self.template_instance = template_instance
+#         self.template_role: Union[str, None] = template_role
+#         self.template_base_app: Union[str, None] = template_base_app
+#         self.clone_role_into_user: bool = clone_role_into_user
+#         self.zip_overlay_path: str = zip_overlay_path
+#         self.match_datastore_tags: bool = match_datastore_tags
+#         self.setting_mappings: dict[str, str] = setting_mappings
+#         self.tags: list[str] = tags
+#         self.start_on_boot: bool = start_on_boot
+#
+#     def to_dict(self) -> dict[str, Any]:
+#         """As the function name implies; converts the class to a dict.
+#
+#         Returns
+#         -------
+#         dict[:class:`str`, Any]
+#             Returns the class attributes in a key, value paired dict.
+#
+#         """
+#         temp: dict[str, Any] = {}
+#         for key in self.__slots__:
+#             temp[key] = getattr(self, key)
+#         return temp
+
+
+@dataclass(slots=True)
+class DeploymentTemplate(ResponseData):
     """Used for :meth:`ADSModule.update_deployment_template` function call.
 
     .. note::
         Your pre-created data structure to be parsed for the required API parameters.
 
+    .. versionchanged:: 5.0.0
+        A dataclass built with :meth:`DeploymentTemplate.from_response`. An unknown key is logged instead of raising.
 
     Attributes
     ----------
@@ -1509,56 +1639,24 @@ class DeploymentTemplate:
         If the Instance should start on ADS01/Controller boot or not, default is False.
     tags : list[:class:`str`]
         The list of tags to assign to the template or that belong to the template.
-    zip_overlay_path : :class:`bool`
-        To zip the overlay path.
+    zip_overlay_path : :class:`str`
+        The path of the overlay to zip.
 
     """
 
-    __slots__ = (
-        "clone_role_into_user",
-        "description",
-        "id",
-        "match_datastore_tags",
-        "module",
-        "name",
-        "setting_mappings",
-        "start_on_boot",
-        "tags",
-        "template_base_app",
-        "template_instance",
-        "template_role",
-        "zip_overlay_path",
-    )
-
-    def __init__(  # noqa: D107
-        self,
-        id: int,  # noqa: A002 # This is due to id overshadowing Python built-ins.
-        name: str,
-        description: Union[str, None],
-        module: Union[str, None],
-        template_instance: Any,
-        template_role: Union[str, None],
-        template_base_app: Union[str, None],
-        clone_role_into_user: bool,
-        zip_overlay_path: str,
-        match_datastore_tags: bool,
-        setting_mappings: dict[str, str],
-        tags: list[str],
-        start_on_boot: bool = False,
-    ) -> None:
-        self.id: int = id
-        self.name: str = name
-        self.description: Union[str, None] = description
-        self.module: Union[str, None] = module
-        self.template_instance = template_instance
-        self.template_role: Union[str, None] = template_role
-        self.template_base_app: Union[str, None] = template_base_app
-        self.clone_role_into_user: bool = clone_role_into_user
-        self.zip_overlay_path: str = zip_overlay_path
-        self.match_datastore_tags: bool = match_datastore_tags
-        self.setting_mappings: dict[str, str] = setting_mappings
-        self.tags: list[str] = tags
-        self.start_on_boot: bool = start_on_boot
+    id: int
+    name: str
+    description: Union[str, None]
+    module: Union[str, None]
+    template_instance: Any
+    template_role: Union[str, None]
+    template_base_app: Union[str, None]
+    clone_role_into_user: bool
+    zip_overlay_path: str
+    match_datastore_tags: bool
+    setting_mappings: dict[str, str]
+    tags: list[str]
+    start_on_boot: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """As the function name implies; converts the class to a dict.
@@ -1577,7 +1675,7 @@ class DeploymentTemplate:
 
 # This may be only controller diag info.
 @dataclass(slots=True)
-class Diagnostics:
+class Diagnostics(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_diagnostics_info`.
 
     Attributes
@@ -1679,7 +1777,7 @@ class Diagnostics:
 
 
 @dataclass(slots=True)
-class Directory:
+class Directory(ResponseData):
     """Represents the JSON response data from :meth:`FileManagerPlugin.get_directory_listing`
 
     Attributes
@@ -1729,7 +1827,7 @@ class Directory:
 
 
 @dataclass(slots=True)
-class Endpoints:
+class Endpoints(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_application_endpoints`
 
     Attributes
@@ -1749,7 +1847,7 @@ class Endpoints:
 
 
 @dataclass(slots=True)
-class FileChunk:
+class FileChunk(ResponseData):
     """Represents the JSON response data from :meth:`FileManagerPlugin.get_file_chunk`
 
     Attributes
@@ -1766,7 +1864,7 @@ class FileChunk:
 
 
 @dataclass(slots=True)
-class Fitness:
+class Fitness(ResponseData):
     """Represents the JSON response data for :attr:`Instance.fitness` attribute.
 
     Attributes
@@ -1842,7 +1940,7 @@ class FolderUploadFile:
 
 
 @dataclass(slots=True)
-class ImportConfig:
+class ImportConfig(ResponseData):
     """Represents the JSON response data from :meth:`GenericModule.import_config`.
 
     .. note::
@@ -1873,7 +1971,7 @@ class ImportConfig:
 
 
 @dataclass(slots=True)
-class InstanceDatastore:
+class InstanceDatastore(ResponseData):
     """Represents a the class object to be used in :meth:`ADSModule.add_datastore`
 
     .. warning::
@@ -2001,7 +2099,7 @@ class InstanceInfo:
 
 
 @dataclass(slots=True)
-class InstanceStatus:
+class InstanceStatus(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_instance_statuses`.
 
     Attributes
@@ -2018,7 +2116,7 @@ class InstanceStatus:
 
 
 @dataclass(slots=True)
-class LicenceInfo:
+class LicenceInfo(ResponseData):
     """Represents the licence AMP reports from :meth:`Core.activate_amp_license`.
 
     .. warning::
@@ -2063,7 +2161,7 @@ class LicenceInfo:
 
 
 @dataclass(slots=True)
-class LoginResults:
+class LoginResults(ResponseData):
     """Represents the JSON response data from the AMP Login response.
 
     Attributes
@@ -2095,13 +2193,9 @@ class LoginResults:
     # LoginUserInfoResponse, not UserInfoResponse; only the login shape carries the username.
     user_info: Union[LoginUserInfo | LoginUserInfoResponse, None] = field(default=None)
 
-    def __post_init__(self) -> None:  # noqa: D105
-        if isinstance(self.user_info, dict):
-            self.user_info = build(LoginUserInfo, self.user_info)
-
 
 @dataclass(slots=True)
-class LoginUserInfo:
+class LoginUserInfo(ResponseData):
     """Represents an AMP users information, tied to :class:`LoginResults` along with representing the
     JSON response from the function :meth`~Core.get_amp_users_summary`
 
@@ -2144,7 +2238,7 @@ class LoginUserInfo:
 
 
 @dataclass(slots=True)
-class MCUser:
+class MCUser(ResponseData):
     """Represents the JSON response data from :meth:`MinecraftModule.mc_get_whitelist`.
 
     Attributes
@@ -2161,7 +2255,7 @@ class MCUser:
 
 
 @dataclass(slots=True)
-class MessageParameters:
+class MessageParameters(ResponseData):
     """Represents the JSON response data from :attr:`Messages.parameters`.
 
     .. note::
@@ -2201,7 +2295,7 @@ class MessageParameters:
 
 
 @dataclass(slots=True)
-class Messages:
+class Messages(ResponseData):
     """Represents a Message from the dataclass attribute :attr:`Updates.messages`
 
     Attributes
@@ -2233,7 +2327,7 @@ class Messages:
 
 
 @dataclass(slots=True)
-class Methods:
+class Methods(ResponseData):
     """Tied to :attr:`ScheduleData.available_methods`.
 
     Hold's information regarding Methods/Events that are available to the Instance. Varies depending on Instance type.
@@ -2265,7 +2359,7 @@ class Methods:
     # Confirmed against getscheduledata.json.
     category: str = ""
     display_format: Union[str, None] = field(default=None)
-    # `build(Methods, entry)` turns these into Consumes.
+    # `Methods.from_response(entry)` turns these into Consumes.
     consumes: list[Consumes] | list[ConsumesResponse] = field(default_factory=list[Consumes])
     notice: Union[str, None] = field(default=None)
 
@@ -2280,7 +2374,7 @@ class Methods:
 
 
 @dataclass(slots=True)
-class Metrics:
+class Metrics(ResponseData):
     """Represents the JSON response data for :attr:`Status.metrics`.
 
     Attributes
@@ -2310,7 +2404,7 @@ class Metrics:
 
 
 @dataclass(slots=True)
-class MetricsData:
+class MetricsData(ResponseData):
     """Represents the JSON response data for each of the attributes of :class:`Metrics`.
 
     Attributes
@@ -2346,7 +2440,7 @@ class MetricsData:
 
 
 @dataclass(slots=True)
-class Module:
+class Module(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_module_info`.
 
     Attributes
@@ -2452,7 +2546,7 @@ class Module:
 
 
 @dataclass(slots=True)
-class OPList:
+class OPList(ResponseData):
     """Represents the JSON response data from :meth:`MinecraftModule.mc_load_op_list`.
 
     Attributes
@@ -2472,7 +2566,7 @@ class OPList:
 
 
 @dataclass(slots=True)
-class OPWhitelist:
+class OPWhitelist(ResponseData):
     """Represents the JSON response data from :meth:`MinecraftModule.mc_get_op_whitelist`.
 
     Attributes
@@ -2489,7 +2583,7 @@ class OPWhitelist:
 
 
 @dataclass(slots=True)
-class ParameterMapping:
+class ParameterMapping(ResponseData):
     """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
 
     The arguments a task passes to its method. An argument the task's method doesn't take is None.
@@ -2796,7 +2890,7 @@ class ParameterMapping:
 
 
 @dataclass(slots=True)
-class PermissionNode:
+class PermissionNode(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_permissions_spec`.
 
     .. versionchanged:: 5.0.0
@@ -2825,7 +2919,7 @@ class PermissionNode:
 
 
 @dataclass(slots=True)
-class PlatformInfo:
+class PlatformInfo(ResponseData):
     """Represents the data from the attribute :attr:`RemoteTargetInfo.platform_info`.
 
     Attributes
@@ -2946,7 +3040,7 @@ class Players:
 
 
 @dataclass(slots=True)
-class Port:
+class Port(ResponseData):
     """Current Port of the related AMP Instance. Tied to :attr:`Updates.ports` and the JSON response
     data from :meth:`Core.get_port_summaries`.
 
@@ -2980,7 +3074,7 @@ class Port:
 
 
 @dataclass(slots=True)
-class PortInfo:
+class PortInfo(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_instance_network_info`.
 
     Attributes
@@ -3031,7 +3125,7 @@ class PortInfo:
 
 
 @dataclass(slots=True)
-class Provision:
+class Provision(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
     Attributes
@@ -3069,7 +3163,7 @@ class Provision:
 
 
 @dataclass(slots=True)
-class ProvisionSettingInfo:
+class ProvisionSettingInfo(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_provision_arguments`.
 
     Attributes
@@ -3110,7 +3204,7 @@ class ProvisionSettingInfo:
 
 
 @dataclass(slots=True)
-class RemoteTargetInfo:
+class RemoteTargetInfo(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_target_info`.
 
     Attributes
@@ -3130,14 +3224,14 @@ class RemoteTargetInfo:
     """
 
     ip_address_list: list[str]
-    # `build(RemoteTargetInfo, result)` turns these into dataclasses.
+    # `RemoteTargetInfo.from_response(result)` turns these into dataclasses.
     platform_info: PlatformInfo
     datastores: list[TargetDatastore]
     deploys_in_containers: bool
 
 
 @dataclass(slots=True)
-class Role:
+class Role(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_role`.
 
     Attributes
@@ -3174,7 +3268,7 @@ class Role:
     description: str
     hidden: bool
     permissions: list[str]
-    # `build(Role, result)` turns these into dataclasses.
+    # `Role.from_response(result)` turns these into dataclasses.
     members: list[RoleMember]
     is_instance_specific: bool
     is_common_role: bool
@@ -3182,7 +3276,7 @@ class Role:
 
 
 @dataclass(slots=True)
-class RoleMember:
+class RoleMember(ResponseData):
     """Represents an AMP user in :attr:`Role.members`.
 
     .. versionadded:: 5.0.0
@@ -3201,7 +3295,7 @@ class RoleMember:
 
 
 @dataclass(slots=True)
-class RunningTask:
+class RunningTask(ResponseData):
     """Represents the JSON response data from functions that return RunningTask.
 
     Attributes
@@ -3321,15 +3415,15 @@ class ScheduleData:
                 setattr(self, key, [])
                 continue
             if key == "available_methods":
-                self.available_methods = [build(Methods, entry) for entry in value]
+                self.available_methods = [Methods.from_response(entry) for entry in value]
                 continue
             if key == "available_triggers" or key == "populated_triggers":
-                setattr(self, key, [build(Triggers, entry) for entry in value])
+                setattr(self, key, [Triggers.from_response(entry) for entry in value])
                 continue
 
 
 @dataclass(slots=True)
-class SecurityCheck:
+class SecurityCheck(ResponseData):
     """Represents one check from the JSON response data of :meth:`Core.run_security_check`.
 
     .. versionadded:: 5.0.0
@@ -3360,7 +3454,7 @@ class SecurityCheck:
 
 
 @dataclass(slots=True)
-class Session:
+class Session(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_active_amp_sessions`.
 
     Attributes
@@ -3395,7 +3489,7 @@ class Session:
 
 
 @dataclass(slots=True)
-class SettingSpec:
+class SettingSpec(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_config` or :meth:`Core.get_configs`.
 
     These represent a single setting field in the Instance configuration UI.
@@ -3516,7 +3610,7 @@ class SettingSpec:
 
 
 @dataclass(slots=True)
-class SettingSpecAction:
+class SettingSpecAction(ResponseData):
     """Represents the JSON response data from :attr:`SettingSpec.actions`.
 
     Attributes
@@ -3545,7 +3639,7 @@ class SettingSpecAction:
 
 
 @dataclass(slots=True)
-class SettingSpecSelectionSource:
+class SettingSpecSelectionSource(ResponseData):
     """Represents the JSON response data from :attr:`SettingSpec.selection_source`.
 
     Attributes
@@ -3586,7 +3680,7 @@ class SettingSpecTable:
 
 
 @dataclass(slots=True)
-class SettingsSpecAttribute:
+class SettingsSpecAttribute(ResponseData):
     """Represents the JSON response data from :attr:`SettingSpec.attributes`.
 
     Attributes
@@ -3625,7 +3719,7 @@ class SettingsSpecAttribute:
 
 
 @dataclass(slots=True)
-class SettingsSpecParent:
+class SettingsSpecParent(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_setting_spec`.
 
     Attributes
@@ -3667,7 +3761,7 @@ class SettingsSpecParent:
     """
 
     # Every category arrives as a list of raw setting dicts, the same shape Core.get_config returns for a
-    # single node. build() turns them into SettingSpec, and __post_init__ does the same for direct construction.
+    # single node. from_response() turns them into SettingSpec.
     # Spelled as a union of lists rather than list[SettingSpec | SettingSpecResponse], because list is invariant in its
     # element type and the raw response would not be assignable to the combined form.
     backups: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
@@ -3683,20 +3777,35 @@ class SettingsSpecParent:
     updates: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
     modules: dict[str, list[SettingSpec]] | dict[str, list[SettingSpecResponse]] = field(default_factory=dict[str, list[SettingSpec]])
 
-    def __post_init__(self) -> None:  # noqa: D105
-        for category in fields(class_or_instance=self):
-            if category.name == "modules":
-                continue
-            entries: list[SettingSpec] | list[SettingSpecResponse] = getattr(self, category.name)
-            setattr(self, category.name, [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries])
-        self.modules = {
-            name: [build(SettingSpec, entry) if isinstance(entry, dict) else entry for entry in entries]
-            for name, entries in self.modules.items()
+    @classmethod
+    def from_response(cls, data: Mapping[str, Any]) -> Self:
+        """Build this dataclass from the `Core.get_setting_spec` response, including the `modules` dict.
+
+        The base builds every category, but doesn't look inside a dict, so the setting lists under `modules` are built here.
+
+        Parameters
+        ----------
+        data : Mapping[:class:`str`, Any]
+            The sanitised AMP response for it.
+
+        Returns
+        -------
+        :class:`Self`
+            The built dataclass, with `modules` built too.
+
+        """
+        # An explicit `super(SettingsSpecParent, cls)`, because `slots=True` builds a new class and a bare `super()`
+        # in this classmethod raises a TypeError.
+        parent = super(SettingsSpecParent, cls).from_response(data)
+        parent.modules = {
+            name: [SettingSpec.from_response(entry) if isinstance(entry, dict) else entry for entry in entries]
+            for name, entries in parent.modules.items()
         }
+        return parent
 
 
 @dataclass(slots=True)
-class Status:
+class Status(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_status` and :attr:`Updates.status`.
 
     Attributes
@@ -3712,7 +3821,8 @@ class Status:
 
     """
 
-    # AMP sends these raw; __post_init__ converts them so the first annotation of each holds true.
+    # AMP sends these raw; from_response() converts the nested ones and __post_init__ converts the state, so the first
+    # annotation of each holds true.
     state: InstanceState | int
     uptime: str
     metrics: Metrics | MetricsResponse
@@ -3726,13 +3836,10 @@ class Status:
     def __post_init__(self) -> None:  # noqa: D105
         if isinstance(self.state, int):
             self.state = InstanceState(self.state)
-        if isinstance(self.metrics, dict):
-            self.metrics = build(Metrics, self.metrics)
-        self.ports = [build(Port, entry) if isinstance(entry, dict) else entry for entry in self.ports]
 
 
 @dataclass(slots=True)
-class StructuredDiagnostics:
+class StructuredDiagnostics(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_structured_diagnostics`.
 
     .. versionadded:: 5.0.0
@@ -3752,7 +3859,7 @@ class StructuredDiagnostics:
 
 
 @dataclass(slots=True)
-class TargetDatastore:
+class TargetDatastore(ResponseData):
     """Represents a datastore in :attr:`RemoteTargetInfo.datastores`, which carries only an ID and a name.
 
     .. versionadded:: 5.0.0
@@ -3838,7 +3945,7 @@ class Template:
 
 
 @dataclass(slots=True)
-class TimedTrigger:
+class TimedTrigger(ResponseData):
     """Represents the data of :meth:`Core.get_time_interval_trigger`.
 
     Attributes
@@ -3880,15 +3987,12 @@ class TimedTrigger:
     match_months: list[int]
     name: str
     order: int
-    # AMP sends a list of raw task dicts; __post_init__ converts them so the annotation holds true.
+    # AMP sends a list of raw task dicts; from_response() converts them so the annotation holds true.
     # Spelled as a union of lists rather than list[TriggerTasks | TriggerTasksResponse]; list is invariant
     # in its element type, so the raw response would not be assignable to the combined form.
     tasks: list[TriggerTasks] | list[TriggerTasksResponse] = field(default_factory=list["TriggerTasks"])
     # Confirmed live on AMP 2.8.0.8.
     last_executed: Union[str, None] = field(default=None)
-
-    def __post_init__(self) -> None:  # noqa: D105
-        self.tasks = [build(TriggerTasks, entry) if isinstance(entry, dict) else entry for entry in self.tasks]
 
 
 class TriggerID:
@@ -3936,7 +4040,7 @@ class TriggerID:
 
 
 @dataclass(slots=True)
-class Triggers:
+class Triggers(ResponseData):
     """Represents the JSON reponse data for attributes :attr:`ScheduleData.available_triggers` and :attr:`ScheduleData.populated_triggers`.
 
     .. note::
@@ -3991,7 +4095,7 @@ class Triggers:
 
 
 @dataclass(slots=True)
-class TriggerTasks:
+class TriggerTasks(ResponseData):
     """Represents the JSON response for the attribute :attr:`Triggers.tasks`.
 
     Hold's information regarding AMP Tasks and their status.
@@ -4045,7 +4149,7 @@ class TriggerTasks:
 
 
 @dataclass(slots=True)
-class TwoFactorSetupInfo:
+class TwoFactorSetupInfo(ResponseData):
     """Represents the setup data from :meth:`Core.enable_two_factor`, to finish with :meth:`Core.confirm_two_factor_setup`.
 
     .. warning::
@@ -4071,7 +4175,7 @@ class TwoFactorSetupInfo:
 
 
 @dataclass(slots=True)
-class UpdateInfo:
+class UpdateInfo(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_update_info`.
 
     Attributes
@@ -4100,7 +4204,7 @@ class UpdateInfo:
 
 
 @dataclass(slots=True)
-class Updates:
+class Updates(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_updates`.
 
     Attributes
@@ -4118,7 +4222,7 @@ class Updates:
 
     """
 
-    # AMP sends all of these raw; __post_init__ converts them so the first annotation of each holds true.
+    # AMP sends all of these raw; from_response() converts them so the first annotation of each holds true.
     # Spelled as a union of lists rather than list[ConsoleEntries | ConsoleEntriesResponse]; list is invariant
     # in its element type, so the raw response would not be assignable to the combined form.
     console_entries: list[ConsoleEntries] | list[ConsoleEntriesResponse]
@@ -4131,17 +4235,9 @@ class Updates:
         # return pformat(vars(self))
         return pformat(_field_values(self))
 
-    def __post_init__(self) -> None:  # noqa: D105
-        if isinstance(self.status, dict):
-            self.status = build(Status, self.status)
-        self.console_entries = [build(ConsoleEntries, entry) if isinstance(entry, dict) else entry for entry in self.console_entries]
-        self.messages = [build(Messages, entry) if isinstance(entry, dict) else entry for entry in self.messages]
-        self.ports = [build(Port, entry) if isinstance(entry, dict) else entry for entry in self.ports]
-        self.tasks = [build(RunningTask, entry) if isinstance(entry, dict) else entry for entry in self.tasks]
-
 
 @dataclass(slots=True)
-class Uptime:
+class Uptime(ResponseData):
     """Represents the JSON response data from :attr:`MessageParameters.uptime`.
 
     .. versionadded:: 5.0.0
@@ -4221,7 +4317,7 @@ class Uptime:
 
 
 @dataclass(slots=True)
-class UserApplicationData:
+class UserApplicationData(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_user_info`.
 
     .. note::
@@ -4275,7 +4371,7 @@ class UserApplicationData:
 
 
 @dataclass(slots=True)
-class UserInfo:
+class UserInfo(ResponseData):
     """Represents the JSON response data from the function :meth:`Core.get_all_amp_user_info` or :meth:`Core.get_amp_user_info`
 
     Attributes
