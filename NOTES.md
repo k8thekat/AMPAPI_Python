@@ -582,3 +582,13 @@ Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and f
   4.x -> 5.0.0 record. Later changes get their tag as they are made.
 - An AMP version in a directive is written `AMP-2.6.0.0` (`Core.get_webserver_metrics`). Sphinx takes the first word
   as the version and the rest as the text, so `AMP 2.6.0.0` renders "Removed in version AMP: 2.6.0.0".
+
+## Class order
+
+Every module keeps its classes in alphabetical order, ignoring case (2785a7a for `modules.py`, b9367bd for the rest).
+- A class that another class in the same file inherits from comes first, as Python needs it defined before the
+  subclass (`ResponseData`, `AMPAPIError`, `ADSData` and `Instance`).
+- `APISpec` in `_types.py` is built from two TypedDicts when the module is imported, so it sits right below them.
+  Every other annotation is a string under `from __future__ import annotations`, so its order doesn't matter.
+- `docs/conf.py` sets `autodoc_member_order = "bysource"`, so `automodule` pages (`_types`, `modules`, `errors`)
+  list the classes in this order. The `autoclass` pages in `docs/*.rst` keep their own order.
