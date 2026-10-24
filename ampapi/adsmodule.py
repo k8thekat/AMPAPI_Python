@@ -76,6 +76,7 @@ from .modules import (
     ActionResult,
     ADSModeState,
     Application,
+    AppSummary,
     CreateInstance,
     DeploymentTemplate,
     Endpoints,
@@ -1931,7 +1932,7 @@ class ADSModule(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> list[Application] | list[AppSummaryResponse]:
+    ) -> list[AppSummary] | list[AppSummaryResponse]:
         """|coro|
 
         Get a condensed summary of every application that can be deployed. See :meth:`get_supported_applications` for the full entries.
@@ -1939,7 +1940,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetSupportedAppSummaries`
 
         .. note::
-            Each entry is an :class:`Application` that leaves out `module_name`, `settings` and `is_multi_ip_aware`.
+            Each entry is an :class:`Application` without `module_name`, `settings` and `is_multi_ip_aware`.
 
 
         Parameters
@@ -1953,8 +1954,8 @@ class ADSModule(Base):
 
         Returns
         -------
-        list[:class:`Application`]
-            On success returns a list of :class:`Application` dataclasses.
+        list[:class:`AppSummary`] | list[:class:`AppSummaryResponse`]
+            A list of :class:`AppSummary` if `format_data` is True, else the raw :class:`AppSummaryResponse` entries.
 
         """
         await self._reauth()
@@ -1969,7 +1970,7 @@ class ADSModule(Base):
             format_data = self.format_data
         if is_response_list(result, AppSummaryResponse, APP_SUMMARY_REQUIRED_KEYS, APP_SUMMARY_EXCLUDED_KEYS):
             if format_data is True:
-                return [Application.from_response(entry) for entry in result]
+                return [AppSummary.from_response(entry) for entry in result]
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
 

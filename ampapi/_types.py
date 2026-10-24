@@ -442,7 +442,7 @@ class AppSummaryResponse(TypedDict):
 
     .. note::
         A condensed :class:`ApplicationResponse`; it drops `module_name`, `settings` and
-        `is_multi_ip_aware`. Builds :class:`~ampapi.modules.Application`.
+        `is_multi_ip_aware`. Builds :class:`~ampapi.modules.AppSummary`.
 
     """
 

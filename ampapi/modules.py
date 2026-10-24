@@ -98,6 +98,7 @@ __all__ = (
     "AnalyticsSummary",
     "AnalyticsTopPlayers",
     "AnalyticsUserDetails",
+    "AppSummary",
     "Application",
     "AuditLogEntry",
     "Backup",
@@ -839,33 +840,28 @@ class APISession:
 
 @dataclass(slots=True)
 class Application(ResponseData):
-    """Represents the JSON response data from :meth:`MinecraftModule.get_supported_applications`
-    and :meth:`ADSModule.get_supported_app_summaries`.
+    """Represents the JSON response data from :meth:`ADSModule.get_supported_applications`.
 
     .. note::
         Shows Template/App information. Similar to the all the applications in a repo lists.
 
     .. note::
-        An entry from :meth:`ADSModule.get_supported_app_summaries` leaves out `module_name`, `settings` and
-        `is_multi_ip_aware`, which keep their defaults.
-
-    .. versionchanged:: 5.0.0
-        `module_name` defaults to "".
+        :meth:`ADSModule.get_supported_app_summaries` sends a shorter form of this, built as :class:`AppSummary`.
 
 
     Attributes
     ----------
-    author : :class:`str`
+    author : :class:`str` | None
         The author of the application/template.
-    container_reason : :class:`str`
+    container_reason : :class:`str` | None
         The reason the application is using a container, if any.
     container_support : :class:`int`
         UNK - Unsure what this value is for.
-    description : :class:`str`
+    description : :class:`str` | None
         A brief description of what the application is.
     display_image_source : :class:`str`
         The URL for the application image. Typically what you see as the Instance Banner.
-    extra_setup_steps_uri : :class:`str`
+    extra_setup_steps_uri : :class:`str` | None
         UNK
     friendly_name : :class:`str`
         A formatted version of the name.
@@ -873,12 +869,18 @@ class Application(ResponseData):
         A unique ID for the application.
     is_service_spec : :class:`bool`
         UNK.
+    module_name : :class:`str`
+        The type of Module this application uses. (eg. "Minecraft", "Generic").
     no_commercial_usage : :class:`bool`
         As the attribute implies; if it's for commercial usage or not.
     supported_platforms : :class:`int`
         UNK
-    module_name : :class:`str`, optional
-        The type of Module this application uses. (eg. "Minecraft", "Generic"), default is "".
+    deprecated_reason : :class:`str` | None, optional
+        Why the application is deprecated, if it is, default is None.
+    is_multi_ip_aware : :class:`bool`, optional
+        UNK, default is False.
+    resource_usage_info : :class:`str` | None, optional
+        UNK, default is None.
     settings : dict[:class:`str`, :class:`str`], optional
         A dict of Instance specific settings to apply for this application, default is an empty dict.
 
@@ -893,10 +895,10 @@ class Application(ResponseData):
     friendly_name: str
     id: str
     is_service_spec: bool
+    module_name: str
     no_commercial_usage: bool
     supported_platforms: int
-    # The summary from `get_supported_app_summaries` leaves these three out.
-    module_name: str = field(default="")
+    # Not in 4.6.0's dataclass; defaulted so older responses still construct.
     deprecated_reason: str | None = field(default=None)
     is_multi_ip_aware: bool = field(default=False)
     # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
@@ -905,6 +907,64 @@ class Application(ResponseData):
 
     def __repr__(self) -> str:  # noqa: D105
         # return pformat(vars(self))
+        return pformat(_field_values(self))
+
+
+@dataclass(slots=True)
+class AppSummary(ResponseData):
+    """Represents one entry from :meth:`ADSModule.get_supported_app_summaries`.
+
+    .. note::
+        A shorter form of :class:`Application`, without `module_name`, `settings` and `is_multi_ip_aware`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    author : :class:`str` | None
+        The author of the application/template.
+    container_reason : :class:`str` | None
+        The reason the application is using a container, if any.
+    container_support : :class:`int`
+        UNK - Unsure what this value is for.
+    deprecated_reason : :class:`str` | None
+        Why the application is deprecated, if it is.
+    description : :class:`str` | None
+        A brief description of what the application is.
+    display_image_source : :class:`str`
+        The URL for the application image. Typically what you see as the Instance Banner.
+    extra_setup_steps_uri : :class:`str` | None
+        UNK
+    friendly_name : :class:`str`
+        A formatted version of the name.
+    id : :class:`str`
+        A unique ID for the application.
+    is_service_spec : :class:`bool`
+        UNK.
+    no_commercial_usage : :class:`bool`
+        As the attribute implies; if it's for commercial usage or not.
+    resource_usage_info : :class:`str` | None
+        UNK
+    supported_platforms : :class:`int`
+        UNK
+
+    """
+
+    author: str | None
+    container_reason: str | None
+    container_support: int
+    deprecated_reason: str | None
+    description: str | None
+    display_image_source: str
+    extra_setup_steps_uri: str | None
+    friendly_name: str
+    id: str
+    is_service_spec: bool
+    no_commercial_usage: bool
+    resource_usage_info: str | None
+    supported_platforms: int
+
+    def __repr__(self) -> str:  # noqa: D105
         return pformat(_field_values(self))
 
 
