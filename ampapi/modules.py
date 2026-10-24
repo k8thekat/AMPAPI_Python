@@ -4067,13 +4067,29 @@ class Template:
     def to_dict(self) -> dict[str, Any]:
         """As the function name implies; converts the class to a dict for use as an API parameter.
 
+        .. versionchanged:: 5.0.0
+            The keys are AMP's parameter names (eg. `TemplateID`), not the attribute names.
+
         Returns
         -------
         dict[:class:`str`, Any]
-            The class attributes as a key, value paired dict; attributes set to None are omitted.
+            The class attributes keyed by their AMP API parameter names; attributes set to None are omitted.
 
         """
-        return _dataclass_to_dict(self)
+        # return _dataclass_to_dict(self)
+        data: dict[str, Any] = {
+            "TemplateID": self.template_id,
+            "NewUsername": self.new_username,
+            "NewPassword": self.new_password,
+            "NewEmail": self.new_email,
+            "RequiredTags": self.required_tags,
+            "Tag": self.tag,
+            "FriendlyName": self.friendly_name,
+            "Secret": self.secret,
+            "PostCreate": self.post_create.value,
+            "ExtraProvisionSettings": self.extra_provision_settings,
+        }
+        return {key: value for key, value in data.items() if value is not None}
 
 
 @dataclass(slots=True)

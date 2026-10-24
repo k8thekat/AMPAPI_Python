@@ -116,6 +116,9 @@ Changed methods
 - :class:`~ampapi.modules.InstanceInfo` needs only `instance_id`. Every other field defaults to None and is left out of
   the call, so AMP leaves that value unchanged. In 4.x nine fields were required, and `memory_policy` and
   `start_on_boot` defaulted to real values that overwrote the Instance's own.
+- :meth:`~ampapi.adsmodule.ADSModule.deploy_template` sends AMP's parameter names (eg. `TemplateID` and `NewUsername`)
+  from :meth:`Template.to_dict <ampapi.modules.Template.to_dict>`, and it returns a
+  :class:`~ampapi.modules.RunningTask`, which is what AMP's spec names. 4.x sent the attribute names.
 - ``Base.version_validation()`` takes the `endpoint` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
 - ``Base.clean_up()`` takes a keyword-only `logout` (default False) to call ``Core/Logout`` before closing the session.

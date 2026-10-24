@@ -1077,12 +1077,15 @@ class ADSModule(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Deploy an Instance template.
 
         Endpoint: `ADSModule/DeployTemplate`
+
+        .. versionchanged:: 5.0.0
+            Returns a :class:`RunningTask`, and sends AMP's parameter names through :meth:`Template.to_dict`.
 
         Parameters
         ----------
@@ -1097,11 +1100,10 @@ class ADSModule(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns a :class:`RunningTask` dataclass, or the raw dictionary when `format_data` is False.
 
         """
-        # The parameter keys are not cased properly and this will fail its JSON payload.
         await self._reauth()
         parameters: dict[str, Any] = template.to_dict()
         result: ResponseAliasFull = await self._post(
@@ -1114,9 +1116,15 @@ class ADSModule(Base):
             raise AMPAPITypeError(end_point="ADSModule/DeployTemplate", cur_type=result, expec_type=dict)
         if format_data is None:
             format_data = self.format_data
-        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        # The spec names a RunningTask for this endpoint, not an ActionResult.
+        # if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        #     if format_data is True:
+        #         return ActionResult.from_response(result)
+        #     return result
+        # raise AMPAPIKeyError("status", "ADSModule/DeployTemplate", result)
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult.from_response(result)
+                return RunningTask.from_response(result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/DeployTemplate", result)  # noqa: EM101
 
