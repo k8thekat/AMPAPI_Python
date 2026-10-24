@@ -24,8 +24,6 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
-from typing_extensions import deprecated
-
 from ._types import (
     ACTION_RESULT_EXCLUDED_KEYS,
     ACTION_RESULT_REQUIRED_KEYS,
@@ -774,80 +772,6 @@ class ADSModule(Base):
                 return RunningTask.from_response(result)
             return result
         raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
-
-    # TODO: AMP answers a null reference to every `Instance` shape we've sent (AMP 2.8.0.8).
-    #       It wants a `LocalAMPInstance`, which the spec doesn't describe, and the panel never calls this.
-    @deprecated(
-        "AMP 2.8.0.8 answers a null reference to every Instance shape sent; its LocalAMPInstance is undocumented and "
-        "the panel never calls it. Use create_instance or create_instance_from_spec.",
-    )
-    @Base.ads_only
-    async def create_local_instance(
-        self,
-        instance: CreateInstance,
-        post_create: PostCreateState = PostCreateState.do_nothing,
-        *,
-        format_data: Union[bool, None] = None,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
-        """|coro|
-
-        Create a local AMP Instance, similar to :meth:`create_instance`.
-        Use case could be on a remote Target ADS Instance instead of letting AMP decide where to create the Instance.
-
-        Endpoint: `ADSModule/CreateLocalInstance`
-
-        .. deprecated:: 5.0.0
-            AMP 2.8.0.8 answers a null reference to every `Instance` shape sent. It wants a `LocalAMPInstance`, which
-            AMP's API spec doesn't describe, and AMP's own panel never calls this endpoint. Use :meth:`create_instance`
-            or :meth:`create_instance_from_spec`.
-
-        .. note::
-            See the :class:`CreateInstance` for more details on how to configure the Instance when creating.
-
-
-        Parameters
-        ----------
-        instance : :class:`CreateInstance`
-            Your pre-created data structure to be parsed for the required API parameters.
-        post_create : :class:`PostCreateState`, optional
-            The action to take after creating the local Instance, by default :attr:`~PostCreateState.do_nothing`.
-        format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default None.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
-
-        """
-        await self._reauth()
-
-        data: dict[str, str | int | dict[str, str] | bool] = instance.to_dict()
-
-        parameters: dict[str, Any] = {"Instance": data, "PostCreate": post_create.value}
-        result: ResponseAliasFull = await self._post(
-            url="ADSModule/CreateLocalInstance",
-            parameters=parameters,
-            request_params=request_params,
-            **response_params,
-        )
-        if not isinstance(result, dict):
-            raise AMPAPITypeError(end_point="ADSModule/CreateLocalInstance", cur_type=result, expec_type=dict)
-
-        if format_data is None:
-            format_data = self.format_data
-
-        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
-            if format_data is True:
-                return ActionResult.from_response(result)
-            return result
-        raise AMPAPIKeyError("status", "ADSModule/CreateLocalInstance", result)  # noqa: EM101
 
     @Base.ads_only
     async def delete_datastore(

@@ -56,55 +56,6 @@ class FileManagerPlugin(Base):
 
     """
 
-    # TODO: Confirm what the delete parameter does.
-    # The 2.8.0.8 spec lists `Delete` as a required Boolean with no description.
-    async def append_file_chunk(
-        self,
-        file_path: str,
-        data: str,
-        delete: bool,
-        *,
-        request_params: Optional[AioHTTPRequestOptions] = None,
-        **response_params: Unpack[ResponseHandlerOptions],
-    ) -> None:
-        """|coro|
-
-        Append data to a file.
-
-        Endpoint: `FileManagerPlugin/AppendFileChunk`
-
-        .. warning::
-            On AMP 2.8.0.8 this call has no visible effect. It creates no file, does not append to a file made by
-            :meth:`write_file_chunk`, and `delete` set to True leaves the file alone. Use :meth:`write_file_chunk`.
-
-        Parameters
-        ----------
-        file_path : :class:`str`
-            Path to the file; relative to the Instance root. eg ``./InstanceName/``.
-        data : :class:`str`
-            Binary data to be written.
-        delete : :class:`bool`
-            AMP's required ``Delete`` flag. The 2.8.0.8 spec gives no description, so its effect is unconfirmed.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Returns
-        -------
-        None
-
-        """
-        await self._reauth()
-        parameters: dict[str, Any] = {"Filename": self.sanitize_path(path=file_path), "Data": data, "Delete": delete}
-        return await self._post(
-            url="FileManagerPlugin/AppendFileChunk",
-            parameters=parameters,
-            no_data=True,
-            request_params=request_params,
-            **response_params,
-        )
-
     async def calculate_file_md5_sum(
         self,
         file_path: str,

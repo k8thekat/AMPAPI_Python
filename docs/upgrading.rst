@@ -95,15 +95,17 @@ Changed methods
   `format_data`. 4.x returned the raw response. AMP's `Pass` key is `passed`, since `pass` is a Python keyword.
 - :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
   and no longer take `format_data`. AMP answers JSON null for both, and never sent the `ActionResult` 4.x annotated.
-- :meth:`~ampapi.adsmodule.ADSModule.create_local_instance` is deprecated. AMP 2.8.0.8 answers a null reference to
-  every Instance shape sent, and its `LocalAMPInstance` is undocumented. Use `create_instance` or
-  `create_instance_from_spec`.
+- `ADSModule.create_local_instance` is removed. AMP 2.8.0.8 answers a null reference to every Instance shape sent, and
+  its `LocalAMPInstance` is undocumented. Use :meth:`~ampapi.adsmodule.ADSModule.create_instance` or
+  :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`.
+- `FileManagerPlugin.append_file_chunk` is removed. On AMP 2.8.0.8 it creates no file and appends to none. Use
+  :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk`.
 - :class:`~ampapi.instance.Instance` has the :class:`~ampapi.generic.GenericModule` and
   :class:`~ampapi.steamcmd.SteamCMDPlugin` endpoints, which Generic Instances (module `GenericModule` or `Generic`)
   serve. On any other module they raise :exc:`RuntimeError`.
 - `PostCreateActionsState` was removed; it never matched AMP's `PostCreateAppActions` (eg. its `start_instance`
   was AMP's `update_once`, and `every_time` = 16 doesn't exist). :class:`~ampapi.CreateInstance`,
-  `DeploymentTemplate`, `create_instance_from_spec` and `create_local_instance` take
+  `DeploymentTemplate` and `create_instance_from_spec` take
   :class:`~ampapi.PostCreateState`, whose values are AMP's.
 - :class:`~ampapi.modules.CreateInstance` fills `new_instance_id` with the zero GUID (AMP picks the ID),
   `admin_username` with ``"admin"`` and `admin_password` with a generated password, since AMP rejects empty values.
