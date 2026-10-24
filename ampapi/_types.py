@@ -1495,7 +1495,8 @@ class TimedTriggerResponse(TypedDict):
     match_months: list[int]
     name: str
     order: int
-    tasks: list[TriggerTasksResponse]
+    # AMP keys this by task ID, and each task carries its own `id` too (every capture on AMP 2.8.0.8).
+    tasks: dict[str, TriggerTasksResponse]
     # Confirmed live on AMP 2.8.0.8; an ISO timestamp once the trigger has fired, null before.
     last_executed: NotRequired[Union[str, None]]
 

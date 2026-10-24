@@ -363,7 +363,9 @@ class ResponseData:
 
             return convert_union
         if isinstance(hint, type) and issubclass(hint, ResponseData):
-            return lambda value: hint.from_response(value) if _is_json_object(value) else value
+            # Bound once here, so each nested value doesn't look the classmethod up again.
+            from_response = hint.from_response
+            return lambda value: from_response(value) if _is_json_object(value) else value
         if origin is list:
             element_converter = ResponseData._converter((typing.get_args(hint) or (Any,))[0])
             if element_converter is None:
@@ -415,7 +417,10 @@ class ResponseData:
         if not is_dataclass(cls):
             msg = f"from_response() needs a dataclass, got {cls!r}."
             raise TypeError(msg)
-        plan = cls._build_plan()
+        # The cache is read here first, which skips a classmethod call on every response after the first.
+        plan = ResponseData._build_plans.get(cls)
+        if plan is None:
+            plan = cls._build_plan()
         values: dict[str, Any] = {}
         for key, value in data.items():
             if key not in plan:
@@ -3987,12 +3992,37 @@ class TimedTrigger(ResponseData):
     match_months: list[int]
     name: str
     order: int
-    # AMP sends a list of raw task dicts; from_response() converts them so the annotation holds true.
+    # AMP sends a dict of raw task dicts keyed by task ID; from_response() turns it into a list of TriggerTasks.
     # Spelled as a union of lists rather than list[TriggerTasks | TriggerTasksResponse]; list is invariant
     # in its element type, so the raw response would not be assignable to the combined form.
     tasks: list[TriggerTasks] | list[TriggerTasksResponse] = field(default_factory=list["TriggerTasks"])
     # Confirmed live on AMP 2.8.0.8.
     last_executed: Union[str, None] = field(default=None)
+
+    @classmethod
+    def from_response(cls, data: Mapping[str, Any]) -> Self:
+        """Build this dataclass from the `Core.get_time_interval_trigger` response, with `tasks` as a list.
+
+        AMP keys `tasks` by task ID. Each task carries its own `id`, so the keys are dropped and the tasks are built
+        as a list of :class:`TriggerTasks`.
+
+        Parameters
+        ----------
+        data : Mapping[:class:`str`, Any]
+            The sanitised AMP response for it.
+
+        Returns
+        -------
+        :class:`Self`
+            The built dataclass, with `tasks` built too.
+
+        """
+        tasks: Any = data.get("tasks")
+        if _is_json_object(tasks):
+            data = {**data, "tasks": list(tasks.values())}
+        # An explicit `super(TimedTrigger, cls)`, because `slots=True` builds a new class and a bare `super()`
+        # in this classmethod raises a TypeError.
+        return super(TimedTrigger, cls).from_response(data)
 
 
 class TriggerID:
