@@ -108,11 +108,6 @@ def _snake_key(key: str) -> str:
     return Base.camel_to_snake_re(data=new_key)
 
 
-class BaseArgs(TypedDict):
-    bridge: Optional[Bridge]
-    session: Optional[aiohttp.ClientSession]
-
-
 class DumpParameters(TypedDict, total=False):
     skipkeys: bool
     ensure_ascii: bool

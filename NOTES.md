@@ -593,7 +593,7 @@ rest). CODING_STYLE.md §21 has the full rule.
 - A private (`_`) class is placed by what uses it, like a helper function. `_SessionDeadError` sits right above
   `Base`, its only user.
 - The TypedDicts in `base.py` type `Base`'s parameters, so they sit above `Base` as its helpers, in alphabetical order
-  among themselves. `BaseArgs` is used nowhere.
+  among themselves. `BaseArgs` was used nowhere and was removed.
 - `APISpec` in `_types.py` is built from two TypedDicts when the module is imported, so it sits right below them.
   Every other annotation is a string under `from __future__ import annotations`, so its order doesn't matter.
 - `docs/conf.py` sets `autodoc_member_order = "bysource"`, so `automodule` pages (`_types`, `modules`, `errors`)
