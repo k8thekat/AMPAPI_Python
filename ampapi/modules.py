@@ -191,7 +191,7 @@ SettingSpecTableAliases = Union[
 
 
 def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
-    """Removes private attributes (aka ``_attribute``) designation from the dict key values.
+    """Removes private attributes (aka `_attribute`) designation from the dict key values.
 
     .. note::
         Typically after calling :meth:`vars`.
@@ -242,7 +242,7 @@ def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
 
     .. note::
         Keys are the dataclass field names verbatim; AMP takes these nested payload objects in
-        ``snake_case``, so no key conversion happens here. Attributes set to None are omitted
+        `snake_case`, so no key conversion happens here. Attributes set to None are omitted
         entirely rather than sent as ``null``.
 
 
@@ -443,9 +443,9 @@ class ActionResult(ResponseData):
     status : :class:`bool`
         If the API call was successful.
     reason : Union[str, None]
-        If :attr:`~ActionResult.status` is ``False`` this will typically have a :class:`str` response.
+        If :attr:`~ActionResult.status` is `False` this will typically have a :class:`str` response.
     result : Union[:class:`str`, dict[:class:`str`, Any], None]
-        If :attr:`~ActionResult.status` is ``True`` this will contain data related to the API call.
+        If :attr:`~ActionResult.status` is `True` this will contain data related to the API call.
 
         .. versionchanged:: 5.0.0
             Can be a dict, for the endpoints that answer an object (eg. :meth:`Core.enable_two_factor`).
@@ -509,7 +509,7 @@ class AnalyticsCountryData(ResponseData):
 
 @dataclass(slots=True)
 class AnalyticsFilter:
-    """A dataclass to handle filtering for :meth:`~AnalyticsPlugin.get_analytics_summary`, pass this dataclass in as the ``filter_``
+    """A dataclass to handle filtering for :meth:`~AnalyticsPlugin.get_analytics_summary`, pass this dataclass in as the `filter_`
 
     .. note::
         Simply create this class and fill out either :attr:`username`, :attr:`user_id` and or :attr:`country`.
@@ -2572,7 +2572,7 @@ class MetricsData(ResponseData):
     max_value : :class:`int`
         The max value the field can have.
     percent : :class:`int`
-        The percent of usage in relation to the ``max_value``.
+        The percent of usage in relation to the `max_value`.
     units : :class:`str`
         The unit of measurement for the field.
     color : Union[None, :class:`str`]

@@ -176,7 +176,7 @@ def is_response_type[ResponseT](
     """Check a response against a key set to narrow it to a specific TypedDict.
 
     .. note::
-        The ``response_type`` parameter is only used to tell the type checker what the response
+        The `response_type` parameter is only used to tell the type checker what the response
         narrows to; the keys are what actually get validated at runtime.
 
 
@@ -228,7 +228,7 @@ def is_response_list[ResponseT](
     Returns
     -------
     :class:`TypeGuard`
-        True when ``data`` is a list and every entry satisfies the key set.
+        True when `data` is a list and every entry satisfies the key set.
 
     """
     if not isinstance(data, list):
@@ -441,8 +441,8 @@ class AppSummaryResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_supported_app_summaries`.
 
     .. note::
-        A condensed :class:`ApplicationResponse`; it drops ``module_name``, ``settings`` and
-        ``is_multi_ip_aware``. Builds :class:`~ampapi.modules.Application`.
+        A condensed :class:`ApplicationResponse`; it drops `module_name`, `settings` and
+        `is_multi_ip_aware`. Builds :class:`~ampapi.modules.Application`.
 
     """
 
@@ -590,7 +590,7 @@ class ControllerResponse(TypedDict):
 
 
 class CPUInfoResponse(TypedDict):
-    """Represents the ``cpu_info`` block nested inside :class:`PlatformInfoResponse`."""
+    """Represents the `cpu_info` block nested inside :class:`PlatformInfoResponse`."""
 
     sockets: int
     cores: int
@@ -719,7 +719,7 @@ class InstanceResponse(TypedDict):
     """Represents a single AMP Instance.
 
     .. note::
-        These arrive nested under ``available_instances`` on each target returned by
+        These arrive nested under `available_instances` on each target returned by
         :meth:`ADSModule.get_instances`, and directly from :meth:`ADSModule.get_instance`.
 
     """
@@ -1205,8 +1205,8 @@ class PlatformInfoResponse(TypedDict):
 
     .. note::
         Two endpoints send different subsets of this. :meth:`ADSModule.get_target_info` sends only the
-        required keys below, while the ``platform`` block on each :meth:`ADSModule.get_instances` target
-        also carries the ``NotRequired`` ones.
+        required keys below, while the `!platform` block on each :meth:`ADSModule.get_instances` target
+        also carries the `NotRequired` ones.
 
     """
 
@@ -1229,7 +1229,7 @@ class PortInfoResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_instance_network_info`.
 
     .. note::
-        ``protocol`` arrives as an int; see :class:`Protocols` for the mapping.
+        `protocol` arrives as an int; see :class:`Protocols` for the mapping.
 
     """
 
@@ -1268,8 +1268,8 @@ class ProvisionResponse(TypedDict):
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
     .. note::
-        The related :class:`Fitness` dataclass carries two extra fields, ``score_description`` and
-        ``score_zero_factors``; those belong to a target's ``fitness`` block, not to this endpoint.
+        The related :class:`Fitness` dataclass carries two extra fields, `score_description` and
+        `score_zero_factors`; those belong to a target's `fitness` block, not to this endpoint.
 
     """
 
@@ -1479,7 +1479,7 @@ class TimedTriggerResponse(TypedDict):
 
     .. note::
         This is *not* :class:`TriggersResponse`; a time interval trigger fires off the ``match_*``
-        schedule fields instead of an event, and carries no ``emits`` / ``type`` keys.
+        schedule fields instead of an event, and carries no `emits` / `!type` keys.
 
     """
 

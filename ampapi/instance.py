@@ -462,7 +462,7 @@ class Instance(
     ) -> Status | StatusResponse:
         """|coro|
 
-        Similar to :meth:`Core.get_status` but with the added benefit of updating our ``self`` object reference.
+        Similar to :meth:`Core.get_status` but with the added benefit of updating our `self` object reference.
 
         .. note::
             The Instance MUST be running (:attr:`~Instance.running = True`) or you will get a :class:`ConnectionError`
@@ -471,7 +471,7 @@ class Instance(
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+            Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -501,7 +501,7 @@ class Instance(
     async def get_instance_status(self) -> Union[Instance, MinecraftInstance]:
         """|coro|
 
-        Requests the recent changes to the Instance, updates our ``self`` object and returns the updated object.
+        Requests the recent changes to the Instance, updates our `self` object and returns the updated object.
 
         .. note::
             Typical usage is to get current information pertaining to an Instance and keeping it updated.
@@ -526,7 +526,7 @@ class Instance(
         Returns
         -------
         Union[:class:`Instance`, :class:`MinecraftInstance`]
-            Returns an updated ``self`` object.
+            Returns an updated `self` object.
 
         """
         # We want the raw dict here, so we can update ourselves instead of building a new Instance.
@@ -549,7 +549,7 @@ class Instance(
         """|coro|
 
         Requests the recent Console entries of the Instance, will acquire all updates from previous API call of :meth:`get_updates`
-        and updates parses the information setting it to ``self``. See :class:`Updates` for attribute access.
+        and updates parses the information setting it to `self`. See :class:`Updates` for attribute access.
 
         .. note::
             The Instance MUST be running (:attr:`~Instance.running = True`) or you will get a :class:`ConnectionError`
@@ -558,7 +558,7 @@ class Instance(
         Parameters
         ----------
         format_data : Union[:class:`bool`, :class:`None`], optional
-            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if :class:`None`), by default :class:`None`
+            Format the JSON response data. (Uses `FORMAT_DATA` global constant if :class:`None`), by default :class:`None`
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -607,7 +607,7 @@ class Instance(
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+            Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
 
         Raises
         ------
@@ -650,7 +650,7 @@ class Instance(
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+            Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
 
         Raises
         ------
@@ -693,7 +693,7 @@ class Instance(
         Parameters
         ----------
         format_data : Union[bool, None], optional
-            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+            Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
 
         Raises
         ------
@@ -731,7 +731,7 @@ class Instance(
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data. (Uses ``FORMAT_DATA`` global constant if None), by default None.
+            Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
 
         Returns
         -------

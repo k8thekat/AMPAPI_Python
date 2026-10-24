@@ -247,14 +247,14 @@ class Base:
 
     @property
     def module(self) -> Module | str:
-        """The AMP Instance ``type``.
+        """The AMP Instance `!type`.
 
         Current Values: `ADS` | `Minecraft` | `Generic` | `SRCDS`
 
         Returns
         -------
         :class:`Module` | :class:`str`
-            The AMP Instance `type` as a :class:`Module`, or the raw string when it is not a known one.
+            The AMP Instance `!type` as a :class:`Module`, or the raw string when it is not a known one.
 
         """
         try:
@@ -275,7 +275,7 @@ class Base:
         Returns
         -------
         :class:`bool`
-            Returns ``True`` or ``False``.
+            Returns `True` or `False`.
 
         """
         return Base._format_data
@@ -453,8 +453,8 @@ class Base:
         no_data : :class:`bool`, optional
             If the endpoint answers JSON null or not. The body is still checked for errors, by default False.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
-            Extra keyword arguments forwarded directly to :meth:`aiohttp.ClientSession.post`. The ``headers``
-            and ``data`` keys are populated automatically when ``None``, by default None.
+            Extra keyword arguments forwarded directly to :meth:`aiohttp.ClientSession.post`. The `headers`
+            and `data` keys are populated automatically when `None`, by default None.
 
             .. code-block:: python
 
@@ -467,7 +467,7 @@ class Base:
         Returns
         -------
         :class:`ResponseTypeAlias` | :class:`str` | :class:`bool` | None
-            The processed response on a successful (2xx) status, ``None`` if ``no_data`` is ``True``.
+            The processed response on a successful (2xx) status, `None` if `no_data` is `True`.
 
         """
         _url: str = self._endpoint_url + "/API/" + url
@@ -634,8 +634,8 @@ class Base:
         Processes a :class:`aiohttp.ClientResponse` into a parsed response object.
 
         .. warning::
-            Will raise :exc:`AMPAPIResponseError` if the response JSON is ``None`` (unless `allow_null` is True),
-            indicates ``"Unauthorized Access"``, ``"Instance Unavailable"``, or has ``status`` of ``False``.
+            Will raise :exc:`AMPAPIResponseError` if the response JSON is `None` (unless `allow_null` is True),
+            indicates ``"Unauthorized Access"``, ``"Instance Unavailable"``, or has `status` of `False`.
 
 
         Parameters
@@ -645,9 +645,9 @@ class Base:
         sanitize_json : :class:`bool`, optional
             Run the parsed JSON through :meth:`sanitize_json` before returning, by default True.
         to_file : :class:`bool`, optional
-            Write the response JSON to a file at ``path``, by default False.
+            Write the response JSON to a file at `path`, by default False.
         path : :class:`pathlib.Path` | None, optional
-            Directory to write the response file to when ``to_file`` is ``True``, by default None.
+            Directory to write the response file to when `to_file` is `True`, by default None.
         check_key_drift : :class:`bool`, optional
             A dev check that runs with `to_file`: compare the response with the TypedDict its endpoint narrows to,
             log a warning and write ``<endpoint>.key_drift.json`` beside the capture when the keys differ, by default False.
@@ -664,9 +664,9 @@ class Base:
         :exc:`AMPAPIResponseError`
             If the response indicates an error condition.
         :exc:`ValueError`
-            If ``to_file`` is ``True`` but ``path`` is ``None``.
+            If `to_file` is `True` but `path` is `None`.
         :exc:`FileNotFoundError`
-            If the provided ``path`` does not exist.
+            If the provided `path` does not exist.
 
         """
         if to_file is True and path is None:
@@ -1148,7 +1148,7 @@ class Base:
         named :class:`TypedDict` class using a PascalCase derivation of the parent key,
         ordered so dependencies appear before the class that references them.
 
-        When a field is ``None`` in some list items but has a real type in others, the inferred
+        When a field is `None` in some list items but has a real type in others, the inferred
         type is ``RealType | None``. Dict values whose keys are not valid Python identifiers
         (e.g. ``{"0": "Equals", "1": "NotEquals"}``) are emitted as ``dict[str, V]`` rather
         than a :class:`TypedDict`.
@@ -1315,7 +1315,7 @@ class Base:
     def sanitize_json(cls, json: Any) -> Any:
         """|classmethod|
 
-        Replaces spaces and underscores in the JSON response dict keys while also formatting keys to ``snake_case``.
+        Replaces spaces and underscores in the JSON response dict keys while also formatting keys to `snake_case`.
 
         Keys containing a ``.`` are AMP setting nodes (eg. ``ADSModule.Defaults.DefaultAuthServerURL``) and are
         left exactly as sent. Their values are still sanitized.

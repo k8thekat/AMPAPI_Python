@@ -128,7 +128,7 @@ class Core(Base):
     """Contains the functions for any ``/API/Core/`` AMP API endpoints.
 
     .. note::
-        If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
+        If the `format_data` parameter is None on any function; the global `FORMAT_DATA` will be used instead.
 
 
     """
@@ -1421,7 +1421,7 @@ class Core(Base):
         description : :class:`str`
             The description of the interval trigger to edit.
         format_data : Union[:class:`bool`, None], optional
-            Format the JSON response data, by default ``None``.
+            Format the JSON response data, by default `None`.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1937,7 +1937,7 @@ class Core(Base):
     ) -> list[AuditLogEntry] | list[AuditLogEntryResponse]:
         """|coro|
 
-        Returns the last ``count`` number of audit log entries.
+        Returns the last `count` number of audit log entries.
 
         Endpoint: `Core/GetAuditLogEntries`
 
@@ -3482,7 +3482,7 @@ class Core(Base):
             Your Two-Factor token string, defaults to "".
             - Uses :meth:`TOTP.now()` on the provided token.
         remember_me : :class:`bool` , optional
-            Remember me token, defaults to ``False``.
+            Remember me token, defaults to `False`.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`

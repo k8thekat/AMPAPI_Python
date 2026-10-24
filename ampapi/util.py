@@ -494,7 +494,7 @@ def _get_endpoint_urls(filepath: Path) -> set[str]:
 
 
 def _normalize_endpoint(name: str) -> str:
-    """Lowercase a name and drop its underscores so ``snake_case`` and ``PascalCase`` names compare equal.
+    """Lowercase a name and drop its underscores so `snake_case` and `PascalCase` names compare equal.
 
     Parameters
     ----------
@@ -521,7 +521,7 @@ def _get_function_signatures(filepath: Path) -> dict[str, list[str]]:
     Returns
     -------
     dict[:class:`str`, list[:class:`str`]]
-        A mapping of ``{method_name: [param_names]}``, excluding ``self``.
+        A mapping of ``{method_name: [param_names]}``, excluding `self`.
 
     """
     result: dict[str, list[str]] = {}
@@ -542,12 +542,12 @@ def find_missing_endpoints(
 ) -> None:
     """Compare all API spec sheets against their Python implementations and report missing endpoints.
 
-    Merges endpoints across all ``*_api_spec.md`` files found in ``spec_path``, then checks each
+    Merges endpoints across all ``*_api_spec.md`` files found in `spec_path`, then checks each
     spec section against the corresponding Python module file using :data:`_SPEC_MODULE_MAP`.
     Results are written to a Markdown file and summarised via logging.
 
     .. note::
-        An endpoint counts as implemented when any module in ``ampapi_path`` posts to its URL (eg.
+        An endpoint counts as implemented when any module in `ampapi_path` posts to its URL (eg.
         ``url="Core/CreateTestTask"``), whatever the wrapper method is named. This covers renamed wrappers,
         private ``DEV:`` wrappers and endpoints folded into another method. Spec and URL names are compared
         lowercased with underscores removed, and the spec section must match the URL's module part
@@ -638,7 +638,7 @@ def find_parameter_mismatches(
 
     For each endpoint that exists in both the spec sheets and the Python implementation, compares
     the parameter names from the spec (converted to snake_case via :meth:`Base.camel_to_snake_re`)
-    against the actual Python function signature. Python-only parameters (e.g. ``format_data``)
+    against the actual Python function signature. Python-only parameters (e.g. `format_data`)
     defined in :data:`_PYTHON_ONLY_PARAMS` are excluded from the comparison. Results are written
     to a Markdown file and summarised via logging.
 
@@ -1233,10 +1233,10 @@ async def generate_docs_rst(instance: Controller) -> None:
 
 
 def repeat_to_length(string: str, repeat_char: str, length: int = 0) -> str:
-    """Will repeat the passed in ``repeat_char`` by the ``len(string)`` provided or by the ``length`` parameter.
+    """Will repeat the passed in `repeat_char` by the ``len(string)`` provided or by the `length` parameter.
 
     .. note::
-        By default the ``repeat_char`` will be one longer than the provided string unless you specify the ``length`` parameter.
+        By default the `repeat_char` will be one longer than the provided string unless you specify the `length` parameter.
 
 
     Parameters
@@ -1244,14 +1244,14 @@ def repeat_to_length(string: str, repeat_char: str, length: int = 0) -> str:
     string : str
         The string to match the :meth:`len` of.
     repeat_char : str
-        The char to repeat to the length of the string or the ``length`` parameter.
+        The char to repeat to the length of the string or the `length` parameter.
     length : int, optional
         The length to repeat the char by, by default 0.
 
     Returns
     -------
     :class:`str`
-        The modified ``repeat_char`` str by the ``length`` provided.
+        The modified `repeat_char` str by the `length` provided.
 
     """
     if length == 0:

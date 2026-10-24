@@ -111,7 +111,7 @@ class ADSModule(Base):
     .. note::
         Every function in this class requires the Instance type be of either :class:`TargetADS`,
         :class:`ADSModule` or the :attr:`~ADSModule.module` attribute to be "ADS".\n
-        If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
+        If the `format_data` parameter is None on any function; the global `FORMAT_DATA` will be used instead.
 
 
     """
@@ -930,7 +930,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/DeleteInstance`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -1145,7 +1145,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/ExtractEverywhere`
 
         .. note::
-            The parameter ``source_archive`` will be sanitized. See :meth:`~Base.sanitize_path`.
+            The parameter `source_archive` will be sanitized. See :meth:`~Base.sanitize_path`.
 
 
         Parameters
@@ -1622,7 +1622,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetInstanceNetworkInfo`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -2914,7 +2914,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/RestartInstance`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -3021,11 +3021,11 @@ class ADSModule(Base):
         Endpoint: `ADSModule/SetInstanceConfig`
 
         .. note::
-            See :ref:`Setting Nodes <Documentation>` for possible ``setting_node`` values.
+            See :ref:`Setting Nodes <Documentation>` for possible `setting_node` values.
 
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -3162,7 +3162,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/SetInstanceSuspended`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -3274,7 +3274,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/StartInstance`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -3378,7 +3378,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/StopInstance`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters
@@ -3759,7 +3759,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/UpgradeInstance`
 
         .. note::
-            The ``instance_name`` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
+            The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
 
         Parameters

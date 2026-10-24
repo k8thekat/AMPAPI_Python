@@ -47,7 +47,7 @@ class AnalyticsPlugin(Base):
     """Contains the base functions for any `/API/AnalyticsPlugin/` AMP API endpoints.
 
     .. note::
-        If the ``format_data`` parameter is None on any function; the global ``FORMAT_DATA`` will be used instead.
+        If the `format_data` parameter is None on any function; the global `FORMAT_DATA` will be used instead.
 
 
     """
