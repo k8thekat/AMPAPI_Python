@@ -12,12 +12,6 @@ Enums
 .. autoenum:: AMPDownloadMirrorState
     :members:
 
-.. autoenum:: IfOperators
-    :members:
-
-.. autoenum:: InstanceState
-    :members:
-
 .. autoenum:: AMPTheme
     :members:
 
@@ -33,6 +27,12 @@ Enums
 .. autoenum:: DefaultIPBindingState
     :members:
 
+.. autoenum:: IfOperators
+    :members:
+
+.. autoenum:: InstanceState
+    :members:
+
 .. autoenum:: LoggingLevelState
     :members:
 
@@ -46,7 +46,10 @@ Enums
     :members:
 
 .. autoenum:: PostCreateState
-    :members: 
+    :members:
+
+.. autoenum:: Protocols
+    :members:
 
 .. autoenum:: ReleaseStreamState
     :members:

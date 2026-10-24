@@ -22,13 +22,23 @@ from enum import Enum, StrEnum
 
 __all__ = (
     "ADSModeState",
+    "AMPDownloadMirrorState",
+    "AMPTheme",
     "AccessModeState",
     "AppStartupModeState",
+    "ApplicationUpdatesState",
+    "ContainerMemoryPolicyState",
+    "DefaultIPBindingState",
     "IfOperators",
     "InstanceState",
+    "LoggingLevelState",
     "MailPriority",
     "Module",
+    "PortAssignmentState",
     "PostCreateState",
+    "Protocols",
+    "ReleaseStreamState",
+    "TwoFactoryModeState",
 )
 
 
@@ -51,7 +61,11 @@ class ADSModeState(Enum):
 
 
 class AMPDownloadMirrorState(Enum):
-    """Related to Node: ADSModule.ADS.DownloadMirror"""
+    """Related to Node: ADSModule.ADS.DownloadMirror
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     us_central = "[Automatic]"
     eu_west = ""
@@ -59,7 +73,11 @@ class AMPDownloadMirrorState(Enum):
 
 
 class AMPTheme(Enum):
-    """Related to Node: Core.AMP.Theme"""
+    """Related to Node: Core.AMP.Theme
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     aura = "Aura"
     black = "Black"
@@ -69,7 +87,11 @@ class AMPTheme(Enum):
 
 
 class ApplicationUpdatesState(Enum):
-    """Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod"""
+    """Related to Node: steamcmdplugin.SteamUpdateSettings.UpdateCheckMethod
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     by_timestamp = 0
     by_build_id = 1
@@ -87,6 +109,12 @@ class AppStartupModeState(Enum):
 
 
 class ContainerMemoryPolicyState(Enum):
+    """The memory policy of a container Instance, see `Instance.container_memory_policy`.
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
+
     not_specified = 0
     reserve = 100
     restrict = 200
@@ -95,6 +123,9 @@ class ContainerMemoryPolicyState(Enum):
 class DefaultIPBindingState(Enum):
     """Related to Node: ADSModule.Network.DockerExternalIPBinding, ADSModule.Network.DefaultAppIPBinding,
     ADSModule.Network.DefaultIPBinding
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
     """
 
     ipv4_loopback = "127.0.0.1"
@@ -144,7 +175,11 @@ class InstanceState(Enum):
 
 
 class LoggingLevelState(Enum):
-    """Related to Node: Core.Monitoring.LogLevel"""
+    """Related to Node: Core.Monitoring.LogLevel
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     debug = 0
     info = 10
@@ -178,7 +213,11 @@ class Module(StrEnum):
 
 
 class PortAssignmentState(Enum):
-    """Related to Node: ADSModule.Network.PortAssignment"""
+    """Related to Node: ADSModule.Network.PortAssignment
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     include_allowed_ports_only = 0
     allow_all_except_excluded = 1
@@ -209,6 +248,8 @@ class Protocols(Enum):
     2 = TCP & UDP
     ```
 
+    .. versionadded:: 5.0.0
+
     """
 
     TCP = 0
@@ -217,7 +258,11 @@ class Protocols(Enum):
 
 
 class ReleaseStreamState(Enum):
-    """Related to Node: ADSModule.Defaults.DefaultReleaseStream"""
+    """Related to Node: ADSModule.Defaults.DefaultReleaseStream
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     lts = 5
     mainline = 10
@@ -226,7 +271,11 @@ class ReleaseStreamState(Enum):
 
 
 class TwoFactoryModeState(Enum):
-    """Related to Node: Core.Security.TwoFactorMode"""
+    """Related to Node: Core.Security.TwoFactorMode
+
+    .. versionchanged:: 5.0.0
+        Exported from `ampapi`.
+    """
 
     optional = 0
     required = 1

@@ -26,7 +26,7 @@ Renamed classes
 `AMPInstance`                   :class:`~ampapi.instance.Instance`
 `AMPMinecraftInstance`          :class:`~ampapi.instance.MinecraftInstance`
 `AMPADSInstance`                :class:`~ampapi.instance.TargetADS`
-`AMPInstanceState`              :class:`~ampapi.InstanceState`
+`AMPInstanceState`              :class:`~ampapi._enums.InstanceState`
 `Metric`                        :class:`~ampapi.modules.Metrics`
 `User`                          :class:`~ampapi.modules.UserInfo`
 `APISPecEndpointData`           :class:`~ampapi._types.APISpecEndpointData`
@@ -54,7 +54,8 @@ Moved modules
 Everything public is still available straight from `ampapi`.
 
 - `ampapi.controller` was removed; :class:`~ampapi.instance.Controller` lives in `ampapi.instance`.
-- `ampapi.enums_` -> `ampapi._enums`
+- `ampapi.enums_` -> `ampapi._enums`. Every Enum in it is now exported from `ampapi`, where 4.x exported only five
+  (eg. :class:`~ampapi._enums.AMPTheme` and :class:`~ampapi._enums.LoggingLevelState` are new there).
 - `ampapi.types_` -> `ampapi._types`
 - `ampapi.util` holds developer tools and is no longer star-imported, so its functions (eg. `amp_api_update`,
   `find_missing_endpoints`) are no longer on `ampapi`. Import the module instead: ``from ampapi import util``.
@@ -106,7 +107,7 @@ Changed methods
 - `PostCreateActionsState` was removed; it never matched AMP's `PostCreateAppActions` (eg. its `start_instance`
   was AMP's `update_once`, and `every_time` = 16 doesn't exist). :class:`~ampapi.CreateInstance`,
   `DeploymentTemplate` and `create_instance_from_spec` take
-  :class:`~ampapi.PostCreateState`, whose values are AMP's.
+  :class:`~ampapi._enums.PostCreateState`, whose values are AMP's.
 - :class:`~ampapi.modules.CreateInstance` fills `new_instance_id` with the zero GUID (AMP picks the ID),
   `admin_username` with ``"admin"`` and `admin_password` with a generated password, since AMP rejects empty values.
 - :class:`~ampapi.modules.CreateInstance` defaults `ip_binding` to ``"0.0.0.0"`` (every IPv4 address). 4.x used
@@ -233,8 +234,8 @@ Returned data
   `request_params` and the ``**response_params`` the other methods take (eg. `to_file`).
 - :class:`~ampapi.modules.ParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
   `seconds`, `message`, `!input`); 4.x kept only `user`, `reason`, `title` and `subtitle`. An argument
-  the task doesn't hold is `None`, not ``""``. Booleans, numbers, `state`, `operation` (:class:`~ampapi.IfOperators`),
-  `priority` (:class:`~ampapi.MailPriority`) and `when` (a naive `datetime`) are converted from AMP's strings
+  the task doesn't hold is `None`, not ``""``. Booleans, numbers, `state`, `operation` (:class:`~ampapi._enums.IfOperators`),
+  `priority` (:class:`~ampapi._enums.MailPriority`) and `when` (a naive `datetime`) are converted from AMP's strings
   (a value that doesn't parse stays a string).
 - :attr:`~ampapi.modules.RemoteTargetInfo.datastores` holds :class:`~ampapi.modules.TargetDatastore` (an ID and a
   name, all AMP sends there); 4.x typed it as `InstanceDatastore`.
@@ -253,7 +254,7 @@ Returned data
 
   - ADSModule `metrics` and LocalFileBackupPlugin `BackupFailed` hold a :class:`~ampapi.modules.MessageParameters`
     (its `metrics` a :class:`~ampapi.modules.Metrics`, its `uptime` an :class:`~ampapi.modules.Uptime` and its
-    `state` an :class:`~ampapi.InstanceState`).
+    `state` an :class:`~ampapi._enums.InstanceState`).
   - Core `refreshTask` holds a :class:`~ampapi.modules.RunningTask`.
   - Core `settingValueUpdate` holds the new :class:`~ampapi.modules.SettingValueUpdate` (`node` and `new_value`).
   - ADSModule `instupdate` holds the new :class:`~ampapi.modules.InstanceUpdate` (`!id`, `target` and `instance`,
