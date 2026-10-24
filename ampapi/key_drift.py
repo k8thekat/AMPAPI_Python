@@ -39,12 +39,12 @@ if TYPE_CHECKING:
 
 __all__ = ("KeyDriftCheck", "declared_keys", "key_drift")
 
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
 # Matches a `url=` literal such as "Core/GetStatus", with or without a leading "API/".
 _ENDPOINT_URL_PATTERN = re.compile(r"^(?:API/)?([A-Za-z]+/[A-Za-z0-9]+)$")
 # The helpers each wrapper narrows its response with; their second argument is the TypedDict.
 _NARROWING_CALLS = ("is_response_type", "is_response_list")
-
-LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 def _is_json_object(value: object) -> TypeGuard[Mapping[str, object]]:
