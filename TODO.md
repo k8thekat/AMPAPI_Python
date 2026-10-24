@@ -14,48 +14,38 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-
 ## ampapi/base.py
 
 ---
-
 
 ## ampapi/core.py
 
 ---
 
-
-
 ## ampapi/analytics.py
 
 ---
-
 
 ## ampapi/filemanager.py, filebackup.py, emailsender.py, minecraft.py
 
 ---
 
-
 ## ampapi/modules.py
 
 ---
-
-
-
 
 ## ampapi/util.py
 
 ---
 
-
 ## Docs
 
 ---
 
-
 ## Issues
 
 ---
+
 - N/A
 
 ## Improvements/Suggestions

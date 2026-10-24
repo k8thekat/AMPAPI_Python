@@ -11,7 +11,7 @@ to one TypedDict before touching it, using the `is_response_type()` / `is_respon
 predicates in `_types.py` paired with the `*_REQUIRED_KEYS` / `*_EXCLUDED_KEYS` tuples.
 
 Both predicates return a `TypeGuard`, which replaces the type outright. A TypedDict therefore
-does **not** have to be a `ResponseTypeAlias` member to be a narrowing target — `TimedTriggerResponse`,
+does **not** have to be a `ResponseTypeAlias` member to be a narrowing target. `TimedTriggerResponse`,
 `SettingsSpecParentResponse` and `UserApplicationDataResponse` are all narrowed to without joining
 the union, which keeps them out of the key-collision problem below.
 
@@ -224,7 +224,7 @@ widened to `Rich | Raw`. `from_response` builds a nested dataclass from the hint
 enum (`Port.protocol`, `Status.state`). `Updates.status`, `TimedTrigger.tasks` and every `SettingsSpecParent`
 category follow this shape. Built directly from a dict (`Status(**raw)`), the nested fields stay raw, as in 4.x.
 
-Container fields are spelled as a **union of containers** — `list[SettingSpec] | list[SettingSpecResponse]`,
+Container fields are spelled as a **union of containers**, `list[SettingSpec] | list[SettingSpecResponse]`,
 not `list[SettingSpec | SettingSpecResponse]`. `list` and `dict` are invariant in their element type, so
 the raw response is not assignable to the combined form.
 
@@ -293,12 +293,12 @@ they can't show the casing; "No such web method" on a method the spec lists is t
 
 Shapes not yet confirmed against a live payload:
 
-- `DeploymentTemplateResponse` / `ProvisionResponse`, derived from the dataclasses and docs; both
-  endpoints returned empty on every setup dumped so far.
-- `TimedTriggerResponse` / `UserApplicationDataResponse`, derived from their dataclasses; there is no
-  dump for `Core/GetTimeIntervalTrigger` or `Core/GetUserInfo`.
+- `ProvisionResponse`, derived from the dataclass and docs. `GetProvisionFitness` answers null on the VMs (#3).
 - `OPWhitelistResponse`, built from the `OPWhitelist` dataclass; `GetOPWhitelist` answers
   "Missing Method" and is in no spec sheet.
+
+`DeploymentTemplateResponse`, `TimedTriggerResponse` and `UserApplicationDataResponse` were on this list until the
+2.8.0.8 captures. The key drift check finds no drift for any of them.
 
 `ampapi/key_drift.py` notices AMP changing its keys; usage is in CONTRIBUTING.md ("Checking for key
 drift"). `key_drift()` / `declared_keys()` are the same functions as Minerva's and Python_Template's
@@ -313,11 +313,8 @@ they only run from a repo checkout.
 
 ## Verification
 
-```bash
-.venv/bin/python -c "import ampapi; import ampapi.util"
-~/.local/bin/uvx ruff check ampapi/
-~/.local/bin/uvx pyright ampapi/
-```
+The checks to run before a change lands are in CLAUDE.md ("Before reporting work as done"); `land_check.py` runs
+Ruff, pyright, Sphinx and the style rules together.
 
 `unit_test.py` at the repo root is untracked and hits a live AMP Instance - do not run it
 unattended.
@@ -549,51 +546,24 @@ Tested with a user holding no roles, then a role with `Instances.<id>` nodes (AM
   ("Common/shared roles are not available on this edition of AMP").
 - `Settings.<Module>.<Category>.<Name>` nodes decide who may change a setting, per the permissions spec.
 
-The original two-VM build, for reference:
-
-```bash
-#!/bin/bash
-# Dev-VMs
-for vm in vm1 vm2; do
-  virt-install --name $vm --memory 4096 --vcpus 2 \
-    --disk /var/lib/libvirt/vm-ware/images/$vm.qcow2,bus=virtio \
-    --network network=default,model=virtio \
-    --os-variant ubuntu24.04 \
-    --import --cloud-init user-data=/home/kat/vm-user-data.yaml \
-    --graphics none --console pty,target_type=serial \
-    --noautoconsole
-done
-```
 ## Version directives
 
-Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and furo:
-- `.. versionadded:: X`, `.. versionchanged:: X`, `.. deprecated:: X` and `.. versionremoved:: X` are built into
-  Sphinx (`versionremoved` since 7.3), so `conf.py` needs nothing. Napoleon passes them through from a numpy docstring,
-  in the body or nested under a parameter's description, and `:attr:` / `:meth:` references inside them resolve.
-- `docs/_static/styles/furo.css` already styles `div.versionadded`, `div.versionchanged` and `div.versionremoved`.
-  They render as "Added in version 5.0.0:", "Changed in version 5.0.0:" and "Removed in version 5.0.0:".
-- Already in use: `Bridge` (`versionadded`). `create_local_instance` was the one `deprecated` until #4 removed it.
+How to write them is in CLAUDE.md ("Version Directives"). What the #14 test build showed (2026-10-20, Sphinx 8.2.3
+and furo):
+- Napoleon passes them through from a numpy docstring, in the body or nested under a parameter's description, and
+  `:attr:` / `:meth:` references inside them resolve. They render as "Added in version 5.0.0:" and so on.
 - `docs/extensions/prettyversion.py` (from dpy/Umbra, commented out in `conf.py`) swaps them for boxes with
   Font Awesome icons. The docs don't load Font Awesome, so the icons would be blank without it.
-- The version is compared against the last release (4.6.0). Things added and changed inside the 5.0.0 work
-  (`route_by_target`, `Controller.targets`) never shipped, so they are `versionadded:: 5.0.0` at most.
 - 5.0.0 tags only the objects whose use changed (Kat, 2026-10-20): `Controller.instances` / `targets`,
   `TargetADS` start, stop and restart, `write_file_chunk` and `sanitize_path`. `docs/upgrading.rst` stays the full
   4.x -> 5.0.0 record. Later changes get their tag as they are made.
-- An AMP version in a directive is written `AMP-2.6.0.0` (`Core.get_webserver_metrics`). Sphinx takes the first word
-  as the version and the rest as the text, so `AMP 2.6.0.0` renders "Removed in version AMP: 2.6.0.0".
 
 ## Class order
 
-Every module keeps its public classes in alphabetical order, ignoring case (2785a7a for `modules.py`, b9367bd for the
-rest). CODING_STYLE.md §21 has the full rule.
-- A class that another class in the same file inherits from comes first, as Python needs it defined before the
-  subclass (`ResponseData`, `AMPAPIError`, `ADSData` and `Instance`). `from __future__ import annotations` only
-  defers annotations, so it doesn't help a base class.
-- A private (`_`) class is placed by what uses it, like a helper function. `_SessionDeadError` sits right above
-  `Base`, its only user.
-- The TypedDicts in `base.py` type `Base`'s parameters, so they sit above `Base` as its helpers, in alphabetical order
-  among themselves. `BaseArgs` was used nowhere and was removed.
+The rule is in CODING_STYLE.md §21 (2785a7a for `modules.py`, b9367bd for the rest). Where it lands in this library:
+- The same-file base classes that come first are `ResponseData`, `AMPAPIError`, `ADSData` and `Instance`.
+- `_SessionDeadError` sits right above `Base`, its only user. The TypedDicts in `base.py` type `Base`'s parameters, so
+  they sit above `Base` as its helpers, in alphabetical order among themselves.
 - `APISpec` in `_types.py` is built from two TypedDicts when the module is imported, so it sits right below them.
   Every other annotation is a string under `from __future__ import annotations`, so its order doesn't matter.
 - `docs/conf.py` sets `autodoc_member_order = "bysource"`, so `automodule` pages (`_types`, `modules`, `errors`)
