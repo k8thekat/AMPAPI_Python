@@ -309,12 +309,6 @@ def _is_json_array(value: object) -> TypeGuard[list[Any]]:
     return isinstance(value, list)
 
 
-# TODO: Remove once every caller uses `from_response` (#24 phase C).
-def build[ResponseT: ResponseData](cls: type[ResponseT], data: Mapping[str, Any]) -> ResponseT:
-    """Forward to :meth:`ResponseData.from_response`, kept until the callers are converted."""
-    return cls.from_response(data)
-
-
 class ResponseData:
     """The base of every dataclass that holds an AMP response.
 
@@ -3977,6 +3971,9 @@ class TimedTrigger(ResponseData):
         The order in which this trigger will appear in the Event list.
     tasks : :class:`list[TriggerTasks]`
         The list of tasks associated with this Timed Trigger.
+
+        .. versionchanged:: 5.0.0
+            Built from the dict AMP sends, which is keyed by task ID.
     last_executed : Union[:class:`str`, None], optional
         When the Timed Trigger last fired, None if it never has, by default None.
 
@@ -4291,7 +4288,7 @@ class Uptime(ResponseData):
     seconds: int
 
 
-# The hand-written class before 5.0.0, when it became a dataclass built with `build`.
+# The hand-written class before 5.0.0, when it became a dataclass built with `from_response`.
 # class UserApplicationData:
 #     """Represents the JSON response data from :meth:`Core.get_user_info`."""
 #

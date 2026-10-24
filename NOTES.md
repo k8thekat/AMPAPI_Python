@@ -88,15 +88,29 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
 
 ## Dataclasses vs. the raw JSON
 
-Response dataclasses are built with `build(Cls, result)` (`modules.py`), never `Cls(**result)` and never `cast`.
-`sanitize_json` has already snake_cased the keys by then. `build` reads the field type hints (cached per class) and
-builds nested dataclasses through lists and unions, trying a union's members in order, so the dataclass goes first
+Response dataclasses inherit `ResponseData` and are built with `Cls.from_response(result)` (`modules.py`), never
+`Cls(**result)` and never `cast` (#24, 2026-10-23; it was the module function `build(Cls, result)` until then).
+`sanitize_json` has already snake_cased the keys by then. `from_response` reads the field type hints (cached per class)
+and builds nested dataclasses through lists and unions, trying a union's members in order, so the dataclass goes first
 (`list[Consumes] | list[ConsumesResponse]`). A key the dataclass doesn't declare is dropped and logged once per
 class and key at WARNING. 4.x used dataclass-wizard's `fromdict`, which dropped them silently, and the 5.0.0 baseline's
-`Cls(**result)` raised on them. `build` rejects a non-dataclass: `DeploymentTemplate` is still unpacked with `**`.
-`UserApplicationData` was too until AMP-2.8.0.8's `display_name` made `get_user_info` raise (live, 2026-10-21).
+`Cls(**result)` raised on them. `DeploymentTemplate` and `UserApplicationData` were the last two unpacked with `**`,
+and the second raised once AMP-2.8.0.8 added `display_name` (live, 2026-10-21).
 
-`build` checks nothing for a plain hint: a dict AMP sends for a `str` field is stored as is. That is how
+`ResponseData` sets `__slots__ = ()`. Without it every `slots=True` subclass gets a `__dict__` back (measured), which
+would undo #9. A subclass that needs more than its hints overrides `from_response` (`SettingsSpecParent` builds the
+`modules` dict, which the converter doesn't look inside, and `TimedTrigger` turns `tasks` into a list). The override
+calls `super(TheClass, cls)`: a bare `super()` in a classmethod of a `slots=True` dataclass raises `TypeError` on
+3.12, because `slots=True` builds a new class and the `__class__` cell still names the old one. `Players`,
+`ScheduleData` and `TriggerID` keep their own `__init__(data)`, since each takes a whole answer, not one object's keys.
+`Core.get_time_interval_trigger` sends `tasks` as a dict keyed by task ID (each task carries its `id` too), in every
+2.8.0.8 capture; the other `tasks` keys AMP sends are lists. Moving `build` onto the class first cost ~4%; reading the
+plan cache inline and binding each nested `from_response` once made it ~5% faster than `build` (Updates 210 -> 199 us).
+Unconfirmed: one `Messages.parameters` came back as a string in a live `get_updates` on vm1 (2026-10-23), where the hint
+allows a `MessageParameters`, its raw dict or None. The converter leaves a non-dict as sent, as `build` did, so the
+next capture with a string there should be kept to see what AMP puts in it.
+
+`from_response` checks nothing for a plain hint: a dict AMP sends for a `str` field is stored as is. That is how
 `ActionResult.result` (typed `str` until #19) held a dict for two endpoints. The spec types the result per endpoint as
 `ActionResult<T>`. In 2.8.0.8, T is `String` (8 endpoints), `Guid` (`create_role`, `create_user`), `TwoFactorSetupInfo`
 (`enable_two_factor`) and `JObject` (`activate_amp_license`). The last two answer an object, and their wrappers
@@ -111,7 +125,7 @@ narrow to `TwoFactorSetupResultResponse` and `LicenceResultResponse` instead (#2
 shape, and `key_drift` follows it like any nested TypedDict (`result.manual_key`). A new `ActionResult<object>`
 wrapper wants the same envelope.
 
-A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `build` drops the data.
+A field whose keys are dynamic stays a raw dict and must not name a dataclass in its hint, or `from_response` drops the data.
 `TriggerTasks.parameter_mapping` is keyed by the snake_cased `consumes` names of the task's method (eg. `seconds` for
 `Event.CommonCorePlugin.Wait`), checked against 117 live tasks. The `ParameterMapping` dataclass declares the union of
 those names across every task method in the 2.8.0.8 captures (`get_schedule_data`'s `available_methods`), 62 of them.
@@ -135,8 +149,9 @@ never sent in a capture stay `Any` (Bukkit, `ImportConfig`, `Fitness`, `Backup.m
 `Core.get_user_list` answers `{}` with no players in every capture; `[]` is handled as empty too.
 
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is
-widened to `Rich | Raw` and `__post_init__` does the conversion. `Port.protocol`, `Status.state`,
-`Updates.status`, `TimedTrigger.tasks` and every `SettingsSpecParent` category follow this shape.
+widened to `Rich | Raw`. `from_response` builds a nested dataclass from the hint, and `__post_init__` converts an
+enum (`Port.protocol`, `Status.state`). `Updates.status`, `TimedTrigger.tasks` and every `SettingsSpecParent`
+category follow this shape. Built directly from a dict (`Status(**raw)`), the nested fields stay raw, as in 4.x.
 
 Container fields are spelled as a **union of containers** — `list[SettingSpec] | list[SettingSpecResponse]`,
 not `list[SettingSpec | SettingSpecResponse]`. `list` and `dict` are invariant in their element type, so
@@ -150,8 +165,8 @@ Where a response's time goes (#9, measured 2026-10-21 on vm1 bodies, this box): 
 sanitising was 67-77% of decode + sanitise + check + build, because `camel_to_snake_re` ran three `re.sub` per key on
 every response. `format_data=False` only skips the build, and its dict was the heaviest form (a new string per key per
 dict: Updates 36 KB as a dict, 11 KB as dataclasses). `_snake_key` now caches the whole key conversion per key string
-(`lru_cache(maxsize=4096)`, bounded because some answers are keyed by player ID) and `build` works out each class's
-converters once (`_build_plan`). `get_updates` went from ~2.8 ms to ~0.38 ms of library time, PermissionsSpec from
+(`lru_cache(maxsize=4096)`, bounded because some answers are keyed by player ID) and `from_response` works out each
+class's converters once (`ResponseData._build_plan`). `get_updates` went from ~2.8 ms to ~0.38 ms of library time, PermissionsSpec from
 15.5 ms to 1.7 ms. The cache reads `Base.json_key_mapping` directly: change that mapping at runtime and call
 `_snake_key.cache_clear()`. msgspec would be ~100x faster again but needs per-class rename maps (AMP sends both `ID`
 and `Id`) and a rewrite; orjson is TODO #17.
@@ -167,7 +182,7 @@ different: its 28 names are real slots, but `Base` and the mixins have none and 
 AMP adds keys between versions. AMP 2.8 added `ports` to the status, three keys to each port and five to
 each backup, plus `oidc_sub` (users), `local_login_enabled` (module info), `warn_text` / `warn_when_value` (every
 setting), `notice` (schedule methods), `locked*` (method arguments) and four error keys on trigger tasks. New fields
-go in defaulted so older responses still construct. A dropped-key WARNING from `build` is the cue to declare one.
+go in defaulted so older responses still construct. A dropped-key WARNING from `from_response` is the cue to declare one.
 
 `Core.get_setting_spec` categories vary by ADS, Instance and licence: only `system_settings` and
 `security_and_privacy` are always sent. The VMs send no `branding`, Kat's live Instances do. Module categories have

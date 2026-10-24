@@ -224,6 +224,14 @@ Returned data
 - Keys holding a dot are AMP setting nodes and keep AMP's spelling (eg. `deployment_args` keeps
   `ADSModule.Defaults.DefaultAuthServerURL`); 4.x rewrote them like field names
   (`ads_module._defaults._default_auth_server_url`).
+- Every response dataclass inherits :class:`~ampapi.modules.ResponseData`, and
+  :meth:`~ampapi.modules.ResponseData.from_response` builds one from a raw, snake_cased answer with its nested
+  dataclasses (eg. ``Status.from_response(data)``). Built directly (``Status(**data)``), the nested fields stay as
+  dicts, as they did in 4.x.
+- :class:`~ampapi.modules.DeploymentTemplate` is a dataclass and takes the same arguments as in 4.x. A key AMP sends
+  that it doesn't declare is logged instead of raising a :exc:`TypeError`.
+- :attr:`~ampapi.modules.TimedTrigger.tasks` is a list of :class:`~ampapi.modules.TriggerTasks`. AMP sends the tasks
+  keyed by task ID, and each task keeps its `!id`.
 
 
 Target ADS
