@@ -68,9 +68,9 @@ if TYPE_CHECKING:
         ConsoleEntriesResponse,
         ConsumesResponse,
         DiagnosticsResponse,
+        InstanceResponse,
         LoginUserInfoResponse,
         MCUserResponse,
-        MessageParametersResponse,
         MessagesResponse,
         MetricsResponse,
         ParameterMappingResponse,
@@ -119,6 +119,7 @@ __all__ = (
     "InstanceDatastore",
     "InstanceInfo",
     "InstanceStatus",
+    "InstanceUpdate",
     "LicenceInfo",
     "LoginResults",
     "LoginUserInfo",
@@ -152,6 +153,7 @@ __all__ = (
     "SettingSpecSelectionSource",
     "SettingSpecTable",
     "SettingSpecTableAliases",
+    "SettingValueUpdate",
     "SettingsSpecAttribute",
     "SettingsSpecParent",
     "Status",
@@ -2115,6 +2117,31 @@ class InstanceStatus(ResponseData):
 
 
 @dataclass(slots=True)
+class InstanceUpdate(ResponseData):
+    """Represents the `parameters` of an ADSModule "instupdate" message, see :attr:`Messages.parameters`.
+
+    .. note::
+        `instance` stays a dict, because building an :class:`~ampapi.instance.Instance` needs a bridge.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    id : :class:`str`
+        The ID of the Instance that changed.
+    target : :class:`str`
+        The ID of the Target ADS the Instance is on.
+    instance : :class:`InstanceResponse`
+        The Instance as :meth:`ADSModule.get_instances` sends it.
+
+    """
+
+    id: str
+    target: str
+    instance: InstanceResponse
+
+
+@dataclass(slots=True)
 class LicenceInfo(ResponseData):
     """Represents the licence AMP reports from :meth:`Core.activate_amp_license`.
 
@@ -2258,8 +2285,8 @@ class MessageParameters(ResponseData):
     """Represents the JSON response data from :attr:`Messages.parameters`.
 
     .. note::
-        Which keys AMP sends depends on the message. A message from the ADSModule carries `instance_id`, `metrics`,
-        `state` and `uptime`, a message from the LocalFileBackupPlugin carries `name` and `reason`.
+        Only two messages build this class. The ADSModule `metrics` message carries `instance_id`, `metrics`,
+        `state` and `uptime`, and the LocalFileBackupPlugin `BackupFailed` message carries `name` and `reason`.
 
     .. versionadded:: 5.0.0
 
@@ -2309,8 +2336,13 @@ class Messages(ResponseData):
         The message.
     source : :class:`str`
         The source of the message.
-    parameters : Union[:class:`MessageParameters`, :class:`MessageParametersResponse`, None], optional
-        Extra data for the message, default is None.
+    parameters : Any, optional
+        Extra data for the message, default is None. What it holds depends on the `source` and `message`:
+            * ADSModule `metrics` and LocalFileBackupPlugin `BackupFailed` hold :class:`MessageParameters`.
+            * Core `refreshTask` holds :class:`RunningTask`.
+            * Core `settingValueUpdate` holds :class:`SettingValueUpdate`.
+            * ADSModule `instupdate` holds :class:`InstanceUpdate`.
+            * Any other message keeps what AMP sent: a dict, a string or None.
 
         .. versionadded:: 5.0.0
 
@@ -2322,7 +2354,54 @@ class Messages(ResponseData):
     message: str
     source: str
     # Confirmed against getupdates.json; defaulted so older responses still construct.
-    parameters: Union[MessageParameters, MessageParametersResponse, None] = field(default=None)
+    # `from_response` builds it by (source, message), anything else stays as AMP sent it.
+    parameters: Union[
+        MessageParameters,
+        RunningTask,
+        SettingValueUpdate,
+        InstanceUpdate,
+        str,
+        dict[str, Any],
+        None,
+    ] = field(default=None)
+
+    @classmethod
+    def from_response(cls, data: Mapping[str, Any]) -> Self:
+        """Build this dataclass from a message in `Core.get_updates`, with `parameters` built by the message type.
+
+        The converter can't pick a class from the `source` and `message` fields, so `parameters` is built here.
+        A message that isn't one of the known shapes keeps its `parameters` as AMP sent them.
+
+        Parameters
+        ----------
+        data : Mapping[:class:`str`, Any]
+            The sanitised AMP response for it.
+
+        Returns
+        -------
+        :class:`Self`
+            The built dataclass, with `parameters` built too.
+
+        """
+        # Keyed by (source, lowercase message). Read in here because `RunningTask` is defined after this class.
+        parameter_classes: dict[tuple[str, str], type[ResponseData]] = {
+            ("ADSModule", "metrics"): MessageParameters,
+            ("LocalFileBackupPlugin", "backupfailed"): MessageParameters,
+            ("Core", "refreshtask"): RunningTask,
+            ("Core", "settingvalueupdate"): SettingValueUpdate,
+            ("ADSModule", "instupdate"): InstanceUpdate,
+        }
+        # Taken out of a copy first, so the converter doesn't build every dict as `MessageParameters`.
+        remaining: dict[str, Any] = dict(data)
+        parameters: Any = remaining.pop("parameters", None)
+        # An explicit `super(Messages, cls)`, because `slots=True` builds a new class and a bare `super()`
+        # in this classmethod raises a TypeError.
+        message = super(Messages, cls).from_response(remaining)
+        parameter_class = parameter_classes.get((str(data.get("source")), str(data.get("message")).lower()))
+        if parameter_class is not None and isinstance(parameters, dict):
+            parameters = parameter_class.from_response(parameters)  # pyright: ignore[reportUnknownArgumentType]
+        message.parameters = parameters
+        return message
 
 
 @dataclass(slots=True)
@@ -3801,6 +3880,25 @@ class SettingsSpecParent(ResponseData):
             for name, entries in parent.modules.items()
         }
         return parent
+
+
+@dataclass(slots=True)
+class SettingValueUpdate(ResponseData):
+    """Represents the `parameters` of a "settingValueUpdate" message from the Core, see :attr:`Messages.parameters`.
+
+    .. versionadded:: 5.0.0
+
+    Attributes
+    ----------
+    node : :class:`str`
+        The setting node that changed. (eg. "Core.Security.SomeSetting")
+    new_value : :class:`str`
+        The new value of the setting, as a string.
+
+    """
+
+    node: str
+    new_value: str
 
 
 @dataclass(slots=True)

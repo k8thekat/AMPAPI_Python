@@ -934,10 +934,34 @@ class MessageParametersResponse(TypedDict, total=False):
     reason: str
 
 
+class SettingValueUpdateResponse(TypedDict):
+    """Represents the JSON response data for `parameters` of a Core "settingValueUpdate" message."""
+
+    node: str
+    new_value: str
+
+
+class InstanceUpdateResponse(TypedDict):
+    """Represents the JSON response data for `parameters` of an ADSModule "instupdate" message."""
+
+    id: str
+    target: str
+    instance: InstanceResponse
+
+
 class MessagesResponse(TypedDict):
     """Represents the JSON response data for each entry of :attr:`UpdatesResponse.messages`."""
 
-    parameters: Union[MessageParametersResponse, None]
+    # Depends on the message, see :attr:`Messages.parameters`. Messages the library doesn't know stay as sent.
+    parameters: Union[
+        MessageParametersResponse,
+        RunningTaskResponse,
+        SettingValueUpdateResponse,
+        InstanceUpdateResponse,
+        str,
+        dict[str, Any],
+        None,
+    ]
     id: str
     expired: bool
     source: str

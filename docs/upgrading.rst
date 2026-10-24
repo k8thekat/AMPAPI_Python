@@ -199,9 +199,15 @@ Returned data
 - :attr:`~ampapi.modules.Module.branding` is a :class:`~ampapi.modules.Branding` dataclass; 4.x left it as a dict.
 - :attr:`~ampapi.modules.AnalyticsSummary.busiest_time`, `quietest_time` and `graph_data` hold
   :class:`~ampapi.modules.AnalyticsGraphData` (`date`, `end_date` and `count`); 4.x left them as dicts.
-- :attr:`~ampapi.modules.Messages.parameters` is a :class:`~ampapi.modules.MessageParameters` (its `metrics` a
-  :class:`~ampapi.modules.Metrics`, its `uptime` an :class:`~ampapi.modules.Uptime` and its `state` an
-  :class:`~ampapi.InstanceState`). 4.x had no `parameters`.
+- :attr:`~ampapi.modules.Messages.parameters` is built by the message type. 4.x had no `parameters`.
+    - ADSModule `metrics` and LocalFileBackupPlugin `BackupFailed` hold a :class:`~ampapi.modules.MessageParameters`
+      (its `metrics` a :class:`~ampapi.modules.Metrics`, its `uptime` an :class:`~ampapi.modules.Uptime` and its
+      `state` an :class:`~ampapi.InstanceState`).
+    - Core `refreshTask` holds a :class:`~ampapi.modules.RunningTask`.
+    - Core `settingValueUpdate` holds the new :class:`~ampapi.modules.SettingValueUpdate` (`node` and `new_value`).
+    - ADSModule `instupdate` holds the new :class:`~ampapi.modules.InstanceUpdate` (`id`, `target` and `instance`,
+      which stays a dict).
+    - Any other message keeps what AMP sent: a dict, a string or None.
 - :attr:`~ampapi.instance.Instance.application_endpoints` holds :class:`~ampapi.modules.Endpoints`, and the
   `datastores` of a :class:`~ampapi.instance.Controller` or :class:`~ampapi.instance.TargetADS` hold
   :class:`~ampapi.modules.TargetDatastore`; 4.x left both as dicts.
