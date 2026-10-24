@@ -9,7 +9,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 ---
 
 - (#3) Confirm `ProvisionResponse` against a live payload; AMP answers `GetProvisionFitness` with null on the VMs.
-- (#30) Repair the VMs to capture the remaining responses and push events (plan in `.local_data/plans/vm_captures/`).
 - (#4) `create_local_instance` is deprecated: remove it, or fix it once AMP's `LocalAMPInstance` shape is known.
 
 ## ampapi/instance.py
@@ -42,6 +41,8 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 ## ampapi/modules.py
 
 ---
+
+- (#32) Build the push events captured in #30 in `Messages.from_response`: `remotePairStatus` (the `ActionResult` keys) and `userlistchanged` (one player record); see NOTES.md, "Dataclasses vs. the raw JSON".
 
 
 

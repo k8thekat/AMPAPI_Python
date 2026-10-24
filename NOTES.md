@@ -112,8 +112,8 @@ calls `super(TheClass, cls)`: a bare `super()` in a classmethod of a `slots=True
 plan cache inline and binding each nested `from_response` once made it ~5% faster than `build` (Updates 210 -> 199 us).
 `Messages` are AMP's push events, and what `parameters` holds depends on `message` (#26). Captured live on vm1,
 2026-10-23/24, by triggering each event and polling `get_updates`. One raw example of each is in
-`getupdates.push_events.json` under `_responses/vm_2.8.0.8_20261020/controller/` and `controller_MCTest01/`, and the
-full table is in the #26 plan.
+`_responses/2.8.0.8/push_events/` (`ads.json`, `target.json`, `minecraft.json`, `generic.json`), and the full table is
+in the #26 plan.
 - `ADSModule/metrics` sends the `MessageParameters` dict.
 - `Core/refreshTask` sends a whole running task (the `RunningTask` keys), and `Core/removeTask` sends the finished
   task's ID as a string.
@@ -122,6 +122,23 @@ full table is in the #26 plan.
 - `ADSModule/refreshGroup` sends the Target ADS's GUID, and `ADSModule/refresh` sends null or a GUID.
 - `Core/schedulemodified`, `Core/sessionslistchanged`, `Core/PermissionsNodeCacheInvalidated` (after an
   `update_instance_info`) and `ADSModule/refreshAppList` send null.
+- From CustomTest01's fake game (#30, `push_events/generic.json`):
+  - `Core/userlistchanged` sends one player record: `id` and `uid` (the `userid` group), `name` and `display_name`
+    (the `username` group), `user_session_id`, `session_id`, `join_time`, `time_logged_in`, `tags`, `ip_address`
+    and `port`. It comes for a join line and again for the leave line, with the same record.
+  - `GenericModule/ServerInfoChanged` sends a dict keyed by the `Console.ServerInfoRegex` group names, lower-cased.
+  - `GenericModule/ServerAuthURLPrompt` sends `url`, often twice for one console line. The panel ignores a URL that
+    isn't https.
+- `ADSModule/remotePairStatus` (with a capital P) reaches the Controller, not the Target, as soon as a Target registers
+  with a pairing code. Its parameters are the `ActionResult` keys: `status`, `reason`, `support_url` and
+  `support_title` (#30, re-pairing vm2).
+- AMP sends both `refreshGroup` and `refreshgroup` (each a Target ADS GUID) for one delete on a Target, so a check on
+  the message name needs to ignore case, as `Messages.from_response` does.
+- Not seen even where the panel expects them: `instdelete` (a delete on vm2 through the Controller sent `instupdate`,
+  `refreshGroup` and `refresh`, as on vm1) and `enumrefresh` (changing MCTest01's `ReleaseStream`, `ServerType` and
+  `SpecificVersion` sent only `settingValueUpdate`). Both are most likely websocket-only on 2.8.0.8.
+
+The fake game on CustomTest01 that produced these is described in "The fake game server on CustomTest01 (vm1)".
 
 `Messages.from_response` builds `parameters` from a map keyed by `(source, message)`, with the message lower-cased
 as the panel does: `metrics` and `BackupFailed` build `MessageParameters`, `refreshTask` builds `RunningTask`,
@@ -151,6 +168,11 @@ Found while triggering them (vm1, 2026-10-24):
   then failed: "No viable deployment target could be found ... target reported no provisioning fitness data", for
   both Targets. Both Targets' `fitness` is null in `GetInstances`, and `GetProvisionFitness` answers null too (#3), so
   the `RunningTask` return the spec names is unconfirmed until a Target reports fitness (#30).
+  What fills fitness is unknown (#30 phase B, 2026-10-24). `ADSModule.dll` has `UpdateLocalFitness` and the
+  messages "Provision fitness score: {0}" and "Failed to get fitness from remote instance", but neither VM's ADS log
+  has ever logged one. Restarting vm1's ADS01 left fitness null after two minutes. No setting names fitness, both
+  VMs allow 32 Instances and local creation, and their Professional licence's `feature_set` is `RunAMP`,
+  `ControllerTargetMode` and `InstanceCloning`. Untried: a different licence edition, and reading the DLL's code.
   `InstanceDatastore.to_dict()` is fine, because `add_datastore` and `update_datastore` send it as one nested object.
 - `CreateInstance.ip_binding` defaulted to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
   that address. It is `"0.0.0.0"` since #28, and an Instance created with the default worked on vm1.
@@ -249,11 +271,20 @@ Instance sends. A stopped Instance reports its `metrics` as `{}`.
 ## Captured responses
 
 `controller_dump.py -section LIVE -out ./_responses` captures responses from a live setup (it hits
-the server, so not unattended). The 2.6.5.0 dumps at the root of `_responses/` are a Controller run. The
-2026-10-20 refresh (#1) is in `_responses/vm_2.8.0.8_20261020/` (vm1 Controller, vm2 direct and through the
-Controller, seven Instances) and `_responses/live_2.8.0.8_20261020/` (Kat's ADS and three running Minecraft
-Instances, without sessions or file contents). The `[LIVE]` login needs `bridge.use_2fa = True`, its TOKEN is the
-TOTP secret.
+the server, so not unattended). The `[LIVE]` login needs `bridge.use_2fa = True`, its TOKEN is the TOTP secret.
+
+`_responses/` is grouped by AMP version and then by kind (#31, 2026-10-24; Kat: "naming the instance for a response
+seems un-needed"). CONTRIBUTING.md shows the layout. In each version folder, `ads/`, `minecraft/` and `generic/` hold
+one capture per endpoint, and a Target's, a live panel's or another game's answer sits in a subfolder (`target/`,
+`live/`, `tf2/`, ...) only where its shape differs. `push_events/` holds the `get_updates` push event examples by kind.
+- `2.6.5/` is the old Controller run that was at the root; `unit_test.py` reads `2.6.5/ads/`.
+- `2.8.0.4/ads/` is the old `controller_setup/` dump.
+- `2.8.0.8/` merges the 2026-10-20 VM refresh (#1: vm1 Controller, vm2 direct and through the Controller, seven
+  Instances), Kat's live captures from 2026-10-18 to 2026-10-21 (without sessions or file contents), and the #26 and
+  #30 push events. Base files come from vm1 first; CustomTest01 is the `generic/` base.
+
+Of 675 files, 264 were kept and 407 same-shaped copies dropped. The key drift check over the new `2.8.0.8/` finds the
+same 15 drifted keys as over the old folders. The old tree is archived in `.local_data/responses_before_31.tar.gz`.
 
 `Core/GetOIDCLogoutUrl` is spelled `Url`, unlike `Core/GetOIDCLoginURL`. The spec sheets snake_case method names, so
 they can't show the casing; "No such web method" on a method the spec lists is the sign of a casing mismatch.
@@ -294,6 +325,36 @@ a captured payload is a guess; `getscheduledata.json` exposed two dataclasses (`
 that raised `TypeError` on their own documented response because fields were missing.
 
 
+
+## The fake game server on CustomTest01 (vm1)
+
+Use CustomTest01 whenever a test needs a running game: player joins and leaves, server info, a sign-in prompt, console
+output, or an app that starts, runs and stops cleanly. It is a Generic "Custom Application" Instance with no real game
+behind it, so it starts in a second, needs no download, and nothing breaks if it's stopped mid-run (#30, 2026-10-24).
+
+- **Run it:** `start_application()` on the CustomTest01 Instance, then poll `get_updates`. `stop_application()` sends
+  `stop` on the console and the script exits cleanly (app state 80, then 0). The Instance itself stays running.
+- **What it prints:** `GenericApplication/fakegame.sh` prints `FakeGame ready`, then 40 rounds, 4 seconds apart, of:
+  - `FakeGame: player FakePlayerN joined with id 76561198000000N`
+  - `FakeGame: server info Version=1.N`
+  - `FakeGame: open https://example.com/auth?user_code=FAKEN to sign in`
+  - `FakeGame: player FakePlayerN left id 76561198000000N`
+
+  After that it idles until stopped.
+- **What AMP makes of it** (examples in `_responses/2.8.0.8/push_events/generic.json`): `Core/userlistchanged`
+  for each join and leave, `GenericModule/ServerInfoChanged` (`server_version`) and
+  `GenericModule/ServerAuthURLPrompt` (`url`), plus console entries in `get_updates` and the usual task events.
+- **The patterns** are in `GenericModule.kvp`. `App.ExecutableLinux=fakegame.sh`, `Console.AppReadyRegex`,
+  `UserJoinRegex` and `UserLeaveRegex` (groups `username`, `userid`), `ServerInfoRegex` (any group names become the
+  keys) and `ServerAuthURLPromptRegex` (group `url`, https only). The file from before #30 is
+  `GenericModule.kvp.pre30a`.
+- **Changing it:** these Generic app settings aren't in the settings spec, and `get_config` answers "No such node". So
+  stop the Instance (`ampinstmgr -q CustomTest01`), edit the kvp or the script as the amp user, and start it again
+  (`ampinstmgr -s CustomTest01`). After that the Controller may still show it as stopped until `start_instance` is
+  called once. A new console line plus a matching pattern is all a new event needs.
+- **What it can't do:** Analytics on the VMs runs in demo mode (`is_demo: true`, about 30 made-up players), so the fake
+  players never reach `get_user_details` or `get_user_list`. A demo player's `get_user_details` answer matches
+  `AnalyticsUserDetails` key for key.
 
 ## Building VMs
 

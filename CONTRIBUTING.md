@@ -82,6 +82,22 @@ TOKEN = your_2fa_secret
 and never run them unattended. Captured responses go in `_responses/`, which is also gitignored, because
 they carry session IDs and user names.
 
+`_responses/` is grouped by AMP version, then by the kind of answer, not by the Instance that gave it:
+
+```
+_responses/<AMP version>/
+    ads/            the Controller's answers; ads/target/ and ads/live/ hold a Target's or a live panel's answer
+                    only where its shape differs
+    minecraft/      a Minecraft Instance; minecraft/target/ and minecraft/live/ as above
+    generic/        a Generic Instance (the fake game on CustomTest01); generic/<game>/ where a game's shape differs
+    push_events/    one example of each push event from `get_updates`, by kind
+    key_drift.md    the report for the whole version
+```
+
+A variant goes in a subfolder instead of a suffixed file name because a capture is matched to its endpoint by its
+file name. `controller_dump.py` writes to `_responses/controller_setup/` by default, so sort a new dump into this
+layout afterwards.
+
 ## Dev tools
 
 ### Calling an endpoint that has no wrapper yet
@@ -102,7 +118,7 @@ Every wrapper method takes `to_file` and `path`, and writes the sanitized respon
 ```python
 from pathlib import Path
 
-captures = Path("_responses")
+captures = Path("_responses/2.8.0.8/minecraft")
 await instance.get_status(format_data=False, to_file=True, path=captures)
 ```
 
@@ -150,7 +166,7 @@ from ampapi.key_drift import KeyDriftCheck
 checker = KeyDriftCheck()
 checker.shapes["Core/GetStatus"]                 # (StatusResponse,)
 checker.check("Core/GetStatus", data)            # (StatusResponse, KeyDrift), or None if no shape is known
-drifted = checker.check_directory(Path("_responses"))   # writes _responses/key_drift.md
+drifted = checker.check_directory(Path("_responses/2.8.0.8"))   # writes _responses/2.8.0.8/key_drift.md
 ```
 
 The report lists every drifted capture, the empty ones (`[]` or `null`), and any with no known shape. A
