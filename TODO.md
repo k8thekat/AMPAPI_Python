@@ -19,8 +19,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#33) Put the classes in alphabetical order, as NOTES.md "Class order" describes.
-
 
 ## ampapi/core.py
 

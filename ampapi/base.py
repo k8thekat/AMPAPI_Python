@@ -108,6 +108,23 @@ def _snake_key(key: str) -> str:
     return Base.camel_to_snake_re(data=new_key)
 
 
+class BaseArgs(TypedDict):
+    bridge: Optional[Bridge]
+    session: Optional[aiohttp.ClientSession]
+
+
+class DumpParameters(TypedDict, total=False):
+    skipkeys: bool
+    ensure_ascii: bool
+    check_circular: bool
+    allow_nan: bool
+    cls: type[JSONEncoder] | None
+    indent: int | str | None
+    separators: tuple[str, str] | None
+    default: Callable[[Any], Any] | None
+    sort_keys: bool
+
+
 class ResponseHandlerOptions(TypedDict, total=False):
     """Response handling parameters.
 
@@ -131,23 +148,6 @@ class ResponseHandlerOptions(TypedDict, total=False):
     path: pathlib.Path
     check_key_drift: bool
     allow_null: bool
-
-
-class DumpParameters(TypedDict, total=False):
-    skipkeys: bool
-    ensure_ascii: bool
-    check_circular: bool
-    allow_nan: bool
-    cls: type[JSONEncoder] | None
-    indent: int | str | None
-    separators: tuple[str, str] | None
-    default: Callable[[Any], Any] | None
-    sort_keys: bool
-
-
-class BaseArgs(TypedDict):
-    bridge: Optional[Bridge]
-    session: Optional[aiohttp.ClientSession]
 
 
 class _SessionDeadError(AMPAPIResponseError):
@@ -265,11 +265,11 @@ class Base:
     @property
     def format_data(self) -> bool:
         """Controls whether the data returned from an API endpoint is formatted or not.\n
-        Default is ``True`` which comes from the global parameter ``FORMAT_DATA``.
+        Default is `True` which comes from the global parameter `FORMAT_DATA`.
 
         .. note::
-            ``True`` = formatted \n
-            ``False`` = unformatted
+            `True` = formatted \n
+            `False` = unformatted
 
 
         Returns
@@ -333,7 +333,7 @@ class Base:
     def ads_only(
         func: Callable[Concatenate[D, T], Coroutine[None, None, F]],
     ) -> Callable[Concatenate[D, T], Coroutine[None, None, F]]:
-        """Checks the class attribute ``.module`` and is equal to ``ADS`` or if the type of Instance using the function is TargetADS.
+        """Checks the class attribute `.module` and is equal to str(`ADS`) or if the type of Instance using the function is TargetADS.
 
         Parameters
         ----------
@@ -440,8 +440,8 @@ class Base:
             Will raise :exc:`AMPAPINetworkError` or :exc:`AMPAPIResponseError` if any errors occur when attempting to call the API.
 
         .. note::
-            When AMP answers that the stored session no longer exists, this logs in again and sends the request once more.
-            A second dead answer raises, and ``Core/Login`` itself is never sent again.
+            When AMP answers that the stored session no longer exists, this calls :meth:`login` again and sends the request once more.
+            A second dead answer raises, and `Core/Login` itself is never sent again.
 
 
         Parameters

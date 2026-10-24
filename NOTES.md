@@ -585,9 +585,15 @@ Checked 2026-10-20 (#14) with a test build of a scratch copy, Sphinx 8.2.3 and f
 
 ## Class order
 
-Every module keeps its classes in alphabetical order, ignoring case (2785a7a for `modules.py`, b9367bd for the rest).
+Every module keeps its public classes in alphabetical order, ignoring case (2785a7a for `modules.py`, b9367bd for the
+rest). CODING_STYLE.md §21 has the full rule.
 - A class that another class in the same file inherits from comes first, as Python needs it defined before the
-  subclass (`ResponseData`, `AMPAPIError`, `ADSData` and `Instance`).
+  subclass (`ResponseData`, `AMPAPIError`, `ADSData` and `Instance`). `from __future__ import annotations` only
+  defers annotations, so it doesn't help a base class.
+- A private (`_`) class is placed by what uses it, like a helper function. `_SessionDeadError` sits right above
+  `Base`, its only user.
+- The TypedDicts in `base.py` type `Base`'s parameters, so they sit above `Base` as its helpers, in alphabetical order
+  among themselves. `BaseArgs` is used nowhere.
 - `APISpec` in `_types.py` is built from two TypedDicts when the module is imported, so it sits right below them.
   Every other annotation is a string under `from __future__ import annotations`, so its order doesn't matter.
 - `docs/conf.py` sets `autodoc_member_order = "bysource"`, so `automodule` pages (`_types`, `modules`, `errors`)
