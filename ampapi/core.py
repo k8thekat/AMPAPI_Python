@@ -95,7 +95,6 @@ from .modules import (
     Updates,
     UserApplicationData,
     UserInfo,
-    build,
 )
 
 if TYPE_CHECKING:
@@ -291,7 +290,7 @@ class Core(Base):
         if not is_response_type(licence, LicenceInfoResponse, LICENCE_INFO_REQUIRED_KEYS, LICENCE_INFO_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=licence, expec_type=dict)
         if format_data is True:
-            return build(LicenceInfo, licence)
+            return LicenceInfo.from_response(licence)
         return licence
 
     async def add_event_trigger(
@@ -347,7 +346,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/AddEventTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def add_interval_trigger(
@@ -426,7 +425,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/AddIntervalTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def add_task(
@@ -491,7 +490,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/AddTask", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def cancel_task(
@@ -543,7 +542,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/CancelTask", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def change_user_password(
@@ -612,7 +611,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ChangeUserPassword", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def change_task_order(
@@ -670,7 +669,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ChangeTaskOrder", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def confirm_two_factor_setup(
@@ -725,7 +724,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ConfirmTwoFactorSetup", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def convert_user_to_oidc(
@@ -786,7 +785,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ConvertUserToOIDC", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def create_role(
@@ -841,7 +840,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/CreateRole", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def create_user(
@@ -893,7 +892,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/CreateUser", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def current_session_has_permission(
@@ -991,7 +990,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DeleteInstanceUsers", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def delete_role(
@@ -1043,7 +1042,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DeleteRole", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def delete_task(
@@ -1098,7 +1097,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DeleteTask", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def delete_trigger(
@@ -1150,7 +1149,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DeleteTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def delete_user(
@@ -1202,7 +1201,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DeleteUser", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def disable_two_factor(
@@ -1258,7 +1257,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DisableTwoFactor", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def dismiss_all_tasks(
@@ -1305,7 +1304,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DismissAllTasks", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def dismiss_task(
@@ -1357,7 +1356,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/DismissTask", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def edit_interval_trigger(
@@ -1451,7 +1450,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/EditIntervalTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def edit_task(
@@ -1509,7 +1508,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/EditTask", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def enable_two_factor(
@@ -1581,7 +1580,7 @@ class Core(Base):
         ):
             raise AMPAPITypeError(end_point="Core/EnableTwoFactor", cur_type=setup, expec_type=dict)
         if format_data is True:
-            return build(TwoFactorSetupInfo, setup)
+            return TwoFactorSetupInfo.from_response(setup)
         return setup
 
     @Base.ads_only
@@ -1673,7 +1672,7 @@ class Core(Base):
             format_data = self.format_data
 
         if format_data is True:
-            return [build(Session, entry) for entry in result]
+            return [Session.from_response(entry) for entry in result]
         return result
 
     async def get_all_amp_user_info(
@@ -1717,7 +1716,7 @@ class Core(Base):
             format_data = self.format_data
 
         if format_data is True:
-            return [build(UserInfo, entry) for entry in result]
+            return [UserInfo.from_response(entry) for entry in result]
         return result
 
     async def get_amp_role_permissions(
@@ -1806,7 +1805,7 @@ class Core(Base):
         if "is_super_user" not in result:  # 'is_super_user' uniquely identifies UserInfoResponse in the union
             raise AMPAPITypeError(end_point="Core/GetAMPUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(UserInfo, result)
+            return UserInfo.from_response(result)
         return result
 
     async def get_amp_users_summary(
@@ -1848,7 +1847,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(LoginUserInfo, item) for item in result]
+            return [LoginUserInfo.from_response(item) for item in result]
         return result
 
     async def get_api_spec(
@@ -1941,7 +1940,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(AuditLogEntry, item) for item in result]
+            return [AuditLogEntry.from_response(item) for item in result]
         return result
 
     async def get_authentication_requirements(
@@ -2035,7 +2034,7 @@ class Core(Base):
 
         if "subcategory" in result:
             if format_data is True:
-                return build(SettingSpec, result)
+                return SettingSpec.from_response(result)
             return result
 
         raise AMPAPIKeyError("subcategory", "Core/GetConfig", result)  # noqa: EM101
@@ -2088,7 +2087,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(SettingSpec, item) for item in result]
+            return [SettingSpec.from_response(item) for item in result]
         return result
 
     async def get_diagnostics_info(
@@ -2135,7 +2134,7 @@ class Core(Base):
             format_data = self.format_data
 
         if format_data is True:
-            return build(Diagnostics, result)
+            return Diagnostics.from_response(result)
         return result
 
     async def get_module_info(
@@ -2179,7 +2178,7 @@ class Core(Base):
         if "app_name" not in result:  # 'app_name' uniquely identifies ModuleResponse in the union
             raise AMPAPITypeError(end_point="Core/GetModuleInfo", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(Module, result)
+            return Module.from_response(result)
         return result
 
     async def get_new_guid(
@@ -2340,7 +2339,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(PermissionNode, item) for item in result]
+            return [PermissionNode.from_response(item) for item in result]
         return result
 
     async def get_port_summaries(
@@ -2382,7 +2381,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(Port, port) for port in result]
+            return [Port.from_response(port) for port in result]
         return result
 
     async def get_provision_spec(
@@ -2424,7 +2423,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(SettingSpec, item) for item in result]
+            return [SettingSpec.from_response(item) for item in result]
         return result
 
     async def get_remote_login_token(
@@ -2516,7 +2515,7 @@ class Core(Base):
         if "is_common_role" not in result:  # 'is_common_role' uniquely identifies RoleResponse in the union
             raise AMPAPITypeError(end_point="Core/GetRole", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(Role, result)
+            return Role.from_response(result)
         return result
 
     async def get_role_data(
@@ -2558,7 +2557,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(Role, item) for item in result]
+            return [Role.from_response(item) for item in result]
         return result
 
     async def get_role_ids(
@@ -2695,7 +2694,7 @@ class Core(Base):
             # Module categories have a colon in their name (eg. `valheim:stadiacontroller`) and go into `modules`.
             categories = {name: entries for name, entries in result.items() if ":" not in name}
             modules = {name: entries for name, entries in result.items() if ":" in name}
-            return build(SettingsSpecParent, {**categories, "modules": modules})
+            return SettingsSpecParent.from_response({**categories, "modules": modules})
         return result
 
     async def get_setting_values(
@@ -2784,7 +2783,7 @@ class Core(Base):
         if not is_response_type(result, StatusResponse, STATUS_REQUIRED_KEYS, STATUS_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/GetStatus", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(Status, result)
+            return Status.from_response(result)
         return result
 
     async def get_structured_diagnostics(
@@ -2830,7 +2829,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return build(StructuredDiagnostics, result)
+            return StructuredDiagnostics.from_response(result)
         return result  # pyright: ignore[reportReturnType]
 
     async def get_tasks(
@@ -2882,7 +2881,7 @@ class Core(Base):
                 raise AMPAPITypeError(end_point="Core/GetTasks", cur_type=item, expec_type=dict)
             tasks.append(item)
         if format_data is True:
-            return [build(RunningTask, task) for task in tasks]
+            return [RunningTask.from_response(task) for task in tasks]
         return tasks
 
     async def get_time_interval_trigger(
@@ -2931,7 +2930,7 @@ class Core(Base):
         if not is_response_type(result, TimedTriggerResponse, TIMED_TRIGGER_REQUIRED_KEYS, TIMED_TRIGGER_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/GetTimeIntervalTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(TimedTrigger, result)
+            return TimedTrigger.from_response(result)
         return result
 
     async def get_triggers(self) -> TriggerID:
@@ -3002,7 +3001,7 @@ class Core(Base):
         if "update_available" not in result:  # 'update_available' uniquely identifies UpdateInfoResponse in the union
             raise AMPAPITypeError(end_point="Core/GetUpdateInfo", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(UpdateInfo, result)
+            return UpdateInfo.from_response(result)
         return result
 
     async def get_updates(
@@ -3049,7 +3048,7 @@ class Core(Base):
         if "console_entries" not in result:
             raise AMPAPITypeError(end_point="Core/GetUpdates", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(Updates, result)
+            return Updates.from_response(result)
         return result
 
     async def get_user_action_spec(
@@ -3139,7 +3138,7 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             # return UserApplicationData(**result)
-            return build(UserApplicationData, result)
+            return UserApplicationData.from_response(result)
         return result
 
     async def get_user_list(
@@ -3234,7 +3233,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/GetWebauthnChallenge", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def get_webauthn_credential_ids(
@@ -3444,7 +3443,7 @@ class Core(Base):
         )
         # Unpack the data into our Dataclass.
         if isinstance(result, dict) and "remember_me_token" in result:
-            return build(LoginResults, result)
+            return LoginResults.from_response(result)
         return None
 
     async def logout(
@@ -3537,7 +3536,7 @@ class Core(Base):
         # The restart ended our session. Resetting it lets the next call log in instead of sending one that fails.
         self._reset_session()
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def resume_instance(
@@ -3665,7 +3664,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RefreshSettingValueList", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def refresh_settings_source_cache(
@@ -3750,7 +3749,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RenameRole", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def restart_application(
@@ -3797,7 +3796,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/Restart", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def reset_user_password(
@@ -3850,7 +3849,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ResetUserPassword", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def revert_user_from_oidc(
@@ -3906,7 +3905,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RevertUserFromOIDC", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def revoke_webauthn_credential(
@@ -3958,7 +3957,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RevokeWebauthnCredential", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def run_security_check(
@@ -4008,7 +4007,7 @@ class Core(Base):
         if not is_response_list(result, SecurityCheckResponse, SECURITY_CHECK_REQUIRED_KEYS, SECURITY_CHECK_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RunSecurityCheck", cur_type=result, expec_type=list)
         if format_data is True:
-            return [build(SecurityCheck, entry) for entry in result]
+            return [SecurityCheck.from_response(entry) for entry in result]
         return result
 
     async def run_event_trigger_immediately(
@@ -4060,7 +4059,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RunEventTriggerImmediately", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def set_amp_user_role_membership(
@@ -4118,7 +4117,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/SetAMPUserRoleMembership", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def set_amp_role_permission(
@@ -4177,7 +4176,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/SetAMPRolePermission", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def set_trigger_enabled(
@@ -4232,7 +4231,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/SetTriggerEnabled", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def send_console_message(
@@ -4371,7 +4370,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/SetConfig", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def sleep(
@@ -4418,7 +4417,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/Sleep", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def start_application(
@@ -4465,7 +4464,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/Start", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def stop_application(
@@ -4578,7 +4577,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateAccountInfo", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     @Base.ads_only
@@ -4633,7 +4632,7 @@ class Core(Base):
         # The upgrade restarts AMP and ends our session.
         self._reset_session()
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     @Base.ads_only
@@ -4688,7 +4687,7 @@ class Core(Base):
         # The update restarts AMP and ends our session.
         self._reset_session()
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def update_application(
@@ -4735,7 +4734,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateApplication", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def update_oidc_sub(
@@ -4796,7 +4795,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateOIDCSub", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def update_public_key(
@@ -4846,7 +4845,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdatePublicKey", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def update_tools(
@@ -4893,7 +4892,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateTools", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def update_user_info(
@@ -4967,7 +4966,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def webauthn_register(
@@ -5033,5 +5032,5 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/WebauthnRegister", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
