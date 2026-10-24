@@ -142,7 +142,9 @@ The fake game on CustomTest01 that produced these is described in "The fake game
 
 `Messages.from_response` builds `parameters` from a map keyed by `(source, message)`, with the message lower-cased
 as the panel does: `metrics` and `BackupFailed` build `MessageParameters`, `refreshTask` builds `RunningTask`,
-`settingValueUpdate` builds `SettingValueUpdate` and `instupdate` builds `InstanceUpdate`. Any other message keeps
+`settingValueUpdate` builds `SettingValueUpdate`, `instupdate` builds `InstanceUpdate`, `remotePairStatus` builds
+`ActionResult` and `userlistchanged` builds `UserApplicationData` (#32; both records match those classes key for key,
+so no new class was needed). Any other message keeps
 what AMP sent, so a new shape is never dropped; add it to the map once it has been captured. `InstanceUpdate.instance`
 stays a dict, because an `Instance` needs a bridge. Live on vm1, 2026-10-24, 276 messages built with no warning.
 

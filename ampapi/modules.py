@@ -2377,6 +2377,8 @@ class Messages(ResponseData):
             * Core `refreshTask` holds :class:`RunningTask`.
             * Core `settingValueUpdate` holds :class:`SettingValueUpdate`.
             * ADSModule `instupdate` holds :class:`InstanceUpdate`.
+            * ADSModule `remotePairStatus` holds :class:`ActionResult`, the result of a Target's pairing.
+            * Core `userlistchanged` holds :class:`UserApplicationData`, the player who joined or left.
             * Any other message keeps what AMP sent: a dict, a string or None.
 
         .. versionadded:: 5.0.0
@@ -2395,6 +2397,8 @@ class Messages(ResponseData):
         RunningTask,
         SettingValueUpdate,
         InstanceUpdate,
+        ActionResult,
+        UserApplicationData,
         str,
         dict[str, Any],
         None,
@@ -2425,6 +2429,8 @@ class Messages(ResponseData):
             ("Core", "refreshtask"): RunningTask,
             ("Core", "settingvalueupdate"): SettingValueUpdate,
             ("ADSModule", "instupdate"): InstanceUpdate,
+            ("ADSModule", "remotepairstatus"): ActionResult,
+            ("Core", "userlistchanged"): UserApplicationData,
         }
         # Taken out of a copy first, so the converter doesn't build every dict as `MessageParameters`.
         remaining: dict[str, Any] = dict(data)

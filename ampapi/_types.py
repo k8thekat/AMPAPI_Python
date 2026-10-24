@@ -958,6 +958,8 @@ class MessagesResponse(TypedDict):
         RunningTaskResponse,
         SettingValueUpdateResponse,
         InstanceUpdateResponse,
+        ActionResultResponse,
+        UserApplicationDataResponse,
         str,
         dict[str, Any],
         None,

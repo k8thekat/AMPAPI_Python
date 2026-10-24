@@ -220,6 +220,8 @@ Returned data
   - Core `settingValueUpdate` holds the new :class:`~ampapi.modules.SettingValueUpdate` (`node` and `new_value`).
   - ADSModule `instupdate` holds the new :class:`~ampapi.modules.InstanceUpdate` (`!id`, `target` and `instance`,
     which stays a dict).
+  - ADSModule `remotePairStatus` holds an :class:`~ampapi.modules.ActionResult`, the result of a Target's pairing.
+  - Core `userlistchanged` holds a :class:`~ampapi.modules.UserApplicationData`, the player who joined or left.
   - Any other message keeps what AMP sent: a dict, a string or None.
 
 - :attr:`~ampapi.instance.Instance.application_endpoints` holds :class:`~ampapi.modules.Endpoints`, and the
