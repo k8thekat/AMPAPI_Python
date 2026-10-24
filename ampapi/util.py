@@ -24,7 +24,6 @@ import ast
 import logging
 import os
 import re
-import traceback
 from dataclasses import asdict, fields
 from logging import Logger
 from pathlib import Path
@@ -1165,19 +1164,21 @@ async def generate_docs_rst(instance: Controller) -> None:
     # As far as I know settings spec information is the same for all Instances
     try:
         _settings_node_parse(data=spec, title="Setting Nodes", title_body="", path=_path.as_posix())
-    except Exception:  # noqa: BLE001
-        logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
+    except Exception:
+        # logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
+        logger.exception("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.")
     # As far as I know Permission spec information is the same for all Instances
     permission_nodes = await instance.get_permissions_spec(format_data=False)
     perms: list[PermissionNodeResponse] = [node for node in permission_nodes if isinstance(node, dict)]
     logger.info("Generating Permission Nodes.rst...")
     try:
         _permission_node_parse(data=perms, title="Permission Nodes", title_body="", path=_path.as_posix())
-    except Exception:  # noqa: BLE001
-        logger.error(
-            "Ran into a <Exception> when attempting to generate the Permission Nodes.rst.\n %s",
-            traceback.print_exc(),
-        )
+    except Exception:
+        # logger.error(
+        #     "Ran into a <Exception> when attempting to generate the Permission Nodes.rst.\n %s",
+        #     traceback.print_exc(),
+        # )
+        logger.exception("Ran into a <Exception> when attempting to generate the Permission Nodes.rst.")
 
     logger.info("Generating Triggers Events.rst and Method Events.rst...")
     await instance.get_instances()
@@ -1290,9 +1291,11 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
         if found_special is False and char in special_chars:
             piece = "``" + char
             found_special = True
-            continue
-        if found_special is True and char == " ":
+        elif found_special is True and char == " ":
             piece = "``" + char
             found_special = False
         _temp += piece
+    # A literal still open at the end of the string gets closed, or Sphinx warns about it.
+    if found_special is True:
+        _temp += "``"
     return _temp
