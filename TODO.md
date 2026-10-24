@@ -42,7 +42,7 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
-- (#26) `Messages.parameters` depends on the message: a `refreshTask` task dict is built as `MessageParameters` and loses its keys (NOTES.md, "Dataclasses vs. the raw JSON").
+- (#29) `Template.to_dict()` sends the field names, but `deploy_template` takes AMP's flat parameter names (`TemplateID`, ...).
 
 
 ## ampapi/util.py

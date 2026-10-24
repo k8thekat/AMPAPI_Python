@@ -1432,7 +1432,7 @@ class CreateInstance:
         See :attr:`Controller.available_ips`.
 
         .. versionchanged:: 5.0.0
-            The default is ``"0.0.0.0"``, it was ``"192.168.0.1"``.
+            The default is ``"0.0.0.0"``; it was ``"192.168.0.1"``.
     port_number : :class:`int`
         The Port to assign to the Instance.
     admin_username : :class:`str`
@@ -3913,7 +3913,7 @@ class SettingValueUpdate(ResponseData):
     Attributes
     ----------
     node : :class:`str`
-        The setting node that changed. (eg. "Core.Security.SomeSetting")
+        The setting node that changed, eg. ``LocalFileBackupPlugin.Storage.StorePath``.
     new_value : :class:`str`
         The new value of the setting, as a string.
 

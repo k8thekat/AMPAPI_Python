@@ -112,29 +112,44 @@ calls `super(TheClass, cls)`: a bare `super()` in a classmethod of a `slots=True
 plan cache inline and binding each nested `from_response` once made it ~5% faster than `build` (Updates 210 -> 199 us).
 `Messages` are AMP's push events, and what `parameters` holds depends on `message` (#26). Captured live on vm1,
 2026-10-23/24, by triggering each event and polling `get_updates`. One raw example of each is in
-`_responses/vm_2.8.0.8_20261024/push_events.json`, and the full table is in the #26 plan.
+`getupdates.push_events.json` under `_responses/vm_2.8.0.8_20261020/controller/` and `controller_MCTest01/`, and the
+full table is in the #26 plan.
 - `ADSModule/metrics` sends the `MessageParameters` dict.
 - `Core/refreshTask` sends a whole running task (the `RunningTask` keys), and `Core/removeTask` sends the finished
   task's ID as a string.
 - `Core/settingValueUpdate` sends `node` and `new_value`.
 - `ADSModule/instupdate` sends `id`, `target` and `instance`, which is the Instance dict `GetInstances` sends.
 - `ADSModule/refreshGroup` sends the Target ADS's GUID, and `ADSModule/refresh` sends null or a GUID.
-- `Core/schedulemodified`, `Core/sessionslistchanged` and `ADSModule/refreshAppList` send null.
+- `Core/schedulemodified`, `Core/sessionslistchanged`, `Core/PermissionsNodeCacheInvalidated` (after an
+  `update_instance_info`) and `ADSModule/refreshAppList` send null.
+
+`Messages.from_response` builds `parameters` from a map keyed by `(source, message)`, with the message lower-cased
+as the panel does: `metrics` and `BackupFailed` build `MessageParameters`, `refreshTask` builds `RunningTask`,
+`settingValueUpdate` builds `SettingValueUpdate` and `instupdate` builds `InstanceUpdate`. Any other message keeps
+what AMP sent, so a new shape is never dropped; add it to the map once it has been captured. `InstanceUpdate.instance`
+stays a dict, because an `Instance` needs a bridge. Live on vm1, 2026-10-24, 276 messages built with no warning.
 
 `ConsoleEntry` and Core `Metrics` never came through `get_updates`. The panel reads `Messages` only when websockets
 are off, and then takes console lines and metrics from `ConsoleEntries` and `Status`, so both are most likely
 websocket-only. A delete sent `instupdate` and `refresh`, not `instdelete`. The panel's handler for the Core ones
 is `handleNotify` in `WebRoot/Scripts/AMP.js`, which also lists `schedulemodified`, `userlistchanged`, `enumrefresh`
 and `settingValueUpdate` (`node` plus `newValues` / `newValue`), `ConsoleEntry` (a console entry),
-`PermissionsNodeCacheInvalidated` and `Metrics`. Other sources go to each plugin's own handler. The hint allows only
-`MessageParameters`, so a `refreshTask` is built as one: 20 task keys are dropped with a warning each, and `name`,
-`reason` and `state` land in the wrong class. A string is left as sent. AMP's logs record none of these events.
+`PermissionsNodeCacheInvalidated` and `Metrics`. Other sources go to each plugin's own handler. Until #26 the hint
+allowed only `MessageParameters`, so a `refreshTask` was built as one and lost 20 task keys. AMP's logs record none of
+these events.
 
 Found while triggering them (vm1, 2026-10-24):
-- `update_instance_info` can't succeed, as in 4.6.0. `InstanceInfo.to_dict()` sends the field names
-  (`instance_id`, ...), and AMP answers "UpdateInstanceInfo method requires InstanceId(String) argument".
-- `CreateInstance.ip_binding` defaults to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
-  that address; `"0.0.0.0"` worked.
+- `update_instance_info` couldn't succeed in 4.6.0 or before #27. `InstanceInfo.to_dict()` sent the field names
+  (`instance_id`, ...), and AMP answered "UpdateInstanceInfo method requires InstanceId(String) argument". The
+  endpoint takes flat parameters (`InstanceId`, `FriendlyName`, ...), not one nested object. With AMP's names it
+  works, and AMP answers with a "Reconfiguring Instance" `RunningTask`, although the spec names `ActionResult`.
+  `ContainerMaxCPU` was accepted as a string and as a float. `InstanceInfo` makes every field but three required,
+  while AMP needs only `InstanceId`, so a caller must send each current value back or it gets overwritten.
+- `Template.to_dict()` has the same problem for `deploy_template` (#29). That endpoint also takes flat parameters
+  (`TemplateID`, `NewUsername`, ...), and Kat's comment at the call site already says the keys are cased wrongly.
+  `InstanceDatastore.to_dict()` is fine, because `add_datastore` and `update_datastore` send it as one nested object.
+- `CreateInstance.ip_binding` defaulted to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
+  that address. It is `"0.0.0.0"` since #28, and an Instance created with the default worked on vm1.
 - `Controller.instance_id` is `'0'`. The local ADS's ID, which `target_ads_instance` needs, is the "Local Instances"
   Target's `instance_id`.
 

@@ -110,8 +110,9 @@ Changed methods
 - :class:`~ampapi.modules.CreateInstance` defaults `ip_binding` to ``"0.0.0.0"`` (every IPv4 address). 4.x used
   ``"192.168.0.1"``, which AMP rejects on a machine without that address.
 - :meth:`~ampapi.adsmodule.ADSModule.update_instance_info` sends AMP's parameter names (eg. `InstanceId` and
-  `FriendlyName`) from :meth:`InstanceInfo.to_dict <ampapi.modules.InstanceInfo.to_dict>`. 4.x sent the attribute names,
-  so AMP always answered that the call requires `InstanceId`.
+  `FriendlyName`) from :meth:`InstanceInfo.to_dict <ampapi.modules.InstanceInfo.to_dict>`, and it returns a
+  :class:`~ampapi.modules.RunningTask`, which is what AMP answers. 4.x sent the attribute names, so AMP always answered
+  that the call requires `InstanceId`.
 - ``Base.version_validation()`` takes the `endpoint` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
 - ``Base.clean_up()`` takes a keyword-only `logout` (default False) to call ``Core/Logout`` before closing the session.
@@ -205,14 +206,16 @@ Returned data
 - :attr:`~ampapi.modules.AnalyticsSummary.busiest_time`, `quietest_time` and `graph_data` hold
   :class:`~ampapi.modules.AnalyticsGraphData` (`date`, `end_date` and `count`); 4.x left them as dicts.
 - :attr:`~ampapi.modules.Messages.parameters` is built by the message type. 4.x had no `parameters`.
-    - ADSModule `metrics` and LocalFileBackupPlugin `BackupFailed` hold a :class:`~ampapi.modules.MessageParameters`
-      (its `metrics` a :class:`~ampapi.modules.Metrics`, its `uptime` an :class:`~ampapi.modules.Uptime` and its
-      `state` an :class:`~ampapi.InstanceState`).
-    - Core `refreshTask` holds a :class:`~ampapi.modules.RunningTask`.
-    - Core `settingValueUpdate` holds the new :class:`~ampapi.modules.SettingValueUpdate` (`node` and `new_value`).
-    - ADSModule `instupdate` holds the new :class:`~ampapi.modules.InstanceUpdate` (`id`, `target` and `instance`,
-      which stays a dict).
-    - Any other message keeps what AMP sent: a dict, a string or None.
+
+  - ADSModule `metrics` and LocalFileBackupPlugin `BackupFailed` hold a :class:`~ampapi.modules.MessageParameters`
+    (its `metrics` a :class:`~ampapi.modules.Metrics`, its `uptime` an :class:`~ampapi.modules.Uptime` and its
+    `state` an :class:`~ampapi.InstanceState`).
+  - Core `refreshTask` holds a :class:`~ampapi.modules.RunningTask`.
+  - Core `settingValueUpdate` holds the new :class:`~ampapi.modules.SettingValueUpdate` (`node` and `new_value`).
+  - ADSModule `instupdate` holds the new :class:`~ampapi.modules.InstanceUpdate` (`!id`, `target` and `instance`,
+    which stays a dict).
+  - Any other message keeps what AMP sent: a dict, a string or None.
+
 - :attr:`~ampapi.instance.Instance.application_endpoints` holds :class:`~ampapi.modules.Endpoints`, and the
   `datastores` of a :class:`~ampapi.instance.Controller` or :class:`~ampapi.instance.TargetADS` hold
   :class:`~ampapi.modules.TargetDatastore`; 4.x left both as dicts.
