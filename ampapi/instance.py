@@ -36,7 +36,7 @@ from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .generic import GenericModule
 from .minecraft import MinecraftModule
-from .modules import ActionResult, BuildInfo, Endpoints, InstanceState, Metrics, PlatformInfo, Status, TargetDatastore, Updates, build
+from .modules import ActionResult, BuildInfo, Endpoints, InstanceState, Metrics, PlatformInfo, Status, TargetDatastore, Updates
 from .steamcmd import SteamCMDPlugin
 
 if TYPE_CHECKING:
@@ -343,15 +343,15 @@ class Instance(
 
         # AMP sends an empty object for the metrics of an Instance that is stopped.
         metrics = data.get("metrics")
-        self.metrics = build(Metrics, metrics) if metrics else None
-        self.application_endpoints = [build(Endpoints, entry) for entry in data.get("application_endpoints") or []]
+        self.metrics = Metrics.from_response(metrics) if metrics else None
+        self.application_endpoints = [Endpoints.from_response(entry) for entry in data.get("application_endpoints") or []]
 
         # This is only used for older versions of AMP v ``>2.6.0.0``  and earlier.
         # Per Mike and Developers of AMP state they will be using string versions from `2.6.0.0` and this handles that.
         if isinstance(data["amp_version"], dict):
             try:
                 # reveal_type(data["amp_version"])
-                self.amp_version = build(BuildInfo, data["amp_version"])
+                self.amp_version = BuildInfo.from_response(data["amp_version"])
             except (RuntimeError, TypeError, ValueError) as e:
                 LOGGER.warning("We attempted to unpack <self.amp_version> and failed %s", e)
                 self.amp_version = data["amp_version"]
@@ -800,9 +800,9 @@ class ADSData(Base):
 
         # The Target's platform and datastores are held as dataclasses.
         if "platform" in self.__cached__:
-            self.platform = build(PlatformInfo, data["platform"])
+            self.platform = PlatformInfo.from_response(data["platform"])
         if "datastores" in self.__cached__:
-            self.datastores = [build(TargetDatastore, entry) for entry in data.get("datastores") or []]
+            self.datastores = [TargetDatastore.from_response(entry) for entry in data.get("datastores") or []]
 
         # AMP sends last_updated as an ISO string, so we convert it here.
         self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])

@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 from ._types import ACTION_RESULT_EXCLUDED_KEYS, ACTION_RESULT_REQUIRED_KEYS, ActionResultResponse, is_response_type
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPITypeError
-from .modules import ActionResult, Directory, FileChunk, FolderUploadFile, build
+from .modules import ActionResult, Directory, FileChunk, FolderUploadFile
 
 if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
@@ -151,7 +151,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/CalculateFileMD5Sum", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def change_exclusion(
@@ -210,7 +210,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/ChangeExclusion", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def copy_file(
@@ -266,7 +266,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/CopyFile", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def create_archive(
@@ -315,7 +315,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/CreateArchive", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def create_directory(
@@ -364,7 +364,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/CreateDirectory", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def download_file_from_url(
@@ -416,7 +416,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/DownloadFileFromURL", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def download_folder_as_zip(
@@ -469,7 +469,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/DownloadFolderAsZip", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def empty_trash(
@@ -522,7 +522,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/EmptyTrash", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def extract_archive(
@@ -578,7 +578,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/ExtractArchive", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def get_directory_listing(
@@ -629,7 +629,7 @@ class FileManagerPlugin(Base):
         if format_data is None:
             format_data = self.format_data
         if format_data is True:
-            return [build(Directory, item) for item in result]
+            return [Directory.from_response(item) for item in result]
         return result
 
     async def get_file_chunk(
@@ -684,7 +684,7 @@ class FileManagerPlugin(Base):
         if "base64_data" not in result:
             raise AMPAPITypeError(end_point="FileManagerPlugin/GetFileChunk", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(FileChunk, result)
+            return FileChunk.from_response(result)
         return result
 
     async def read_file_chunk(
@@ -742,7 +742,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/ReadFileChunk", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     # TODO: Test functionality or get clarification on use/action.
@@ -792,7 +792,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/ReleaseFileUploadLock", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def rename_directory(
@@ -847,7 +847,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/RenameDirectory", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def rename_file(
@@ -899,7 +899,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/RenameFile", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def trash_directory(
@@ -952,7 +952,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/TrashDirectory", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def trash_file(
@@ -1005,7 +1005,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/TrashFile", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def write_file_chunk(
@@ -1071,7 +1071,7 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/WriteFileChunk", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
 
     async def upload_folder(
@@ -1135,5 +1135,5 @@ class FileManagerPlugin(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="FileManagerPlugin/UploadFolder", cur_type=result, expec_type=dict)
         if format_data is True:
-            return build(ActionResult, result)
+            return ActionResult.from_response(result)
         return result
