@@ -481,8 +481,11 @@ class AnalyticsCountryData(ResponseData):
         The current display's session time per country.
     session_count : :class:`int`
         The current number of sessions per country.
-    session_time_percent : :class:`float`
-        UNK
+    session_time_percent : Union[:class:`float`, :class:`str`]
+        UNK. AMP sends the string "Infinity" when it divides by a zero session time.
+
+        .. versionchanged:: 5.0.0
+            Can be the string "Infinity".
     total_session_time : :class:`float`
         The total session time per country.
     unique_player_count : :class:`int`
@@ -500,7 +503,8 @@ class AnalyticsCountryData(ResponseData):
     country: str
     display_session_time: str
     session_count: int
-    session_time_percent: float
+    # session_time_percent: float
+    session_time_percent: Union[float, str]
     total_session_time: float
     unique_player_count: int
     unique_player_percent: float
@@ -694,8 +698,12 @@ class AnalyticsTopPlayers(ResponseData):
     ----------
     display_session_time : :class:`str`
         Display the session time.
-    percent : :class:`float`
+    percent : Union[:class:`float`, :class:`str`]
         The percent of how much this value in comparison to :attr:`~AnalyticsTopPlayers.total_session_time`.
+        AMP sends the string "Infinity" when it divides by a zero session time.
+
+        .. versionchanged:: 5.0.0
+            Can be the string "Infinity".
     total_session_time : :class:`float`
         The total amount of session time the user has for the day.
     username : :class:`str`
@@ -704,7 +712,8 @@ class AnalyticsTopPlayers(ResponseData):
     """
 
     display_session_time: str
-    percent: float
+    # percent: float
+    percent: Union[float, str]
     total_session_time: float
     username: str
 
@@ -1698,14 +1707,23 @@ class DeploymentTemplate(ResponseData):
         The template role name, similar to the AMP User Roles.
     match_datastore_tags : :class:`bool`
         To force match the datastore tags; if any.
-    setting_mappings : dict[:class:`str`, :class:`str`]
-        A dictionary of setting mappings.
+    setting_mappings : Union[dict[:class:`str`, :class:`str`], None]
+        A dictionary of setting mappings, None on a new template.
+
+        .. versionchanged:: 5.0.0
+            Can be None.
     start_on_boot : :class:`bool`
         If the Instance should start on ADS01/Controller boot or not, default is False.
-    tags : list[:class:`str`]
-        The list of tags to assign to the template or that belong to the template.
-    zip_overlay_path : :class:`str`
-        The path of the overlay to zip.
+    tags : Union[list[:class:`str`], None]
+        The list of tags to assign to the template or that belong to the template, None on a new template.
+
+        .. versionchanged:: 5.0.0
+            Can be None.
+    zip_overlay_path : Union[:class:`str`, None]
+        The path of the overlay to zip, None on a new template.
+
+        .. versionchanged:: 5.0.0
+            Can be None.
 
     """
 
@@ -1717,10 +1735,13 @@ class DeploymentTemplate(ResponseData):
     template_role: Union[str, None]
     template_base_app: Union[str, None]
     clone_role_into_user: bool
-    zip_overlay_path: str
+    # zip_overlay_path: str
+    zip_overlay_path: Union[str, None]
     match_datastore_tags: bool
-    setting_mappings: dict[str, str]
-    tags: list[str]
+    # setting_mappings: dict[str, str]
+    setting_mappings: Union[dict[str, str], None]
+    # tags: list[str]
+    tags: Union[list[str], None]
     start_on_boot: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -3386,8 +3407,11 @@ class ProvisionSettingInfo(ResponseData):
 
     Attributes
     ----------
-    default_value : Union[:class:`str`, :class:`int`, None]
+    default_value : Union[:class:`str`, :class:`int`, list[Any], None]
         The default value.
+
+        .. versionchanged:: 5.0.0
+            Can be an int, a list or None, where 4.x had a str.
     description : :class:`str`
         The description.
     endpoint_name : :class:`str`
@@ -3407,7 +3431,8 @@ class ProvisionSettingInfo(ResponseData):
 
     """
 
-    default_value: Union[str, int, None]
+    # default_value: Union[str, int, None]
+    default_value: Union[str, int, list[Any], None]
     description: str
     endpoint_name: str
     node: str
@@ -3722,8 +3747,11 @@ class SettingSpec(ResponseData):
         If the setting should always allow read or not.
     attributes : :class:`SettingsSpecAttribute`, optional
         The attributes that are set/prompted for when changing this setting.
-    current_value : Union[:class:`list`, :class:`str`, :class:`bool`, :class:`int`, :class:`dict`, :class:`SettingSpecTableAliases`]
+    current_value : Union[list[:class:`str`], :class:`str`, :class:`bool`, :class:`int`, :class:`dict`, `SettingSpecTableAliases`, None]
         The current value of the setting, default is "".
+
+        .. versionchanged:: 5.0.0
+            Can be None, which AMP sends for some `system_settings`.
     description : :class:`str`, optional
         The text description below the setting name in the UI, default is "".
     enum_values : Union[dict[:class:`str`, :class:`str`], None], optional
@@ -3738,18 +3766,32 @@ class SettingSpec(ResponseData):
         UNK, default is "".
     max_length : :class:`int`
         UNK, all fields are 0 in data, default is 0.
-    min_value : None
-        UNK, all fields are null in data, default is None.
-    meta : :class:`str`
-        UNK, all fields are "", default is "".
+    max_value : Union[:class:`int`, :class:`float`, None]
+        The highest value the setting accepts, default is None.
+
+        .. versionchanged:: 5.0.0
+            An int or a float, where 4.x hinted None.
+    min_value : Union[:class:`int`, :class:`float`, None]
+        The lowest value the setting accepts, default is None.
+
+        .. versionchanged:: 5.0.0
+            An int or a float, where 4.x hinted None.
+    meta : Union[:class:`str`, None]
+        UNK, all fields are "" or null in data, default is "".
+
+        .. versionchanged:: 5.0.0
+            Can be None.
     name : :class:`str`
         The name of the setting.
     node : :class:`str`
         The node required to have to edit this setting, default is "".
     order : :class:`int`
         The order in which this setting will appear in the UI, default is 1.
-    placeholder : :class:`str`
+    placeholder : Union[:class:`str`, None]
         The placeholder text for the setting field, default is "".
+
+        .. versionchanged:: 5.0.0
+            Can be None.
     read_only : :class:`bool`
         If the setting is read only or not, default is False.
     read_only_provision : :class:`bool`
@@ -3762,8 +3804,11 @@ class SettingSpec(ResponseData):
         UNK, most fields are null in data, default is None.
     subcategory : :class:`str`
         The subcategory the setting will appear under in the Instance configuration UI, default is "".
-    suffix : :class:`str`
+    suffix : Union[:class:`str`, None]
         The suffix applied to the string current_value, default is "".
+
+        .. versionchanged:: 5.0.0
+            Can be None.
     tag : :class:`str`
         What the setting is related to, similar to a Server Config property or file, default is "".
     val_type : :class:`str`
@@ -3780,11 +3825,13 @@ class SettingSpec(ResponseData):
     """
 
     category: str
-    actions: list[str] | list[SettingSpecAction] = field(default_factory=list[str])
+    # actions: list[str] | list[SettingSpecAction] = field(default_factory=list[str])
+    actions: list[SettingSpecAction] = field(default_factory=list["SettingSpecAction"])
     always_allow_read: bool = field(default=False)
     attributes: Union[SettingsSpecAttribute, None] = field(default=None)
     # TODO: This will need a tighter type definition.
-    current_value: Union[list[SettingSpecTableAliases], str, bool, int, dict[Any, Any], SettingSpecTableAliases] = ""
+    # current_value: Union[list[SettingSpecTableAliases], str, bool, int, dict[Any, Any], SettingSpecTableAliases] = ""
+    current_value: Union[list[str], str, bool, int, dict[Any, Any], SettingSpecTableAliases, None] = ""
     description: str = ""
     enum_values: Union[dict[str, str], None] = field(default=None)
     enum_values_are_deferred: bool = field(default=False)
@@ -3792,20 +3839,25 @@ class SettingSpec(ResponseData):
     is_provision_spec: bool = field(default=False)
     keywords: str = ""
     max_length: int = 0
-    max_value: None = field(default=None)
-    min_value: None = field(default=None)
-    meta: str = ""
+    # max_value: None = field(default=None)
+    max_value: Union[int, float, None] = field(default=None)
+    # min_value: None = field(default=None)
+    min_value: Union[int, float, None] = field(default=None)
+    # meta: str = ""
+    meta: Union[str, None] = ""
     name: str = field(default="")
     node: str = ""
     order: int = field(default=1)
-    placeholder: str = ""
+    # placeholder: str = ""
+    placeholder: Union[str, None] = ""
     read_only: bool = field(default=False)
     read_only_provision: bool = field(default=False)
     required: bool = field(default=False)
     requires_restart: bool = field(default=False)
     selection_source: Union[SettingSpecSelectionSource, None] = field(default=None)
     subcategory: str = ""
-    suffix: str = ""
+    # suffix: str = ""
+    suffix: Union[str, None] = ""
     tag: str = ""
     val_type: str = ""  # ['Boolean', 'Int32', 'String', 'Enum', "List<String>"]
     warn_text: Union[str, None] = field(default=None)
@@ -4205,8 +4257,11 @@ class TimedTrigger(ResponseData):
     ----------
     description : :class:`str`
         The description of the trigger, this is shown in the UI.
-    enabled_state : :class:`bool`
-        If the Timed Trigger is enabled or not.
+    enabled_state : :class:`int`
+        If the Timed Trigger is enabled or not, AMP sends 0 or 1.
+
+        .. versionchanged:: 5.0.0
+            An int, where 4.x hinted a bool.
     id : :class:`str`
         The ID of the Timed Trigger, these are unique per Instance.
     match_days : list[:class:`int`]
@@ -4234,7 +4289,8 @@ class TimedTrigger(ResponseData):
     """
 
     description: str
-    enabled_state: bool
+    # enabled_state: bool
+    enabled_state: int
     id: str
     match_days: list[int]
     match_days_of_month: list[int]
@@ -4393,8 +4449,11 @@ class TriggerTasks(ResponseData):
         If the task is enabled or not.
     locked : :class:`bool`
         If the task is locked or not.
-    created_by : :class:`str`
+    created_by : Union[:class:`str`, None]
         The user that created the task.
+
+        .. versionchanged:: 5.0.0
+            Can be None.
     order : :class:`int`
         The order in which this task will appear in the list of tasks.
     error_behaviour : :class:`int`, optional
@@ -4421,7 +4480,8 @@ class TriggerTasks(ResponseData):
     parameter_mapping: ParameterMapping | ParameterMappingResponse
     enabled_state: int
     locked: bool
-    created_by: str
+    # created_by: str
+    created_by: Union[str, None]
     order: int
     error_behaviour: int = 0
     wait_for_complete: bool = False
@@ -4681,8 +4741,11 @@ class UserInfo(ResponseData):
         The list of permissions the user has.
     roles : :class:`list[str]`
         The list of AMP roles the user has.
-    email_address : :class:`str`
-        The email address of the user.
+    email_address : Union[:class:`str`, None]
+        The email address of the user, None when the user has none.
+
+        .. versionchanged:: 5.0.0
+            Can be None, where 4.x hinted a str.
     last_login : :class:`datetime`
         The last login date of the user.
     oidc_sub : Union[:class:`str`, None], optional
@@ -4692,7 +4755,8 @@ class UserInfo(ResponseData):
 
     id: str
     name: str
-    email_address: None
+    # email_address: None
+    email_address: Union[str, None]
     disabled: bool
     permissions: None
     is_super_user: bool

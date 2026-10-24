@@ -264,7 +264,8 @@ class AnalyticsStatsResponse(TypedDict):
     display_value: Union[int, float, str]
     current: Union[int, float]
     previous: Union[int, float]
-    difference: float
+    # difference: float
+    difference: Union[float, str]
     description: str
 
 
@@ -563,7 +564,8 @@ class ControllerResponse(TypedDict):
     can_create: bool
     creates_in_containers: bool
     datastores: list[TargetDatastoreResponse]
-    description: str
+    # description: str
+    description: Union[str, None]
     disabled: bool
     # Null on every target observed so far, so its shape is unconfirmed; see the Fitness dataclass.
     fitness: Union[dict[str, Any], None]
@@ -614,10 +616,13 @@ class DeploymentTemplateResponse(TypedDict):
     template_role: Union[str, None]
     template_base_app: Union[str, None]
     clone_role_into_user: bool
-    zip_overlay_path: str
+    # zip_overlay_path: str
+    zip_overlay_path: Union[str, None]
     match_datastore_tags: bool
-    setting_mappings: dict[str, str]
-    tags: list[str]
+    # setting_mappings: dict[str, str]
+    setting_mappings: Union[dict[str, str], None]
+    # tags: list[str]
+    tags: Union[list[str], None]
     start_on_boot: bool
 
 
@@ -741,7 +746,8 @@ class InstanceResponse(TypedDict):
     is_https: bool
     management_mode: int
     module: str
-    port: str
+    # port: str
+    port: int
     release_stream: int
     running: bool
     suspended: bool
@@ -929,8 +935,9 @@ class MetricsDataResponse(TypedDict):
     color: Optional[str]
     color2: Optional[str]
     color3: Optional[str]
-    # Confirmed against getstatus.json; AMP sends a short label for the metric tile (eg "CPU", "RAM").
-    short_name: NotRequired[str]
+    # Confirmed against getstatus.json; AMP sends a short label for the metric tile (eg "CPU", "RAM"), or null.
+    # short_name: NotRequired[str]
+    short_name: NotRequired[Union[str, None]]
 
 
 class MetricsResponse(TypedDict):
@@ -1290,7 +1297,8 @@ class ProvisionSettingInfoResponse(TypedDict):
     node: str
     type: str
     description: str
-    default_value: Union[str, int, None]
+    # default_value: Union[str, int, None]
+    default_value: Union[str, int, list[Any], None]
     value_range: Union[int, str]
     custom_field_type: Union[str, None]
     related_setting: Union[str, None]
@@ -1396,28 +1404,37 @@ class SettingSpecResponse(TypedDict):
     description: str
     category: str
     subcategory: str
-    current_value: int
+    # current_value: int
+    current_value: Union[int, str, bool, list[Any], dict[str, Any], None]
     val_type: str
     enum_values: Union[dict[str, str], None]
     enum_values_are_deferred: bool
-    selection_source: None
+    # selection_source: None
+    selection_source: Union[dict[str, Any], None]
     node: str
-    input_type: str
+    # input_type: str
+    input_type: Union[str, None]
     is_provision_spec: bool
     read_only_provision: bool
     actions: list[Any]
     keywords: str
     always_allow_read: bool
     tag: str
-    min_value: None
-    max_value: None
+    # min_value: None
+    min_value: Union[int, float, None]
+    # max_value: None
+    max_value: Union[int, float, None]
     max_length: int
-    placeholder: str
-    suffix: str
-    meta: str
+    # placeholder: str
+    placeholder: Union[str, None]
+    # suffix: str
+    suffix: Union[str, None]
+    # meta: str
+    meta: Union[str, None]
     requires_restart: bool
     required: bool
-    attributes: None
+    # attributes: None
+    attributes: Union[dict[str, Any], None]
     order: int
     warn_when_value: NotRequired[Any]
     warn_text: NotRequired[Union[str, None]]
@@ -1484,7 +1501,8 @@ class TimedTriggerResponse(TypedDict):
     """
 
     description: str
-    enabled_state: bool
+    # enabled_state: bool
+    enabled_state: int
     id: str
     match_days: list[int]
     match_days_of_month: list[int]
@@ -1557,7 +1575,7 @@ class TriggerTasksResponse(TypedDict):
 
     locked : :class:`bool`
 
-    created_by : :class:`str`
+    created_by : Union[:class:`str`, None]
 
     order : :class:`int`
     """
@@ -1567,7 +1585,8 @@ class TriggerTasksResponse(TypedDict):
     parameter_mapping: ParameterMappingResponse
     enabled_state: int
     locked: bool
-    created_by: str
+    # created_by: str
+    created_by: Union[str, None]
     order: int
     error_behaviour: NotRequired[int]
     wait_for_complete: NotRequired[bool]
@@ -1649,7 +1668,8 @@ class UserApplicationDataResponse(TypedDict):
 class UserInfoResponse(TypedDict):
     id: str
     name: str
-    email_address: None
+    # email_address: None
+    email_address: Union[str, None]
     disabled: bool
     permissions: None
     is_super_user: bool

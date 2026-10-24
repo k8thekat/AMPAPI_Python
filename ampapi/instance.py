@@ -232,8 +232,11 @@ class Instance(
         The module of the Instance.
     module_display_name : :class:`str`
         The display name of the module, default is "".
-    port : :class:`str`
+    port : :class:`int`
         The port of the Instance.
+
+        .. versionchanged:: 5.0.0
+            Documented as an int, which is what AMP sends; 4.x documented a str.
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`
@@ -1448,8 +1451,11 @@ class MinecraftInstance(MinecraftModule, Instance):
         The module of the Instance, default is "Minecraft".
     module_display_name : :class:`str`
         The display name of the module, default is "".
-    port : :class:`str`
+    port : :class:`int`
         The port of the Instance.
+
+        .. versionchanged:: 5.0.0
+            Documented as an int, which is what AMP sends; 4.x documented a str.
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`
@@ -1537,8 +1543,11 @@ class TargetADS(ADSData, ADSModule, Instance):
         The module of the Instance, default is "ADS".
     module_display_name : :class:`str`
         The display name of the module, default is "".
-    port : :class:`str`
+    port : :class:`int`
         The port of the Instance.
+
+        .. versionchanged:: 5.0.0
+            Documented as an int, which is what AMP sends; 4.x documented a str.
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`
