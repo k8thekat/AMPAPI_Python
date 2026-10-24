@@ -70,6 +70,9 @@ class AnalyticsPlugin(Base):
 
         Endpoint: `AnalyticsPlugin/GetAnalyticsSummary`
 
+        .. versionchanged:: 5.0.0
+            `start_date` is sent as an ISO 8601 string, which is AMP's `DateTime` format. 4.x sent a POSIX timestamp.
+
         Parameters
         ----------
         period_days : :class:`int`, optional
@@ -101,7 +104,8 @@ class AnalyticsPlugin(Base):
 
         parameters: dict[str, Any] = {
             "PeriodDays": period_days,
-            "StartDate": start_date.timestamp(),
+            # "StartDate": start_date.timestamp(),
+            "StartDate": start_date.isoformat(),
             "Filters": asdict(filters) if filters is not None else {},
         }
         if player_count is not None:

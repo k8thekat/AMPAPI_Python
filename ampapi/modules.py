@@ -2070,8 +2070,11 @@ class InstanceInfo:
         If the Instance should be run in a container; default is None, which leaves the value unchanged.
     container_memory : Union[:class:`int`, None], optional
         The amount of memory allocated to the container in MB; default is None, which leaves the value unchanged.
-    container_max_cpu : Union[:class:`str`, None], optional
+    container_max_cpu : Union[:class:`float`, None], optional
         The maximum amount of CPU cores allocated to the container; default is None, which leaves the value unchanged.
+
+        .. versionchanged:: 5.0.0
+            A :class:`float`, which is AMP's `Single`. 4.x annotated it as a :class:`str`.
     container_image : Union[:class:`str`, None], optional
         The container/docker image to use; default is None, which leaves the value unchanged.
     memory_policy : Union[:class:`ContainerMemoryPolicyState`, None], optional
@@ -2116,7 +2119,9 @@ class InstanceInfo:
     exclude_from_firewall: Union[bool, None] = field(default=None)
     run_in_container: Union[bool, None] = field(default=None)
     container_memory: Union[int, None] = field(default=None)
-    container_max_cpu: Union[str, None] = field(default=None)  # Unsure exactly what this field is or does.
+    # container_max_cpu: Union[str, None] = field(default=None)  # Unsure exactly what this field is or does.
+    # The maximum CPU cores for the container; AMP's `ContainerMaxCPU` is a Single.
+    container_max_cpu: Union[float, None] = field(default=None)
     container_image: Union[str, None] = field(default=None)
     memory_policy: Union[ContainerMemoryPolicyState, None] = field(default=None)
     start_on_boot: Union[bool, None] = field(default=None)

@@ -138,6 +138,21 @@ Changed methods
   - :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup`: `was_created_automatically`, `dirty_only` and
     `backup_while_running`.
   - :meth:`~ampapi.filemanager.FileManagerPlugin.create_archive`: `overwrite_existing`.
+
+- :meth:`~ampapi.Core.edit_interval_trigger` takes lists of ints for `months`, `days`, `hours`, `minutes` and
+  `days_of_month`, like :meth:`~ampapi.Core.add_interval_trigger`, and checks each int against its range. 4.x sent single
+  ints, which AMP always rejected.
+- :meth:`~ampapi.Core.get_audit_log_entries` takes `before` as a :class:`~datetime.datetime` (default None, the time of
+  the call) and sends it as an ISO 8601 string. 4.x sent a POSIX timestamp, which AMP ignores, so every call answered the
+  newest entries. Its default was also fixed when the module was imported.
+- :meth:`~ampapi.analytics.AnalyticsPlugin.get_analytics_summary` sends `start_date` as an ISO 8601 string, which is
+  AMP's `DateTime` format. 4.x sent a POSIX timestamp, and raised an :exc:`UnboundLocalError` when `start_date` was None.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec` annotates `target_datastore` as an :class:`int`, which
+  is what AMP takes. 4.x annotated it as a :class:`str`.
+- :attr:`InstanceInfo.container_max_cpu <ampapi.modules.InstanceInfo.container_max_cpu>` is a :class:`float`, AMP's
+  `Single`. 4.x annotated it as a :class:`str`.
+- :meth:`~ampapi.Core.refresh_setting_value_list` sends AMP's `Node` parameter. 4.x sent `Name`, so AMP always answered
+  that the call requires `Node`.
 - :meth:`~ampapi.adsmodule.ADSModule.deploy_template` sends AMP's parameter names (eg. `TemplateID` and `NewUsername`)
   from :meth:`Template.to_dict <ampapi.modules.Template.to_dict>`, and it returns a
   :class:`~ampapi.modules.RunningTask`, which is what AMP's spec names. 4.x sent the attribute names.

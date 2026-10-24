@@ -726,7 +726,8 @@ class ADSModule(Base):
         friendly_name: str,
         post_create: Union[PostCreateState, None] = None,
         start_on_boot: bool | None = None,
-        target_datastore: str | None = None,
+        # target_datastore: str | None = None,
+        target_datastore: Union[int, None] = None,
         group: str | None = None,
         *,
         format_data: Union[bool, None] = None,
@@ -738,6 +739,10 @@ class ADSModule(Base):
         Create an Instance based upon the Spec ID provided.
 
         Endpoint: `ADSModule/CreateInstanceFromSpec`
+
+        .. versionchanged:: 5.0.0
+            `target_datastore` is an :class:`int`. 4.x annotated it as a :class:`str`, but AMP's `TargetDatastore` is an
+            Int32.
 
         Parameters
         ----------
@@ -751,7 +756,7 @@ class ADSModule(Base):
             The action the Instance will take after creation, by default None.
         start_on_boot : :class:`bool | None`, optional
             If the Instance should start on PC boot, by default None.
-        target_datastore : :class:`str | None`, optional
+        target_datastore : Union[:class:`int`, None], optional
             The Datastore ID if any to attach the Instance to, by default None.
         group : :class:`str | None`, optional
             The Group ID, by default None.

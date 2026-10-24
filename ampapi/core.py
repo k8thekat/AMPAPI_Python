@@ -1378,11 +1378,16 @@ class Core(Base):
     async def edit_interval_trigger(
         self,
         trigger_id: str,
-        months: int,
-        days: int,
-        hours: int,
-        minutes: int,
-        days_of_month: int,
+        # months: int,
+        # days: int,
+        # hours: int,
+        # minutes: int,
+        # days_of_month: int,
+        months: list[int],
+        days: list[int],
+        hours: list[int],
+        minutes: list[int],
+        days_of_month: list[int],
         description: str,
         *,
         format_data: Union[bool, None] = None,
@@ -1395,20 +1400,24 @@ class Core(Base):
 
         Endpoint: `Core/EditIntervalTrigger`
 
+        .. versionchanged:: 5.0.0
+            `months`, `days`, `hours`, `minutes` and `days_of_month` take a list of ints, like
+            :meth:`add_interval_trigger`. Each int is checked against its range.
+
         Parameters
         ----------
         trigger_id : :class:`str`
             The ID of the interval trigger to edit.
-        months : :class:`int`
-            The number of the month you want the trigger to run. Range 1 to 12.
-        days : :class:`int`
-            The days of the interval trigger to edit, the first day of the week is Monday. Range is 0 to 7.
-        hours : :class:`int`
-            The hours of the interval trigger to edit. Range is 0 to 23.
-        minutes : :class:`int`
-            The minutes of the interval trigger to edit. Range is 0 to 59.
-        days_of_month : :class:`int`
-            The days of the month of the interval trigger to edit. Range is 1 to 31.
+        months : list[:class:`int`]
+            The months of the year the trigger runs in. Range 1 to 12.
+        days : list[:class:`int`]
+            The days of the week the trigger runs on, the first day of the week is Monday. Range is 0 to 7.
+        hours : list[:class:`int`]
+            The hours of the day the trigger runs at. Range is 0 to 23.
+        minutes : list[:class:`int`]
+            The minutes of the hour the trigger runs at. Range is 0 to 59.
+        days_of_month : list[:class:`int`]
+            The days of the month the trigger runs on. Range is 1 to 31.
         description : :class:`str`
             The description of the interval trigger to edit.
         format_data : Union[:class:`bool`, None], optional
@@ -1425,21 +1434,32 @@ class Core(Base):
 
         """
         await self._reauth()
-        if months < 1 or months > 12:
-            msg = "Months must be between 1 and 12."
-            raise ValueError(msg)
-        if days < 0 or days > 7:
-            msg = "Days must be between 0 and 7."
-            raise ValueError(msg)
-        if hours < 0 or hours > 23:
-            msg = "Hours must be between 0 and 23."
-            raise ValueError(msg)
-        if minutes < 0 or minutes > 59:
-            msg = "Minutes must be between 0 and 59."
-            raise ValueError(msg)
-        if days_of_month < 1 or days_of_month > 31:
-            msg = "Days of month must be between 1 and 31."
-            raise ValueError(msg)
+        # if months < 1 or months > 12:
+        #     msg = "Months must be between 1 and 12."
+        #     raise ValueError(msg)
+        # if days < 0 or days > 7:
+        #     msg = "Days must be between 0 and 7."
+        #     raise ValueError(msg)
+        # if hours < 0 or hours > 23:
+        #     msg = "Hours must be between 0 and 23."
+        #     raise ValueError(msg)
+        # if minutes < 0 or minutes > 59:
+        #     msg = "Minutes must be between 0 and 59."
+        #     raise ValueError(msg)
+        # if days_of_month < 1 or days_of_month > 31:
+        #     msg = "Days of month must be between 1 and 31."
+        #     raise ValueError(msg)
+        # Each list is checked per element against the same ranges.
+        for name, values, lowest, highest in (
+            ("Months", months, 1, 12),
+            ("Days", days, 0, 7),
+            ("Hours", hours, 0, 23),
+            ("Minutes", minutes, 0, 59),
+            ("Days of month", days_of_month, 1, 31),
+        ):
+            if any(value < lowest or value > highest for value in values):
+                msg = f"{name} must be between {lowest} and {highest}."
+                raise ValueError(msg)
 
         parameters: dict[str, Any] = {
             "Id": trigger_id,
@@ -1907,7 +1927,8 @@ class Core(Base):
 
     async def get_audit_log_entries(
         self,
-        before: float = datetime.datetime.now(tz=datetime.UTC).timestamp(),
+        # before: float = datetime.datetime.now(tz=datetime.UTC).timestamp(),
+        before: Union[datetime.datetime, None] = None,
         count: int = 10,
         *,
         format_data: Union[bool, None] = None,
@@ -1924,10 +1945,15 @@ class Core(Base):
             These are anything in the Console of the Controller/ADS such as login events or API calls.
 
 
+        .. versionchanged:: 5.0.0
+            `before` is a :class:`~datetime.datetime`, sent as an ISO 8601 string. 4.x took a POSIX timestamp, which AMP
+            ignores, so it always answered the newest entries. The default is now the time of the call; 4.x used the
+            time the module was imported.
+
         Parameters
         ----------
-        before : :class:`float`
-            A POSIX timestamp, defaults to datetime.now(tz=timezone.utc).timestamp().
+        before : Union[:class:`~datetime.datetime`, None]
+            Return the entries before this time, by default None which uses the time of the call.
         count : :class:`int`
             Number of entries to return, default is 10.
         format_data : Union[:class:`bool`, None], optional
@@ -1944,7 +1970,10 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, Any] = {"Before": before, "Count": count}
+        if before is None:
+            before = datetime.datetime.now(tz=datetime.UTC)
+        # parameters: dict[str, Any] = {"Before": before, "Count": count}
+        parameters: dict[str, Any] = {"Before": before.isoformat(), "Count": count}
         result: ResponseAliasFull = await self._post(
             url="Core/GetAuditLogEntries",
             parameters=parameters,
@@ -3675,6 +3704,9 @@ class Core(Base):
 
         Endpoint: `Core/RefreshSettingValueList`
 
+        .. versionchanged:: 5.0.0
+            Sends AMP's `Node` parameter. 4.x sent `Name`, so AMP always answered that the call requires `Node`.
+
         Parameters
         ----------
         node : :class:`str`
@@ -3693,7 +3725,8 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"Name": node}
+        # parameters: dict[str, str] = {"Name": node}
+        parameters: dict[str, str] = {"Node": node}
         result: ResponseAliasFull = await self._post(
             url="Core/RefreshSettingValueList",
             parameters=parameters,
