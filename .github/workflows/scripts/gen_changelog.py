@@ -86,7 +86,13 @@ def gitHub_commit() -> None:
         raise RuntimeError(msg, last_commit, new_commit)
 
     # Format the git log data into a dictionary for Changelog.
-    output = subprocess.check_output(["git", "log", "--format=%B", last_commit + "..HEAD"])
+    # output = subprocess.check_output(["git", "log", "--format=%B", last_commit + "..HEAD"])
+    # Commits already on `origin/main` were logged when they were released, so they are left out.
+    # A branch that merged `main` back in would otherwise log every one of them again.
+    log_command: list[str] = ["git", "log", "--format=%B", last_commit + "..HEAD"]
+    if subprocess.run(["git", "rev-parse", "--verify", "--quiet", "origin/main"], check=False, capture_output=True).returncode == 0:
+        log_command.extend(["--not", "origin/main"])
+    output = subprocess.check_output(log_command)
     files: dict[str, list[str]] = {}
     cur_data = output.decode("utf-8")
     cur_data = cur_data.strip()

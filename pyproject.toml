@@ -38,7 +38,9 @@ target-version = "py312"
 line-length = 140
 # exclude = ["docs/extensions/*.py"]
 # unit_test.py is a test file that calls a live AMP server, so it isn't held to the library's rules.
-exclude = ["docs/extensions/*.py", "unit_test.py"]
+# exclude = ["docs/extensions/*.py", "unit_test.py"]
+# The workflow scripts are shared with Python_Template and carry a blanket `# ruff: noqa`, so Ruff skips them too.
+exclude = ["docs/extensions/*.py", "unit_test.py", ".github/workflows/scripts/*.py"]
 # A file named on the command line (as the editor and check_code pass them) is excluded too.
 force-exclude = true
 
