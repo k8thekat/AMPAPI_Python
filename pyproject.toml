@@ -36,7 +36,11 @@ Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/main/CHANGELOG.md"
 [tool.ruff]
 target-version = "py312"
 line-length = 140
-exclude = ["docs/extensions/*.py"]
+# exclude = ["docs/extensions/*.py"]
+# unit_test.py is a test file that calls a live AMP server, so it isn't held to the library's rules.
+exclude = ["docs/extensions/*.py", "unit_test.py"]
+# A file named on the command line (as the editor and check_code pass them) is excluded too.
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -121,3 +125,7 @@ build-backend = "setuptools.build_meta"
 dev = [
     "asqlite>=2.0.0",
 ]
+
+[tool.check_code]
+# unit_test.py is a test file that calls a live AMP server, so pyright skips it as Ruff does.
+skip_pyright = ["unit_test.py"]

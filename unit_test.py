@@ -35,7 +35,9 @@ from ampapi.modules import (
 )
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
-_response_dir = Path(__file__).parent / "_responses"
+# _response_dir = Path(__file__).parent / "_responses"
+# The 2.6.5 ADS and Core captures these tests read, since `_responses/` is grouped by AMP version and kind (#31).
+_response_dir = Path(__file__).parent / "_responses" / "2.6.5" / "ads"
 
 
 def _load_response(filename: str) -> dict[str, Any] | list[Any]:
