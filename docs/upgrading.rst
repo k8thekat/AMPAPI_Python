@@ -144,6 +144,8 @@ Changed methods
   `template_role` and `template_base_app` can be None. With templates present, 4.x could not build the class at all.
 - ``Base.version_validation()`` checked the wrong way round and never fired; it now raises once AMP is at or past the
   version the endpoint was removed in.
+- :meth:`~ampapi.Core.get_remote_login_token` works without `is_temporary`. A parameter left as None is no longer
+  sent, and AMP takes its default. 4.x sent a null, which AMP rejects, so the call failed.
 
 
 Errors

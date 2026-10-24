@@ -84,13 +84,10 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   takes the same code twice in one 30-second window. Checked on vm1, 2026-10-23, with a throwaway 2FA user: a
   login right after `logout` and a retry's login after a dead session both worked in the window of the login
   before them. `EnableTwoFactor` answers `result` with `url` (the authenticator link) and `manual_key` (the secret).
-- Every call sent through the ADS proxy (`ADSModule/Servers/<id>/...`) logs a Core warning on the ADS: the client
-  "tried to use session ID ... but that session belongs to 127.0.0.1" (an Instance on the same ADS) or to the
-  Target's address (an Instance on vm2), "while attempting to call Servers". The proxied login is made by the ADS, so
-  AMP ties that session to the ADS's address. The calls still succeed. vm1's ADS01 log had 290 of these in one
-  7-minute sweep (2026-10-24 01:05-01:12 UTC).
-- `Core/GetRemoteLoginToken` without `is_temporary` fails (#25). AMP logs "Unable to convert parameter
-  'IsTemporary' with value '' to type 'Boolean'" and "Can not convert Null to Boolean" (vm1 ADS01, 2026-10-24).
+- `Core/GetRemoteLoginToken` rejects a null `IsTemporary`. AMP logs "Unable to convert parameter 'IsTemporary' with
+  value '' to type 'Boolean'" and "Can not convert Null to Boolean" (vm1 ADS01, 2026-10-24). The spec marks both
+  parameters optional, and AMP takes its default when one is left out, so the wrapper doesn't send one that is None
+  (#25). Checked on vm1: no argument, `is_temporary` True or False, and both arguments each return a token.
 
 
 ## Dataclasses vs. the raw JSON

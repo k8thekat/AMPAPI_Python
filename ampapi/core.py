@@ -2446,6 +2446,9 @@ class Core(Base):
             You can set a description of what the token is for, defaults to None.
         is_temporary : Union[:class:`bool`, None], optional
             If the token should be temporary, defaults to None.
+
+            .. versionchanged:: 5.0.0
+                Left out of the request when None, which AMP takes as its default. AMP rejects a null.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -2458,7 +2461,13 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, Any] = {"Description": description, "IsTemporary": is_temporary}
+        # parameters: dict[str, Any] = {"Description": description, "IsTemporary": is_temporary}
+        # Both are optional to AMP, but a null `IsTemporary` fails, so a parameter left as None isn't sent.
+        parameters: dict[str, Any] = {}
+        if description is not None:
+            parameters["Description"] = description
+        if is_temporary is not None:
+            parameters["IsTemporary"] = is_temporary
         result: ResponseAliasFull = await self._post(
             url="Core/GetRemoteLoginToken",
             parameters=parameters,
