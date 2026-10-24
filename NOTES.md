@@ -143,10 +143,14 @@ Found while triggering them (vm1, 2026-10-24):
   (`instance_id`, ...), and AMP answered "UpdateInstanceInfo method requires InstanceId(String) argument". The
   endpoint takes flat parameters (`InstanceId`, `FriendlyName`, ...), not one nested object. With AMP's names it
   works, and AMP answers with a "Reconfiguring Instance" `RunningTask`, although the spec names `ActionResult`.
-  `ContainerMaxCPU` was accepted as a string and as a float. `InstanceInfo` makes every field but three required,
-  while AMP needs only `InstanceId`, so a caller must send each current value back or it gets overwritten.
-- `Template.to_dict()` has the same problem for `deploy_template` (#29). That endpoint also takes flat parameters
-  (`TemplateID`, `NewUsername`, ...), and Kat's comment at the call site already says the keys are cased wrongly.
+  `ContainerMaxCPU` was accepted as a string and as a float. Since 67be1d5 only `instance_id` is required, and a
+  field left as None isn't sent. Live, an `InstanceInfo` with only `instance_id` and `description` changed the
+  description and no other `GetInstances` key.
+- `Template.to_dict()` had the same problem for `deploy_template` (#29, fixed in 247f4a4). That endpoint also takes
+  flat parameters (`TemplateID`, `NewUsername`, ...). With AMP's names, AMP read the template and looked for a Target,
+  then failed: "No viable deployment target could be found ... target reported no provisioning fitness data", for
+  both Targets. Both Targets' `fitness` is null in `GetInstances`, and `GetProvisionFitness` answers null too (#3), so
+  the `RunningTask` return the spec names is unconfirmed until a Target reports fitness (#30).
   `InstanceDatastore.to_dict()` is fine, because `add_datastore` and `update_datastore` send it as one nested object.
 - `CreateInstance.ip_binding` defaulted to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
   that address. It is `"0.0.0.0"` since #28, and an Instance created with the default worked on vm1.
