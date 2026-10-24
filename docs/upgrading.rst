@@ -107,6 +107,9 @@ Changed methods
   :class:`~ampapi.PostCreateState`, whose values are AMP's.
 - :class:`~ampapi.modules.CreateInstance` fills `new_instance_id` with the zero GUID (AMP picks the ID),
   `admin_username` with ``"admin"`` and `admin_password` with a generated password, since AMP rejects empty values.
+- :meth:`~ampapi.adsmodule.ADSModule.update_instance_info` sends AMP's parameter names (eg. `InstanceId` and
+  `FriendlyName`) from :meth:`InstanceInfo.to_dict <ampapi.modules.InstanceInfo.to_dict>`. 4.x sent the attribute names,
+  so AMP always answered that the call requires `InstanceId`.
 - ``Base.version_validation()`` takes the `endpoint` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
 - ``Base.clean_up()`` takes a keyword-only `logout` (default False) to call ``Core/Logout`` before closing the session.

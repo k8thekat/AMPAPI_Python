@@ -2090,13 +2090,31 @@ class InstanceInfo:
     def to_dict(self) -> dict[str, Any]:
         """As the function name implies; converts the class to a dict for use as an API parameter.
 
+        .. versionchanged:: 5.0.0
+            The keys are AMP's parameter names (eg. `InstanceId`), not the attribute names.
+
         Returns
         -------
         dict[:class:`str`, Any]
-            The class attributes as a key, value paired dict; attributes set to None are omitted.
+            The class attributes keyed by their AMP API parameter names; attributes set to None are omitted.
 
         """
-        return _dataclass_to_dict(self)
+        # return _dataclass_to_dict(self)
+        data: dict[str, Any] = {
+            "InstanceId": self.instance_id,
+            "FriendlyName": self.friendly_name,
+            "Description": self.description,
+            "Suspended": self.suspended,
+            "ExcludeFromFirewall": self.exclude_from_firewall,
+            "RunInContainer": self.run_in_container,
+            "ContainerMemory": self.container_memory,
+            "ContainerMaxCPU": self.container_max_cpu,
+            "ContainerImage": self.container_image,
+            "MemoryPolicy": self.memory_policy.value,
+            "StartOnBoot": self.start_on_boot,
+            "WelcomeMessage": self.welcome_message,
+        }
+        return {key: value for key, value in data.items() if value is not None}
 
 
 @dataclass(slots=True)
