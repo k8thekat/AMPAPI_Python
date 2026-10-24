@@ -2049,46 +2049,59 @@ class InstanceDatastore(ResponseData):
 class InstanceInfo:
     """Represents the JSON response data for :meth:`ADSModule.update_instance_info`.
 
+    .. versionchanged:: 5.0.0
+        Only `instance_id` is required. A field left as None is not sent, so AMP leaves that value unchanged.
+
     Attributes
     ----------
     instance_id : :class:`str`
         The Instance GUID.
-    friendly_name : :class:`str`
-        The friendly name of the Instance.
-    description : :class:`str`
-        The description of the Instance.
-    suspended : :class:`bool`
-        If the Instance is suspended.
-    exclude_from_firewall : :class:`bool`
-        If the Instance should be excluded from the firewall.
-    run_in_container : :class:`bool`
-        If the Instance should be run in a container.
-    container_memory : :class:`int`
-        The amount of memory allocated to the container in MB.
-    container_max_cpu : :class:`str`
-        The maximum amount of CPU cores allocated to the container.
-    container_image : :class:`str`
-        The container/docker image to use.
-    memory_policy : :class:`ContainerMemoryPolicyState`
-        The memory policy of the Instance, default is :attr:`ContainerMemoryPolicyState.reserve`.
-    start_on_boot : :class:`bool`
-        If the Instance should start on boot, default is False.
-    welcome_message : :class:`str`
-        The welcome message of the Instance, default is None.
+    friendly_name : Union[:class:`str`, None], optional
+        The friendly name of the Instance; default is None, which leaves the value unchanged.
+    description : Union[:class:`str`, None], optional
+        The description of the Instance; default is None, which leaves the value unchanged.
+    suspended : Union[:class:`bool`, None], optional
+        If the Instance is suspended; default is None, which leaves the value unchanged.
+    exclude_from_firewall : Union[:class:`bool`, None], optional
+        If the Instance should be excluded from the firewall; default is None, which leaves the value unchanged.
+    run_in_container : Union[:class:`bool`, None], optional
+        If the Instance should be run in a container; default is None, which leaves the value unchanged.
+    container_memory : Union[:class:`int`, None], optional
+        The amount of memory allocated to the container in MB; default is None, which leaves the value unchanged.
+    container_max_cpu : Union[:class:`str`, None], optional
+        The maximum amount of CPU cores allocated to the container; default is None, which leaves the value unchanged.
+    container_image : Union[:class:`str`, None], optional
+        The container/docker image to use; default is None, which leaves the value unchanged.
+    memory_policy : Union[:class:`ContainerMemoryPolicyState`, None], optional
+        The memory policy of the Instance; default is None, which leaves the value unchanged.
+    start_on_boot : Union[:class:`bool`, None], optional
+        If the Instance should start on boot; default is None, which leaves the value unchanged.
+    welcome_message : Union[:class:`str`, None], optional
+        The welcome message of the Instance; default is None, which leaves the value unchanged.
 
     """
 
     instance_id: str
-    friendly_name: str
-    description: str
-    suspended: bool
-    exclude_from_firewall: bool
-    run_in_container: bool
-    container_memory: int
-    container_max_cpu: str  # Unsure exactly what this field is or does.
-    container_image: str
-    memory_policy: ContainerMemoryPolicyState = field(default=ContainerMemoryPolicyState.reserve)
-    start_on_boot: bool = field(default=False)
+    # friendly_name: str
+    # description: str
+    # suspended: bool
+    # exclude_from_firewall: bool
+    # run_in_container: bool
+    # container_memory: int
+    # container_max_cpu: str  # Unsure exactly what this field is or does.
+    # container_image: str
+    # memory_policy: ContainerMemoryPolicyState = field(default=ContainerMemoryPolicyState.reserve)
+    # start_on_boot: bool = field(default=False)
+    friendly_name: Union[str, None] = field(default=None)
+    description: Union[str, None] = field(default=None)
+    suspended: Union[bool, None] = field(default=None)
+    exclude_from_firewall: Union[bool, None] = field(default=None)
+    run_in_container: Union[bool, None] = field(default=None)
+    container_memory: Union[int, None] = field(default=None)
+    container_max_cpu: Union[str, None] = field(default=None)  # Unsure exactly what this field is or does.
+    container_image: Union[str, None] = field(default=None)
+    memory_policy: Union[ContainerMemoryPolicyState, None] = field(default=None)
+    start_on_boot: Union[bool, None] = field(default=None)
     welcome_message: Union[str, None] = field(default=None)
 
     def to_dict(self) -> dict[str, Any]:
@@ -2114,7 +2127,7 @@ class InstanceInfo:
             "ContainerMemory": self.container_memory,
             "ContainerMaxCPU": self.container_max_cpu,
             "ContainerImage": self.container_image,
-            "MemoryPolicy": self.memory_policy.value,
+            "MemoryPolicy": self.memory_policy.value if self.memory_policy is not None else None,
             "StartOnBoot": self.start_on_boot,
             "WelcomeMessage": self.welcome_message,
         }
