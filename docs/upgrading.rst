@@ -112,8 +112,9 @@ Changed methods
   `admin_username` with ``"admin"`` and `admin_password` with a generated password, since AMP rejects empty values.
 - :class:`~ampapi.modules.CreateInstance` defaults `ip_binding` to ``"0.0.0.0"`` (every IPv4 address). 4.x used
   ``"192.168.0.1"``, which AMP rejects on a machine without that address.
-- :meth:`CreateInstance.to_dict <ampapi.modules.CreateInstance.to_dict>` raises a :exc:`ValueError` when
-  `instance_name` is empty and `auto_configure` is False. AMP took the call and failed the creation task instead.
+- :class:`~ampapi.modules.CreateInstance` requires `instance_name` and `port_number`, which now follow `module`. 4.x
+  defaulted them to ``""`` and ``8001``. AMP fails a local creation with an empty name, and a fixed port works only
+  until one Instance holds it. A call that passes the fields after `module` by position needs them as keywords.
 - :meth:`~ampapi.adsmodule.ADSModule.create_instance` takes a keyword-only `wait` (default False) and `wait_timeout`
   (default 300 seconds). With `wait`, it waits for the creation task to end and raises
   :exc:`~ampapi.AMPAPIResponseError` when the task fails.

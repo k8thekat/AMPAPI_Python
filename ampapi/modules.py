@@ -1493,7 +1493,11 @@ class CreateInstance:
 
     .. note::
         AMP refuses a :attr:`~CreateInstance.port_number` outside 1001 to 65535, or one another Instance already uses.
-        When :attr:`~CreateInstance.auto_configure` is True, AMP picks the name and port itself.
+        When :attr:`~CreateInstance.auto_configure` is True, AMP picks the port itself, and the name too when
+        :attr:`~CreateInstance.instance_name` is empty.
+
+    .. versionchanged:: 5.0.0
+        `instance_name` and `port_number` are required and follow `module`.
 
 
     Attributes
@@ -1504,20 +1508,19 @@ class CreateInstance:
         The Instance friendly name, this is what you see in the web GUI.
     module : :class:`str`
         The Instance module it will use.
+    instance_name : :class:`str`
+        The name for the Instance, similar to :attr:`friendly_name`. AMP wants it to start with a letter and hold only
+        letters, numbers, dashes and underscores.
+    port_number : :class:`int`
+        The Port to assign to the Instance.
     new_instance_id : :class:`str`
         The ID for the new Instance, default is the zero GUID ("00000000-0000-0000-0000-000000000000"), which lets AMP pick the ID.
-    instance_name : :class:`str`
-        The name for the Instance, similar to :attr:`friendly_name`, default is "". It must be set when
-        :attr:`auto_configure` is False. AMP wants it to start with a letter and hold only letters, numbers, dashes and
-        underscores.
     ip_binding : :class:`str`
         The IP to assign to the Instance, default is ``"0.0.0.0"``, which binds every IPv4 address.
         See :attr:`Controller.available_ips`.
 
         .. versionchanged:: 5.0.0
             The default is ``"0.0.0.0"``; it was ``"192.168.0.1"``.
-    port_number : :class:`int`
-        The Port to assign to the Instance.
     admin_username : :class:`str`
         The username of the Instance's admin user, default is "admin". AMP rejects an empty username.
     admin_password : :class:`str`
@@ -1526,8 +1529,8 @@ class CreateInstance:
     provision_settings : dict[:class:`str`, :class:`str`]
         UNK
     auto_configure : :class:`bool`
-        When enabled, all settings other than the module, target and friendly_name are ignored and
-        replaced with automatically generated values
+        When enabled, AMP generates the Instance's settings itself. It picks the port, and the name when
+        :attr:`instance_name` is empty.
     post_create : :class:`PostCreateState`
         The action to take after creating the Instance, defaults to :attr:`~PostCreateState.do_nothing`
     start_on_boot : :class:`bool`
@@ -1543,10 +1546,12 @@ class CreateInstance:
     target_ads_instance: str  # Tied to Auto Configure
     friendly_name: str  # Tied to Auto Configure
     module: str  # Tied to Auto Configure
+    instance_name: str
+    port_number: int
     new_instance_id: str = field(default="00000000-0000-0000-0000-000000000000")
-    instance_name: str = field(default="")
+    # instance_name: str = field(default="")
     ip_binding: str = field(default="0.0.0.0")  # noqa: S104
-    port_number: int = field(default=8001)
+    # port_number: int = field(default=8001)
     admin_username: str = field(default="admin")
     admin_password: str = field(default_factory=lambda: secrets.token_urlsafe(18))
     provision_settings: dict[str, str] = field(default_factory=dict[str, str])
@@ -1560,26 +1565,12 @@ class CreateInstance:
     def to_dict(self) -> dict[str, str | int | dict[str, str] | bool]:
         """As the function name implies; converts the class to a dict for use as an API parameter.
 
-        .. versionchanged:: 5.0.0
-            Raises :exc:`ValueError` when `instance_name` is empty and `auto_configure` is False.
-
         Returns
         -------
         dict[:class:`str`, :class:`str` | :class:`int` | dict[:class:`str`, :class:`str`] | :class:`bool`]
             The class attributes keyed by their AMP API parameter names.
 
-        Raises
-        ------
-        :exc:`ValueError`
-            If `instance_name` is empty and `auto_configure` is False.
-
         """
-        # Measured on AMP-2.8.0.8 (vm1): AMP accepts an empty name and only reports it through the failed RunningTask,
-        # while a taken or out of range port, an empty password and an unknown IP are refused on the call itself.
-        if self.auto_configure is False and self.instance_name == "":
-            msg = "The instance_name attribute must be set when auto_configure is False."
-            raise ValueError(msg)
-
         data: dict[str, str | int | dict[str, str] | bool] = {
             "TargetADSInstance": self.target_ads_instance,
             "NewInstanceId": self.new_instance_id,

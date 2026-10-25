@@ -541,6 +541,8 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
     - A remote creation changes the request on the way. An IP that isn't on the Target became `0.0.0.0`, an empty
       `InstanceName` with `AutoConfigure` False was named from the friendly name (`p37empty01`), and a given
       `InstanceName` replaced the friendly name (2 of 2). A taken name or port is still refused on the call.
+    - With `AutoConfigure` True and `InstanceName` given on the local Target, AMP kept the name, replaced the friendly
+      name with it and picked port 8086 instead of the 8097 sent.
 
 ## Generic Instances
 
