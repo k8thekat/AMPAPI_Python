@@ -1160,7 +1160,7 @@ class Branding(ResponseData):
 
 @dataclass(slots=True)
 class BuildInfo(ResponseData):
-    """Represents an AMP version number, as used by :attr:`Status.application_version` and :attr:`Instance.amp_version`.
+    """Represents an AMP version number, as used by :attr:`Diagnostics.application_version` and :attr:`Instance.amp_version`.
 
     .. note::
         * Currently has a converter function ``v2.6.0.0``
@@ -3837,7 +3837,6 @@ class SettingSpec(ResponseData):
 
     category: str
     # actions: list[str] | list[SettingSpecAction] = field(default_factory=list[str])
-    # actions: list[SettingSpecAction] = field(default_factory=list["SettingSpecAction"])
     actions: list[SettingSpecAction] | list[SettingSpecActionResponse] = field(default_factory=list["SettingSpecAction"])
     always_allow_read: bool = field(default=False)
     # attributes: Union[SettingsSpecAttribute, None] = field(default=None)

@@ -243,6 +243,11 @@ survey checked every value in the 151 captures from 2.8.0.8 against both the Typ
 - `SettingSpec.min_value`/`max_value` are numbers in about 140 specs.
 - Analytics percentages can be the string "Infinity" when AMP divides by a zero session time (one live capture,
   VaskelsServer).
+Key drift couldn't see inside `list[Any]` fields, so #35 gave the nested Analytics and `SettingSpec` items their own
+TypedDicts (`AnalyticsCountryDataResponse`, `AnalyticsTopPlayersResponse`, `SettingSpecActionResponse`,
+`SettingSpecSelectionSourceResponse`, `SettingsSpecAttributeResponse`). `BuildInfo`, `BukkitPlugin`, `OPList` and
+`Fitness` have none: AMP sends a version string for `BuildInfo`, the endpoints behind `BukkitPlugin` and `OPList`
+were removed in 2.6.5.0, and `fitness` is null in every capture.
 The survey script (`dc_survey.py`) lived in a session scratchpad; it pairs each wrapper's narrowing check with its
 `from_response` call and needs `key_drift.declared_keys`, because `__required_keys__` ignores `Required`/`NotRequired`
 under string annotations on 3.12.
