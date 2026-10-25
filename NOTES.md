@@ -515,6 +515,23 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - File paths: AMP's file manager takes `\`, `//`, `./`, `../` (it stays inside the Instance), `_` and dot-folders
   like `.trash` as given. Only a bare `/` fails ("Index was outside the bounds of the array"), so
   `Base.sanitize_path` just drops leading slashes.
+- Measured on vm1 on 2026-10-24 (AMP-2.8.0.8, #36):
+  - `FileManagerPlugin/ReleaseFileUploadLock` answers `status: True` every time: for a missing file or directory,
+    after a non-final `WriteFileChunk`, twice in a row, and after the final chunk. A held lock never showed.
+  - `Core/OIDCLogin` with fake values answers the `LoginResults` shape (result 3, "The OIDC state parameter is
+    invalid or has expired."). `GetOIDCLoginURL` answers null with no provider, so the success payload is unknown.
+  - `Core/SetConfig` and `SetConfigs` read every value as a String. A `List<String>` setting needs a JSON string, and a
+    real JSON array is refused as "Missing Field". A newline-separated string is refused too: `SetConfigs` answers
+    False and `SetConfig` "The supplied value was invalid.". An empty string sets a list to null, not `[]`. Booleans
+    and Int32s are taken as JSON values or as strings (`true`, `"True"`, `587`, `"587"`). The wrappers `json.dumps`
+    lists, tuples and dicts.
+  - `ADSModule/CreateInstance`:
+    - Refused on the call: a port outside 1001 to 65535 or one already in use (8001 included), and an empty
+      `AdminPassword`.
+    - The creation task fails: an empty `InstanceName` with `AutoConfigure` False ("must start with a letter, and
+      contain only letters, numbers, dashes and underscores"), and an IP that isn't on the machine.
+    - With `AutoConfigure` True, AMP names the Instance from the friendly name (`p361b01`) and picks the port.
+    - Accepted silently: an empty `FriendlyName` and an unknown `TargetDatastore`.
 
 ## Generic Instances
 

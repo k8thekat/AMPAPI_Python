@@ -4383,7 +4383,7 @@ class Core(Base):
 
         Parameters
         ----------
-        data : dict[:class:`str`, `SettingValue`]
+        data : dict[:class:`str`, Union[:class:`str`, :class:`bool`, :class:`int`, :class:`list`, :class:`tuple`, :class:`dict`]]
             Dictionary of Setting Nodes to set.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
@@ -4437,7 +4437,7 @@ class Core(Base):
         ----------
         node : :class:`str`
             Setting node name.
-        value : `SettingValue`
+        value : Union[:class:`str`, :class:`bool`, :class:`int`, :class:`list`, :class:`tuple`, :class:`dict`]
             Config node value.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
