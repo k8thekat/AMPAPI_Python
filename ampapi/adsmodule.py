@@ -711,6 +711,7 @@ class ADSModule(Base):
             result: ResponseAliasFull = await self._post(url="Core/GetTasks", request_params=request_params, **response_params)
             if not isinstance(result, list):
                 raise AMPAPITypeError(end_point="Core/GetTasks", cur_type=result, expec_type=list)
+
             current: Union[RunningTaskResponse, None] = None
             for item in result:
                 if (
@@ -719,14 +720,18 @@ class ADSModule(Base):
                 ):
                     current = item
                     break
+
+            # AMP drops our task from the list once it succeeds.
             if current is None:
                 return
+
             if current["end_time"] is not None:
                 if current["status"] is False:
                     reason: str = current["reason"] or current["state_message"] or ""
                     raise AMPAPIResponseError(title=current["name"], url=f"{self._endpoint_url}/API/{end_point}", reason=reason)
                 return
-            await asyncio.sleep(1)
+
+            await asyncio.sleep(delay=1)
 
     @Base.ads_only
     async def create_instance(
@@ -808,11 +813,17 @@ class ADSModule(Base):
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if wait is True:
                 try:
-                    async with asyncio.timeout(wait_timeout):
-                        await self._wait_for_task(result, "ADSModule/CreateInstance", request_params, **response_params)
-                except TimeoutError as error:
+                    async with asyncio.timeout(delay=wait_timeout):
+                        await self._wait_for_task(
+                            task=result,
+                            end_point="ADSModule/CreateInstance",
+                            request_params=request_params,
+                            **response_params,
+                        )
+                except TimeoutError as e:
                     msg = f"The ADSModule/CreateInstance task {result['id']} was still running after {wait_timeout} seconds."
-                    raise TimeoutError(msg) from error
+                    raise TimeoutError(msg) from e
+
             if format_data is True:
                 return RunningTask.from_response(result)
             return result
@@ -3091,14 +3102,15 @@ class ADSModule(Base):
             UNK.
 
         """
-        await self._reauth()
-        parameters: dict[str, str] = {"id": id_, "REQ_RAWJSON": req_rawjson}
-        return await self._post(
-            url="ADSModule/Servers",
-            parameters=parameters,
-            request_params=request_params,
-            **response_params,
-        )
+        raise NotImplementedError
+        # await self._reauth()
+        # parameters: dict[str, str] = {"id": id_, "REQ_RAWJSON": req_rawjson}
+        # return await self._post(
+        #     url="ADSModule/Servers",
+        #     parameters=parameters,
+        #     request_params=request_params,
+        #     **response_params,
+        # )
 
     @Base.ads_only
     async def set_instance_config(
