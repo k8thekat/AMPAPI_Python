@@ -21,6 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import datetime
+import json
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
 from pyotp import TOTP
@@ -52,6 +53,7 @@ from ._types import (
     ActionResultResponse,
     LicenceInfoResponse,
     LicenceResultResponse,
+    LoginResultsResponse,
     RunningTaskResponse,
     ScheduleDataResponse,
     SecurityCheckResponse,
@@ -106,7 +108,6 @@ if TYPE_CHECKING:
         APISpec,
         AuditLogEntryResponse,
         DiagnosticsResponse,
-        LoginResultsResponse,
         LoginUserInfoResponse,
         ModuleResponse,
         PermissionNodeResponse,
@@ -122,6 +123,9 @@ if TYPE_CHECKING:
     )
 
 __all__ = ("Core",)
+
+# What `Core.set_config` and `Core.set_configs` take for a value. AMP reads every value as a String.
+SettingValue = Union[str, bool, int, list[Any], tuple[Any, ...], dict[str, Any]]
 
 
 class Core(Base):
@@ -3628,7 +3632,6 @@ class Core(Base):
         await self._reauth()
         return await self._post(url="Core/Resume", no_data=True, request_params=request_params, **response_params)
 
-    # TODO: Verify data structure.
     async def oidc_login(
         self,
         code: str,
@@ -3638,10 +3641,10 @@ class Core(Base):
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> Any:
+    ) -> LoginResults | LoginResultsResponse:
         """|coro|
 
-        Related to OIDC credentials. Return type is UNKNOWN as of v`3.0.0`.
+        Logs in with the code from an OIDC provider.
 
         Endpoint: `Core/OIDCLogin`
 
@@ -3649,6 +3652,7 @@ class Core(Base):
 
         .. versionchanged:: 5.0.0
             Takes the required `state` parameter after `instance_id`.
+            Returns a :class:`LoginResults` and not the raw dict.
 
         Parameters
         ----------
@@ -3667,8 +3671,8 @@ class Core(Base):
 
         Returns
         -------
-        :class:`Any`
-            UNK.
+        :class:`LoginResults`
+            A :class:`LoginResults` dataclass. A refused login has the same shape, with `success` False.
 
         """
         await self._reauth()
@@ -3685,9 +3689,13 @@ class Core(Base):
             request_params=request_params,
             **response_params,
         )
+        # TODO: Confirm the success payload.
+        # The VMs have no OIDC provider; a failed answer has the LoginResults shape (result 3, "state invalid or expired").
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
-        return result
+        if not is_response_type(result, LoginResultsResponse, ("success", "result", "result_reason")):
+            raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
+        return LoginResults.from_response(result)
 
     async def refresh_setting_value_list(
         self,
@@ -4353,12 +4361,9 @@ class Core(Base):
             **response_params,
         )
 
-    # TODO: Look into sanitizing data structure for array style key/value pairs.
-    # - "value":[\"asd\"]
-    # I am already calling JSON.dumps, look into structure and see what is (possibly) failing.
     async def set_configs(
         self,
-        data: dict[str, str],
+        data: dict[str, SettingValue],
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -4369,9 +4374,16 @@ class Core(Base):
 
         Endpoint: `Core/SetConfigs`
 
+        .. note::
+            A list, tuple or dict value is sent as a JSON string, which is what AMP needs for a `List<String>` setting.
+            An empty string ``""`` clears a list setting to None, not to ``[]``; send an empty list for that.
+
+        .. versionchanged:: 5.0.0
+            A list, tuple or dict value is sent as a JSON string, and `data` accepts :class:`bool` and :class:`int` values.
+
         Parameters
         ----------
-        data : dict[:class:`str`, :class:`str`]
+        data : dict[:class:`str`, `SettingValue`]
             Dictionary of Setting Nodes to set.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
@@ -4385,7 +4397,10 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, dict[str, str]] = {"data": data}
+        # parameters: dict[str, dict[str, str]] = {"data": data}
+        parameters: dict[str, dict[str, Any]] = {
+            "data": {node: json.dumps(value) if isinstance(value, (list, tuple, dict)) else value for node, value in data.items()},
+        }
         result: ResponseAliasFull = await self._post(
             url="Core/SetConfigs",
             parameters=parameters,
@@ -4399,7 +4414,7 @@ class Core(Base):
     async def set_config(
         self,
         node: str,
-        value: str,
+        value: SettingValue,
         *,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
@@ -4411,11 +4426,18 @@ class Core(Base):
 
         Endpoint: `Core/SetConfig`
 
+        .. note::
+            A list, tuple or dict value is sent as a JSON string, which is what AMP needs for a `List<String>` setting.
+            An empty string ``""`` clears a list setting to None, not to ``[]``; send an empty list for that.
+
+        .. versionchanged:: 5.0.0
+            A list, tuple or dict value is sent as a JSON string, and `value` accepts :class:`bool` and :class:`int`.
+
         Parameters
         ----------
         node : :class:`str`
             Setting node name.
-        value : :class:`str`
+        value : `SettingValue`
             Config node value.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
@@ -4431,7 +4453,8 @@ class Core(Base):
 
         """
         await self._reauth()
-        parameters: dict[str, str] = {"node": node, "value": value}
+        # parameters: dict[str, str] = {"node": node, "value": value}
+        parameters: dict[str, Any] = {"node": node, "value": json.dumps(value) if isinstance(value, (list, tuple, dict)) else value}
         result: ResponseAliasFull = await self._post(
             url="Core/SetConfig",
             parameters=parameters,

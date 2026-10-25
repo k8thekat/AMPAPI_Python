@@ -124,6 +124,10 @@ Changed methods
   `UpdateInstanceInfo` takes. 4.x could not send them.
 - :meth:`~ampapi.Core.oidc_login` takes the `state` parameter after `instance_id`. AMP requires it, and 4.x never sent
   it, so the call always failed.
+- :meth:`~ampapi.Core.set_config` and :meth:`~ampapi.Core.set_configs` send a list, tuple or dict value as a JSON string.
+  AMP needs that for a `List<String>` setting, and 4.x raised "Missing Field" for a list. Both also accept
+  :class:`bool` and :class:`int` values.
+- :meth:`~ampapi.Core.oidc_login` returns a :class:`~ampapi.modules.LoginResults`; 4.x returned the raw dict.
 - These methods gain keyword-only parameters from AMP's API spec. Each defaults to None and is left out of the call
   when None, so AMP keeps its own default and no existing call changes:
 

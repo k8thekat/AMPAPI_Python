@@ -705,7 +705,6 @@ class FileManagerPlugin(Base):
             return ActionResult.from_response(result)
         return result
 
-    # TODO: Test functionality or get clarification on use/action.
     async def release_file_upload_lock(
         self,
         file_path: str,
@@ -719,6 +718,9 @@ class FileManagerPlugin(Base):
         Releases a File Upload Lock.
 
         Endpoint: `FileManagerPlugin/ReleaseFileUploadLock`
+
+        .. note::
+            AMP answers success whether or not a lock was held, or the file exists (measured on AMP-2.8.0.8).
 
         Parameters
         ----------

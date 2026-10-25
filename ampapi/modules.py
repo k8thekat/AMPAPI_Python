@@ -2424,7 +2424,6 @@ class LoginUserInfo(ResponseData):
     username: str
 
     def __post_init__(self) -> None:  # noqa: D105
-        # TODO: This may be best handled with a try/except and setting a default value afterwards. - 6/14/26
         if isinstance(self.last_login, str):
             self.last_login = timestamp_converter(self.last_login)
 
@@ -3841,9 +3840,8 @@ class SettingSpec(ResponseData):
     always_allow_read: bool = field(default=False)
     # attributes: Union[SettingsSpecAttribute, None] = field(default=None)
     attributes: Union[SettingsSpecAttribute | SettingsSpecAttributeResponse, None] = field(default=None)
-    # TODO: This will need a tighter type definition.
     # current_value: Union[list[SettingSpecTableAliases], str, bool, int, dict[Any, Any], SettingSpecTableAliases] = ""
-    current_value: Union[list[str], str, bool, int, dict[Any, Any], SettingSpecTableAliases, None] = ""
+    current_value: Union[list[str], str, bool, int, dict[str, str], SettingSpecTableAliases, None] = ""
     description: str = ""
     enum_values: Union[dict[str, str], None] = field(default=None)
     enum_values_are_deferred: bool = field(default=False)
@@ -3879,7 +3877,9 @@ class SettingSpec(ResponseData):
     def __post_init__(self) -> None:  # noqa: D105
         # determines the current value type and converts the data into the respective dataclass if needed.
         _table = SettingSpecTable().table
-        if self.node in _table and isinstance(self.current_value, int):
+        # if self.node in _table and isinstance(self.current_value, int):
+        # A bool is an int, so it is left alone and not turned into an Enum.
+        if self.node in _table and isinstance(self.current_value, int) and not isinstance(self.current_value, bool):
             self.current_value = _table[self.node](self.current_value)
 
     __hash__ = None  # type: ignore[assignment]

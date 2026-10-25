@@ -698,7 +698,9 @@ class Base:
         if sanitize_json is True:
             response_json = self.sanitize_json(response_json)
 
-        if to_file is True and path is not None and response_json is not None:
+        # A None answer already returned or raised above, so the check is redundant now that sanitize_json keeps the type.
+        # if to_file is True and path is not None and response_json is not None:
+        if to_file is True and path is not None:
             # ? SUGGESTION: May have to make this async in the future if it becomes blocking.
             if path.exists() is False:
                 msg = "The path provided does not exist. %s"
@@ -1035,8 +1037,6 @@ class Base:
         """
         await self.clean_up()
 
-    # TODO: See about supporting automatic login handling like other Endpoints.
-    # See about re-writing the logic to allow setting the URL and other parameters.
     async def _call_end_point(
         self,
         endpoint: str,
@@ -1305,7 +1305,14 @@ class Base:
             setattr(self, field.name, getattr(data, field.name))
         return self
 
-    # TODO: Better type hinting parameters.
+    @overload
+    @classmethod
+    def sanitize_json(cls, json: str) -> str: ...
+
+    @overload
+    @classmethod
+    def sanitize_json[JsonT](cls, json: JsonT) -> JsonT: ...
+
     @classmethod
     def sanitize_json(cls, json: Any) -> Any:
         """|classmethod|
@@ -1339,7 +1346,15 @@ class Base:
             #         entries[index] = cls.sanitize_json(json=entry)
             # return entries
             # Only dictionary entries are sanitized. Anything else (nested lists included) is kept as is.
-            return [cls.sanitize_json(json=entry) if isinstance(entry, dict) else entry for entry in source_list]
+            # return [cls.sanitize_json(json=entry) if isinstance(entry, dict) else entry for entry in source_list]
+            cleaned_list: list[Any] = []
+            for entry in source_list:
+                if isinstance(entry, dict):
+                    entry_map: dict[str, Any] = entry  # pyright: ignore[reportUnknownVariableType]
+                    cleaned_list.append(cls.sanitize_json(json=entry_map))
+                else:
+                    cleaned_list.append(entry)
+            return cleaned_list
 
         if isinstance(json, dict):
             source_map: dict[str, Any] = json  # pyright: ignore[reportUnknownVariableType]
@@ -1362,7 +1377,11 @@ class Base:
             # Build a fresh dict rather than copying and popping. The key conversion is cached per key string.
             new_map: dict[str, Any] = {}
             for old_key, old_value in source_map.items():
-                new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+                # new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
+                new_value: Any = old_value
+                if isinstance(old_value, (list, dict)):
+                    nested: Any = old_value  # pyright: ignore[reportUnknownVariableType]
+                    new_value = cls.sanitize_json(json=nested)
                 # AMP setting nodes (eg. `ADSModule.Defaults.DefaultAuthServerURL`) are the only dotted keys AMP sends.
                 # None of the captured responses has a dotted field name, so a dotted key is kept exactly as sent.
                 new_key: str = old_key if "." in old_key else _snake_key(old_key)

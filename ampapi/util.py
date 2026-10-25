@@ -185,7 +185,6 @@ async def _parse_get_api_spec_to_file(
     mode = "x"
     if _dir.exists():
         mode = "w"
-    # TODO: turn these into .rst files instead.
     with Path.open(_dir, mode) as file:
         file.write(f"INSTANCE TYPE: {instance_type}\n")
         file.write(f"APP VERSION: {diag_info.application_version}\n")
@@ -1188,7 +1187,7 @@ async def generate_docs_rst(instance: Controller) -> None:
         raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=data, expec_type=dict)
     mc_: bool = False
     gen_: bool = False
-    src_: bool = False
+    # src_: bool = False
     # A remote Target's Instances live on its TargetADS, so we look through those too.
     every_instance: set[InstanceTypeAliases] = set(instance.instances)
     for target_ads in instance.targets.values():
@@ -1208,14 +1207,12 @@ async def generate_docs_rst(instance: Controller) -> None:
                 raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=generic_data, expec_type=dict)
             data = dict_merge(data, generic_data)
             gen_ = True
-        # TODO: AMP 2.8 has no "srcds" module, so this never matches there.
-        #       Drop it once we know no supported AMP version still sends it.
-        if src_ is False and entry.running and entry.module == "srcds":
-            srcds_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
-            if not isinstance(srcds_data, dict):
-                raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=srcds_data, expec_type=dict)
-            data = dict_merge(data, srcds_data)
-            src_ = True
+        # if src_ is False and entry.running and entry.module == "srcds":
+        #     srcds_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
+        #     if not isinstance(srcds_data, dict):
+        #         raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=srcds_data, expec_type=dict)
+        #     data = dict_merge(data, srcds_data)
+        #     src_ = True
 
     _temp: ScheduleData = ScheduleData(data=data)
     _trigger_event_parse(
