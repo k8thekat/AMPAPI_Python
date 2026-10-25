@@ -20,6 +20,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
@@ -71,7 +72,7 @@ from ._types import (
     is_response_type,
 )
 from .base import Base, ResponseAliasFull, ResponseHandlerOptions
-from .errors import AMPAPIKeyError, AMPAPITypeError
+from .errors import AMPAPIKeyError, AMPAPIResponseError, AMPAPITypeError
 from .modules import (
     ActionResult,
     ADSModeState,
@@ -675,11 +676,65 @@ class ADSModule(Base):
             return result
         raise AMPAPIKeyError("status", "ADSModule/CreateDeploymentTemplate", result)  # noqa: EM101
 
+    async def _wait_for_task(
+        self,
+        task: RunningTaskResponse,
+        end_point: str,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> None:
+        """|coro|
+
+        Poll `Core/GetTasks` once a second until the task ends, and raise when it fails.
+
+        AMP drops a task from the list when it succeeds. A failed task stays listed with `status` False and its `reason`.
+        The caller bounds the wait with :func:`asyncio.timeout`.
+
+        Parameters
+        ----------
+        task : :class:`RunningTaskResponse`
+            The raw task the endpoint answered with.
+        end_point : :class:`str`
+            The endpoint that started the task, used in the error.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
+
+        Raises
+        ------
+        :exc:`AMPAPIResponseError`
+            If the task ends with `status` False.
+
+        """
+        while True:
+            result: ResponseAliasFull = await self._post(url="Core/GetTasks", request_params=request_params, **response_params)
+            if not isinstance(result, list):
+                raise AMPAPITypeError(end_point="Core/GetTasks", cur_type=result, expec_type=list)
+            current: Union[RunningTaskResponse, None] = None
+            for item in result:
+                if (
+                    is_response_type(item, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS)
+                    and item["id"] == task["id"]
+                ):
+                    current = item
+                    break
+            if current is None:
+                return
+            if current["end_time"] is not None:
+                if current["status"] is False:
+                    reason: str = current["reason"] or current["state_message"] or ""
+                    raise AMPAPIResponseError(title=current["name"], url=f"{self._endpoint_url}/API/{end_point}", reason=reason)
+                return
+            await asyncio.sleep(1)
+
     @Base.ads_only
     async def create_instance(
         self,
         instance: CreateInstance,
         *,
+        wait: bool = False,
+        wait_timeout: float = 300,
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -693,11 +748,25 @@ class ADSModule(Base):
         .. note::
             See the :class:`CreateInstance` for more details on how to configure the Instance when creating.
 
+        .. note::
+            AMP answers with the creation task before the Instance exists. Some failures, such as an IP address that
+            isn't on the machine, only show in that task, so pass `wait` to raise for them.
+            On a remote Target the task ends once the Controller hands the creation over, and the Target creates the
+            Instance in a task of its own.
+
 
         Parameters
         ----------
         instance : :class:`CreateInstance`
             Your pre-created data structure to be parsed for the required API parameters.
+        wait : :class:`bool`, optional
+            Wait for the creation task to end and raise if it fails, by default False.
+
+            .. versionadded:: 5.0.0
+        wait_timeout : :class:`float`, optional
+            How many seconds `wait` waits for the task to end, by default 300.
+
+            .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -709,7 +778,15 @@ class ADSModule(Base):
         -------
         :class:`RunningTask` | :class:`RunningTaskResponse`
             On success returns a :class:`RunningTask` dataclass, or the raw dictionary when `format_data` is False.
-            AMP 2.8 answers with a running task that also carries the :class:`ActionResult` keys.
+            AMP 2.8 answers with a running task that also carries the :class:`ActionResult` keys. With `wait`, it is
+            still the task AMP answered with.
+
+        Raises
+        ------
+        :exc:`AMPAPIResponseError`
+            If `wait` is True and the creation task fails.
+        :exc:`TimeoutError`
+            If `wait` is True and the creation task is still running after `wait_timeout` seconds.
 
         """
         await self._reauth()
@@ -729,6 +806,13 @@ class ADSModule(Base):
             format_data = self.format_data
 
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
+            if wait is True:
+                try:
+                    async with asyncio.timeout(wait_timeout):
+                        await self._wait_for_task(result, "ADSModule/CreateInstance", request_params, **response_params)
+                except TimeoutError as error:
+                    msg = f"The ADSModule/CreateInstance task {result['id']} was still running after {wait_timeout} seconds."
+                    raise TimeoutError(msg) from error
             if format_data is True:
                 return RunningTask.from_response(result)
             return result

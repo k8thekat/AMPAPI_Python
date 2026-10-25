@@ -9,7 +9,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 ---
 
 - (#3) Confirm `ProvisionResponse` against a live payload; AMP answers `GetProvisionFitness` with null on the VMs.
-- (#37) Add an opt-in `wait` to `create_instance` that polls the returned `RunningTask` and raises when it fails.
 
 ## ampapi/instance.py
 

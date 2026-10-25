@@ -114,6 +114,9 @@ Changed methods
   ``"192.168.0.1"``, which AMP rejects on a machine without that address.
 - :meth:`CreateInstance.to_dict <ampapi.modules.CreateInstance.to_dict>` raises a :exc:`ValueError` when
   `instance_name` is empty and `auto_configure` is False. AMP took the call and failed the creation task instead.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance` takes a keyword-only `wait` (default False) and `wait_timeout`
+  (default 300 seconds). With `wait`, it waits for the creation task to end and raises
+  :exc:`~ampapi.AMPAPIResponseError` when the task fails.
 - :meth:`~ampapi.adsmodule.ADSModule.update_instance_info` sends AMP's parameter names (eg. `InstanceId` and
   `FriendlyName`) from :meth:`InstanceInfo.to_dict <ampapi.modules.InstanceInfo.to_dict>`, and it returns a
   :class:`~ampapi.modules.RunningTask`, which is what AMP answers. 4.x sent the attribute names, so AMP always answered

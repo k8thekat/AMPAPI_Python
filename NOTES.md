@@ -532,6 +532,15 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
       contain only letters, numbers, dashes and underscores"), and an IP that isn't on the machine.
     - With `AutoConfigure` True, AMP names the Instance from the friendly name (`p361b01`) and picks the port.
     - Accepted silently: an empty `FriendlyName` and an unknown `TargetDatastore`.
+    - The creation task, polled with `Core/GetTasks` every 0.25 seconds (#37): on the local Target it stays at state 0
+      and drops off the list when it succeeds (about 11 seconds for a Generic Instance), and it never showed state 4.
+      A failed one stays listed at state 3, with `status` False and the `reason`, until it is dismissed.
+    - On a remote Target the Controller's task reaches state 4 within 0.3 seconds and drops off after about 5. The
+      Target creates the Instance in its own `ADSModule.CreateLocalInstance` task, whose ID has no link to the
+      Controller's (`parent_task_id` is null), so `create_instance(wait=True)` returns before the Instance exists there.
+    - A remote creation changes the request on the way. An IP that isn't on the Target became `0.0.0.0`, an empty
+      `InstanceName` with `AutoConfigure` False was named from the friendly name (`p37empty01`), and a given
+      `InstanceName` replaced the friendly name (2 of 2). A taken name or port is still refused on the call.
 
 ## Generic Instances
 
