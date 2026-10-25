@@ -3751,7 +3751,7 @@ class SettingSpec(ResponseData):
         The current value of the setting, default is "".
 
         .. versionchanged:: 5.0.0
-            Can be None, which AMP sends for some `system_settings`.
+            Can be None.
     description : :class:`str`, optional
         The text description below the setting name in the UI, default is "".
     enum_values : Union[dict[:class:`str`, :class:`str`], None], optional

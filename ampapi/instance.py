@@ -236,7 +236,7 @@ class Instance(
         The port of the Instance.
 
         .. versionchanged:: 5.0.0
-            Documented as an int, which is what AMP sends; 4.x documented a str.
+            Documented as an int, where 4.x documented a str.
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`
@@ -1455,7 +1455,7 @@ class MinecraftInstance(MinecraftModule, Instance):
         The port of the Instance.
 
         .. versionchanged:: 5.0.0
-            Documented as an int, which is what AMP sends; 4.x documented a str.
+            Documented as an int, where 4.x documented a str.
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`
@@ -1547,7 +1547,7 @@ class TargetADS(ADSData, ADSModule, Instance):
         The port of the Instance.
 
         .. versionchanged:: 5.0.0
-            Documented as an int, which is what AMP sends; 4.x documented a str.
+            Documented as an int, where 4.x documented a str.
     release_stream : :class:`int`
         The release stream of the Instance.
     running : :class:`bool`

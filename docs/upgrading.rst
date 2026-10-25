@@ -295,15 +295,18 @@ Returned data
   that it doesn't declare is logged instead of raising a :exc:`TypeError`.
 - :attr:`~ampapi.modules.TimedTrigger.tasks` is a list of :class:`~ampapi.modules.TriggerTasks`. AMP sends the tasks
   keyed by task ID, and each task keeps its `!id`.
-- Some hints now match what AMP sends. These fields can be None where 4.x hinted a value:
-  :attr:`UserInfo.email_address <ampapi.modules.UserInfo.email_address>`,
-  :attr:`TriggerTasks.created_by <ampapi.modules.TriggerTasks.created_by>`,
-  `SettingSpec.current_value`, `meta`, `placeholder` and `suffix`, and the `setting_mappings`, `tags` and
-  `zip_overlay_path` of :class:`~ampapi.modules.DeploymentTemplate`.
-  :attr:`TimedTrigger.enabled_state <ampapi.modules.TimedTrigger.enabled_state>` is an int (AMP sends 0 or 1),
-  `SettingSpec.min_value` and `max_value` are an int or a float, `AnalyticsCountryData.session_time_percent` and
-  `AnalyticsTopPlayers.percent` can be the string ``"Infinity"``, and `ProvisionSettingInfo.default_value` can be a
-  list. `Instance.port` is documented as an int, which is what AMP sends.
+- Some hints now match what AMP sends:
+
+  - These fields can be None, where 4.x hinted a value: `~ampapi.modules.UserInfo.email_address`,
+    `~ampapi.modules.TriggerTasks.created_by`, the `current_value`, `meta`, `placeholder` and `suffix` of
+    `~ampapi.modules.SettingSpec`, and the `setting_mappings`, `tags` and `zip_overlay_path` of
+    `~ampapi.modules.DeploymentTemplate`.
+  - `~ampapi.modules.TimedTrigger.enabled_state` is an int, since AMP sends 0 or 1.
+  - The `min_value` and `max_value` of `~ampapi.modules.SettingSpec` are an int or a float.
+  - `~ampapi.modules.AnalyticsCountryData.session_time_percent` and `~ampapi.modules.AnalyticsTopPlayers.percent`
+    can be the string ``"Infinity"``.
+  - `~ampapi.modules.ProvisionSettingInfo.default_value` can be a list.
+  - `Instance.port` is documented as an int, which is what AMP sends.
 
 
 Target ADS

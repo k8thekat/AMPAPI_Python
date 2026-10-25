@@ -232,6 +232,21 @@ An annotation that the runtime does not honour is worse than a loose one; severa
 claiming a nested dataclass that nothing ever built. Where the nested shape is still unconfirmed
 the field is left raw and tagged, rather than annotated aspirationally.
 
+Key drift only compares keys, so a value whose type the hint doesn't allow passes it unnoticed (#34, 2026-10-24). A
+survey checked every value in the 151 captures from 2.8.0.8 against both the TypedDict and the dataclass hint, and found:
+- `SettingSpec.actions` was `list[str] | list[SettingSpecAction]`. `list[str]` accepts any list, so the actions stayed
+  dicts until the dataclass went first. It was the only union with that order.
+- AMP sends null for fields hinted as plain values: `UserInfo.email_address` is null for a user without one,
+  `TriggerTasks.created_by` for some tasks, `SettingSpec.meta`/`placeholder`/`suffix` in the "updates" category and a
+  new `DeploymentTemplate`'s `setting_mappings`, `tags` and `zip_overlay_path`.
+- `TimedTrigger.enabled_state` is 0 or 1 and `Instance.port` is an int.
+- `SettingSpec.min_value`/`max_value` are numbers in about 140 specs.
+- Analytics percentages can be the string "Infinity" when AMP divides by a zero session time (one live capture,
+  VaskelsServer).
+The survey script (`dc_survey.py`) lived in a session scratchpad; it pairs each wrapper's narrowing check with its
+`from_response` call and needs `key_drift.declared_keys`, because `__required_keys__` ignores `Required`/`NotRequired`
+under string annotations on 3.12.
+
 Where a response's time goes (#9, measured 2026-10-21 on vm1 bodies, this box): before 5.0.0's changes, key
 sanitising was 67-77% of decode + sanitise + check + build, because `camel_to_snake_re` ran three `re.sub` per key on
 every response. `format_data=False` only skips the build, and its dict was the heaviest form (a new string per key per
