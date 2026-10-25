@@ -62,8 +62,10 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeVar
 
     from ._types import (
+        AnalyticsCountryDataResponse,
         AnalyticsGraphDataResponse,
         AnalyticsStatsResponse,
+        AnalyticsTopPlayersResponse,
         BrandingResponse,
         ConsoleEntriesResponse,
         ConsumesResponse,
@@ -77,7 +79,10 @@ if TYPE_CHECKING:
         PortResponse,
         RunningTaskResponse,
         ScheduleDataResponse,
+        SettingSpecActionResponse,
         SettingSpecResponse,
+        SettingSpecSelectionSourceResponse,
+        SettingsSpecAttributeResponse,
         StatusResponse,
         TriggersResponse,
         TriggerTasksResponse,
@@ -652,7 +657,7 @@ class AnalyticsSummary(ResponseData):
 
         .. versionchanged:: 5.0.0
             Is an :class:`AnalyticsGraphData`, was a dict.
-    country_data : list[:class:`AnalyticsCountryData`]
+    country_data : list[:class:`AnalyticsCountryData`] | list[:class:`AnalyticsCountryDataResponse`]
         The Country information for the summary, default is a list.
     graph_data : list[:class:`AnalyticsGraphData`] | list[:class:`AnalyticsGraphDataResponse`]
         The Data displayed on the Web UI panel Analytics Menu, default is a list.
@@ -668,7 +673,7 @@ class AnalyticsSummary(ResponseData):
             Is an :class:`AnalyticsGraphData`, was a dict.
     stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatsResponse`]
         The Analytics Stats of the summary, default is a list.
-    top_players : list[:class:`AnalyticsTopPlayers`]
+    top_players : list[:class:`AnalyticsTopPlayers`] | list[:class:`AnalyticsTopPlayersResponse`]
         The TOP players from the summary, default is a list.
 
     """
@@ -676,14 +681,18 @@ class AnalyticsSummary(ResponseData):
     busiest_time: AnalyticsGraphData | AnalyticsGraphDataResponse = field(
         default_factory=lambda: AnalyticsGraphData(date="", end_date="", count=0),
     )
-    country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
+    # country_data: list[AnalyticsCountryData] = field(default_factory=list[AnalyticsCountryData])
+    country_data: list[AnalyticsCountryData] | list[AnalyticsCountryDataResponse] = field(default_factory=list[AnalyticsCountryData])
     graph_data: list[AnalyticsGraphData] | list[AnalyticsGraphDataResponse] = field(default_factory=list[AnalyticsGraphData])
     is_demo: bool = field(default=False)
     quietest_time: AnalyticsGraphData | AnalyticsGraphDataResponse = field(
         default_factory=lambda: AnalyticsGraphData(date="", end_date="", count=0),
     )
     stats: list[AnalyticsStats] | list[AnalyticsStatsResponse] = field(default_factory=list[AnalyticsStats])
-    top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
+    # top_players: list[AnalyticsTopPlayers] = field(default_factory=list["AnalyticsTopPlayers"])
+    top_players: list[AnalyticsTopPlayers] | list[AnalyticsTopPlayersResponse] = field(
+        default_factory=list["AnalyticsTopPlayers"],
+    )
 
     def __repr__(self) -> str:  # noqa: D105
         # return pformat(vars(self))
@@ -1151,7 +1160,7 @@ class Branding(ResponseData):
 
 @dataclass(slots=True)
 class BuildInfo(ResponseData):
-    """Tied to the class attribute for :class:`UpdateInfo.build`
+    """Represents an AMP version number, as used by :attr:`Status.application_version` and :attr:`Instance.amp_version`.
 
     .. note::
         * Currently has a converter function ``v2.6.0.0``
@@ -1168,6 +1177,8 @@ class BuildInfo(ResponseData):
         The revision number of the AMP build.
     minor_revision : :class:`int`
         The minor revision number of the AMP build.
+    major_revision : Union[:class:`int`, None]
+        The major revision number of the AMP build, defaults to None.
     build : Union[:class:`int`, None]
         The build number, defaults to None.
 
@@ -1267,7 +1278,7 @@ class BukkitPlugin(ResponseData):
         The version information of the plugin.
     icon : dict[:class:`str`, :class:`str`]
         The icon name and URL in a dict key, value pair.
-    tested_version : list[:class:`str`]
+    tested_versions : list[:class:`str`]
         The tested versions of the plugin, default is a list
     update_date : Union[:class:`int`, None]
         The timestamp of when it was updated, default is None
@@ -3741,11 +3752,11 @@ class SettingSpec(ResponseData):
     ----------
     category : :class:`str`
         Which category the setting will appear under in the Instance configuration UI.
-    actions : list[:class:`SettingSpecAction`]
+    actions : list[:class:`SettingSpecAction`] | list[:class:`SettingSpecActionResponse`]
         The list of actions related to the setting, defaults to an empty list.
     always_allow_read : :class:`bool`
         If the setting should always allow read or not.
-    attributes : :class:`SettingsSpecAttribute`, optional
+    attributes : Union[:class:`SettingsSpecAttribute` | :class:`SettingsSpecAttributeResponse`, None], optional
         The attributes that are set/prompted for when changing this setting.
     current_value : Union[list[:class:`str`], :class:`str`, :class:`bool`, :class:`int`, :class:`dict`, `SettingSpecTableAliases`, None]
         The current value of the setting, default is "".
@@ -3800,7 +3811,7 @@ class SettingSpec(ResponseData):
         If the setting is required or not, default is False.
     requires_restart : :class:`bool`
         If the setting requires the Instance or Server to be restarted, default is False.
-    selection_source : Union[:class:`SettingSpecSelectionSource`, None]
+    selection_source : Union[:class:`SettingSpecSelectionSource` | :class:`SettingSpecSelectionSourceResponse`, None]
         UNK, most fields are null in data, default is None.
     subcategory : :class:`str`
         The subcategory the setting will appear under in the Instance configuration UI, default is "".
@@ -3826,9 +3837,11 @@ class SettingSpec(ResponseData):
 
     category: str
     # actions: list[str] | list[SettingSpecAction] = field(default_factory=list[str])
-    actions: list[SettingSpecAction] = field(default_factory=list["SettingSpecAction"])
+    # actions: list[SettingSpecAction] = field(default_factory=list["SettingSpecAction"])
+    actions: list[SettingSpecAction] | list[SettingSpecActionResponse] = field(default_factory=list["SettingSpecAction"])
     always_allow_read: bool = field(default=False)
-    attributes: Union[SettingsSpecAttribute, None] = field(default=None)
+    # attributes: Union[SettingsSpecAttribute, None] = field(default=None)
+    attributes: Union[SettingsSpecAttribute | SettingsSpecAttributeResponse, None] = field(default=None)
     # TODO: This will need a tighter type definition.
     # current_value: Union[list[SettingSpecTableAliases], str, bool, int, dict[Any, Any], SettingSpecTableAliases] = ""
     current_value: Union[list[str], str, bool, int, dict[Any, Any], SettingSpecTableAliases, None] = ""
@@ -3854,7 +3867,8 @@ class SettingSpec(ResponseData):
     read_only_provision: bool = field(default=False)
     required: bool = field(default=False)
     requires_restart: bool = field(default=False)
-    selection_source: Union[SettingSpecSelectionSource, None] = field(default=None)
+    # selection_source: Union[SettingSpecSelectionSource, None] = field(default=None)
+    selection_source: Union[SettingSpecSelectionSource | SettingSpecSelectionSourceResponse, None] = field(default=None)
     subcategory: str = ""
     # suffix: str = ""
     suffix: Union[str, None] = ""

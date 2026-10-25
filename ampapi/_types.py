@@ -252,6 +252,20 @@ then by method name, with the caption of the action as the value. A module witho
 """
 
 
+class AnalyticsCountryDataResponse(TypedDict):
+    """One item of :attr:`AnalyticsSummaryResponse.country_data`, seen in 18 items of the 2.8.0.8 captures."""
+
+    country: str
+    session_count: int
+    sessions_percent: float
+    total_session_time: float
+    display_session_time: str
+    # AMP sent the string "Infinity" for 1 of 18 items.
+    session_time_percent: Union[float, str]
+    unique_player_count: int
+    unique_player_percent: float
+
+
 class AnalyticsGraphDataResponse(TypedDict):
     date: str
     end_date: str
@@ -272,11 +286,23 @@ class AnalyticsStatsResponse(TypedDict):
 class AnalyticsSummaryResponse(TypedDict):
     stats: list[AnalyticsStatsResponse]
     graph_data: list[AnalyticsGraphDataResponse]
-    country_data: list[Any]
-    top_players: list[Any]
+    # country_data: list[Any]
+    country_data: list[AnalyticsCountryDataResponse]
+    # top_players: list[Any]
+    top_players: list[AnalyticsTopPlayersResponse]
     quietest_time: AnalyticsGraphDataResponse
     busiest_time: AnalyticsGraphDataResponse
     is_demo: bool
+
+
+class AnalyticsTopPlayersResponse(TypedDict):
+    """One item of :attr:`AnalyticsSummaryResponse.top_players`, seen in 32 items of the 2.8.0.8 captures."""
+
+    username: str
+    total_session_time: float
+    display_session_time: str
+    # AMP sent the string "Infinity" for 1 of 32 items.
+    percent: Union[float, str]
 
 
 class AnalyticsUserDetailsResponse(TypedDict):
@@ -1396,6 +1422,17 @@ class SessionResponse(TypedDict):
     session_type: str
 
 
+class SettingSpecActionResponse(TypedDict):
+    """One item of :attr:`SettingSpecResponse.actions`, seen in 19 items of the 2.8.0.8 captures."""
+
+    module: str
+    method: str
+    caption: str
+    argument: str
+    is_client_side: bool
+    type_id: str
+
+
 class SettingSpecResponse(TypedDict):
     """Current response structure from :meth:`get_config()`."""
 
@@ -1410,13 +1447,14 @@ class SettingSpecResponse(TypedDict):
     enum_values: Union[dict[str, str], None]
     enum_values_are_deferred: bool
     # selection_source: None
-    selection_source: Union[dict[str, Any], None]
+    selection_source: Union[SettingSpecSelectionSourceResponse, None]
     node: str
     # input_type: str
     input_type: Union[str, None]
     is_provision_spec: bool
     read_only_provision: bool
-    actions: list[Any]
+    # actions: list[Any]
+    actions: list[SettingSpecActionResponse]
     keywords: str
     always_allow_read: bool
     tag: str
@@ -1434,10 +1472,32 @@ class SettingSpecResponse(TypedDict):
     requires_restart: bool
     required: bool
     # attributes: None
-    attributes: Union[dict[str, Any], None]
+    attributes: Union[SettingsSpecAttributeResponse, None]
     order: int
     warn_when_value: NotRequired[Any]
     warn_text: NotRequired[Union[str, None]]
+
+
+class SettingSpecSelectionSourceResponse(TypedDict):
+    """The raw `selection_source` of :class:`SettingSpecResponse`, seen in 66 specs of the 2.8.0.8 captures."""
+
+    deferred: bool
+    must_validate: bool
+    type_id: str
+
+
+class SettingsSpecAttributeResponse(TypedDict):
+    """The raw `attributes` of :class:`SettingSpecResponse`, seen in 10 specs of the 2.8.0.8 captures."""
+
+    key_name: str
+    value_name: str
+    key_placeholder: str
+    value_placeholder: str
+    read_only_keys: bool
+    key_enum_source: str
+    # A dict in 1 of 10 specs, null in the other 9.
+    key_enum_values: Union[dict[str, str], None]
+    type_id: str
 
 
 class SettingsSpecParentResponse(TypedDict):
