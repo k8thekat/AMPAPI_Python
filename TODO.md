@@ -16,6 +16,8 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ## ampapi/base.py
 
+- (#41) `json_to_typeddict` writes invalid code when the root dict's keys aren't identifiers (`"GenericModule.Meta.OS"`, role IDs); the functional `TypedDict("Name", {...})` form would fix it.
+
 ---
 
 ## ampapi/core.py
