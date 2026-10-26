@@ -131,6 +131,9 @@ class MinecraftModule(Base):
 
         Endpoint: `MinecraftModule/AddOPEntry`
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/AddOPEntry` was removed in AMP 2.6.5.0.
+
         Parameters
         ----------
         user_or_uuid : :class:`str`
@@ -184,6 +187,9 @@ class MinecraftModule(Base):
         Add a user to the whitelist.
 
         Endpoint: `MinecraftModule/AddToWhitelist`
+
+        .. deprecated:: 5.0.0
+            `MinecraftModule/AddToWhitelist` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -241,6 +247,8 @@ class MinecraftModule(Base):
             CATEGORIES: 'Bungee - Spigot', 'Bungee - Proxy', 'Spigot', 'Transportation', 'Chat', 'Tools and Utilities',
             'Misc', 'Libraries / APIs'
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetCategories` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -281,6 +289,9 @@ class MinecraftModule(Base):
         Get Bukkit installed plugins.
 
         Endpoint: `MinecraftModule/BukGetInstalledPlugins`
+
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetInstalledPlugins` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -329,6 +340,9 @@ class MinecraftModule(Base):
         Get update for Bukkit plugin.
 
         Endpoint: `MinecraftModule/BukGetInstallUpdatePlugin`
+
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetInstallUpdatePlugin` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -383,6 +397,8 @@ class MinecraftModule(Base):
 
         Endpoint: `MinecraftModule/BukGetPluginInfo`
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetPluginInfo` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -427,6 +443,9 @@ class MinecraftModule(Base):
         Get Bukkit plugins from category.
 
         Endpoint: `MinecraftModule/BukGetPluginsForCategory`
+
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetPluginsForCategory` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -484,6 +503,9 @@ class MinecraftModule(Base):
 
         Endpoint: `MinecraftModule/BukGetPopularPlugins`
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetPopularPlugins` was removed in AMP 2.6.5.0.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -531,6 +553,9 @@ class MinecraftModule(Base):
 
         Endpoint: `MinecraftModule/BukGetRemovePlugin`
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetRemovePlugin` was removed in AMP 2.6.5.0.
+
         Parameters
         ----------
         plugin_id : :class:`int`
@@ -573,6 +598,9 @@ class MinecraftModule(Base):
         Search for Bukkit plugins.
 
         Endpoint: `MinecraftModule/BukGetSearch`
+
+        .. deprecated:: 5.0.0
+            `MinecraftModule/BukGetSearch` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -752,6 +780,8 @@ class MinecraftModule(Base):
         .. note::
             This requires the full UUID of the user with the ``-`` chars included.
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/GetHeadByUUID` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -847,6 +877,9 @@ class MinecraftModule(Base):
         Get the whitelist.
 
         Endpoint: `MinecraftModule/GetWhitelist`
+
+        .. deprecated:: 5.0.0
+            `MinecraftModule/GetWhitelist` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -980,6 +1013,9 @@ class MinecraftModule(Base):
 
         Endpoint: `MinecraftModule/LoadOPList`
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/LoadOPList` was removed in AMP 2.6.5.0.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
@@ -1066,6 +1102,8 @@ class MinecraftModule(Base):
         .. note::
             You can supply a Minecraft UUID (non-trimmed) or Username.
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/RemoveOPEntry` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
@@ -1110,6 +1148,8 @@ class MinecraftModule(Base):
         .. note::
             You can supply a Minecraft UUID (non-trimmed) or Username.
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/RemoveWhitelistEntry` was removed in AMP 2.6.5.0.
 
         Parameters
         ----------
