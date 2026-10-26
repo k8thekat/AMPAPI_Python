@@ -127,8 +127,10 @@ class LocalFileBackupPlugin(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DeleteFromS3", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -232,8 +234,10 @@ class LocalFileBackupPlugin(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DownloadFromS3", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if "is_primary_task" not in result:
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/DownloadFromS3", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -281,8 +285,10 @@ class LocalFileBackupPlugin(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/GetBackups", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         backups: list[BackupResponse] = []
         for item in result:
             if not is_response_type(item, BackupResponse, BACKUP_REQUIRED_KEYS, BACKUP_EXCLUDED_KEYS):
@@ -368,8 +374,10 @@ class LocalFileBackupPlugin(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/RestoreBackup", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -518,8 +526,10 @@ class LocalFileBackupPlugin(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         # if not is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
         #     raise AMPAPITypeError(end_point="LocalFileBackupPlugin/TakeBackup", cur_type=result, expec_type=dict)
         # if format_data is True:
@@ -578,8 +588,10 @@ class LocalFileBackupPlugin(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/UploadToS3", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if "is_primary_task" not in result:
             raise AMPAPITypeError(end_point="LocalFileBackupPlugin/UploadToS3", cur_type=result, expec_type=dict)
         if format_data is True:

@@ -773,6 +773,7 @@ class Core(Base):
         parameters: dict[str, Any] = {"Username": username}
         if oidc_sub is not None:
             parameters["OIDCSub"] = oidc_sub
+
         result: ResponseAliasFull = await self._post(
             url="Core/ConvertUserToOIDC",
             parameters=parameters,
@@ -896,6 +897,7 @@ class Core(Base):
             parameters["IsOIDCUser"] = is_oidc_user
         if oidc_sub is not None:
             parameters["OIDCSub"] = oidc_sub
+
         result: ResponseAliasFull = await self._post(
             url="Core/CreateUser",
             parameters=parameters,
@@ -959,6 +961,7 @@ class Core(Base):
 
         if not isinstance(result, bool):
             raise AMPAPITypeError(end_point="Core/CurrentSessionHasPermission", cur_type=result, expec_type=bool)
+
         return result
 
     async def delete_instance_users(
@@ -1797,6 +1800,7 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetAMPRolePermissions", cur_type=result, expec_type=list)
+
         return result
 
     async def get_amp_user_info(
@@ -1840,8 +1844,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetAMPUserInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if "is_super_user" not in result:  # 'is_super_user' uniquely identifies UserInfoResponse in the union
             raise AMPAPITypeError(end_point="Core/GetAMPUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -1884,8 +1890,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetAMPUsersSummary", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [LoginUserInfo.from_response(item) for item in result]
         return result
@@ -1927,6 +1935,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetAPISpec", cur_type=result, expec_type=dict)
+
         return result  # pyright: ignore[reportReturnType]
 
     async def get_audit_log_entries(
@@ -1985,8 +1994,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetAuditLogEntries", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [AuditLogEntry.from_response(item) for item in result]
         return result
@@ -2029,6 +2040,7 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetAuthenticationRequirements", cur_type=result, expec_type=list)
+
         return result
 
     async def get_config(
@@ -2132,8 +2144,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetConfigs", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [SettingSpec.from_response(item) for item in result]
         return result
@@ -2221,8 +2235,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetModuleInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if "app_name" not in result:  # 'app_name' uniquely identifies ModuleResponse in the union
             raise AMPAPITypeError(end_point="Core/GetModuleInfo", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -2262,6 +2278,7 @@ class Core(Base):
         )
         if not isinstance(result, str):
             raise AMPAPITypeError(end_point="Core/GetNewGuid", cur_type=result, expec_type=str)
+
         return result
 
     async def get_oidc_login_url(
@@ -2304,6 +2321,7 @@ class Core(Base):
         )
         if not isinstance(result, str):
             raise AMPAPITypeError(end_point="Core/GetOIDCLoginURL", cur_type=result, expec_type=str)
+
         return result
 
     async def get_oidc_logout_url(
@@ -2346,6 +2364,7 @@ class Core(Base):
         )
         if not isinstance(result, str):
             raise AMPAPITypeError(end_point="Core/GetOIDCLogoutUrl", cur_type=result, expec_type=str)
+
         return result
 
     async def get_permissions_spec(
@@ -2384,8 +2403,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetPermissionsSpec", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [PermissionNode.from_response(item) for item in result]
         return result
@@ -2426,8 +2447,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetPortSummaries", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [Port.from_response(port) for port in result]
         return result
@@ -2468,8 +2491,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetProvisionSpec", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [SettingSpec.from_response(item) for item in result]
         return result
@@ -2516,6 +2541,7 @@ class Core(Base):
             parameters["Description"] = description
         if is_temporary is not None:
             parameters["IsTemporary"] = is_temporary
+
         result: ResponseAliasFull = await self._post(
             url="Core/GetRemoteLoginToken",
             parameters=parameters,
@@ -2524,6 +2550,7 @@ class Core(Base):
         )
         if not isinstance(result, str):
             raise AMPAPITypeError(end_point="Core/GetRemoteLoginToken", cur_type=result, expec_type=str)
+
         return result
 
     async def get_role(
@@ -2567,8 +2594,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetRole", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if "is_common_role" not in result:  # 'is_common_role' uniquely identifies RoleResponse in the union
             raise AMPAPITypeError(end_point="Core/GetRole", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -2611,8 +2640,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetRoleData", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return [Role.from_response(item) for item in result]
         return result
@@ -2650,6 +2681,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetRoleIds", cur_type=result, expec_type=dict)
+
         # Not going to write a logic check for having "keys" of other responses. This returns unique ID keys to a user defined str mapping.
         #  Unable to type define properly.
         return result  # pyright: ignore[reportReturnType]
@@ -2738,8 +2770,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetSettingsSpec", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(
             result,
             SettingsSpecParentResponse,
@@ -2797,6 +2831,7 @@ class Core(Base):
         parameters: dict[str, Any] = {"SettingNode": setting_node}
         if with_refresh is not None:
             parameters["WithRefresh"] = with_refresh
+
         result: ResponseAliasFull = await self._post(
             url="Core/GetSettingValues",
             parameters=parameters,
@@ -2805,6 +2840,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetSettingValues", cur_type=result, expec_type=dict)
+
         # No TypedDict models this response, so it comes back as a plain dict.
         return dict(result)
 
@@ -2844,8 +2880,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetStatus", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, StatusResponse, STATUS_REQUIRED_KEYS, STATUS_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/GetStatus", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -2892,8 +2930,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetStructuredDiagnostics", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if format_data is True:
             return StructuredDiagnostics.from_response(result)
         return result  # pyright: ignore[reportReturnType]
@@ -2939,8 +2979,10 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetTasks", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         tasks: list[RunningTaskResponse] = []
         for item in result:
             if not is_response_type(item, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
@@ -2991,8 +3033,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetTimeIntervalTrigger", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, TimedTriggerResponse, TIMED_TRIGGER_REQUIRED_KEYS, TIMED_TRIGGER_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/GetTimeIntervalTrigger", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -3062,8 +3106,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetUpdateInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if "update_available" not in result:  # 'update_available' uniquely identifies UpdateInfoResponse in the union
             raise AMPAPITypeError(end_point="Core/GetUpdateInfo", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -3107,8 +3153,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetUpdates", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         # UpdatesResponse shares the 'status' key with ActionResultResponse, so 'console_entries' tells them apart;
         # the ActionResult endpoints exclude it with `"console_entries" not in result`.
         if "console_entries" not in result:
@@ -3150,6 +3198,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetUserActionsSpec", cur_type=result, expec_type=dict)
+
         return result  # pyright: ignore[reportReturnType]
 
     async def get_user_info(
@@ -3193,8 +3242,10 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetUserInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(
             result,
             UserApplicationDataResponse,
@@ -3248,8 +3299,10 @@ class Core(Base):
             users = dict(result)
         else:
             raise AMPAPITypeError(end_point="Core/GetUserList", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         # A UUID -> name map that no TypedDict models; Players takes it as a plain dict.
         if format_data is True:
             return Players(data=users)
@@ -3343,6 +3396,7 @@ class Core(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetWebauthnCredentialIDs", cur_type=result, expec_type=dict)
+
         if not is_response_type(
             result,
             WebauthnCredentialIDsResponse,
@@ -3385,6 +3439,7 @@ class Core(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="Core/GetWebauthnCredentialSummaries", cur_type=result, expec_type=list)
+
         return result
 
     @deprecated("This was removed in `2.6.0.0`", stacklevel=2)
@@ -3693,6 +3748,7 @@ class Core(Base):
         # The VMs have no OIDC provider; a failed answer has the LoginResults shape (result 3, "state invalid or expired").
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
+
         if not is_response_type(result, LoginResultsResponse, ("success", "result", "result_reason")):
             raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
         return LoginResults.from_response(result)
@@ -4409,6 +4465,7 @@ class Core(Base):
         )
         if not isinstance(result, bool):
             raise AMPAPITypeError(end_point="Core/SetConfigs", cur_type=result, expec_type=bool)
+
         return result
 
     async def set_config(
@@ -4880,6 +4937,7 @@ class Core(Base):
         parameters: dict[str, Any] = {"Username": username}
         if oidc_sub is not None:
             parameters["OIDCSub"] = oidc_sub
+
         result: ResponseAliasFull = await self._post(
             url="Core/UpdateOIDCSub",
             parameters=parameters,

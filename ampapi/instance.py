@@ -1136,6 +1136,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         )
         if format_data is None:
             format_data = self.format_data
+
         if format_data is False:
             return result
 
@@ -1319,6 +1320,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
 
         if format_data is None:
             format_data = self.format_data
+
         if format_data is False:
             return result
 
@@ -1942,6 +1944,7 @@ class TargetADS(ADSData, ADSModule, Instance):
         )
         if format_data is None:
             format_data = self.format_data
+
         if format_data is False:
             return result
         if result["instance_id"] == self.instance_id:
@@ -2032,6 +2035,7 @@ class TargetADS(ADSData, ADSModule, Instance):
         )
         if format_data is None:
             format_data = self.format_data
+
         if format_data is False:
             return result
 

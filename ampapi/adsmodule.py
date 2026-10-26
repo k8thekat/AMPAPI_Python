@@ -165,6 +165,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/AddDatastore", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
 
@@ -546,6 +547,7 @@ class ADSModule(Base):
             parameters["DeleteSource"] = delete_source
         if copy_files is not None:
             parameters["CopyFiles"] = copy_files
+
         result: ResponseAliasFull = await self._post(
             url="ADSModule/CloneInstance",
             parameters=parameters,
@@ -895,6 +897,7 @@ class ADSModule(Base):
             parameters["TargetDatastore"] = target_datastore
         if group is not None:
             parameters["Group"] = group
+
         result: ResponseAliasFull = await self._post(
             url="ADSModule/CreateInstanceFromSpec",
             parameters=parameters,
@@ -903,8 +906,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/CreateInstanceFromSpec", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
@@ -1123,8 +1128,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeleteInstanceUsers", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -1176,8 +1183,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DeployTemplate", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         # The spec names a RunningTask for this endpoint, not an ActionResult.
         # if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
         #     if format_data is True:
@@ -1232,8 +1241,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/DetachTarget", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -1286,8 +1297,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ExtractEverywhere", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -1336,8 +1349,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetApplicationEndpoints", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, EndpointsResponse, ENDPOINTS_REQUIRED_KEYS, ENDPOINTS_EXCLUDED_KEYS):
             if format_data is True:
                 return [Endpoints.from_response(entry) for entry in result]
@@ -1390,8 +1405,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastore", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, InstanceDatastoreResponse, INSTANCE_DATASTORE_REQUIRED_KEYS, INSTANCE_DATASTORE_EXCLUDED_KEYS):
             if format_data is True:
                 return InstanceDatastore.from_response(result)
@@ -1431,8 +1448,10 @@ class ADSModule(Base):
         result: ResponseAliasFull = await self._post(url="ADSModule/GetDatastores", request_params=request_params, **response_params)
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastores", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, InstanceDatastoreResponse, INSTANCE_DATASTORE_REQUIRED_KEYS, INSTANCE_DATASTORE_EXCLUDED_KEYS):
             if format_data is True:
                 return [InstanceDatastore.from_response(entry) for entry in result]
@@ -1482,6 +1501,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetDatastoreInstances", cur_type=result, expec_type=list)
+
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetDatastoreInstances", cur_type=result, expec_type=list)
@@ -1523,8 +1543,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetDeploymentTemplates", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, DeploymentTemplateResponse, DEPLOYMENT_TEMPLATE_REQUIRED_KEYS, DEPLOYMENT_TEMPLATE_EXCLUDED_KEYS):
             if format_data is True:
                 # return [DeploymentTemplate(**entry) for entry in result]
@@ -1581,6 +1603,7 @@ class ADSModule(Base):
 
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetGroup", cur_type=result, expec_type=dict)
+
         if is_response_type(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetGroup", cur_type=result, expec_type=dict)
@@ -1623,6 +1646,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstance", cur_type=result, expec_type=dict)
+
         if is_response_type(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetInstance", cur_type=result, expec_type=dict)
@@ -1667,6 +1691,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
+
         if is_response_list(result, ControllerResponse, CONTROLLER_REQUIRED_KEYS, CONTROLLER_EXCLUDED_KEYS):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetInstances", cur_type=result, expec_type=list)
@@ -1714,6 +1739,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceLiveSettings", cur_type=result, expec_type=dict)
+
         # The keys are AMP setting node names, a user defined mapping that cannot be typed any further.
         return result  # pyright: ignore[reportReturnType]
 
@@ -1763,8 +1789,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceNetworkInfo", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, PortInfoResponse, PORT_INFO_REQUIRED_KEYS, PORT_INFO_EXCLUDED_KEYS):
             if format_data is True:
                 return [PortInfo.from_response(entry) for entry in result]
@@ -1808,8 +1836,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceStatuses", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, InstanceStatusResponse, INSTANCE_STATUS_REQUIRED_KEYS, INSTANCE_STATUS_EXCLUDED_KEYS):
             if format_data is True:
                 return [InstanceStatus.from_response(entry) for entry in result]
@@ -1850,6 +1880,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
+
         if is_response_list(result, InstanceResponse, INSTANCE_REQUIRED_KEYS, INSTANCE_EXCLUDED_KEYS):
             return result
         raise AMPAPITypeError(end_point="ADSModule/GetLocalInstances", cur_type=result, expec_type=list)
@@ -1896,6 +1927,7 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetConfig", cur_type=result, expec_type=dict)
+
         if "subcategory" not in result:
             raise AMPAPIKeyError("subcategory", "Core/GetConfig", result)  # noqa: EM101
 
@@ -1954,8 +1986,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetProvisionArguments", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(
             result,
             ProvisionSettingInfoResponse,
@@ -2012,8 +2046,10 @@ class ADSModule(Base):
 
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetProvisionFitness", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ProvisionResponse, PROVISION_REQUIRED_KEYS, PROVISION_EXCLUDED_KEYS):
             if format_data is True:
                 return Provision.from_response(result)
@@ -2061,8 +2097,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedAppSummaries", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, AppSummaryResponse, APP_SUMMARY_REQUIRED_KEYS, APP_SUMMARY_EXCLUDED_KEYS):
             if format_data is True:
                 return [AppSummary.from_response(entry) for entry in result]
@@ -2106,8 +2144,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, list):
             raise AMPAPITypeError(end_point="ADSModule/GetSupportedApplications", cur_type=result, expec_type=list)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_list(result, ApplicationResponse, APPLICATION_REQUIRED_KEYS, APPLICATION_EXCLUDED_KEYS):
             if format_data is True:
                 return [Application.from_response(entry) for entry in result]
@@ -2151,8 +2191,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetTargetInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RemoteTargetInfoResponse, REMOTE_TARGET_INFO_REQUIRED_KEYS, REMOTE_TARGET_INFO_EXCLUDED_KEYS):
             if format_data is True:
                 return RemoteTargetInfo.from_response(result)
@@ -2196,8 +2238,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetTargetPairingCode", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2252,8 +2296,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/HandoutInstanceConfigs", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2306,8 +2352,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ManageInstance", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2378,8 +2426,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ModifyCustomFirewallRule", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2435,8 +2485,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/MoveInstanceDatastore", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
@@ -2489,8 +2541,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/PrepareFileTransfer", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2538,8 +2592,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ReactivateInstance", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
@@ -2583,8 +2639,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/ReactivateLocalInstances", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
@@ -2666,8 +2724,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RefreshGroup", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2716,8 +2776,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RefreshInstanceConfig", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2826,8 +2888,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RegisterTarget", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2890,8 +2954,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RegisterTargetWithCode", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -2944,8 +3010,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RepairDatastore", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
@@ -2998,8 +3066,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RequestDatastoreSizeCalculation", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
@@ -3052,8 +3122,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/RestartInstance", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3168,8 +3240,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/SetInstanceConfig", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3237,6 +3311,7 @@ class ADSModule(Base):
             parameters["AdvertisedAddress"] = advertised_address
         if advertised_address_includes_port is not None:
             parameters["AdvertisedAddressIncludesPort"] = advertised_address_includes_port
+
         result: ResponseAliasFull = await self._post(
             url="ADSModule/SetInstanceNetworkInfo",
             parameters=parameters,
@@ -3245,8 +3320,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/SetInstanceNetworkInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3301,6 +3378,7 @@ class ADSModule(Base):
         parameters: dict[str, Any] = {"InstanceName": instance_name, "Suspended": suspended}
         if suspend_reason is not None:
             parameters["SuspendReason"] = suspend_reason
+
         result: ResponseAliasFull = await self._post(
             url="ADSModule/SetInstanceSuspended",
             parameters=parameters,
@@ -3309,8 +3387,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/SetInstanceSuspended", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3359,8 +3439,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StartAllInstances", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3413,8 +3495,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StartInstance", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3463,8 +3547,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StopAllInstances", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3517,8 +3603,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/StopInstance", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3569,8 +3657,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateDatastore", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3620,8 +3710,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateDeploymentTemplate", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3674,8 +3766,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateInstanceInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         # AMP 2.8.0.8 answers with a RunningTask, not the ActionResult its spec names (vm1, 2026-10-24).
         # if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
         #     if format_data is True:
@@ -3790,8 +3884,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpdateTargetInfo", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3843,8 +3939,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpgradeAllInstances", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)
@@ -3898,6 +3996,7 @@ class ADSModule(Base):
         parameters: dict[str, Any] = {"InstanceName": instance_name}
         if restart_if_running is not None:
             parameters["RestartIfRunning"] = restart_if_running
+
         result: ResponseAliasFull = await self._post(
             url="ADSModule/UpgradeInstance",
             parameters=parameters,
@@ -3906,8 +4005,10 @@ class ADSModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/UpgradeInstance", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)

@@ -86,8 +86,10 @@ class GenericModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="GenericModule/ImportConfig", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ImportConfigResponse, IMPORT_CONFIG_REQUIRED_KEYS, IMPORT_CONFIG_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="GenericModule/ImportConfig", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -136,8 +138,10 @@ class GenericModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="GenericModule/RefreshRemoteOptions", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="GenericModule/RefreshRemoteOptions", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -186,8 +190,10 @@ class GenericModule(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="GenericModule/RefreshToolDiscovery", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="GenericModule/RefreshToolDiscovery", cur_type=result, expec_type=dict)
         if format_data is True:
