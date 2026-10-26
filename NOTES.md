@@ -314,8 +314,8 @@ they can't show the casing; "No such web method" on a method the spec lists is t
 Shapes not yet confirmed against a live payload:
 
 - `ProvisionResponse`, derived from the dataclass and docs. `GetProvisionFitness` answers null on the VMs (#3).
-- `OPWhitelistResponse`, built from the `OPWhitelist` dataclass; `GetOPWhitelist` answers
-  "Missing Method" and is in no spec sheet.
+- `OPWhitelistResponse`, built from the `OPWhitelist` dataclass. `GetOPWhitelist` was removed in AMP 2.6.5.0, so it
+  can't be confirmed. AMP 2.8.0.8 answers "Missing Method" (checked on FTBEvolution01, 2026-10-26).
 
 `DeploymentTemplateResponse`, `TimedTriggerResponse` and `UserApplicationDataResponse` were on this list until the
 2.8.0.8 captures. The key drift check finds no drift for any of them.

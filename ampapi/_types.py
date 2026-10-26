@@ -161,8 +161,7 @@ BACKUP_EXCLUDED_KEYS: tuple[str, ...] = ()
 IMPORT_CONFIG_REQUIRED_KEYS: tuple[str, ...] = ("settings", "imported", "not_imported", "unrecognised", "rejected")
 IMPORT_CONFIG_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# TODO: Confirm these keys against a live GetOPWhitelist response.
-# The captured response is a "Missing Method" error, so they come from the `OPWhitelist` dataclass.
+# `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0, so these keys come from the `OPWhitelist` dataclass.
 OP_WHITELIST_REQUIRED_KEYS: tuple[str, ...] = ("op_list", "whitelist")
 OP_WHITELIST_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -1012,7 +1011,12 @@ class ModuleResponse(TypedDict):
 
 
 class OPWhitelistResponse(TypedDict):
-    """The raw response from :meth:`MinecraftModule.mc_get_op_whitelist`."""
+    """The raw response from :meth:`MinecraftModule.mc_get_op_whitelist`.
+
+    .. deprecated:: 5.0.0
+        `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0.
+
+    """
 
     op_list: list[MCUserResponse]
     whitelist: list[MCUserResponse]

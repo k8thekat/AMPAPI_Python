@@ -2823,6 +2823,9 @@ class OPList(ResponseData):
 class OPWhitelist(ResponseData):
     """Represents the JSON response data from :meth:`MinecraftModule.mc_get_op_whitelist`.
 
+    .. deprecated:: 5.0.0
+        `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0.
+
     Attributes
     ----------
     op_list : list[:class:`MCUserResponse`]

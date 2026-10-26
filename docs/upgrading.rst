@@ -101,6 +101,8 @@ Changed methods
   :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`.
 - `FileManagerPlugin.append_file_chunk` is removed. On AMP 2.8.0.8 it creates no file and appends to none. Use
   :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk`.
+- :meth:`~ampapi.minecraft.MinecraftModule.mc_get_op_whitelist`, :class:`~ampapi.modules.OPWhitelist` and
+  `OPWhitelistResponse` are deprecated. `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0.
 - :class:`~ampapi.instance.Instance` has the :class:`~ampapi.generic.GenericModule` and
   :class:`~ampapi.steamcmd.SteamCMDPlugin` endpoints, which Generic Instances (module `GenericModule` or `Generic`)
   serve. On any other module they raise :exc:`RuntimeError`.

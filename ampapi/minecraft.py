@@ -796,6 +796,9 @@ class MinecraftModule(Base):
 
         Endpoint: `MinecraftModule/GetOPWhitelist`
 
+        .. deprecated:: 5.0.0
+            `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
