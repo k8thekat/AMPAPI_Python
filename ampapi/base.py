@@ -34,7 +34,7 @@ from json import JSONEncoder
 from pathlib import Path
 
 # from pprint import pformat
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, ParamSpec, TypedDict, Union, Unpack, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, ParamSpec, TypedDict, TypeGuard, Union, Unpack, overload
 
 import aiohttp
 from aiohttp import ClientResponse
@@ -158,6 +158,237 @@ class _SessionDeadError(AMPAPIResponseError):
         self.reason: str = reason
         # Skips `AMPAPIResponseError`'s error log. A dead session is expected, and `_post` logs in again.
         AMPAPIError.__init__(self, f"{title} | URL: {url} | Reason: {reason}")
+
+
+class _TypedDictWriter:
+    """Writes the :class:`TypedDict` classes for :meth:`Base.json_to_typeddict`."""
+
+    def __init__(self, root_name: str) -> None:
+        self.root_name: str = root_name
+        self.class_bodies: dict[str, str] = {}
+
+    def write_root(self, data: dict[str, Any]) -> None:
+        # The root is stored last, so every class it references is already written above it.
+        self.class_bodies[self.root_name] = self.dict_body(class_name=self.root_name, data=data)
+
+    def dict_body(self, class_name: str, data: dict[str, Any]) -> str:
+        field_lines: list[str] = []
+        for key, value in data.items():
+            field_type = self.infer_type(value=value, key=key, parent_name=class_name)
+            field_lines.append(f"    {key}: {field_type}")
+
+        if len(field_lines) == 0:
+            return "    ..."
+        return "\n".join(field_lines)
+
+    def infer_type(self, value: Any, key: str, parent_name: str) -> str:
+        if value is None:
+            return "None"
+        if isinstance(value, bool):
+            return "bool"
+        if isinstance(value, int):
+            return "int"
+        if isinstance(value, float):
+            return "float"
+        if isinstance(value, str):
+            return "str"
+
+        if self.is_dict(value):
+            return self.infer_dict_type(entries=value, key=key, parent_name=parent_name)
+
+        if self.is_list(value):
+            return self.infer_list_type(items=value, key=key, parent_name=parent_name)
+        return "Any"
+
+    def infer_dict_type(self, entries: dict[str, Any], key: str, parent_name: str) -> str:
+        if len(entries) == 0:
+            return "dict[str, Any]"
+
+        for entry_key in entries:
+            if entry_key.isidentifier() is False:
+                value_types: set[str] = set()
+                for entry_value in entries.values():
+                    value_types.add(self.infer_type(value=entry_value, key=key, parent_name=parent_name))
+                return f"dict[str, {self.join_types(types=value_types)}]"
+
+        class_name = self.pascal_case(key=key)
+        body = self.dict_body(class_name=class_name, data=entries)
+        return self.claim_name(candidate=class_name, parent_name=parent_name, body=body)
+
+    def infer_list_type(self, items: list[Any], key: str, parent_name: str) -> str:
+        if len(items) == 0:
+            return "list[Any]"
+
+        present = [item for item in items if item is not None]
+        if len(present) == 0:
+            return "list[None]"
+
+        element_types: set[str] = set()
+        dict_items = self.only_dicts(values=present)
+        flattened = self.flatten_lists(values=present)
+        if dict_items is not None:
+            element_types.add(self.merged_dict_type(dicts=dict_items, key=key, parent_name=parent_name))
+        elif flattened is not None:
+            element_types.add(self.infer_list_type(items=flattened, key=key, parent_name=parent_name))
+        else:
+            for item in present:
+                element_types.add(self.infer_type(value=item, key=key, parent_name=parent_name))
+
+        if len(present) < len(items):
+            element_types.add("None")
+        return f"list[{self.join_types(types=element_types)}]"
+
+    def merged_dict_type(self, dicts: list[dict[str, Any]], key: str, parent_name: str) -> str:
+        for entries in dicts:
+            if len(entries) > 0:
+                return self.write_merged_class(class_name=self.pascal_case(key=key), items=dicts, parent_name=parent_name)
+        return "dict[str, Any]"
+
+    def write_merged_class(self, class_name: str, items: list[dict[str, Any]], parent_name: str) -> str:
+        values_by_key: dict[str, list[Any]] = {}
+        for item in items:
+            for key, value in item.items():
+                if key not in values_by_key:
+                    values_by_key[key] = []
+                values_by_key[key].append(value)
+
+        field_lines: list[str] = []
+        for key, values in values_by_key.items():
+            field_lines.append(self.merged_field_line(class_name=class_name, key=key, values=values, item_count=len(items)))
+
+        body = "\n".join(field_lines) if len(field_lines) > 0 else "    ..."
+        return self.claim_name(candidate=class_name, parent_name=parent_name, body=body)
+
+    def merged_field_line(self, class_name: str, key: str, values: list[Any], item_count: int) -> str:
+        present = [value for value in values if value is not None]
+        field_types: set[str] = set()
+        # Lists across the items are flattened, so empty and filled lists don't give `list[Any] | list[X]`.
+        # Dicts across the items are merged into one class, so the first item's shape isn't the only one kept.
+        flattened = self.flatten_lists(values=present)
+        dict_values = self.only_dicts(values=present)
+        if len(present) == 0:
+            field_types.add("None")
+        elif flattened is not None:
+            field_types.add(self.infer_list_type(items=flattened, key=key, parent_name=class_name))
+        elif dict_values is not None:
+            field_types.add(self.merged_dict_type(dicts=dict_values, key=key, parent_name=class_name))
+        else:
+            for value in present:
+                field_types.add(self.infer_type(value=value, key=key, parent_name=class_name))
+
+        # An explicit `None` makes the type optional; a key some items lack makes it `NotRequired`.
+        if len(present) < len(values):
+            field_types.add("None")
+        field_type = self.join_types(types=field_types)
+
+        if len(values) < item_count:
+            field_type = f"NotRequired[{field_type}]"
+        return f"    {key}: {field_type}"
+
+    def claim_name(self, candidate: str, parent_name: str, body: str) -> str:
+        """Store a class body under the first free name and return that name.
+
+        A name is free when no class uses it, or when the class using it has the same body.
+        The candidate is tried first, then the parent's name in front of it, then that with a number.
+        """
+        name = candidate
+        if self.is_taken(name=name, body=body):
+            name = f"{parent_name}{candidate}"
+
+        base_name = name
+        number = 2
+        while self.is_taken(name=name, body=body):
+            name = f"{base_name}{number}"
+            number += 1
+
+        self.class_bodies[name] = body
+        return name
+
+    def is_taken(self, name: str, body: str) -> bool:
+        if name == self.root_name:
+            return True
+        return name in self.class_bodies and self.class_bodies[name] != body
+
+    def join_types(self, types: set[str]) -> str:
+        names = sorted(name for name in types if name != "None")
+        if len(names) == 0:
+            return "None" if "None" in types else "Any"
+
+        # An empty list or dict only says `Any` when no other item gave it a real type.
+        for placeholder, prefix in (("dict[str, Any]", "dict["), ("list[Any]", "list[")):
+            specific = [name for name in names if name.startswith(prefix) and name != placeholder]
+            if placeholder in names and len(specific) > 0:
+                names.remove(placeholder)
+
+        if "None" in types:
+            names.append("None")
+        return " | ".join(names)
+
+    # `isinstance` alone narrows to `dict[Unknown, Unknown]`, so these two give pyright the JSON shapes.
+    @staticmethod
+    def is_dict(value: Any) -> TypeGuard[dict[str, Any]]:
+        return isinstance(value, dict)
+
+    @staticmethod
+    def is_list(value: Any) -> TypeGuard[list[Any]]:
+        return isinstance(value, list)
+
+    @staticmethod
+    def pascal_case(key: str) -> str:
+        return "".join(part.title() for part in key.split("_"))
+
+    def only_dicts(self, values: list[Any]) -> list[dict[str, Any]] | None:
+        """The values as a list of dicts, or `None` unless every value is a dict with identifier keys."""
+        dicts = [value for value in values if self.is_dict(value)]
+        if len(dicts) < len(values):
+            return None
+
+        for entries in dicts:
+            for entry_key in entries:
+                if entry_key.isidentifier() is False:
+                    return None
+        return dicts
+
+    def flatten_lists(self, values: list[Any]) -> list[Any] | None:
+        """Every list in `values` joined into one list, or `None` unless every value is a list."""
+        flattened: list[Any] = []
+        list_count = 0
+        for value in values:
+            if self.is_list(value):
+                flattened.extend(value)
+                list_count += 1
+
+        if list_count < len(values) or list_count == 0:
+            return None
+        return flattened
+
+    def render(self, *, include_imports: bool) -> str:
+        blocks: list[str] = []
+        if include_imports is True:
+            blocks.append(self.imports())
+
+        for class_name, body in self.class_bodies.items():
+            blocks.append(f"class {class_name}(TypedDict):\n{body}")
+        return "\n\n\n".join(blocks) + "\n"
+
+    def imports(self) -> str:
+        typing_extensions_line = "from typing_extensions import TypedDict"
+        if self.uses_name(name="NotRequired") is True:
+            typing_extensions_line = "from typing_extensions import NotRequired, TypedDict"
+
+        if self.uses_name(name="Any") is True:
+            return f"from typing import Any\n\n{typing_extensions_line}"
+        return typing_extensions_line
+
+    def uses_name(self, name: str) -> bool:
+        pattern = re.compile(rf"\b{name}\b")
+
+        for body in self.class_bodies.values():
+            for field_line in body.splitlines():
+                # Only the annotation counts, since a field can be called `Any` too.
+                if pattern.search(field_line.split(": ", 1)[-1]) is not None:
+                    return True
+        return False
 
 
 class Base:
@@ -1143,12 +1374,21 @@ class Base:
         named :class:`TypedDict` class using a PascalCase derivation of the parent key,
         ordered so dependencies appear before the class that references them.
 
-        When a field is `None` in some list items but has a real type in others, the inferred
-        type is ``RealType | None``. Dict values whose keys are not valid Python identifiers
-        (e.g. ``{"0": "Equals", "1": "NotEquals"}``) are emitted as ``dict[str, V]`` rather
+        When that name is already used by a class with a different body, the parent class's name goes in
+        front of it (`SecondInfo`), then a number if that is taken too (`SecondInfo2`). A class with an
+        identical body is reused instead.
+
+        A list of dicts produces one merged class. A key missing from some of the dicts is
+        ``NotRequired[X]``, a key that is `None` in some of them is ``X | None``, and a key that is both is
+        ``NotRequired[X | None]``. Mixed types are a sorted union (``int | str``), and `Any` is only used when
+        there is nothing to infer, such as an empty list or dict. Dict values whose keys are not valid Python
+        identifiers (e.g. ``{"0": "Equals", "1": "NotEquals"}``) are emitted as ``dict[str, V]`` rather
         than a :class:`TypedDict`.
 
-        The returned string can be printed or written directly to a ``.py`` file.
+        The returned string starts with the first class, or with the imports, and can be printed or written
+        directly to a ``.py`` file.
+
+        .. versionadded:: 5.0.0
 
         Parameters
         ----------
@@ -1157,100 +1397,104 @@ class Base:
         data : dict[:class:`str`, Any]
             The JSON dict whose keys and values define the fields and their types.
         include_imports : :class:`bool`, optional
-            To include "from typing import Any\n\nfrom typing_extensions import TypedDict\n" at the top of the file, by default False.
+            To put the imports the classes use at the top of the output, by default False.
+            `Any` is only imported when a class uses it, and `NotRequired` likewise.
 
         Returns
         -------
         :class:`str`
-            Python source code containing one or more :class:`TypedDict` class definitions
-            preceded by the necessary imports.
+            Python source code containing one or more :class:`TypedDict` class definitions,
+            preceded by the imports when `include_imports` is True.
 
         """
-        class_defs: list[str] = []
-        seen: set[str] = set()
-
-        def _infer(value: Any, key: str) -> str:
-            if value is None:
-                return "None"
-            if isinstance(value, bool):
-                return "bool"
-            if isinstance(value, int):
-                return "int"
-            if isinstance(value, float):
-                return "float"
-            if isinstance(value, str):
-                return "str"
-            if isinstance(value, dict):
-                if not all(k.isidentifier() for k in value):  # type: ignore  # noqa: PGH003
-                    val_types = {_infer(v, key) for v in value.values()} if value else {"Any"}  # pyright: ignore[reportUnknownVariableType]
-                    val_type = next(iter(val_types)) if len(val_types) == 1 else "Any"
-                    return f"dict[str, {val_type}]"
-                child_name = "".join(part.title() for part in key.split("_"))
-                _build(child_name, value)  # pyright: ignore[reportUnknownArgumentType]
-                return child_name
-            if isinstance(value, list):
-                return _infer_list(value, key)  # pyright: ignore[reportUnknownArgumentType]
-            return "Any"
-
-        def _infer_list(items: list[Any], key: str) -> str:
-            if not items:
-                return "list[Any]"
-            non_none = [v for v in items if v is not None]
-            if not non_none:
-                return "list[None]"
-            has_none = len(non_none) < len(items)
-            if all(isinstance(v, dict) for v in non_none):
-                child_name = "".join(part.title() for part in key.split("_"))
-                _build_merged(child_name, non_none)
-                elem = child_name
-            else:
-                elem_types = {_infer(v, key) for v in non_none}
-                elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
-            if has_none:
-                elem = f"{elem} | None"
-            return f"list[{elem}]"
-
-        def _build_merged(cls_name: str, items: list[dict[str, Any]]) -> None:
-            if cls_name in seen:
-                return
-            seen.add(cls_name)
-            key_values: dict[str, list[Any]] = {}
-            for item in items:
-                for k, v in item.items():
-                    key_values.setdefault(k, []).append(v)
-            field_lines: list[str] = []
-            for k, values in key_values.items():
-                non_none = [v for v in values if v is not None]
-                has_none = len(non_none) < len(items)
-                if not non_none:
-                    type_str = "None"
-                elif all(isinstance(v, list) for v in non_none):
-                    # Flatten all list values to infer a single unified element type,
-                    # so mixed empty/non-empty lists don't produce list[Any] | list[X].
-                    combined: list[Any] = [elem for v in non_none for elem in v]
-                    type_str = _infer_list(combined, k)
-                    if has_none:
-                        type_str = f"{type_str} | None"
-                else:
-                    types: set[str] = {_infer(v, k) for v in non_none}
-                    type_str = next(iter(types)) if len(types) == 1 else " | ".join(sorted(types))
-                    if has_none:
-                        type_str = f"{type_str} | None"
-                field_lines.append(f"    {k}: {type_str}")
-            body = "\n".join(field_lines) if field_lines else "    ..."
-            class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
-
-        def _build(cls_name: str, fields: Any | dict[str, Any]) -> None:
-            if cls_name in seen:
-                return
-            seen.add(cls_name)
-            field_lines = [f"    {k}: {_infer(v, k)}" for k, v in fields.items()]
-            body = "\n".join(field_lines) if field_lines else "    ..."
-            class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
-
-        _build(name, data)
-        imports = "from typing import Any\n\nfrom typing_extensions import TypedDict\n" if include_imports is True else ""
-        return imports + "\n\n\n" + "\n\n\n".join(class_defs)
+        # class_defs: list[str] = []
+        # seen: set[str] = set()
+        #
+        # def _infer(value: Any, key: str) -> str:
+        #     if value is None:
+        #         return "None"
+        #     if isinstance(value, bool):
+        #         return "bool"
+        #     if isinstance(value, int):
+        #         return "int"
+        #     if isinstance(value, float):
+        #         return "float"
+        #     if isinstance(value, str):
+        #         return "str"
+        #     if isinstance(value, dict):
+        #         if not all(k.isidentifier() for k in value):
+        #             val_types = {_infer(v, key) for v in value.values()} if value else {"Any"}
+        #             val_type = next(iter(val_types)) if len(val_types) == 1 else "Any"
+        #             return f"dict[str, {val_type}]"
+        #         child_name = "".join(part.title() for part in key.split("_"))
+        #         _build(child_name, value)
+        #         return child_name
+        #     if isinstance(value, list):
+        #         return _infer_list(value, key)
+        #     return "Any"
+        #
+        # def _infer_list(items: list[Any], key: str) -> str:
+        #     if not items:
+        #         return "list[Any]"
+        #     non_none = [v for v in items if v is not None]
+        #     if not non_none:
+        #         return "list[None]"
+        #     has_none = len(non_none) < len(items)
+        #     if all(isinstance(v, dict) for v in non_none):
+        #         child_name = "".join(part.title() for part in key.split("_"))
+        #         _build_merged(child_name, non_none)
+        #         elem = child_name
+        #     else:
+        #         elem_types = {_infer(v, key) for v in non_none}
+        #         elem = next(iter(elem_types)) if len(elem_types) == 1 else "Any"
+        #     if has_none:
+        #         elem = f"{elem} | None"
+        #     return f"list[{elem}]"
+        #
+        # def _build_merged(cls_name: str, items: list[dict[str, Any]]) -> None:
+        #     if cls_name in seen:
+        #         return
+        #     seen.add(cls_name)
+        #     key_values: dict[str, list[Any]] = {}
+        #     for item in items:
+        #         for k, v in item.items():
+        #             key_values.setdefault(k, []).append(v)
+        #     field_lines: list[str] = []
+        #     for k, values in key_values.items():
+        #         non_none = [v for v in values if v is not None]
+        #         has_none = len(non_none) < len(items)
+        #         if not non_none:
+        #             type_str = "None"
+        #         elif all(isinstance(v, list) for v in non_none):
+        #             # Flatten all list values to infer a single unified element type,
+        #             # so mixed empty/non-empty lists don't produce list[Any] | list[X].
+        #             combined: list[Any] = [elem for v in non_none for elem in v]
+        #             type_str = _infer_list(combined, k)
+        #             if has_none:
+        #                 type_str = f"{type_str} | None"
+        #         else:
+        #             types: set[str] = {_infer(v, k) for v in non_none}
+        #             type_str = next(iter(types)) if len(types) == 1 else " | ".join(sorted(types))
+        #             if has_none:
+        #                 type_str = f"{type_str} | None"
+        #         field_lines.append(f"    {k}: {type_str}")
+        #     body = "\n".join(field_lines) if field_lines else "    ..."
+        #     class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
+        #
+        # def _build(cls_name: str, fields: Any | dict[str, Any]) -> None:
+        #     if cls_name in seen:
+        #         return
+        #     seen.add(cls_name)
+        #     field_lines = [f"    {k}: {_infer(v, k)}" for k, v in fields.items()]
+        #     body = "\n".join(field_lines) if field_lines else "    ..."
+        #     class_defs.append(f"class {cls_name}(TypedDict):\n{body}")
+        #
+        # _build(name, data)
+        # imports = "from typing import Any\n\nfrom typing_extensions import TypedDict\n" if include_imports is True else ""
+        # return imports + "\n\n\n" + "\n\n\n".join(class_defs)
+        writer = _TypedDictWriter(root_name=name)
+        writer.write_root(data=data)
+        return writer.render(include_imports=include_imports)
 
     def parse_bridge(self, bridge: Bridge) -> None:
         """Takes the :class:`Bridge` object and set's the :attr:`~Base.url` and sets :attr:`_bridge` to our Bridge object.
