@@ -25,6 +25,7 @@ import copy
 import datetime
 import functools
 import json
+import keyword
 import logging
 import re
 import time
@@ -166,8 +167,21 @@ class _TypedDictWriter:
     def __init__(self, root_name: str) -> None:
         self.root_name: str = root_name
         self.class_bodies: dict[str, str] = {}
+        # The `dict[str, V]` type the root is written as, when one of its keys can't be a field.
+        self.root_alias: str | None = None
 
     def write_root(self, data: dict[str, Any]) -> None:
+        # A root keyed by role IDs or setting names is written as a map, the same as a nested dict would be.
+        # Each value is named after its own key, since the root has no parent key to name them after.
+        for key in data:
+            if self.is_field_name(key=key) is False:
+                value_types: set[str] = set()
+                for entry_key, entry_value in data.items():
+                    value_types.add(self.infer_type(value=entry_value, key=entry_key, parent_name=self.root_name))
+
+                self.root_alias = f"dict[str, {self.join_types(types=value_types)}]"
+                return
+
         # The root is stored last, so every class it references is already written above it.
         self.class_bodies[self.root_name] = self.dict_body(class_name=self.root_name, data=data)
 
@@ -205,7 +219,7 @@ class _TypedDictWriter:
             return "dict[str, Any]"
 
         for entry_key in entries:
-            if entry_key.isidentifier() is False:
+            if self.is_field_name(key=entry_key) is False:
                 value_types: set[str] = set()
                 for entry_value in entries.values():
                     value_types.add(self.infer_type(value=entry_value, key=key, parent_name=parent_name))
@@ -334,18 +348,27 @@ class _TypedDictWriter:
         return isinstance(value, list)
 
     @staticmethod
+    def is_field_name(key: str) -> bool:
+        # `isidentifier()` is True for a keyword too, and `from: str` is a SyntaxError in a class body.
+        return key.isidentifier() is True and keyword.iskeyword(key) is False
+
+    @staticmethod
     def pascal_case(key: str) -> str:
-        return "".join(part.title() for part in key.split("_"))
+        # Any character that can't go in a name splits the key, so `et_legacy:stadia controller` gives `EtLegacyStadiaController`.
+        class_name = "".join(part.title() for part in re.split(r"[\W_]+", key))
+        if class_name.isidentifier() is False:
+            return f"Key{class_name}"
+        return class_name
 
     def only_dicts(self, values: list[Any]) -> list[dict[str, Any]] | None:
-        """The values as a list of dicts, or `None` unless every value is a dict with identifier keys."""
+        """The values as a list of dicts, or `None` unless every value is a dict whose keys can all be fields."""
         dicts = [value for value in values if self.is_dict(value)]
         if len(dicts) < len(values):
             return None
 
         for entries in dicts:
             for entry_key in entries:
-                if entry_key.isidentifier() is False:
+                if self.is_field_name(key=entry_key) is False:
                     return None
         return dicts
 
@@ -364,24 +387,36 @@ class _TypedDictWriter:
 
     def render(self, *, include_imports: bool) -> str:
         blocks: list[str] = []
-        if include_imports is True:
-            blocks.append(self.imports())
+        imports = self.imports()
+        if include_imports is True and len(imports) > 0:
+            blocks.append(imports)
 
         for class_name, body in self.class_bodies.items():
             blocks.append(f"class {class_name}(TypedDict):\n{body}")
+
+        if self.root_alias is not None:
+            blocks.append(f"{self.root_name} = {self.root_alias}")
         return "\n\n\n".join(blocks) + "\n"
 
     def imports(self) -> str:
-        typing_extensions_line = "from typing_extensions import TypedDict"
+        # A root map of plain values, like `dict[str, str]`, writes no class and needs no import at all.
+        typing_extensions_names: list[str] = []
         if self.uses_name(name="NotRequired") is True:
-            typing_extensions_line = "from typing_extensions import NotRequired, TypedDict"
+            typing_extensions_names.append("NotRequired")
+        if len(self.class_bodies) > 0:
+            typing_extensions_names.append("TypedDict")
 
+        import_lines: list[str] = []
         if self.uses_name(name="Any") is True:
-            return f"from typing import Any\n\n{typing_extensions_line}"
-        return typing_extensions_line
+            import_lines.append("from typing import Any")
+        if len(typing_extensions_names) > 0:
+            import_lines.append(f"from typing_extensions import {', '.join(typing_extensions_names)}")
+        return "\n\n".join(import_lines)
 
     def uses_name(self, name: str) -> bool:
         pattern = re.compile(rf"\b{name}\b")
+        if self.root_alias is not None and pattern.search(self.root_alias) is not None:
+            return True
 
         for body in self.class_bodies.values():
             for field_line in body.splitlines():
@@ -1381,9 +1416,10 @@ class Base:
         A list of dicts produces one merged class. A key missing from some of the dicts is
         ``NotRequired[X]``, a key that is `None` in some of them is ``X | None``, and a key that is both is
         ``NotRequired[X | None]``. Mixed types are a sorted union (``int | str``), and `Any` is only used when
-        there is nothing to infer, such as an empty list or dict. Dict values whose keys are not valid Python
-        identifiers (e.g. ``{"0": "Equals", "1": "NotEquals"}``) are emitted as ``dict[str, V]`` rather
-        than a :class:`TypedDict`.
+        there is nothing to infer, such as an empty list or dict. A dict with a key that can't be a field, because
+        it is not a valid Python identifier (e.g. ``{"0": "Equals", "1": "NotEquals"}``) or is a keyword such as
+        `from`, is emitted as ``dict[str, V]`` rather than a :class:`TypedDict`. That includes the root, which is
+        then written as ``Name = dict[str, V]``, as for the role IDs of `get_role_ids`.
 
         The returned string starts with the first class, or with the imports, and can be printed or written
         directly to a ``.py`` file.
