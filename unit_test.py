@@ -5,7 +5,7 @@ import datetime
 import json
 import logging
 from configparser import ConfigParser
-from dataclasses import fields
+from dataclasses import MISSING, fields
 from pathlib import Path
 from typing import Any, Union
 
@@ -49,6 +49,19 @@ def _load_response(filename: str) -> dict[str, Any] | list[Any]:
 
 def _response_exists(filename: str) -> bool:
     return (_response_dir / filename).is_file()
+
+
+def _assert_keys_match(entry: dict[str, Any], dataclass_type: type[Any]) -> None:
+    """Assert a JSON entry's keys are the dataclass's fields. A field the entry lacks must have a default."""
+    field_names = {dataclass_field.name for dataclass_field in fields(dataclass_type)}
+    extra = set(entry.keys()) - field_names
+    assert not extra, f"Extra keys in JSON: {extra}"
+
+    # A newer AMP field the 2.6.5 captures lack is fine, as long as the dataclass can build without it.
+    for dataclass_field in fields(dataclass_type):
+        has_default = dataclass_field.default is not MISSING or dataclass_field.default_factory is not MISSING
+        if dataclass_field.name not in entry:
+            assert has_default, f"Missing key {dataclass_field.name!r} has no default"
 
 
 def get_api_params(section: str) -> APIParams:
@@ -422,11 +435,14 @@ class TestUserInfoUnpack:
         if not _response_exists("getallampuserinfo.json"):
             pytest.skip("Response file not captured yet")
         data: list[Any] = _load_response("getallampuserinfo.json")  # pyright: ignore[reportAssignmentType]
-        dc_field_names = {f.name for f in fields(UserInfo)}
+        # dc_field_names = {f.name for f in fields(UserInfo)}
+        # for entry in data:
+        #     assert set(entry.keys()) == dc_field_names, (
+        #         f"Key mismatch: JSON has {set(entry.keys())}, dataclass has {dc_field_names}"
+        #     )
+        # The 2.6.5 capture has no `oidc_sub`, which defaults to None.
         for entry in data:
-            assert set(entry.keys()) == dc_field_names, (
-                f"Key mismatch: JSON has {set(entry.keys())}, dataclass has {dc_field_names}"
-            )
+            _assert_keys_match(entry=entry, dataclass_type=UserInfo)
 
 
 class TestScheduleDataUnpack:
@@ -437,7 +453,9 @@ class TestScheduleDataUnpack:
             pytest.skip("Response file not captured yet")
         data: dict[str, Any] = _load_response("getscheduledata.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, dict)
-        schedule = ScheduleData(**data)
+        # schedule = ScheduleData(**data)
+        # `ScheduleData` is a slotted class that takes the response, not a dataclass.
+        schedule = ScheduleData(data)  # pyright: ignore[reportArgumentType]
         assert isinstance(schedule.available_methods, list)
         assert isinstance(schedule.available_triggers, list)
         assert isinstance(schedule.populated_triggers, list)
@@ -446,10 +464,12 @@ class TestScheduleDataUnpack:
         if not _response_exists("getscheduledata.json"):
             pytest.skip("Response file not captured yet")
         data: dict[str, Any] = _load_response("getscheduledata.json")  # pyright: ignore[reportAssignmentType]
-        dc_field_names = {f.name for f in fields(ScheduleData)}
-        assert set(data.keys()) == dc_field_names, (
-            f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
-        )
+        # dc_field_names = {f.name for f in fields(ScheduleData)}
+        # assert set(data.keys()) == dc_field_names, (
+        #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
+        # )
+        slot_names = set(ScheduleData.__slots__)
+        assert set(data.keys()) == slot_names, f"Key mismatch: JSON has {set(data.keys())}, ScheduleData has {slot_names}"
 
 
 class TestLoginResultsUnpack:
@@ -503,7 +523,8 @@ class TestActionResultUnpack:
 
     def test_no_extra_keys(self) -> None:  # noqa: D102
         dc_field_names = {f.name for f in fields(ActionResult)}
-        assert dc_field_names == {"status", "reason", "result"}
+        # assert dc_field_names == {"status", "reason", "result"}
+        assert dc_field_names == {"status", "reason", "result", "support_url", "support_title"}
 
 
 # endregion
@@ -527,10 +548,12 @@ class TestDiagnosticsUnpack:
         if not _response_exists("getdiagnosticsinfo.json"):
             pytest.skip("Response file not captured yet")
         data: dict[str, Any] = _load_response("getdiagnosticsinfo.json")  # pyright: ignore[reportAssignmentType]
-        dc_field_names = {f.name for f in fields(Diagnostics)}
-        assert set(data.keys()) == dc_field_names, (
-            f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
-        )
+        # dc_field_names = {f.name for f in fields(Diagnostics)}
+        # assert set(data.keys()) == dc_field_names, (
+        #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
+        # )
+        # The 2.6.5 capture has no `config_version`, which defaults to an empty string.
+        _assert_keys_match(entry=data, dataclass_type=Diagnostics)
 
 
 class TestModuleUnpack:
@@ -549,10 +572,12 @@ class TestModuleUnpack:
         if not _response_exists("getmoduleinfo.json"):
             pytest.skip("Response file not captured yet")
         data: dict[str, Any] = _load_response("getmoduleinfo.json")  # pyright: ignore[reportAssignmentType]
-        dc_field_names = {f.name for f in fields(Module)}
-        assert set(data.keys()) == dc_field_names, (
-            f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
-        )
+        # dc_field_names = {f.name for f in fields(Module)}
+        # assert set(data.keys()) == dc_field_names, (
+        #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
+        # )
+        # The 2.6.5 capture has no `local_login_enabled`, which defaults to True.
+        _assert_keys_match(entry=data, dataclass_type=Module)
 
 
 class TestPortUnpack:
