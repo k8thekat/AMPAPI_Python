@@ -217,7 +217,9 @@ async def capture_ads_responses(section: str = "LIVE") -> list[EndpointResult]:
         "get_instance_statuses": lambda: ads.get_instance_statuses(format_data=False, **rp),
         "get_provision_fitness": lambda: ads.get_provision_fitness(format_data=False, **rp),
         "get_target_info": lambda: ads.get_target_info(format_data=False, **rp),
-        "get_instances": lambda: ads.get_instances(include_self=True, **rp),
+        # "get_instances": lambda: ads.get_instances(include_self=True, **rp),
+        # `get_instances` always includes the ADS's own Target now, so it has no `include_self`.
+        "get_instances": lambda: ads.get_instances(**rp),
     }
 
     # Collect results and resolve IDs for parameterized endpoints.
@@ -299,7 +301,8 @@ async def capture_instance_responses(section: str = "LIVE") -> list[EndpointResu
 
     # Discover a running Minecraft instance.
     try:
-        controllers = await ads.get_instances(include_self=True)
+        # controllers = await ads.get_instances(include_self=True)
+        controllers = await ads.get_instances()
     except Exception as e:  # noqa: BLE001
         LOGGER.error("Failed to fetch instances: %s", e)
         await ads.clean_up()
