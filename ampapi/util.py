@@ -1064,6 +1064,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     every_instance: set[InstanceTypeAliases] = set(instance.instances)
     for target_ads in instance.targets.values():
         every_instance.update(target_ads.instances)
+
     for entry in every_instance:
         # Minecraft Instances have their own unique API endpoints; so we need to get those.
         if entry.module == "Minecraft" and isinstance(entry, MinecraftInstance) and entry.running is True:
@@ -1185,6 +1186,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     data: ScheduleData | ScheduleDataResponse = await instance.get_schedule_data(format_data=False)
     if not isinstance(data, dict):
         raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=data, expec_type=dict)
+
     mc_: bool = False
     gen_: bool = False
     # src_: bool = False
@@ -1192,6 +1194,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     every_instance: set[InstanceTypeAliases] = set(instance.instances)
     for target_ads in instance.targets.values():
         every_instance.update(target_ads.instances)
+
     for entry in every_instance:
         # print(entry.running, entry.friendly_name, entry.module)
         if mc_ is False and entry.running and entry.module == "Minecraft":
@@ -1200,6 +1203,7 @@ async def generate_docs_rst(instance: Controller) -> None:
                 raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=mc_data, expec_type=dict)
             data = dict_merge(data, mc_data)
             mc_ = True
+
         # AMP 2.8 reports Generic Instances as "GenericModule", Source (srcds) games included.
         if gen_ is False and entry.running and entry.module in ("Generic", "GenericModule"):
             generic_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
@@ -1292,6 +1296,7 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
             piece = "``" + char
             found_special = False
         _temp += piece
+
     # A literal still open at the end of the string gets closed, or Sphinx warns about it.
     if found_special is True:
         _temp += "``"

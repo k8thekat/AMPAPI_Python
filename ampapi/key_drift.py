@@ -76,11 +76,13 @@ def _nested_shape(hint: Any) -> Union[tuple[type, bool], None]:
             if argument is not type(None):
                 return _nested_shape(argument)
         return None
+
     if origin is list:
         arguments = typing.get_args(hint)
         if arguments and typing.is_typeddict(arguments[0]):
             return arguments[0], True
         return None
+
     if typing.is_typeddict(hint):
         return hint, False
     return None
@@ -235,6 +237,7 @@ class KeyDriftCheck:
             for function in ast.walk(tree):
                 if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
+
                 urls: set[str] = set()
                 narrowed: list[str] = []
                 for node in ast.walk(function):
@@ -245,8 +248,10 @@ class KeyDriftCheck:
                             match = _ENDPOINT_URL_PATTERN.match(keyword.value.value)
                             if match:
                                 urls.add(match.group(1))
+
                     if isinstance(node.func, ast.Name) and node.func.id in _NARROWING_CALLS and len(node.args) > 1:
                         narrowed.extend(_annotation_names(node.args[1]))
+
                 # A method posting to more than one URL cannot say which response a shape belongs to.
                 if len(urls) != 1:
                     continue
@@ -280,6 +285,7 @@ class KeyDriftCheck:
             payloads: list[Mapping[str, object]] = [item for item in data if _is_json_object(item)]
         else:
             payloads = [data] if _is_json_object(data) else []
+
         if not shapes or not payloads:
             return None
         results: list[tuple[type, KeyDrift]] = [(shape, key_drift(shape, payloads)) for shape in shapes]
@@ -321,15 +327,18 @@ class KeyDriftCheck:
             data: object = json.loads(capture.read_text())
             if _is_json_object(data) and "title" in data:
                 continue
+
             # An empty list or null has no keys to compare.
             if data is None or data == []:
                 empty.append(name)
                 continue
+
             # Same endpoint name in two modules: keep whichever shape matches best.
             results = [(endpoint, found) for endpoint in by_name.get(capture.stem.lower(), []) if (found := self.check(endpoint, data))]
             if not results:
                 unmatched.append(name)
                 continue
+
             checked += 1
             endpoint, (shape, drift) = min(results, key=lambda result: len(result[1][1]["missing"]) + len(result[1][1]["unexpected"]))
             if drift["missing"] or drift["unexpected"]:
@@ -346,6 +355,7 @@ class KeyDriftCheck:
                     if keys:
                         file.write(f"- {label}: " + ", ".join(f"`{key}` ({count})" for key, count in keys.items()) + "\n")
                 file.write("\n")
+
             if empty:
                 file.write("## Empty\n\n" + "".join(f"- `{name}`\n" for name in empty) + "\n")
             if unmatched:

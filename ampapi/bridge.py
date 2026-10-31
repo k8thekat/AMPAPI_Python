@@ -98,6 +98,7 @@ class Bridge(APIParams):
 
         for field in fields(class_or_instance=api_params):
             setattr(self, field.name, getattr(api_params, field.name))
+
         if singleton:
             self._initialized = True
 

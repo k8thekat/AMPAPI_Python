@@ -275,6 +275,7 @@ def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
     """
     if not is_dataclass(dataclass_):
         raise AMPAPITypeError(end_point="<dataclass_to_dict>", cur_type=dataclass_, expec_type=dict)
+
     values: dict[str, Any] = {}
     for entry in fields(class_or_instance=dataclass_):
         value: Any = getattr(dataclass_, entry.name)
@@ -353,6 +354,7 @@ class ResponseData:
                 option_converter = ResponseData._converter(option)
                 if option_converter is not None:
                     options.append(option_converter)
+
             if not options:
                 return None
 
@@ -364,10 +366,12 @@ class ResponseData:
                 return value
 
             return convert_union
+
         if isinstance(hint, type) and issubclass(hint, ResponseData):
             # Bound once here, so each nested value doesn't look the classmethod up again.
             from_response = hint.from_response
             return lambda value: from_response(value) if _is_json_object(value) else value
+
         if origin is list:
             element_converter = ResponseData._converter((typing.get_args(hint) or (Any,))[0])
             if element_converter is None:
@@ -419,10 +423,12 @@ class ResponseData:
         if not is_dataclass(cls):
             msg = f"from_response() needs a dataclass, got {cls!r}."
             raise TypeError(msg)
+
         # The cache is read here first, which skips a classmethod call on every response after the first.
         plan = ResponseData._build_plans.get(cls)
         if plan is None:
             plan = cls._build_plan()
+
         values: dict[str, Any] = {}
         for key, value in data.items():
             if key not in plan:
@@ -2567,12 +2573,14 @@ class Messages(ResponseData):
             ("ADSModule", "remotepairstatus"): ActionResult,
             ("Core", "userlistchanged"): UserApplicationData,
         }
+
         # Taken out of a copy first, so the converter doesn't build every dict as `MessageParameters`.
         remaining: dict[str, Any] = dict(data)
         parameters: Any = remaining.pop("parameters", None)
         # An explicit `super(Messages, cls)`, because `slots=True` builds a new class and a bare `super()`
         # in this classmethod raises a TypeError.
         message = super(Messages, cls).from_response(remaining)
+
         parameter_class = parameter_classes.get((str(data.get("source")), str(data.get("message")).lower()))
         if parameter_class is not None and isinstance(parameters, dict):
             parameters = parameter_class.from_response(parameters)  # pyright: ignore[reportUnknownArgumentType]
@@ -4348,6 +4356,7 @@ class TimedTrigger(ResponseData):
         tasks: Any = data.get("tasks")
         if _is_json_object(tasks):
             data = {**data, "tasks": list(tasks.values())}
+
         # An explicit `super(TimedTrigger, cls)`, because `slots=True` builds a new class and a bare `super()`
         # in this classmethod raises a TypeError.
         return super(TimedTrigger, cls).from_response(data)

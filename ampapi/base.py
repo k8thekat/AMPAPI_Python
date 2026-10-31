@@ -847,6 +847,7 @@ class Base:
                                 url=dead_session.url,
                                 reason=dead_session.reason,
                             ) from dead_session
+
                         # The handler no longer resets the session. It could wipe one another call just stored.
                         # Reset only if the stored session is still the one this pass sent.
                         # The login below is a fresh one and the loop resends with the new ID.
@@ -1044,16 +1045,20 @@ class Base:
         match = re.search(r"API/([A-Za-z]+/[A-Za-z0-9]+)$", response.url.path)
         if match is None:
             return
+
         endpoint: str = match.group(1)
         if sanitized is False:
             LOGGER.warning("<%s.%s> | Skipped %s; the TypedDicts use the sanitized keys.", __class__.__name__, "_check_key_drift", endpoint)
             return
+
         if Base._key_drift_check is None:
             Base._key_drift_check = KeyDriftCheck()
+
         found = Base._key_drift_check.check(endpoint=endpoint, data=data)
         if found is None:
             LOGGER.debug("<%s.%s> | No TypedDict is known for %s.", __class__.__name__, "_check_key_drift", endpoint)
             return
+
         shape, drift = found
         if not drift["missing"] and not drift["unexpected"]:
             return
@@ -1152,6 +1157,7 @@ class Base:
                     amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
                     if isinstance(amp_result, int) and not isinstance(amp_result, bool) and amp_result in self._login_result_names:
                         amp_result = f"{amp_result}, {self._login_result_names[amp_result]}"
+
                     reason: str = self._login_failed % (self._bridge.user, amp_result)
                     LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
                     raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
@@ -1773,6 +1779,7 @@ class Base:
         ):
             LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
             return
+
         # to_dataclass hands back the raw str when it cannot parse the version; comparing that against a
         # BuildInfo raises a TypeError, so bail out the same way an unusable response does.
         _version: BuildInfo | str = BuildInfo.to_dataclass(data=result["application_version"])
@@ -1783,6 +1790,7 @@ class Base:
                 "`Core/GetDiagnosticsInfo`",
             )
             return
+
         # The endpoint only exists before the version it was removed in.
         if not _version < version:
             raise RuntimeError(self._version_unavailable % (f"`{endpoint}`", _version))

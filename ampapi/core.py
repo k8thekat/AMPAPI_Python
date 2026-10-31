@@ -3064,6 +3064,7 @@ class Core(Base):
         # format_data=False always returns the raw dict; the isinstance check is what tells pyright that.
         if not isinstance(data, dict):
             raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=data, expec_type=dict)
+
         triggers: list[TriggersResponse] = data.get("available_triggers", [])
         for entry in triggers:
             entry["description"] = self.sanitize_json(json=entry["description"])
@@ -3654,6 +3655,7 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RestartAMP", cur_type=result, expec_type=dict)
+
         # The restart ended our session. Resetting it lets the next call log in instead of sending one that fails.
         self._reset_session()
         if format_data is True:
@@ -4787,6 +4789,7 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpgradeAMP", cur_type=result, expec_type=dict)
+
         # The upgrade restarts AMP and ends our session.
         self._reset_session()
         if format_data is True:
@@ -4842,6 +4845,7 @@ class Core(Base):
 
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/UpdateAMPInstance", cur_type=result, expec_type=dict)
+
         # The update restarts AMP and ends our session.
         self._reset_session()
         if format_data is True:

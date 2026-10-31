@@ -110,6 +110,7 @@ class AnalyticsPlugin(Base):
         }
         if player_count is not None:
             parameters["PlayerCount"] = player_count
+
         result: ResponseAliasFull = await self._post(
             url="AnalyticsPlugin/GetAnalyticsSummary",
             parameters=parameters,
@@ -118,8 +119,10 @@ class AnalyticsPlugin(Base):
         )
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(result, AnalyticsSummaryResponse, ANALYTICS_SUMMARY_REQUIRED_KEYS, ANALYTICS_SUMMARY_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetAnalyticsSummary", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -188,8 +191,10 @@ class AnalyticsPlugin(Base):
 
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="AnalyticsPlugin/GetUserDetails", cur_type=result, expec_type=dict)
+
         if format_data is None:
             format_data = self.format_data
+
         if not is_response_type(
             result,
             AnalyticsUserDetailsResponse,

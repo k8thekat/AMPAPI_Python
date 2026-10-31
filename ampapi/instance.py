@@ -150,6 +150,7 @@ class ADSData(Base):
             self.state = InstanceState(data["state"])
         except ValueError:
             self.state = InstanceState.undefined
+
         self._mark_cached()
 
 
@@ -1382,6 +1383,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         # The Targets AMP no longer lists are dropped.
         for target_id in [target_id for target_id in self._targets if target_id not in remote_ids]:
             del self._targets[target_id]
+
         self._sync_instances(current=self._instances, available=local_instances)
 
         # Every Target answers on its own, so we ask them all at once.
