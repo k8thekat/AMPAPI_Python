@@ -3442,7 +3442,7 @@ class Core(Base):
 
         return result
 
-    @deprecated("This was removed in `2.6.0.0`", stacklevel=2)
+    @deprecated("Removed in AMP v2.6.0.0", stacklevel=2)
     async def get_webserver_metrics(
         self,
         *,

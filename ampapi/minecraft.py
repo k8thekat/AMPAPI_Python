@@ -114,8 +114,7 @@ class MinecraftModule(Base):
             return result
         raise AMPAPITypeError(end_point="MinecraftModule/AcceptEULA", cur_type=result, expec_type=bool)
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_add_op_entry(
         self,
@@ -171,8 +170,7 @@ class MinecraftModule(Base):
             return ActionResult.from_response(result)
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_add_to_whitelist(
         self,
@@ -228,8 +226,7 @@ class MinecraftModule(Base):
             return ActionResult.from_response(result)
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_categories(
         self,
@@ -274,8 +271,7 @@ class MinecraftModule(Base):
 
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_installed_plugins(
         self,
@@ -324,8 +320,7 @@ class MinecraftModule(Base):
             return [BukkitPlugin.from_response(item) for item in result]
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_install_update_plugin(
         self,
@@ -381,8 +376,7 @@ class MinecraftModule(Base):
             return RunningTask.from_response(result)
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_plugin_info(
         self,
@@ -425,8 +419,7 @@ class MinecraftModule(Base):
         )
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_plugins_for_category(
         self,
@@ -487,8 +480,7 @@ class MinecraftModule(Base):
             return [BukkitPlugin.from_response(item) for item in result]
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_popular_plugins(
         self,
@@ -537,8 +529,7 @@ class MinecraftModule(Base):
             return [BukkitPlugin.from_response(item) for item in result]
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_remove_plugin(
         self,
@@ -580,8 +571,7 @@ class MinecraftModule(Base):
             **response_params,
         )
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_buk_get_search(
         self,
@@ -761,8 +751,7 @@ class MinecraftModule(Base):
             return result
         raise AMPAPITypeError(end_point="MinecraftModule/GetFailureReason", cur_type=result, expec_type=str)
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_get_head_by_uuid(
         self,
@@ -810,8 +799,7 @@ class MinecraftModule(Base):
             return result
         raise AMPAPITypeError(end_point="MinecraftModule/GetHeadByUUID", cur_type=result, expec_type=str)
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_get_op_whitelist(
         self,
@@ -862,8 +850,7 @@ class MinecraftModule(Base):
             return OPWhitelist.from_response(result)
         return result
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_get_whitelist(
         self,
@@ -997,8 +984,7 @@ class MinecraftModule(Base):
             **response_params,
         )
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_load_op_list(
         self,
@@ -1083,8 +1069,7 @@ class MinecraftModule(Base):
             return result
         raise AMPAPITypeError(end_point="MinecraftModule/RejectEULA", cur_type=result, expec_type=bool)
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_remove_op_entry(
         self,
@@ -1129,8 +1114,7 @@ class MinecraftModule(Base):
             **response_params,
         )
 
-    # TODO: Removed in AMP API 2.6.5.0
-    @deprecated("Removed in AMP API 2.6.5.0")
+    @deprecated("Removed in AMP v2.6.5.0")
     @mc_only
     async def mc_remove_whitelist_entry(
         self,
