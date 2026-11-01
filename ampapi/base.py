@@ -1011,6 +1011,18 @@ class Base:
         # AMP puts the cause in `reason`
         if isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
             reason: str = str(response_json.get("reason") or "Status is False")
+
+            # An `ActionResult` endpoint answers a dead session here instead of with a title
+            # The call never ran, so `_post` logs in again and resends it like the title form above
+            if "Session.Exists" in reason:
+                LOGGER.warning(
+                    "<%s.%s> | AMP does not know the stored session. | URL: %s",
+                    __class__.__name__,
+                    "_response_handler",
+                    response.url,
+                )
+                raise _SessionDeadError(title="Unauthorized Access", url=str(response.url), reason=reason)
+
             LOGGER.error("%s failed because of Status: %s | Reason: %s", response.url, response_json["status"], reason)
             raise AMPAPIResponseError(title="Status False", url=str(response.url), reason=reason)
 

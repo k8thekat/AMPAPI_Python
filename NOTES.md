@@ -79,8 +79,15 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   session when they finish. The next call logs in first instead of sending one that fails.
 - An endpoint whose spec type is `ActionResult` reports a dead session as `{"Status": false, "Reason": "You do not
   have permission ... requires the Session.Exists permission."}`, not as a `Title` (`DeleteDatastore` on vm1,
-  2026-10-31). `_response_handler` only knows the `Title` form, so that call raises without logging in again (#44).
-  `Core/GetAPISpec` answers without a session at all, so it never finds a dead one.
+  2026-10-31). Since #44 `_response_handler` treats a `Status` False whose reason names `Session.Exists` as a dead
+  session too, and `_post` logs in again and resends it.
+  A sweep of all 523 spec methods on vm1 (the Controller, CustomTest01 and MCTest01, each called with a dead session
+  and an empty body) found three answers. 211 plain `ActionResult` methods sent the `Status` False form, every one
+  naming `Session.Exists`. Every other return type, `ActionResult<T>` included, sent the `Title` form. The rest
+  answer without a session: `GetAPISpec`, `GetModuleInfo`, `GetOIDCLoginURL`, `TriggerWebhookEvent`, and the login
+  methods (`Login`, `OIDCLogin`, `GetAuthenticationRequirements`, `GetWebauthnCredentialIDs`, `EnableTwoFactor`,
+  `ConfirmTwoFactorSetup`, `ChangeUserPassword`, `AttachADSWithPairingCode`). Given parameters, those answered
+  their own failures ("No such user"), so a `Status` False without `Session.Exists` stays a real failure.
 - A permission error raises at once, with no login and the session untouched. "Instance Unavailable" (an ADS
   booting, or a stopped Instance) raises and keeps the session, since it is still alive.
 - One login for concurrent calls (#22, Kat's idea of checking the object's own state): a call that logs in sets
