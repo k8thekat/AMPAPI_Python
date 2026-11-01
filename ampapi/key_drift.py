@@ -255,11 +255,13 @@ class KeyDriftCheck:
                 # A method posting to more than one URL cannot say which response a shape belongs to.
                 if len(urls) != 1:
                     continue
+
                 url: str = next(iter(urls))
                 for name in narrowed or _annotation_names(function.returns):
                     shape: object = getattr(_types, name, None)
                     if isinstance(shape, type) and typing.is_typeddict(shape):
                         shapes[url].add(shape)
+
         return {url: tuple(sorted(found, key=lambda shape: shape.__name__)) for url, found in sorted(shapes.items())}
 
     def check(self, endpoint: str, data: object) -> Union[tuple[type, KeyDrift], None]:

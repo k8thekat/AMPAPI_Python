@@ -402,6 +402,7 @@ class ADSModule(Base):
             "Port": port,
             "InstanceID": instance_id,
         }
+
         if pairing_code is not None:
             parameters["PairingCode"] = pairing_code
             result: ResponseAliasFull = await self._post(
@@ -418,6 +419,7 @@ class ADSModule(Base):
                 request_params=request_params,
                 **response_params,
             )
+
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/AttachADS", cur_type=result, expec_type=dict)
 

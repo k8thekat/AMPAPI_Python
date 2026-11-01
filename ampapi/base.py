@@ -280,6 +280,7 @@ class _TypedDictWriter:
         # Dicts across the items are merged into one class, so the first item's shape isn't the only one kept.
         flattened = self.flatten_lists(values=present)
         dict_values = self.only_dicts(values=present)
+
         if len(present) == 0:
             field_types.add("None")
         elif flattened is not None:
@@ -1149,6 +1150,7 @@ class Base:
                     "token": code,
                     "rememberMe": True,
                 }
+
                 # Network and response errors raise straight through; their URL already names Core/Login.
                 # We post directly, since `_call_end_point` logs in first and would call us again.
                 result = await self._post(url="Core/Login", parameters=parameters)
@@ -1260,6 +1262,7 @@ class Base:
                 LOGGER.warning("<%s.%s> | `Core/Logout` failed, closing the session anyway", __class__.__name__, "clean_up", exc_info=True)
             # Logged out or not, the stored session is no use to the next call.
             self._reset_session()
+
         LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
         if self.session is not None:
             await self.session.close()
@@ -1561,10 +1564,12 @@ class Base:
         # so all connections will use the same session ID (if possible)
         self._bridge = bridge
         self._endpoint_url = bridge.url
+
         if bridge.use_2fa is True:
             if bridge.token == "":
                 err = "You must provide a 2FA Token if you are using 2FA."
                 raise ValueError(err)
+
             # elif bridge.token.startswith(("'", '"')) is False or bridge.token.endswith(("'", '"')) is False:
             #     raise ValueError("2FA Token must be enclosed in quotes.")
             # Removed starting and ending quotes
@@ -1625,12 +1630,14 @@ class Base:
             # Bind the narrowed value to a typed local; `json` is Any, so everything derived from it
             # would otherwise be Unknown under strict mode.
             source_list: list[Any] = json  # pyright: ignore[reportUnknownVariableType]
+
             # entries: list[Any] = copy.copy(x=source_list)
             # for index, entry in enumerate(source_list):
             #     # If any of our entries are a dictionary; let's go through them.
             #     if isinstance(entry, dict):
             #         entries[index] = cls.sanitize_json(json=entry)
             # return entries
+
             # Only dictionary entries are sanitized. Anything else (nested lists included) is kept as is.
             # return [cls.sanitize_json(json=entry) if isinstance(entry, dict) else entry for entry in source_list]
             cleaned_list: list[Any] = []
@@ -1644,6 +1651,7 @@ class Base:
 
         if isinstance(json, dict):
             source_map: dict[str, Any] = json  # pyright: ignore[reportUnknownVariableType]
+
             # new_map: dict[str, Any] = copy.copy(x=source_map)
             # for old_key, old_value in source_map.items():
             #     new_map.pop(old_key)
@@ -1660,6 +1668,7 @@ class Base:
             #     new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
             #     new_map[new_key] = new_value
             # return new_map
+
             # Build a fresh dict rather than copying and popping. The key conversion is cached per key string.
             new_map: dict[str, Any] = {}
             for old_key, old_value in source_map.items():
@@ -1668,6 +1677,7 @@ class Base:
                 if isinstance(old_value, (list, dict)):
                     nested: Any = old_value  # pyright: ignore[reportUnknownVariableType]
                     new_value = cls.sanitize_json(json=nested)
+
                 # AMP setting nodes (eg. `ADSModule.Defaults.DefaultAuthServerURL`) are the only dotted keys AMP sends.
                 # None of the captured responses has a dotted field name, so a dotted key is kept exactly as sent.
                 new_key: str = old_key if "." in old_key else _snake_key(old_key)

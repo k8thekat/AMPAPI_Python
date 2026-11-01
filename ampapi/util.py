@@ -97,6 +97,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
     mode = "x"
     if _dir.exists():
         mode = "w"
+
     used_ids: list[str] = []
     used_names: list[str] = []
     file = Path.open(_dir, mode)
@@ -123,6 +124,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
             continue
         if method.name in used_names:
             name = f"{method.name} - {method.id.split('.')[1]}"
+
         file.write(f"\n{name}\n")
         used_names.append(method.name)
         file.write(f"{repeat_to_length(string=name, repeat_char='~')}\n")
@@ -130,6 +132,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
         file.write(f"{method.description}\n\n")
         file.write(f"- ``{method.id}``\n\n")
         used_ids.append(method.id)
+
         if len(method.consumes) > 0:
             file.write("Consumes these values:\n")
             # Methods.consumes holds the raw ConsumesResponse dicts unless a Consumes was handed in.
@@ -185,6 +188,7 @@ async def _parse_get_api_spec_to_file(
     mode = "x"
     if _dir.exists():
         mode = "w"
+
     with Path.open(_dir, mode) as file:
         file.write(f"INSTANCE TYPE: {instance_type}\n")
         file.write(f"APP VERSION: {diag_info.application_version}\n")
@@ -226,9 +230,11 @@ def _parse_api_spec_file(path: Path) -> dict[str, dict[str, str]]:
             raw = line.rstrip("\n")
             if not raw.strip() or raw.startswith(("INSTANCE TYPE:", "APP VERSION:", "BUILD:", "____")):
                 continue
+
             stripped = raw.lstrip("\t")
             depth = len(raw) - len(stripped)
             stripped = stripped.rstrip()
+
             if depth == 0 and stripped.endswith(":"):
                 current_parent = stripped[:-1]
             elif depth == 1 and stripped.endswith(":"):
@@ -578,9 +584,11 @@ def find_missing_endpoints(
                 raw = line.rstrip("\n")
                 if not raw.strip() or raw.startswith(("INSTANCE TYPE:", "APP VERSION:", "BUILD:", "____")):
                     continue
+
                 stripped = raw.lstrip("\t")
                 depth = len(raw) - len(stripped)
                 stripped = stripped.rstrip()
+
                 if depth == 0 and stripped.endswith(":"):
                     current_parent = stripped[:-1]
                     all_spec.setdefault(current_parent, set())
@@ -869,10 +877,12 @@ def _permission_node_parse(
                                 file.write(f"- Instances.`instance-id`.{node['name']}\n")
 
                 continue
+
             # Our notes about the prefix characters.
             file.write(_parent_node_note % entry["name"] + "\n")
             # Handles formatting our nodes
             file.write(f"- {temp[-1]}.*\n")
+
         if entry["name"] not in used_keys and index == 1:
             used_keys.append(entry["name"])
 
@@ -900,11 +910,13 @@ def _permission_node_parse(
                 for node in sorted(entry["children"], key=lambda x: x["name"]):
                     file.write(f"- {temp[-1]}.{node['name']}\n")
                 continue
+
             # Our notes about the prefix characters with the passed in var post %.
             file.write(_parent_node_note % entry["name"] + "\n")
 
             # Handles formatting our nodes
             file.write(f"- {temp[-1]}.*\n")
+
         if entry["name"] not in used_keys and index == 2:
             used_keys.append(entry["name"])
             header: str | Any = entry["name"] + " Nodes"
@@ -1091,6 +1103,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
             if not isinstance(ads_diag, Diagnostics) or not isinstance(instance_diag, Diagnostics):
                 msg = f"Responses are of the wrong type. ADS: {type(ads_diag)} | Instance: {type(instance_diag)}"
                 raise TypeError(msg)
+
             if instance_diag.application_version == ads_diag.application_version:
                 _logger.info(
                     "Found %s matching the current ADS version `%s` .",
@@ -1099,6 +1112,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
                 )
                 await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
                 break
+
             # A mismatched Instance isn't fatal, we just move on and try the next one.
             _logger.warning(
                 "<%s.%s> | Version mismatch between the Instance and the ADS. ADS: %s | Instance: %s",
@@ -1107,6 +1121,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
                 ads_diag.application_version,
                 instance_diag.application_version,
             )
+
     # We found our Minecraft Instance, now lets parse our Controller/ADS
     await _parse_get_api_spec_to_file(instance=instance, sanitize_json=sanitize_json)
 
@@ -1167,6 +1182,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     except Exception:
         # logger.error("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.\n %s", traceback.print_exc())
         logger.exception("Ran into a <Exception> when attempting to generate the Setting Nodes.rst.")
+
     # As far as I know Permission spec information is the same for all Instances
     permission_nodes = await instance.get_permissions_spec(format_data=False)
     perms: list[PermissionNodeResponse] = [node for node in permission_nodes if isinstance(node, dict)]

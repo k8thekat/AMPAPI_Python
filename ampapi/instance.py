@@ -130,6 +130,7 @@ class ADSData(Base):
                         cls.__name__,
                         cls._cache_hint(name),
                     )
+
         return object.__getattribute__(self, name)
 
     def _parse_target_data(self, data: ControllerResponse) -> None:

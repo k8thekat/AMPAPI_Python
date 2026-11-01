@@ -535,11 +535,13 @@ class LocalFileBackupPlugin(Base):
         # if format_data is True:
         #     return RunningTask.from_response(result)
         # return result
+
         # A running task carries the ActionResult keys too, so it is checked first.
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
             return result
+
         # With `DirtyOnly` and nothing changed, AMP takes no backup and answers an ActionResult (vm1, 2026-10-24).
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
