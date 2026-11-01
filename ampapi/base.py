@@ -83,25 +83,21 @@ ResponseAliasFull = Union[ResponseTypeAlias, str, bool, None]
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-# The three passes of `Base.camel_to_snake_re`, compiled once.
+# These are the three passes of `Base.camel_to_snake_re`
 _PLURAL_ACRONYM_PATTERN: re.Pattern[str] = re.compile(r"([A-Z]{2,})(s)(?=[^a-z]|$)")
 _WORD_BOUNDARY_PATTERN: re.Pattern[str] = re.compile("(.)([A-Z][a-z]+)")
 _LOWER_UPPER_PATTERN: re.Pattern[str] = re.compile("([a-z0-9])([A-Z])")
 
 
 def _plural_acronym_repl(match: re.Match[str]) -> str:
-    """Lowers an acronym's trailing letters: `IDs` -> `Ids`, `CPUs` -> `Cpus`."""
+    """Lower an acronym's trailing letters, eg. `IDs` -> `Ids`."""
     return match.group(1)[0] + match.group(1)[1:].lower() + match.group(2)
 
 
-# Bounded: some answers are keyed by player ID, and an unbounded cache would grow without limit.
+# This is bounded because some responses are keyed by player ID
 @functools.lru_cache(maxsize=4096)
 def _snake_key(key: str) -> str:
-    """The `snake_case` form of one AMP response key, remembered per key string.
-
-    Spaces and underscores are stripped, :attr:`Base.json_key_mapping` is applied and
-    :meth:`Base.camel_to_snake_re` does the rest.
-    """
+    """Convert one AMP response key to `snake_case`."""
     # To handle keys with spaces and to remove underscores that exist already.
     new_key: str = key.replace(" ", "").replace("_", "")
     if new_key in Base.json_key_mapping:
@@ -135,7 +131,7 @@ class ResponseHandlerOptions(TypedDict, total=False):
     check_key_drift : :class:`bool`
         Dev check, only with `to_file`: compare the capture with the TypedDict its endpoint narrows to.
     allow_null : :class:`bool`
-        Return None when AMP answers JSON null, instead of raising.
+        Return None when AMP answers JSON null, and raise otherwise.
 
     """
 
@@ -147,7 +143,7 @@ class ResponseHandlerOptions(TypedDict, total=False):
 
 
 class _SessionDeadError(AMPAPIResponseError):
-    """Raised by :meth:`Base._response_handler` when AMP says the stored session no longer exists.
+    """Raised by :meth:`Base._response_handler` when AMP says the stored session does not exist.
 
     :meth:`Base._post` catches it once to log in again and resend. It is private. Anything that gets past
     :meth:`Base._post` is a plain :exc:`AMPAPIResponseError`.
@@ -157,7 +153,7 @@ class _SessionDeadError(AMPAPIResponseError):
         self.title: str = title
         self.url: str = url
         self.reason: str = reason
-        # Skips `AMPAPIResponseError`'s error log. A dead session is expected, and `_post` logs in again.
+        # We skip `AMPAPIResponseError`'s error log, as `_post` logs in again
         AMPAPIError.__init__(self, f"{title} | URL: {url} | Reason: {reason}")
 
 
@@ -167,12 +163,12 @@ class _TypedDictWriter:
     def __init__(self, root_name: str) -> None:
         self.root_name: str = root_name
         self.class_bodies: dict[str, str] = {}
-        # The `dict[str, V]` type the root is written as, when one of its keys can't be a field.
+        # This is a `dict[str, V]` when a root key can't be a field
         self.root_alias: str | None = None
 
     def write_root(self, data: dict[str, Any]) -> None:
-        # A root keyed by role IDs or setting names is written as a map, the same as a nested dict would be.
-        # Each value is named after its own key, since the root has no parent key to name them after.
+        # A root keyed by role IDs or setting names is written as a map
+        # Each value is named after its own key
         for key in data:
             if self.is_field_name(key=key) is False:
                 value_types: set[str] = set()
@@ -182,7 +178,7 @@ class _TypedDictWriter:
                 self.root_alias = f"dict[str, {self.join_types(types=value_types)}]"
                 return
 
-        # The root is stored last, so every class it references is already written above it.
+        # Root goes last so its classes are above it
         self.class_bodies[self.root_name] = self.dict_body(class_name=self.root_name, data=data)
 
     def dict_body(self, class_name: str, data: dict[str, Any]) -> str:
@@ -276,8 +272,8 @@ class _TypedDictWriter:
     def merged_field_line(self, class_name: str, key: str, values: list[Any], item_count: int) -> str:
         present = [value for value in values if value is not None]
         field_types: set[str] = set()
-        # Lists across the items are flattened, so empty and filled lists don't give `list[Any] | list[X]`.
-        # Dicts across the items are merged into one class, so the first item's shape isn't the only one kept.
+        # Flatten the lists across items so we don't get `list[Any] | list[X]`
+        # Merge the dicts across items into one class
         flattened = self.flatten_lists(values=present)
         dict_values = self.only_dicts(values=present)
 
@@ -291,7 +287,7 @@ class _TypedDictWriter:
             for value in present:
                 field_types.add(self.infer_type(value=value, key=key, parent_name=class_name))
 
-        # An explicit `None` makes the type optional; a key some items lack makes it `NotRequired`.
+        # An explicit `None` makes it optional, and a key some items lack makes it `NotRequired`
         if len(present) < len(values):
             field_types.add("None")
         field_type = self.join_types(types=field_types)
@@ -301,11 +297,7 @@ class _TypedDictWriter:
         return f"    {key}: {field_type}"
 
     def claim_name(self, candidate: str, parent_name: str, body: str) -> str:
-        """Store a class body under the first free name and return that name.
-
-        A name is free when no class uses it, or when the class using it has the same body.
-        The candidate is tried first, then the parent's name in front of it, then that with a number.
-        """
+        """Store a class body under the first free name and return that name."""
         name = candidate
         if self.is_taken(name=name, body=body):
             name = f"{parent_name}{candidate}"
@@ -329,7 +321,7 @@ class _TypedDictWriter:
         if len(names) == 0:
             return "None" if "None" in types else "Any"
 
-        # An empty list or dict only says `Any` when no other item gave it a real type.
+        # Empty lists and dicts only say `Any` if nothing else gave a type
         for placeholder, prefix in (("dict[str, Any]", "dict["), ("list[Any]", "list[")):
             specific = [name for name in names if name.startswith(prefix) and name != placeholder]
             if placeholder in names and len(specific) > 0:
@@ -339,7 +331,7 @@ class _TypedDictWriter:
             names.append("None")
         return " | ".join(names)
 
-    # `isinstance` alone narrows to `dict[Unknown, Unknown]`, so these two give pyright the JSON shapes.
+    # These give pyright the JSON shapes
     @staticmethod
     def is_dict(value: Any) -> TypeGuard[dict[str, Any]]:
         return isinstance(value, dict)
@@ -350,12 +342,12 @@ class _TypedDictWriter:
 
     @staticmethod
     def is_field_name(key: str) -> bool:
-        # `isidentifier()` is True for a keyword too, and `from: str` is a SyntaxError in a class body.
+        # `isidentifier()` is True for keywords too, but `from: str` is a SyntaxError
         return key.isidentifier() is True and keyword.iskeyword(key) is False
 
     @staticmethod
     def pascal_case(key: str) -> str:
-        # Any character that can't go in a name splits the key, so `et_legacy:stadia controller` gives `EtLegacyStadiaController`.
+        # Characters that can't go in a name split the key, so `et_legacy:stadia controller` is `EtLegacyStadiaController`
         class_name = "".join(part.title() for part in re.split(r"[\W_]+", key))
         if class_name.isidentifier() is False:
             return f"Key{class_name}"
@@ -400,7 +392,7 @@ class _TypedDictWriter:
         return "\n\n\n".join(blocks) + "\n"
 
     def imports(self) -> str:
-        # A root map of plain values, like `dict[str, str]`, writes no class and needs no import at all.
+        # A root map of plain values, like `dict[str, str]`, needs no import
         typing_extensions_names: list[str] = []
         if self.uses_name(name="NotRequired") is True:
             typing_extensions_names.append("NotRequired")
@@ -421,7 +413,7 @@ class _TypedDictWriter:
 
         for body in self.class_bodies.values():
             for field_line in body.splitlines():
-                # Only the annotation counts, since a field can be called `Any` too.
+                # We only check the annotation
                 if pattern.search(field_line.split(": ", 1)[-1]) is not None:
                     return True
         return False
@@ -436,7 +428,7 @@ class Base:
 
     .. note::
         A session expires after 240sec of inactivity per Cube Coders AMP.
-        If for any reason you want to change that value; set the attribute :attr:`session_ttl`.\n
+        If for any reason you want to change that value, set the attribute :attr:`session_ttl`.\n
 
 
     Attributes
@@ -456,25 +448,20 @@ class Base:
     _endpoint_url: str
     _instance_id: str
     _session_ttl: ClassVar[int] = 240
-    # A login in progress on this object is waited for by the other calls, and the session it stores is used.
-    # It only exists while a login runs. It is set in `__init__`.
+    # Other calls wait on this while a login runs, and it only exists during a login
     _login_pending: Union[asyncio.Future[None], None]
 
-    # Cache state for classes whose attributes are populated from an API response rather than __init__.
-    # `_is_cached` flips once data has been applied; `_cached_at` stamps when, so staleness can be told
-    # apart from "never fetched".
+    # This is the cache state for attributes filled from an API response instead of __init__
+    # `_is_cached` is set once data is applied and `_cached_at` is when
     _is_cached: bool = False
     _cached_at: Optional[datetime.datetime] = None
-    # Monotonic mirror of `_cached_at`; the staleness check runs on every guarded attribute access, and
-    # `time.monotonic()` is far cheaper than building a tz-aware datetime each time.
+    # This is a monotonic copy of `_cached_at`, which is cheaper to check on every attribute access
     _cached_monotonic: Optional[float] = None
     _cache_timeout: ClassVar[int] = 300
-    # Named in the cache messages so they can point at whatever actually refreshes the attribute.
-    # `_cache_source` is the class-wide fallback; `_cache_sources` overrides it per attribute for the
-    # ones populated by a different endpoint.
+    # These are named in the cache messages, and `_cache_sources` overrides `_cache_source` per attribute
     _cache_source: ClassVar[str] = "the API call that populates it"
     _cache_sources: ClassVar[dict[str, str]] = {}
-    # Shared by every instance and built on the first `check_key_drift` call; it reads the wrapper source once.
+    # This is built on the first `check_key_drift` call and shared by every instance
     _key_drift_check: ClassVar[Union[KeyDriftCheck, None]] = None
 
     # Error response strings.
@@ -487,12 +474,12 @@ class Base:
     _no_data: ClassVar[str] = "Failed to receive any data from post request."
     _unauthorized_access: ClassVar[str] = "The user does not have the required permissions to interact with this instance."
     _instance_offline: ClassVar[str] = "The requested Instance is not available at this time. | URL: %s"
-    _login_failed: ClassVar[str] = "Failed to login to AMP as '%s' (AMP result %s); check the user, password and 2FA token."
-    # Login result codes confirmed in AMP's own logs. Any other code is reported as its number only.
+    _login_failed: ClassVar[str] = "Failed to login to AMP as '%s' (AMP result %s). Check the user, password and 2FA token."
+    # These are the login result codes, and any other code is reported as its number
     _login_result_names: ClassVar[dict[int, str]] = {0: "Failure", 5: "NoInstanceAccess", 100: "PassthruDisabled"}
     _no_cache: ClassVar[str] = "'%s.%s' has not been populated yet. You must call <%s>.%s first."
     _stale_cache: ClassVar[str] = (
-        "'%s.%s' was cached %s seconds ago and the timeout is %s seconds; the value may be stale. Call <%s>.%s to refresh it."
+        "'%s.%s' was cached %s seconds ago and the timeout is %s seconds. The value may be stale. Call <%s>.%s to refresh it."
     )
     _version_unavailable: ClassVar[str] = "The API call %s is no longer available at this version of AMP %s"
 
@@ -702,7 +689,7 @@ class Base:
             Will raise :exc:`AMPAPINetworkError` or :exc:`AMPAPIResponseError` if any errors occur when attempting to call the API.
 
         .. note::
-            When AMP answers that the stored session no longer exists, this calls :meth:`login` again and sends the request once more.
+            When AMP says the stored session does not exist, this logs in again and sends the request once more.
             A second dead answer raises, and `Core/Login` itself is never sent again.
 
 
@@ -740,16 +727,16 @@ class Base:
         # Ver. 2.6.2.8 Authorization header key change.
         if request_params is None:
             request_params = {}
-        # A copy, since the headers and data are filled in below. A dict the caller passes again would carry the old ones.
+        # We copy it because we fill in the headers and data below
         request_params = request_params.copy()
 
-        # Headers the caller passed are theirs to keep. Only the ones we build here follow a new login.
+        # Only headers we build follow a new login, so the caller's are kept
         library_headers: bool = "headers" not in request_params
 
-        # A dead session gets one login and one resend, once per call.
-        # The RuntimeError retry below has no limit of its own, as before #18.
+        # A dead session gets one login and one resend per call
+        # TODO: The RuntimeError retry below has no limit
         session_retried: bool = False
-        # Counts the RuntimeError retries, for the log line.
+        # This counts the retries for the log line
         runtime_retries: int = 0
 
         while True:
@@ -761,7 +748,7 @@ class Base:
                 self.session = aiohttp.ClientSession()
 
             # request_params.setdefault("headers", {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"})
-            # Rebuilt on every pass. A resend after a new login carries the new session ID.
+            # Rebuilt every pass so a resend carries the new session ID
             if library_headers is True:
                 request_params["headers"] = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
             request_params.setdefault("data", json.dumps(parameters))
@@ -785,7 +772,7 @@ class Base:
                     self.session = aiohttp.ClientSession()
 
                 # retry: int | float = self._backoff.delay()
-                # The backoff can hand back 0 seconds (half of all first retries do). One second is the least we wait.
+                # Backoff can return 0, so we wait at least 1 second
                 retry: int | float = max(1, self._backoff.delay())
                 runtime_retries += 1
                 # LOGGER.error(
@@ -811,7 +798,7 @@ class Base:
                 #     request_params=request_params,
                 #     **response_params,
                 # )
-                # Same retry as the recursive call above. It stays in this loop, and `session_retried` carries over.
+                # This does the same as the old recursive call
                 continue
 
             # ? Suggestion
@@ -834,14 +821,14 @@ class Base:
                         if no_data is True:
                             # response.release()
                             # return None
-                            # A Void endpoint answers JSON null, but AMP still reports a failure in the body with a 200.
+                            # A Void endpoint answers JSON null, but a failure still comes back in the body with a 200
                             response_params["allow_null"] = True
                             await self._response_handler(response=response, **response_params)
                             return None
                         return await self._response_handler(response=response, **response_params)
 
                     except _SessionDeadError as dead_session:
-                        # A second dead answer, or a dead answer to the login itself, is a real failure.
+                        # A second dead answer, or one to the login itself, is a real failure
                         if session_retried is True or url == "Core/Login":
                             raise AMPAPIResponseError(
                                 title=dead_session.title,
@@ -849,9 +836,7 @@ class Base:
                                 reason=dead_session.reason,
                             ) from dead_session
 
-                        # The handler no longer resets the session. It could wipe one another call just stored.
-                        # Reset only if the stored session is still the one this pass sent.
-                        # The login below is a fresh one and the loop resends with the new ID.
+                        # Only reset if the stored session is the one we sent
                         stored_session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
                         if stored_session is not None and stored_session.id == api_session.id:
                             self._reset_session()
@@ -966,7 +951,7 @@ class Base:
         if sanitize_json is True:
             response_json = self.sanitize_json(response_json)
 
-        # A None answer already returned or raised above, so the check is redundant now that sanitize_json keeps the type.
+        # None was already returned or raised above
         # if to_file is True and path is not None and response_json is not None:
         if to_file is True and path is not None:
             # ? SUGGESTION: May have to make this async in the future if it becomes blocking.
@@ -975,7 +960,7 @@ class Base:
                 raise FileNotFoundError(msg, path)
             self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
 
-        # A bool has no title or status to check.
+        # A bool has no title or status
         if isinstance(response_json, bool):
             return response_json
 
@@ -983,18 +968,17 @@ class Base:
         if isinstance(response_json, dict) and "title" in response_json:
             title: str = response_json.get("title")
 
-            # `Session.Exists` is the permission for having a session at all. That marks a dead session apart from a missing permission.
-            # The call never ran. `_post` can log in again and send it once more.
-            # It is a warning, not an error. Only a second dead answer is a failure, and `_post` raises that one.
+            # Missing `Session.Exists` means a dead session
+            # The call never ran, so `_post` logs in again and resends it
             if title == "Unauthorized Access" and "Session.Exists" in str(response_json.get("message", "")):
                 LOGGER.warning(
-                    "<%s.%s> | AMP no longer knows the stored session. | URL: %s",
+                    "<%s.%s> | AMP does not know the stored session. | URL: %s",
                     __class__.__name__,
                     "_response_handler",
                     response.url,
                 )
                 # self._reset_session()
-                # `_post` resets it, and only when the stored session is still the one it sent.
+                # `_post` resets the session
                 raise _SessionDeadError(title=title, url=str(response.url), reason=response_json.get("message", ""))
 
             if title == "Unauthorized Access" or title == "Instance Unavailable":
@@ -1011,14 +995,14 @@ class Base:
             # This will be our default catch all for any "invalid" Responses.
             raise AMPAPIResponseError(title=response_json["title"], url=str(response.url), reason=response_json.get("message", ""))
 
-        # A failed ActionResult, eg. RegisterTargetWithCode against a Controller whose ADS mode is not set yet.
-        # AMP explains why in `reason`, so that is what gets raised.
+        # A failed ActionResult, eg. RegisterTargetWithCode against a Controller with no ADS mode set
+        # AMP puts the cause in `reason`
         if isinstance(response_json, dict) and "status" in response_json and response_json["status"] is False:
             reason: str = str(response_json.get("reason") or "Status is False")
             LOGGER.error("%s failed because of Status: %s | Reason: %s", response.url, response_json["status"], reason)
             raise AMPAPIResponseError(title="Status False", url=str(response.url), reason=reason)
 
-        # Error responses raised above, so only a real capture gets compared.
+        # Errors were already raised, so we only compare good captures
         if check_key_drift is True and to_file is True and path is not None:
             self._check_key_drift(response=response, data=response_json, path=path, sanitized=sanitize_json)
 
@@ -1033,23 +1017,23 @@ class Base:
         Parameters
         ----------
         response : :class:`aiohttp.ClientResponse`
-            The response the capture came from; its URL names the endpoint.
+            The response the capture came from. Its URL names the endpoint.
         data : :class:`object`
             The captured JSON response.
         path : :class:`pathlib.Path`
             The directory the capture was written to.
         sanitized : :class:`bool`
-            If the JSON was sanitized; the TypedDicts use the sanitized `snake_case` keys.
+            If the JSON was sanitized or not. The TypedDicts use the sanitized `snake_case` keys.
 
         """
-        # The URL ends in the endpoint, after any ADSModule/Servers/<id>/ proxy prefix.
+        # The endpoint is at the end, after any ADSModule/Servers/<id>/ prefix
         match = re.search(r"API/([A-Za-z]+/[A-Za-z0-9]+)$", response.url.path)
         if match is None:
             return
 
         endpoint: str = match.group(1)
         if sanitized is False:
-            LOGGER.warning("<%s.%s> | Skipped %s; the TypedDicts use the sanitized keys.", __class__.__name__, "_check_key_drift", endpoint)
+            LOGGER.warning("<%s.%s> | Skipped %s as the TypedDicts use sanitized keys.", __class__.__name__, "_check_key_drift", endpoint)
             return
 
         if Base._key_drift_check is None:
@@ -1057,7 +1041,7 @@ class Base:
 
         found = Base._key_drift_check.check(endpoint=endpoint, data=data)
         if found is None:
-            LOGGER.debug("<%s.%s> | No TypedDict is known for %s.", __class__.__name__, "_check_key_drift", endpoint)
+            LOGGER.debug("<%s.%s> | No TypedDict known for %s.", __class__.__name__, "_check_key_drift", endpoint)
             return
 
         shape, drift = found
@@ -1110,8 +1094,8 @@ class Base:
             If the login request itself failed.
 
         """
-        # A login is in progress on this object. Wait, then check the stored session again.
-        # If the login failed there is still none. This call then tries its own, one at a time.
+        # Wait on a login already running, then check the stored session again
+        # If that login failed there is still no session, so we try our own
         while self._login_pending is not None:
             await asyncio.shield(self._login_pending)
 
@@ -1127,7 +1111,7 @@ class Base:
             session_id: str = session.id
 
         if session_id == "0":
-            # Set with no `await` since the check above. Other calls wait on it until the login is done.
+            # There is no `await` since the check above, and other calls wait on this until the login is done
             pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
             self._login_pending = pending
             try:
@@ -1136,7 +1120,7 @@ class Base:
                         # Handles time based 2Factory Auth Key/Code
                         code = TOTP(self._bridge.token).now()
 
-                    # pyotp raises binascii.Error, a ValueError, for a token that is not valid base32.
+                    # pyotp raises binascii.Error (a ValueError) for a bad base32 token
                     except ValueError as error:
                         msg = (
                             "Please check your 2 Factor Code, should not contain spaces, escape characters "
@@ -1151,11 +1135,11 @@ class Base:
                     "rememberMe": True,
                 }
 
-                # Network and response errors raise straight through; their URL already names Core/Login.
-                # We post directly, since `_call_end_point` logs in first and would call us again.
+                # Network and response errors raise straight through, and their URL names Core/Login
+                # We post directly because `_call_end_point` would log in again
                 result = await self._post(url="Core/Login", parameters=parameters)
                 if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
-                    # AMP sends no reason; a wrong password and a wrong 2FA code both answer `result: 40`.
+                    # AMP sends no reason, and a wrong password and a wrong 2FA code both give `result: 40`
                     amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
                     if isinstance(amp_result, int) and not isinstance(amp_result, bool) and amp_result in self._login_result_names:
                         amp_result = f"{amp_result}, {self._login_result_names[amp_result]}"
@@ -1168,7 +1152,7 @@ class Base:
                 api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
                 self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
                 return result
-            # Resolved with None even when the login raised. Only the call that logged in sees the error.
+            # Waiters get None, and only the caller that logged in sees the error
             finally:
                 self._login_pending = None
                 if not pending.done():
@@ -1194,7 +1178,7 @@ class Base:
         """If the cached API data is older than :attr:`_cache_timeout`.
 
         .. note::
-            Returns False when nothing has been cached yet; use :attr:`_is_cached` to tell the two apart.
+            Returns False when nothing is cached yet. Check :attr:`_is_cached` to tell the two apart.
 
 
         Returns
@@ -1208,27 +1192,11 @@ class Base:
 
     @classmethod
     def _cache_hint(cls, name: str) -> str:
-        """The call a user should make to populate or refresh a cached attribute.
-
-        .. note::
-            Falls back to :attr:`_cache_source` when the attribute has no entry in :attr:`_cache_sources`.
-
-
-        Parameters
-        ----------
-        name : :class:`str`
-            The attribute being reported on.
-
-        Returns
-        -------
-        :class:`str`
-            The call to name in the message. (eg. `"get_instances(format_data=True)"`)
-
-        """
+        """Get the call that populates a cached attribute."""
         return cls._cache_sources.get(name, cls._cache_source)
 
     def _mark_cached(self) -> None:
-        """Stamp this class as holding freshly applied API data."""
+        """Mark this class as holding fresh API data."""
         self._is_cached = True
         self._cached_at = datetime.datetime.now(tz=datetime.UTC)
         self._cached_monotonic = time.monotonic()
@@ -1239,20 +1207,20 @@ class Base:
         Close any open :class:`aiohttp.ClientSession` belonging to this class.
 
         .. note::
-            Safe to call more than once; the session is cleared once closed.
+            Safe to call more than once, since the session is cleared once closed.
 
         .. versionchanged:: 5.0.0
-            `logout` also resets the stored session, and skips `Core/Logout` when there is no session to end.
+            `logout` also resets the stored session and skips `Core/Logout` if there is no session.
 
         Parameters
         ----------
         logout : :class:`bool`, optional
-            Call `Core/Logout` first, so AMP ends the login session instead of leaving it to expire, by default False.
+            If to call `Core/Logout` first or not, by default False.
             A failed logout is logged as a warning and the session is still closed.
 
         """
         stored: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
-        # Without a stored session the dead-session retry in `_post` would log in only to log out.
+        # There is no session to end, so we skip the logout
         if logout is True and (stored is None or stored.id == "0"):
             LOGGER.debug("<%s.%s> | No stored session, skipping `Core/Logout`", __class__.__name__, "clean_up")
         elif logout is True:
@@ -1260,7 +1228,7 @@ class Base:
                 await self._post(url="Core/Logout", no_data=True)
             except Exception:
                 LOGGER.warning("<%s.%s> | `Core/Logout` failed, closing the session anyway", __class__.__name__, "clean_up", exc_info=True)
-            # Logged out or not, the stored session is no use to the next call.
+            # Reset the stored session either way
             self._reset_session()
 
         LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
@@ -1274,8 +1242,8 @@ class Base:
         Enter the async context manager.
 
         .. note::
-            Nothing is opened here; the :class:`aiohttp.ClientSession` is created lazily on the first
-            request. This exists so the session is always closed on the way out.
+            Nothing is opened here. The :class:`aiohttp.ClientSession` is created on the first
+            request. This makes sure the session is closed on the way out.
 
 
         Returns
@@ -1297,7 +1265,7 @@ class Base:
         Exit the async context manager, closing any open session.
 
         .. note::
-            Exceptions are not suppressed; this returns None so any error propagates.
+            Exceptions are not suppressed, so any error propagates.
 
 
         Parameters
@@ -1323,7 +1291,7 @@ class Base:
     ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
 
-        Generic function for calling any API endpoint; a dev tool for testing endpoints that have no wrapper yet.
+        Generic function for calling any API endpoint, a dev tool for testing endpoints with no wrapper yet.
         Some API endpoints require the Instance module type to be ADS. \n
         See `docs/api_spec_sheets/<AMP version>/ADS_api_spec.md` or `Minecraft_api_spec.md` for the full API endpoints
         and parameter information.
@@ -1418,16 +1386,16 @@ class Base:
         named :class:`TypedDict` class using a PascalCase derivation of the parent key,
         ordered so dependencies appear before the class that references them.
 
-        When that name is already used by a class with a different body, the parent class's name goes in
+        When a name is used by a class with a different body, the parent class's name goes in
         front of it (`SecondInfo`), then a number if that is taken too (`SecondInfo2`). A class with an
-        identical body is reused instead.
+        identical body is reused.
 
         A list of dicts produces one merged class. A key missing from some of the dicts is
         ``NotRequired[X]``, a key that is `None` in some of them is ``X | None``, and a key that is both is
         ``NotRequired[X | None]``. Mixed types are a sorted union (``int | str``), and `Any` is only used when
         there is nothing to infer, such as an empty list or dict. A dict with a key that can't be a field, because
         it is not a valid Python identifier (e.g. ``{"0": "Equals", "1": "NotEquals"}``) or is a keyword such as
-        `from`, is emitted as ``dict[str, V]`` rather than a :class:`TypedDict`. That includes the root, which is
+        `from`, is emitted as ``dict[str, V]``, not a :class:`TypedDict`. That includes the root, which is
         then written as ``Name = dict[str, V]``, as for the role IDs of `get_role_ids`.
 
         The returned string starts with the first class, or with the imports, and can be printed or written
@@ -1627,8 +1595,7 @@ class Base:
 
         """
         if isinstance(json, list):
-            # Bind the narrowed value to a typed local; `json` is Any, so everything derived from it
-            # would otherwise be Unknown under strict mode.
+            # This is a typed local for pyright
             source_list: list[Any] = json  # pyright: ignore[reportUnknownVariableType]
 
             # entries: list[Any] = copy.copy(x=source_list)
@@ -1638,7 +1605,7 @@ class Base:
             #         entries[index] = cls.sanitize_json(json=entry)
             # return entries
 
-            # Only dictionary entries are sanitized. Anything else (nested lists included) is kept as is.
+            # Only dicts get sanitized, and the rest is kept
             # return [cls.sanitize_json(json=entry) if isinstance(entry, dict) else entry for entry in source_list]
             cleaned_list: list[Any] = []
             for entry in source_list:
@@ -1669,7 +1636,7 @@ class Base:
             #     new_map[new_key] = new_value
             # return new_map
 
-            # Build a fresh dict rather than copying and popping. The key conversion is cached per key string.
+            # We build a fresh dict, and the key conversion is cached
             new_map: dict[str, Any] = {}
             for old_key, old_value in source_map.items():
                 # new_value: Any = cls.sanitize_json(json=old_value) if isinstance(old_value, (list, dict)) else old_value
@@ -1678,8 +1645,7 @@ class Base:
                     nested: Any = old_value  # pyright: ignore[reportUnknownVariableType]
                     new_value = cls.sanitize_json(json=nested)
 
-                # AMP setting nodes (eg. `ADSModule.Defaults.DefaultAuthServerURL`) are the only dotted keys AMP sends.
-                # None of the captured responses has a dotted field name, so a dotted key is kept exactly as sent.
+                # AMP setting nodes are dotted, so we keep those keys as sent
                 new_key: str = old_key if "." in old_key else _snake_key(old_key)
                 new_map[new_key] = new_value
             return new_map
@@ -1710,7 +1676,7 @@ class Base:
             Leading slashes are dropped, so `/` means the Instance root. Everything else is sent to AMP as given.
 
         .. versionchanged:: 5.0.0
-            Only drops leading slashes. 4.x refused any `_`, turned `..` into `.` and stripped a leading `.`.
+            Only leading slashes are dropped. `_`, `..` and a leading `.` are left as given.
 
 
         Parameters
@@ -1774,7 +1740,7 @@ class Base:
         Raises
         ------
         :exc:`RuntimeError`
-            The AMP version is `version` or newer, so it no longer has the endpoint.
+            If the AMP version is `version` or newer.
 
         """
         result: ResponseAliasFull = await self._post(
@@ -1790,8 +1756,7 @@ class Base:
             LOGGER.warning("Unable to validate version Info, the API call %s may raise an error", "`Core/GetDiagnosticsInfo`")
             return
 
-        # to_dataclass hands back the raw str when it cannot parse the version; comparing that against a
-        # BuildInfo raises a TypeError, so bail out the same way an unusable response does.
+        # to_dataclass returns a str if it can't parse, so we skip the check
         _version: BuildInfo | str = BuildInfo.to_dataclass(data=result["application_version"])
         if isinstance(_version, str):
             LOGGER.warning(
@@ -1801,7 +1766,7 @@ class Base:
             )
             return
 
-        # The endpoint only exists before the version it was removed in.
+        # The endpoint only exists before the removal version
         if not _version < version:
             raise RuntimeError(self._version_unavailable % (f"`{endpoint}`", _version))
 
