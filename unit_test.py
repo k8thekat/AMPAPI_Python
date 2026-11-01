@@ -36,7 +36,7 @@ from ampapi.modules import (
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 # _response_dir = Path(__file__).parent / "_responses"
-# Our 2.6.5 ADS captures
+# These tests read our 2.6.5 ADS captures
 _response_dir = Path(__file__).parent / "_responses" / "2.6.5" / "ads"
 
 
@@ -442,7 +442,7 @@ class TestUserInfoUnpack:
         #     assert set(entry.keys()) == dc_field_names, (
         #         f"Key mismatch: JSON has {set(entry.keys())}, dataclass has {dc_field_names}"
         #     )
-        # 2.6.5 captures lack oidc_sub, it defaults to None
+        # 2.6.5 captures lack oidc_sub, so it defaults to None
         for entry in data:
             _assert_keys_match(entry=entry, dataclass_type=UserInfo)
 
@@ -456,7 +456,7 @@ class TestScheduleDataUnpack:
         data: dict[str, Any] = _load_response("getscheduledata.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, dict)
         # schedule = ScheduleData(**data)
-        # ScheduleData takes the response, it's not a dataclass
+        # ScheduleData takes the response because it's not a dataclass
         schedule = ScheduleData(data)  # pyright: ignore[reportArgumentType]
         assert isinstance(schedule.available_methods, list)
         assert isinstance(schedule.available_triggers, list)
@@ -554,7 +554,7 @@ class TestDiagnosticsUnpack:
         # assert set(data.keys()) == dc_field_names, (
         #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
         # )
-        # 2.6.5 captures lack config_version, it defaults to an empty string
+        # 2.6.5 captures lack config_version, so it defaults to an empty string
         _assert_keys_match(entry=data, dataclass_type=Diagnostics)
 
 
@@ -578,7 +578,7 @@ class TestModuleUnpack:
         # assert set(data.keys()) == dc_field_names, (
         #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
         # )
-        # 2.6.5 captures lack local_login_enabled, it defaults to True
+        # 2.6.5 captures lack local_login_enabled, so it defaults to True
         _assert_keys_match(entry=data, dataclass_type=Module)
 
 
