@@ -36,7 +36,7 @@ from ampapi.modules import (
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 # _response_dir = Path(__file__).parent / "_responses"
-# The 2.6.5 ADS and Core captures these tests read, since `_responses/` is grouped by AMP version and kind (#31).
+# Our 2.6.5 ADS captures
 _response_dir = Path(__file__).parent / "_responses" / "2.6.5" / "ads"
 
 
@@ -52,12 +52,12 @@ def _response_exists(filename: str) -> bool:
 
 
 def _assert_keys_match(entry: dict[str, Any], dataclass_type: type[Any]) -> None:
-    """Assert a JSON entry's keys are the dataclass's fields. A field the entry lacks must have a default."""
+    """Check the JSON keys against the dataclass fields."""
     field_names = {dataclass_field.name for dataclass_field in fields(dataclass_type)}
     extra = set(entry.keys()) - field_names
     assert not extra, f"Extra keys in JSON: {extra}"
 
-    # A newer AMP field the 2.6.5 captures lack is fine, as long as the dataclass can build without it.
+    # Fields missing from the capture need a default
     for dataclass_field in fields(dataclass_type):
         has_default = dataclass_field.default is not MISSING or dataclass_field.default_factory is not MISSING
         if dataclass_field.name not in entry:
@@ -218,7 +218,6 @@ async def capture_ads_responses(section: str = "LIVE") -> list[EndpointResult]:
         "get_provision_fitness": lambda: ads.get_provision_fitness(format_data=False, **rp),
         "get_target_info": lambda: ads.get_target_info(format_data=False, **rp),
         # "get_instances": lambda: ads.get_instances(include_self=True, **rp),
-        # `get_instances` always includes the ADS's own Target now, so it has no `include_self`.
         "get_instances": lambda: ads.get_instances(**rp),
     }
 
@@ -388,15 +387,15 @@ async def capture_all_and_report(section: str = "LIVE") -> None:
 
 # endregion
 
-# region Dataclass Unpack Tests — Saved Responses
+# region Dataclass Unpack Tests - Saved Responses
 
 
 class TestSessionUnpack:
-    """Verify Session dataclass unpacks directly from JSON without cast."""
+    """Verify Session dataclass unpacks directly from JSON."""
 
     def test_unpack_all_sessions(self) -> None:  # noqa: D102
         if not _response_exists("getactiveampsessions.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: list[Any] = _load_response("getactiveampsessions.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, list)
         for entry in data:
@@ -420,7 +419,7 @@ class TestSessionUnpack:
 
 
 class TestUserInfoUnpack:
-    """Verify UserInfo dataclass unpacks directly from JSON without cast."""
+    """Verify UserInfo dataclass unpacks directly from JSON."""
 
     def test_unpack_all_users(self) -> None:  # noqa: D102
         if not _response_exists("getallampuserinfo.json"):
@@ -443,13 +442,13 @@ class TestUserInfoUnpack:
         #     assert set(entry.keys()) == dc_field_names, (
         #         f"Key mismatch: JSON has {set(entry.keys())}, dataclass has {dc_field_names}"
         #     )
-        # The 2.6.5 capture has no `oidc_sub`, which defaults to None.
+        # 2.6.5 captures lack oidc_sub, it defaults to None
         for entry in data:
             _assert_keys_match(entry=entry, dataclass_type=UserInfo)
 
 
 class TestScheduleDataUnpack:
-    """Verify ScheduleData dataclass unpacks directly from JSON without cast."""
+    """Verify ScheduleData dataclass unpacks directly from JSON."""
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getscheduledata.json"):
@@ -457,7 +456,7 @@ class TestScheduleDataUnpack:
         data: dict[str, Any] = _load_response("getscheduledata.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, dict)
         # schedule = ScheduleData(**data)
-        # `ScheduleData` is a slotted class that takes the response, not a dataclass.
+        # ScheduleData takes the response, it's not a dataclass
         schedule = ScheduleData(data)  # pyright: ignore[reportArgumentType]
         assert isinstance(schedule.available_methods, list)
         assert isinstance(schedule.available_triggers, list)
@@ -476,7 +475,7 @@ class TestScheduleDataUnpack:
 
 
 class TestLoginResultsUnpack:
-    """Verify LoginResults dataclass unpacks directly from JSON without cast."""
+    """Verify LoginResults dataclass unpacks directly from JSON."""
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("login.json"):
@@ -532,7 +531,7 @@ class TestActionResultUnpack:
 
 # endregion
 
-# region Dataclass Unpack Tests — Captured Responses (require capture_responses)
+# region Dataclass Unpack Tests - Captured Responses (require capture_responses)
 
 
 class TestDiagnosticsUnpack:
@@ -540,7 +539,7 @@ class TestDiagnosticsUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getdiagnosticsinfo.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: dict[str, Any] = _load_response("getdiagnosticsinfo.json")  # pyright: ignore[reportAssignmentType]
         diag = Diagnostics(**data)
         assert isinstance(diag.application_name, str)
@@ -555,7 +554,7 @@ class TestDiagnosticsUnpack:
         # assert set(data.keys()) == dc_field_names, (
         #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
         # )
-        # The 2.6.5 capture has no `config_version`, which defaults to an empty string.
+        # 2.6.5 captures lack config_version, it defaults to an empty string
         _assert_keys_match(entry=data, dataclass_type=Diagnostics)
 
 
@@ -564,7 +563,7 @@ class TestModuleUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getmoduleinfo.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: dict[str, Any] = _load_response("getmoduleinfo.json")  # pyright: ignore[reportAssignmentType]
         mod = Module(**data)
         assert isinstance(mod.module_name, str)
@@ -579,7 +578,7 @@ class TestModuleUnpack:
         # assert set(data.keys()) == dc_field_names, (
         #     f"Key mismatch: JSON has {set(data.keys())}, dataclass has {dc_field_names}"
         # )
-        # The 2.6.5 capture has no `local_login_enabled`, which defaults to True.
+        # 2.6.5 captures lack local_login_enabled, it defaults to True
         _assert_keys_match(entry=data, dataclass_type=Module)
 
 
@@ -588,7 +587,7 @@ class TestPortUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getportsummaries.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: list[Any] = _load_response("getportsummaries.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, list)
         for entry in data:
@@ -618,7 +617,7 @@ class TestRoleUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getroledata.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: list[Any] = _load_response("getroledata.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, list)
         for entry in data:
@@ -643,7 +642,7 @@ class TestRunningTaskUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("gettasks.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: list[Any] = _load_response("gettasks.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, list)
         for entry in data:
@@ -659,7 +658,7 @@ class TestStatusUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getstatus.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: dict[str, Any] = _load_response("getstatus.json")  # pyright: ignore[reportAssignmentType]
         status = Status(**data)
         assert isinstance(status.uptime, str)
@@ -678,7 +677,7 @@ class TestUpdateInfoUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getupdateinfo.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: dict[str, Any] = _load_response("getupdateinfo.json")  # pyright: ignore[reportAssignmentType]
         info = UpdateInfo(**data)
         assert isinstance(info.update_available, bool)
@@ -698,7 +697,7 @@ class TestUpdatesUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getupdates.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: dict[str, Any] = _load_response("getupdates.json")  # pyright: ignore[reportAssignmentType]
         updates = Updates(**data)
         assert isinstance(updates.console_entries, list)
@@ -718,7 +717,7 @@ class TestAuditLogEntryUnpack:
 
     def test_unpack(self) -> None:  # noqa: D102
         if not _response_exists("getauditlogentries.json"):
-            pytest.skip("Response file not captured yet — run capture_responses() first")
+            pytest.skip("Response file not captured yet, run capture_responses() first")
         data: list[Any] = _load_response("getauditlogentries.json")  # pyright: ignore[reportAssignmentType]
         assert isinstance(data, list)
         for entry in data:

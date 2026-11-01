@@ -1,19 +1,16 @@
+# Copyright (C) 2021-2026 Katelynn Cadwallader. Part of AMPAPI_Python, under the GPL v3 (see LICENSE).
 """Capture AMP API responses from a Controller/Target setup.
 
-Stdlib only (plus ``pyotp`` if a 2FA token is set) for the request path, so it runs on any box
-that can reach the Controller and a bug in the library's request handling can't mask what the
-API actually returned.
+Stdlib only (plus `pyotp` if a 2FA token is set) for the request path, so a bug in the
+library's request handling can't hide what the API returned.
 
 .. note::
-    Responses are written **sanitized** by default - keys are run through
-    :meth:`Base.sanitize_json` so the files match what the library hands back and what the
-    ``*Response`` TypedDicts describe. AMP sends ``PascalCase`` on the wire; the library
-    converts to ``snake_case``, so an unsanitized dump does NOT match the TypedDicts.
-    Sanitizing needs ``ampapi`` importable; without it the dump falls back to raw and says so.
-    Pass ``-raw`` to keep AMP's original keys deliberately.
+    Responses are written sanitized by default. Keys run through :meth:`Base.sanitize_json`
+    to match the `*Response` TypedDicts, since AMP sends `PascalCase` keys.
+    Sanitizing needs `ampapi` importable, otherwise the dump falls back to raw and says so.
+    Pass ``-raw`` to keep AMP's original keys.
 
-
-Reads credentials from ``local.ini`` next to this file. Usage::
+Reads credentials from `local.ini` next to this file. Usage::
 
     python controller_dump.py                      # dumps the CONTROLLER section
     python controller_dump.py -section TARGET      # dumps the TARGET section
@@ -35,10 +32,10 @@ from configparser import ConfigParser
 from pathlib import Path
 from typing import Any
 
-# * (label, endpoint, parameters). Parameters marked "<...>" are filled in at runtime from an
-# * earlier response; see _resolve() below.
+# (label, endpoint, parameters)
+# Parameters marked "<...>" are filled in from an earlier response, see _resolve()
 ENDPOINTS: list[tuple[str, str, dict[str, Any]]] = [
-    # -- no parameters --------------------------------------------------------
+    # No parameters
     ("target info", "ADSModule/GetTargetInfo", {}),
     ("instances (targets)", "ADSModule/GetInstances", {"ForceIncludeSelf": True}),
     ("local instances", "ADSModule/GetLocalInstances", {}),
@@ -49,7 +46,7 @@ ENDPOINTS: list[tuple[str, str, dict[str, Any]]] = [
     ("supported applications", "ADSModule/GetSupportedApplications", {}),
     ("supported app summaries", "ADSModule/GetSupportedAppSummaries", {}),
     ("provision spec", "Core/GetProvisionSpec", {}),
-    # -- parameterised, resolved from earlier responses -----------------------
+    # Parameters from earlier responses
     ("datastore", "ADSModule/GetDatastore", {"id": "<datastore_id>"}),
     ("datastore instances", "ADSModule/GetDatastoreInstances", {"datastoreId": "<datastore_id>"}),
     ("instance", "ADSModule/GetInstance", {"InstanceId": "<instance_id>"}),
@@ -60,7 +57,7 @@ ENDPOINTS: list[tuple[str, str, dict[str, Any]]] = [
 
 
 def _get_sanitizer(*, raw: bool) -> Any:
-    """Return the library's sanitize_json, or None when raw output was asked for or ampapi is missing."""
+    """Return the library's `sanitize_json`, or None for raw output or a missing ampapi."""
     if raw:
         return None
     try:
@@ -73,21 +70,21 @@ def _get_sanitizer(*, raw: bool) -> Any:
 
 
 class Dumper:
-    """Logs into an AMP instance and writes endpoint responses to disk."""
+    """Log into an AMP Instance and write endpoint responses to disk."""
 
-    def __init__(self, base_url: str, out_dir: Path, sanitizer: Any = None) -> None:
+    def __init__(self, base_url: str, out_dir: Path, sanitizer: Any = None) -> None:  # noqa: D107
         self.base = base_url.rstrip("/")
         self.out = out_dir
         self.sanitizer = sanitizer
         self.session: str | None = None
         self.resolved: dict[str, Any] = {}
-        # * AMP's self-signed certs are common on a LAN; don't fail the dump over them.
+        # AMP's certs are often self-signed on a LAN
         self.ssl_ctx = ssl.create_default_context()
         self.ssl_ctx.check_hostname = False
         self.ssl_ctx.verify_mode = ssl.CERT_NONE
 
     def post(self, endpoint: str, parameters: dict[str, Any]) -> tuple[int, bytes]:
-        """Send one API request and return the status code with the raw body."""
+        """Send one API request, returning the status code and raw body."""
         body = dict(parameters)
         if self.session:
             body["SESSIONID"] = self.session
@@ -101,7 +98,7 @@ class Dumper:
             return response.status, response.read()
 
     def login(self, username: str, password: str, token: str) -> bool:
-        """Authenticate, generating a TOTP code when a 2FA token is configured."""
+        """Log in, with a TOTP code if a 2FA token is set."""
         code = ""
         if token:
             try:
@@ -121,7 +118,7 @@ class Dumper:
         return True
 
     def _resolve(self, parameters: dict[str, Any]) -> dict[str, Any] | None:
-        """Substitute any ``<placeholder>`` from values discovered in earlier responses."""
+        """Fill each ``<placeholder>`` from earlier responses."""
         out: dict[str, Any] = {}
         for key, value in parameters.items():
             if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
@@ -134,8 +131,8 @@ class Dumper:
         return out
 
     def _learn(self, endpoint: str, parsed: Any) -> None:
-        """Pick IDs out of a response so later endpoints have something to ask for."""
-        entries: list[dict[str, Any]] = parsed if isinstance(parsed, list) else []
+        """Keep IDs from a response for later endpoints."""
+        entries: list[dict[str, Any]] = parsed if isinstance(parsed, list) else []  # pyright: ignore[reportUnknownVariableType]
         if endpoint.endswith("GetDatastores") and entries:
             first: dict[str, Any] = entries[0]
             self.resolved.setdefault("datastore_id", first.get("Id", first.get("id")))
@@ -149,7 +146,7 @@ class Dumper:
                     return
 
     def run(self) -> None:
-        """Walk every endpoint, writing each response and reporting what happened."""
+        """Call every endpoint and write each response."""
         self.out.mkdir(parents=True, exist_ok=True)
         written, skipped, failed = 0, 0, 0
 
@@ -175,7 +172,7 @@ class Dumper:
             except json.JSONDecodeError:
                 note = "  <- NOT VALID JSON"
 
-            # * Match what the library writes: sanitized keys, so the file lines up with the TypedDicts.
+            # Sanitized keys match the TypedDicts
             if parsed is not None and self.sanitizer is not None:
                 parsed = self.sanitizer(json=parsed)
                 (self.out / name).write_text(json.dumps(parsed, indent=4))
@@ -186,12 +183,12 @@ class Dumper:
             if parsed is None and not note:
                 note = "  <- empty/null body"
             elif isinstance(parsed, list):
-                entries: list[Any] = parsed
+                entries: list[Any] = parsed  # pyright: ignore[reportUnknownVariableType]
                 note = f"  <- list, {len(entries)} entries" + ("  (EMPTY)" if not entries else "")
             elif isinstance(parsed, dict):
-                mapping: dict[str, Any] = parsed
+                mapping: dict[str, Any] = parsed  # pyright: ignore[reportUnknownVariableType]
                 note = f"  <- dict, {len(mapping)} keys"
-                # * Key case depends on whether the sanitizer ran.
+                # Key case depends on the sanitizer
                 title = mapping.get("title", mapping.get("Title"))
                 if title and ("message" in mapping or "Message" in mapping):
                     note += f"  !! {title}"
@@ -204,7 +201,7 @@ class Dumper:
 
 
 def main() -> None:
-    """Parse arguments, read local.ini and run the dump."""
+    """Read local.ini and run the dump."""
     parser = argparse.ArgumentParser(description="Dump AMP API responses from a Controller/Target.")
     parser.add_argument("-section", default="CONTROLLER", help="local.ini section to use, default CONTROLLER.")
     parser.add_argument(
