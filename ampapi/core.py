@@ -124,7 +124,7 @@ if TYPE_CHECKING:
 
 __all__ = ("Core",)
 
-# What `Core.set_config` and `Core.set_configs` take for a value. AMP reads every value as a String.
+# What `set_config` and `set_configs` take. AMP reads every value as a String
 SettingValue = Union[str, bool, int, list[Any], tuple[Any, ...], dict[str, Any]]
 
 
@@ -250,7 +250,7 @@ class Core(Base):
             AMP sends the licence key back in the answer.
 
         .. versionchanged:: 5.0.0
-            Returns the :class:`LicenceInfo` AMP sends, not the :class:`ActionResult` around it.
+            Returns a :class:`LicenceInfo`, not an :class:`ActionResult`.
 
         Parameters
         ----------
@@ -289,7 +289,7 @@ class Core(Base):
         if not is_response_type(result, LicenceResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=result, expec_type=dict)
 
-        # The spec types this `ActionResult<JObject>`. The licence is in `result`, and a failure has already raised.
+        # The licence is inside "result"
         licence: Any = result.get("result")
         if not is_response_type(licence, LicenceInfoResponse, LICENCE_INFO_REQUIRED_KEYS, LICENCE_INFO_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/ActivateAMPLicence", cur_type=licence, expec_type=dict)
@@ -869,11 +869,11 @@ class Core(Base):
         username : :class:`str`
             The AMP User name.
         is_oidc_user : Union[:class:`bool`, None], optional
-            If the user signs in through OIDC, by default None, which leaves AMP's default.
+            If the user signs in through OIDC or not, by default None.
 
             .. versionadded:: 5.0.0
         oidc_sub : Union[:class:`str`, None], optional
-            The OIDC subject (`sub`) claim that identifies the user, by default None, which leaves AMP's default.
+            The OIDC subject (`sub`) claim that identifies the user, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -891,7 +891,7 @@ class Core(Base):
         """
         await self._reauth()
         # parameters: dict[str, str] = {"Username": username}
-        # `IsOIDCUser` is a Boolean, so the values are no longer all strings.
+        # Not every value is a string
         parameters: dict[str, Any] = {"Username": username}
         if is_oidc_user is not None:
             parameters["IsOIDCUser"] = is_oidc_user
@@ -1456,16 +1456,29 @@ class Core(Base):
         # if days_of_month < 1 or days_of_month > 31:
         #     msg = "Days of month must be between 1 and 31."
         #     raise ValueError(msg)
-        # Each list is checked per element against the same ranges.
-        for name, values, lowest, highest in (
-            ("Months", months, 1, 12),
-            ("Days", days, 0, 7),
-            ("Hours", hours, 0, 23),
-            ("Minutes", minutes, 0, 59),
-            ("Days of month", days_of_month, 1, 31),
-        ):
-            if any(value < lowest or value > highest for value in values):
-                msg = f"{name} must be between {lowest} and {highest}."
+        for month in months:
+            if month < 1 or month > 12:
+                msg = "Months must be between 1 and 12."
+                raise ValueError(msg)
+
+        for day in days:
+            if day < 0 or day > 7:
+                msg = "Days must be between 0 and 7."
+                raise ValueError(msg)
+
+        for hour in hours:
+            if hour < 0 or hour > 23:
+                msg = "Hours must be between 0 and 23."
+                raise ValueError(msg)
+
+        for minute in minutes:
+            if minute < 0 or minute > 59:
+                msg = "Minutes must be between 0 and 59."
+                raise ValueError(msg)
+
+        for day_of_month in days_of_month:
+            if day_of_month < 1 or day_of_month > 31:
+                msg = "Days of month must be between 1 and 31."
                 raise ValueError(msg)
 
         parameters: dict[str, Any] = {
@@ -1573,7 +1586,7 @@ class Core(Base):
             ConfirmTwoFactorSetup must be invoked to complete setup.
 
         .. versionchanged:: 5.0.0
-            Returns the :class:`TwoFactorSetupInfo` AMP sends, not the :class:`ActionResult` around it.
+            Returns a :class:`TwoFactorSetupInfo`, not an :class:`ActionResult`.
 
 
         Parameters
@@ -1613,7 +1626,7 @@ class Core(Base):
         if not is_response_type(result, TwoFactorSetupResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/EnableTwoFactor", cur_type=result, expec_type=dict)
 
-        # The spec types this `ActionResult<TwoFactorSetupInfo>`. The setup data is in `result`, and a failure has already raised.
+        # The setup data is inside "result"
         setup: Any = result.get("result")
         if not is_response_type(
             setup,
@@ -1848,7 +1861,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if "is_super_user" not in result:  # 'is_super_user' uniquely identifies UserInfoResponse in the union
+        if "is_super_user" not in result:  # Only UserInfoResponse has "is_super_user"
             raise AMPAPITypeError(end_point="Core/GetAMPUserInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             return UserInfo.from_response(result)
@@ -2189,7 +2202,7 @@ class Core(Base):
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetDiagnosticsInfo", cur_type=result, expec_type=dict)
 
-        if "cpu_model" not in result:  # 'cpu_model' uniquely identifies DiagnosticsResponse in the union
+        if "cpu_model" not in result:  # Only DiagnosticsResponse has "cpu_model"
             raise AMPAPITypeError(end_point="Core/GetDiagnosticsInfo", cur_type=result, expec_type=dict)
 
         if format_data is None:
@@ -2239,7 +2252,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if "app_name" not in result:  # 'app_name' uniquely identifies ModuleResponse in the union
+        if "app_name" not in result:  # Only ModuleResponse has "app_name"
             raise AMPAPITypeError(end_point="Core/GetModuleInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             return Module.from_response(result)
@@ -2521,7 +2534,7 @@ class Core(Base):
             If the token should be temporary, defaults to None.
 
             .. versionchanged:: 5.0.0
-                Left out of the request when None, which AMP takes as its default. AMP rejects a null.
+                Left out of the request when None, because AMP rejects a null.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -2535,7 +2548,7 @@ class Core(Base):
         """
         await self._reauth()
         # parameters: dict[str, Any] = {"Description": description, "IsTemporary": is_temporary}
-        # Both are optional to AMP, but a null `IsTemporary` fails, so a parameter left as None isn't sent.
+        # AMP fails on a null IsTemporary, so skip anything that is None
         parameters: dict[str, Any] = {}
         if description is not None:
             parameters["Description"] = description
@@ -2598,7 +2611,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if "is_common_role" not in result:  # 'is_common_role' uniquely identifies RoleResponse in the union
+        if "is_common_role" not in result:  # Only RoleResponse has "is_common_role"
             raise AMPAPITypeError(end_point="Core/GetRole", cur_type=result, expec_type=dict)
         if format_data is True:
             return Role.from_response(result)
@@ -2726,7 +2739,7 @@ class Core(Base):
         if not is_response_type(result, ScheduleDataResponse, SCHEDULE_DATA_REQUIRED_KEYS, SCHEDULE_DATA_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=result, expec_type=dict)
 
-        # ScheduleData takes the whole response; it converts the three nested lists itself.
+        # ScheduleData handles the nested lists
         if format_data is True:
             return ScheduleData(data=result)
         return result
@@ -2783,8 +2796,13 @@ class Core(Base):
             raise AMPAPITypeError(end_point="Core/GetSettingsSpec", cur_type=result, expec_type=dict)
         if format_data is True:
             # Module categories have a colon in their name (eg. `valheim:stadiacontroller`) and go into `modules`.
-            categories = {name: entries for name, entries in result.items() if ":" not in name}
-            modules = {name: entries for name, entries in result.items() if ":" in name}
+            categories: dict[str, Any] = {}
+            modules: dict[str, Any] = {}
+            for name, entries in result.items():
+                if ":" in name:
+                    modules[name] = entries
+                else:
+                    categories[name] = entries
             return SettingsSpecParent.from_response({**categories, "modules": modules})
         return result
 
@@ -2811,7 +2829,7 @@ class Core(Base):
         setting_node : :class:`str`
             The setting node name.
         with_refresh : Union[:class:`bool`, None], optional
-            Refresh the setting's value list before reading it, by default None, which leaves AMP's default.
+            Refresh the setting's value list before reading it, by default None.
 
             .. versionadded:: 5.0.0
         request_params : :class:`AioHTTPRequestOptions` | None, optional
@@ -2827,7 +2845,7 @@ class Core(Base):
         """
         await self._reauth()
         # parameters: dict[str, str] = {"SettingNode": setting_node}
-        # `WithRefresh` is a Boolean, so the values are no longer all strings.
+        # Not every value is a string
         parameters: dict[str, Any] = {"SettingNode": setting_node}
         if with_refresh is not None:
             parameters["WithRefresh"] = with_refresh
@@ -2841,7 +2859,7 @@ class Core(Base):
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/GetSettingValues", cur_type=result, expec_type=dict)
 
-        # No TypedDict models this response, so it comes back as a plain dict.
+        # No TypedDict models this, so it stays a plain dict
         return dict(result)
 
     async def get_status(
@@ -3061,7 +3079,7 @@ class Core(Base):
         """
         await self._reauth()
         data: ScheduleData | ScheduleDataResponse = await self.get_schedule_data(format_data=False)
-        # format_data=False always returns the raw dict; the isinstance check is what tells pyright that.
+        # isinstance is only here for pyright
         if not isinstance(data, dict):
             raise AMPAPITypeError(end_point="Core/GetScheduleData", cur_type=data, expec_type=dict)
 
@@ -3111,7 +3129,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if "update_available" not in result:  # 'update_available' uniquely identifies UpdateInfoResponse in the union
+        if "update_available" not in result:  # Only UpdateInfoResponse has "update_available"
             raise AMPAPITypeError(end_point="Core/GetUpdateInfo", cur_type=result, expec_type=dict)
         if format_data is True:
             return UpdateInfo.from_response(result)
@@ -3158,8 +3176,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        # UpdatesResponse shares the 'status' key with ActionResultResponse, so 'console_entries' tells them apart;
-        # the ActionResult endpoints exclude it with `"console_entries" not in result`.
+        # UpdatesResponse and ActionResultResponse share "status", so we use "console_entries" to tell them apart
         if "console_entries" not in result:
             raise AMPAPITypeError(end_point="Core/GetUpdates", cur_type=result, expec_type=dict)
         if format_data is True:
@@ -3293,7 +3310,7 @@ class Core(Base):
             request_params=request_params,
             **response_params,
         )
-        # AMP answers an empty list instead of an empty object when no one is connected.
+        # AMP sends an empty list when nobody is connected
         if isinstance(result, list) and len(result) == 0:
             users: dict[str, Any] = {}
         elif isinstance(result, dict):
@@ -3304,7 +3321,7 @@ class Core(Base):
         if format_data is None:
             format_data = self.format_data
 
-        # A UUID -> name map that no TypedDict models; Players takes it as a plain dict.
+        # This is a UUID to name map with no TypedDict
         if format_data is True:
             return Players(data=users)
         return users
@@ -3473,7 +3490,7 @@ class Core(Base):
         Raises
         ------
         :exc:`RuntimeError`
-            The AMP version no longer has this endpoint. (AMP 2.6.0.0 and newer)
+            If the AMP version is 2.6.0.0 or newer.
 
         """
         await self._reauth()
@@ -3554,7 +3571,7 @@ class Core(Base):
             On success returns a :class:`LoginResults` dataclass, None if AMP sent no login token.
 
         """
-        # No token means no 2FA, so send an empty code rather than one generated from an empty secret.
+        # No token means no 2FA, so we send an empty code
         code: str = TOTP(token).now() if token else ""
         parameters: dict[str, str | bool] = {"username": amp_user, "password": amp_password, "token": code, "rememberMe": remember_me}
         result: ResponseAliasFull = await self._post(
@@ -3598,11 +3615,10 @@ class Core(Base):
         await self._reauth()
         # return await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
         await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
-        # AMP ended the session. The stored one is no use to the next call.
+        # Our session ended, so we reset it
         self._reset_session()
 
-    # AMP restarts the AMP process of whichever Instance gets the call, an ADS or not.
-    # The application inside an Instance is `restart_application`.
+    # Restarts the AMP process on any Instance, ADS or not
     # @Base.ads_only
     async def restart_amp(
         self,
@@ -3618,8 +3634,8 @@ class Core(Base):
         Endpoint: `Core/RestartAMP`
 
         .. note::
-            A running application is stopped and is not started again. The session ends with the process. This
-            Instance's stored session is reset and the next call logs in again by itself.
+            A running application is stopped and is not started again. The stored session is reset and the next call
+            logs in again.
 
         .. note::
             This restarts AMP itself, not the application it runs. To restart the application (eg. a Minecraft server),
@@ -3656,7 +3672,7 @@ class Core(Base):
         if not is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/RestartAMP", cur_type=result, expec_type=dict)
 
-        # The restart ended our session. Resetting it lets the next call log in instead of sending one that fails.
+        # The restart ended our session, so we reset it and the next call logs in
         self._reset_session()
         if format_data is True:
             return ActionResult.from_response(result)
@@ -3747,7 +3763,7 @@ class Core(Base):
             **response_params,
         )
         # TODO: Confirm the success payload.
-        # The VMs have no OIDC provider; a failed answer has the LoginResults shape (result 3, "state invalid or expired").
+        # A failed login comes back as a LoginResults
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
 
@@ -3770,7 +3786,7 @@ class Core(Base):
         Endpoint: `Core/RefreshSettingValueList`
 
         .. versionchanged:: 5.0.0
-            Sends AMP's `Node` parameter instead of `Name`.
+            Sends AMP's `Node` parameter.
 
         Parameters
         ----------
@@ -3824,7 +3840,7 @@ class Core(Base):
         Endpoint: `Core/RefreshSettingsSourceCache`
 
         .. versionchanged:: 5.0.0
-            Returns None and no longer takes `format_data`.
+            Returns None and `format_data` was removed.
 
         Parameters
         ----------
@@ -4433,8 +4449,8 @@ class Core(Base):
         Endpoint: `Core/SetConfigs`
 
         .. note::
-            A list, tuple or dict value is sent as a JSON string, which is what AMP needs for a `List<String>` setting.
-            An empty string ``""`` clears a list setting to None, not to ``[]``; send an empty list for that.
+            A list, tuple or dict value is sent as a JSON string. To clear a list setting, send an empty list. An empty
+            string sets it to None.
 
         .. versionchanged:: 5.0.0
             A list, tuple or dict value is sent as a JSON string, and `data` accepts :class:`bool` and :class:`int` values.
@@ -4456,9 +4472,14 @@ class Core(Base):
         """
         await self._reauth()
         # parameters: dict[str, dict[str, str]] = {"data": data}
-        parameters: dict[str, dict[str, Any]] = {
-            "data": {node: json.dumps(value) if isinstance(value, (list, tuple, dict)) else value for node, value in data.items()},
-        }
+        settings: dict[str, Any] = {}
+        for node, value in data.items():
+            if isinstance(value, (list, tuple, dict)):
+                settings[node] = json.dumps(value)
+            else:
+                settings[node] = value
+
+        parameters: dict[str, dict[str, Any]] = {"data": settings}
         result: ResponseAliasFull = await self._post(
             url="Core/SetConfigs",
             parameters=parameters,
@@ -4486,8 +4507,8 @@ class Core(Base):
         Endpoint: `Core/SetConfig`
 
         .. note::
-            A list, tuple or dict value is sent as a JSON string, which is what AMP needs for a `List<String>` setting.
-            An empty string ``""`` clears a list setting to None, not to ``[]``; send an empty list for that.
+            A list, tuple or dict value is sent as a JSON string. To clear a list setting, send an empty list. An empty
+            string sets it to None.
 
         .. versionchanged:: 5.0.0
             A list, tuple or dict value is sent as a JSON string, and `value` accepts :class:`bool` and :class:`int`.
@@ -4755,7 +4776,7 @@ class Core(Base):
         Endpoint: `Core/UpgradeAMP`
 
         .. note::
-            AMP restarts, which ends the session. This Instance's stored session is reset and the next call logs in again.
+            AMP restarts, so the stored session is reset and the next call logs in again.
 
         .. warning::
             The Instance must be an ADS or Controller.
@@ -4811,7 +4832,7 @@ class Core(Base):
         Endpoint: `Core/UpdateAMPInstance`
 
         .. note::
-            AMP restarts, which ends the session. This Instance's stored session is reset and the next call logs in again.
+            AMP restarts, so the stored session is reset and the next call logs in again.
 
         .. warning::
             The Instance must be an ADS or Controller.
