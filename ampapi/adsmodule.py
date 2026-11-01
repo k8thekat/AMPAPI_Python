@@ -21,7 +21,6 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 
@@ -196,8 +195,8 @@ class ADSModule(Base):
 
         .. note::
             `args` takes setting nodes, eg. `{"Core.Login.UseAuthServer": "True", "Core.Login.AuthServerURL": url}`
-            points an Instance at its Controller for logins, which is what `ampinstmgr --RepairAuth` does
-            (tested on AMP 2.8.0.8). Send it through the :class:`TargetADS` for a Target's Instance.
+            points an Instance at its Controller for logins, the same as `ampinstmgr --RepairAuth`.
+            Send it through the :class:`TargetADS` for a Target's Instance.
 
         .. warning::
             `rebuild_configuration` is untested.
@@ -282,16 +281,15 @@ class ADSModule(Base):
         template_id : :class:`int`
             The Template ID to apply.
         new_friendly_name : Union[:class:`str`, None], optional
-            The new friendly name for the Instance, by default None, which leaves AMP's default.
+            The new friendly name for the Instance, by default None.
 
             .. versionadded:: 5.0.0
         secret : Union[:class:`str`, None], optional
-            The secret AMP uses when applying the template, by default None, which leaves AMP's default.
+            The secret AMP uses when applying the template, by default None.
 
             .. versionadded:: 5.0.0
         restart_if_previously_running : Union[:class:`bool`, None], optional
-            Restart the Instance after applying the template if it was running before, by default None, which leaves
-            AMP's default.
+            Restart the Instance after applying the template if it was running before, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -446,7 +444,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/CancelPairing`
 
         .. versionchanged:: 5.0.0
-            Returns None and no longer takes `format_data`.
+            Returns None and does not take `format_data`.
 
         Parameters
         ----------
@@ -689,26 +687,7 @@ class ADSModule(Base):
     ) -> None:
         """|coro|
 
-        Poll `Core/GetTasks` once a second until the task ends, and raise when it fails.
-
-        AMP drops a task from the list when it succeeds. A failed task stays listed with `status` False and its `reason`.
-        The caller bounds the wait with :func:`asyncio.timeout`.
-
-        Parameters
-        ----------
-        task : :class:`RunningTaskResponse`
-            The raw task the endpoint answered with.
-        end_point : :class:`str`
-            The endpoint that started the task, used in the error.
-        request_params : :class:`AioHTTPRequestOptions` | None, optional
-            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
-        **response_params : :class:`Unpack[ResponseHandlerOptions]`
-            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
-
-        Raises
-        ------
-        :exc:`AMPAPIResponseError`
-            If the task ends with `status` False.
+        Poll `Core/GetTasks` until the task ends and raise if it failed.
 
         """
         while True:
@@ -725,7 +704,7 @@ class ADSModule(Base):
                     current = item
                     break
 
-            # AMP drops our task from the list once it succeeds.
+            # AMP drops our task from the list once it succeeds
             if current is None:
                 return
 
@@ -759,9 +738,9 @@ class ADSModule(Base):
 
         .. note::
             AMP answers with the creation task before the Instance exists. Some failures, such as an IP address that
-            isn't on the machine, only show in that task, so pass `wait` to raise for them.
-            On a remote Target the task ends once the Controller hands the creation over, and the Target creates the
-            Instance in a task of its own.
+            isn't on the machine, only show in that task. Pass `wait` to raise for them.
+            On a remote Target the task ends once the Controller hands the creation over, and then the Target creates the
+            Instance in its own task.
 
 
         Parameters
@@ -856,8 +835,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/CreateInstanceFromSpec`
 
         .. versionchanged:: 5.0.0
-            `target_datastore` is an :class:`int`. 4.x annotated it as a :class:`str`, but AMP's `TargetDatastore` is an
-            Int32.
+            `target_datastore` is an :class:`int` instead of a :class:`str`, as AMP's `TargetDatastore` is an Int32.
 
         Parameters
         ----------
@@ -1189,7 +1167,7 @@ class ADSModule(Base):
         if format_data is None:
             format_data = self.format_data
 
-        # The spec names a RunningTask for this endpoint, not an ActionResult.
+        # The spec names a RunningTask here, not an ActionResult
         # if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
         #     if format_data is True:
         #         return ActionResult.from_response(result)
@@ -1571,14 +1549,14 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetGroup`
 
         .. note::
-            AMP answers with the Target item for the ID, the same shape as one entry of :meth:`get_instances`.
-            JSON null means the Target is gone, and this method returns None for it.
+            AMP answers with the Target item for the ID, the same shape as one Target of :meth:`get_instances`.
+            JSON null means the Target is gone and we return None for it.
 
 
         Parameters
         ----------
         group_id : :class:`str`
-            The ADS ID of the Target, the `instance_id` of a :meth:`get_instances` entry.
+            The ADS ID of the Target, the `instance_id` of a :meth:`get_instances` Target.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1591,7 +1569,7 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        # AMP answers JSON null when the Target is gone, which is not an error here.
+        # A Target that is gone is a JSON null, not an error
         response_params["allow_null"] = True
         parameters: dict[str, str] = {"groupId": group_id}
         result: ResponseAliasFull = await self._post(
@@ -1667,7 +1645,7 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetInstances`
 
         .. note::
-            AMP's `ForceIncludeSelf` is always sent as True, so the ADS's own Target is in the list.
+            AMP's `ForceIncludeSelf` is always sent as True. The ADS's own Target is in the list.
 
 
         Parameters
@@ -1742,7 +1720,7 @@ class ADSModule(Base):
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="ADSModule/GetInstanceLiveSettings", cur_type=result, expec_type=dict)
 
-        # The keys are AMP setting node names, a user defined mapping that cannot be typed any further.
+        # The keys are setting node names, so we can't type them any further
         return result  # pyright: ignore[reportReturnType]
 
     @Base.ads_only
@@ -1896,15 +1874,15 @@ class ADSModule(Base):
     ) -> ADSModeState:
         """|coro|
 
-        Gets the role of the ADS this object logs in to (Controller, Target, hybrid or standalone).
+        Get the role of the ADS this object logs in to (Controller, Target, hybrid or standalone).
 
         Endpoint: `Core/GetConfig`
 
         .. note::
-            This reads the `ADSModule.ADS.Mode` setting, so any logged in user can read it on the ADS they log in to.
+            This reads the `ADSModule.ADS.Mode` setting. Any logged in user can read it on the ADS they log in to.
 
         .. note::
-            The mode is not cached, so every call asks AMP.
+            The mode is not cached. Every call asks AMP.
 
         Parameters
         ----------
@@ -1934,16 +1912,16 @@ class ADSModule(Base):
             raise AMPAPIKeyError("subcategory", "Core/GetConfig", result)  # noqa: EM101
 
         mode_value = result["current_value"]
-        # A value the enum lacks raises ValueError, whether an unknown number or not a number at all.
-        with contextlib.suppress(ValueError):
+        # A value the enum lacks raises a ValueError
+        try:
             return ADSModeState(mode_value)
-
-        LOGGER.warning(
-            "<%s.%s> | Unknown ADSModule.ADS.Mode value: %r | Returning ADSModeState.not_set",
-            __class__.__name__,
-            "get_mode",
-            mode_value,
-        )
+        except ValueError:
+            LOGGER.warning(
+                "<%s.%s> | Unknown ADSModule.ADS.Mode value: %r | Returning ADSModeState.not_set",
+                __class__.__name__,
+                "get_mode",
+                mode_value,
+            )
         return ADSModeState.not_set
 
     @Base.ads_only
@@ -2036,7 +2014,7 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        # AMP answers JSON null when it has no fitness data, which is not an error here.
+        # No fitness data is a JSON null, not an error
         response_params["allow_null"] = True
         result: ResponseAliasFull = await self._post(
             url="ADSModule/GetProvisionFitness",
@@ -3134,7 +3112,7 @@ class ADSModule(Base):
             return result
         raise AMPAPIKeyError("status", "ADSModule/RestartInstance", result)  # noqa: EM101
 
-    # TODO: Returns Any; build a dataclass and TypedDict once the response shape has been confirmed.
+    # TODO: Returns Any, so we need to build a dataclass and TypedDict.
     @Base.ads_only
     async def servers(
         self,
@@ -3156,7 +3134,7 @@ class ADSModule(Base):
 
         .. warning::
             `ADSModule/Servers` is AMP's proxy route, the one the library uses as a URL path in `ADSModule/Servers/<ID>/API/...`.
-            Calling it as an endpoint fails, AMP 2.8.0.8 answers "Index was outside the bounds of the array".
+            Calling it as an endpoint fails with "Index was outside the bounds of the array".
 
 
         Parameters
@@ -3283,11 +3261,11 @@ class ADSModule(Base):
         must_stop : :class:`bool | None`, optional
             UNK, by default None.
         advertised_address : Union[:class:`str`, None], optional
-            The address AMP advertises for the Instance, by default None, which leaves AMP's default.
+            The address AMP advertises for the Instance, by default None.
 
             .. versionadded:: 5.0.0
         advertised_address_includes_port : Union[:class:`bool`, None], optional
-            If `advertised_address` already includes the port, by default None, which leaves AMP's default.
+            If `advertised_address` already includes the port, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -3360,7 +3338,7 @@ class ADSModule(Base):
         suspended : :class:`bool`, optional
             Set the Instance to be suspended, by default False.
         suspend_reason : Union[:class:`str`, None], optional
-            The reason the Instance is suspended, by default None, which leaves AMP's default.
+            The reason the Instance is suspended, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -3648,8 +3626,12 @@ class ADSModule(Base):
 
         """
         await self._reauth()
-        # Accepts the dataclass or the raw InstanceDatastoreResponse; the TypedDict is already a dict.
-        data: dict[str, Any] = updated_datastore.to_dict() if isinstance(updated_datastore, InstanceDatastore) else dict(updated_datastore)
+        # We take the dataclass or the raw dict
+        data: dict[str, Any]
+        if isinstance(updated_datastore, InstanceDatastore):  # noqa: SIM108
+            data = updated_datastore.to_dict()
+        else:
+            data = dict(updated_datastore)
         parameters: dict[str, Any] = {"updatedDatastore": data}
         result: ResponseAliasFull = await self._post(
             url="ADSModule/UpdateDatastore",
@@ -3772,7 +3754,7 @@ class ADSModule(Base):
         if format_data is None:
             format_data = self.format_data
 
-        # AMP 2.8.0.8 answers with a RunningTask, not the ActionResult its spec names (vm1, 2026-10-24).
+        # AMP 2.8.0.8 sends back a RunningTask, not the ActionResult its spec lists
         # if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
         #     if format_data is True:
         #         return ActionResult.from_response(result)
@@ -3976,7 +3958,7 @@ class ADSModule(Base):
         instance_name : :class:`str`
             The Instance name.
         restart_if_running : Union[:class:`bool`, None], optional
-            Restart the Instance after the upgrade if it is running, by default None, which leaves AMP's default.
+            Restart the Instance after the upgrade if it is running, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -3994,7 +3976,7 @@ class ADSModule(Base):
         """
         await self._reauth()
         # parameters: dict[str, str] = {"InstanceName": instance_name}
-        # `RestartIfRunning` is a Boolean, so the values are no longer all strings.
+        # `RestartIfRunning` is a Boolean, not a string
         parameters: dict[str, Any] = {"InstanceName": instance_name}
         if restart_if_running is not None:
             parameters["RestartIfRunning"] = restart_if_running

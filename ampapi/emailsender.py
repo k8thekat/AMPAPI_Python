@@ -36,7 +36,7 @@ __all__ = ("EmailSenderPlugin",)
 class EmailSenderPlugin(Base):
     """Contains the functions for any ``/API/EmailSenderPlugin/`` API endpoints."""
 
-    async def test_SMTP_settings(  # noqa: N802 # Mirrors the AMP `TestSMTPSettings` endpoint name, renaming it would break the public API.
+    async def test_SMTP_settings(  # noqa: N802 # This mirrors the AMP endpoint name
         self,
         *,
         format_data: Union[bool, None] = None,

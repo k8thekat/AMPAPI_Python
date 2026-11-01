@@ -246,7 +246,7 @@ class FileManagerPlugin(Base):
         file_path : :class:`str`
             Path to the file; relative to the Instance root. eg ``./InstanceName/``.
         overwrite_existing : Union[:class:`bool`, None], optional
-            Overwrite an archive that already exists, by default None, which leaves AMP's default.
+            Overwrite an archive that already exists, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -264,7 +264,7 @@ class FileManagerPlugin(Base):
         """
         await self._reauth()
         # parameters: dict[str, str] = {"PathToArchive": self.sanitize_path(file_path)}
-        # `OverwriteExisting` is a Boolean, so the values are no longer all strings.
+        # `OverwriteExisting` is a Boolean, not a string
         parameters: dict[str, Any] = {"PathToArchive": self.sanitize_path(file_path)}
         if overwrite_existing is not None:
             parameters["OverwriteExisting"] = overwrite_existing
@@ -745,7 +745,7 @@ class FileManagerPlugin(Base):
         Endpoint: `FileManagerPlugin/ReleaseFileUploadLock`
 
         .. note::
-            AMP answers success whether or not a lock was held, or the file exists (measured on AMP-2.8.0.8).
+            AMP returns success even if no lock was held or the file doesn't exist.
 
         Parameters
         ----------
@@ -1023,7 +1023,7 @@ class FileManagerPlugin(Base):
         Endpoint: `FileManagerPlugin/WriteFileChunk`
 
         .. versionchanged:: 5.0.0
-            `append` is renamed `final_chunk`. It was always sent as AMP's `FinalChunk`, which marks the last chunk.
+            `append` is renamed `final_chunk`.
 
         Parameters
         ----------
@@ -1089,7 +1089,7 @@ class FileManagerPlugin(Base):
         Endpoint: `FileManagerPlugin/UploadFolder`
 
         .. note::
-            The `target_directory` must already exist, AMP answers "The specified directory does not exist" otherwise.
+            The `target_directory` must already exist, otherwise AMP answers "The specified directory does not exist".
             Subfolders in a file's `relative_path` are created.
 
 
@@ -1102,7 +1102,7 @@ class FileManagerPlugin(Base):
         target_directory : :class:`str`
             Path to the folder the files are uploaded into; relative to the Instance root. eg ``./InstanceName/``.
         files : list[:class:`FolderUploadFile`]
-            The files to upload, each one's content is sent as base64.
+            The files to upload. Each file's content is sent as base64.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional

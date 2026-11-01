@@ -479,16 +479,15 @@ class LocalFileBackupPlugin(Base):
         s3 : :class:`bool`, optional
             If the backup should be on S3 or not.
         was_created_automatically : Union[:class:`bool`, None], optional
-            Mark the backup as one AMP created automatically, by default None, which leaves AMP's default.
+            Mark the backup as one AMP created automatically, by default None.
 
             .. versionadded:: 5.0.0
         dirty_only : Union[:class:`bool`, None], optional
-            Back up only if files changed since the last backup, by default None, which leaves AMP's default. When
-            nothing changed, AMP takes no backup and answers an :class:`ActionResult`.
+            Back up only if files changed since the last backup, by default None.
 
             .. versionadded:: 5.0.0
         backup_while_running : Union[:class:`bool`, None], optional
-            Take the backup while the Instance is running, by default None, which leaves AMP's default.
+            Take the backup while the Instance is running, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -536,13 +535,13 @@ class LocalFileBackupPlugin(Base):
         #     return RunningTask.from_response(result)
         # return result
 
-        # A running task carries the ActionResult keys too, so it is checked first.
+        # RunningTask also has the ActionResult keys, so check it first
         if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
                 return RunningTask.from_response(result)
             return result
 
-        # With `DirtyOnly` and nothing changed, AMP takes no backup and answers an ActionResult (vm1, 2026-10-24).
+        # DirtyOnly with nothing changed gives us an ActionResult
         if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
             if format_data is True:
                 return ActionResult.from_response(result)

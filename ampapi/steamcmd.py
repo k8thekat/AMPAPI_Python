@@ -30,8 +30,7 @@ if TYPE_CHECKING:
 __all__ = ("SteamCMDPlugin",)
 
 
-# AMP names this module in lowercase (`steamcmdplugin`), so the URLs below are lowercase as well.
-# `SteamCMDPlugin/...` fails with "No such module loaded".
+# AMP wants the module name lowercase, so `SteamCMDPlugin/` fails with "No such module loaded"
 class SteamCMDPlugin(Base):
     """Contains all Endpoints for `/API/steamcmdplugin/`."""
 
@@ -44,7 +43,7 @@ class SteamCMDPlugin(Base):
     ) -> None:
         """|coro|
 
-        Cancels a pending Steam Guard login.
+        Cancel a pending Steam Guard login.
 
         Endpoint: `steamcmdplugin/CancelSteamGuard`
 
@@ -78,7 +77,7 @@ class SteamCMDPlugin(Base):
     ) -> None:
         """|coro|
 
-        Sends the Steam Guard code to a pending Steam login.
+        Send the Steam Guard code to a pending Steam login.
 
         Endpoint: `steamcmdplugin/SteamGuardCode`
 
@@ -117,7 +116,7 @@ class SteamCMDPlugin(Base):
     ) -> None:
         """|coro|
 
-        Sets the Steam username and password the Instance logs in with.
+        Set the Steam username and password the Instance logs in with.
 
         Endpoint: `steamcmdplugin/SteamUsernamePassword`
 

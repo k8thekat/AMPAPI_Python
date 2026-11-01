@@ -55,7 +55,7 @@ class GenericModule(Base):
     ) -> ImportConfig | ImportConfigResponse:
         """|coro|
 
-        Imports the settings from a config file in the Instance's files.
+        Import the settings from a config file in the Instance's files.
 
         Endpoint: `GenericModule/ImportConfig`
 
@@ -107,7 +107,7 @@ class GenericModule(Base):
     ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Refreshes the remote options of a setting field.
+        Refresh the remote options of a setting field.
 
         Endpoint: `GenericModule/RefreshRemoteOptions`
 
@@ -159,7 +159,7 @@ class GenericModule(Base):
     ) -> ActionResult | ActionResultResponse:
         """|coro|
 
-        Refreshes the tool discovery of a setting field.
+        Refresh the tool discovery of a setting field.
 
         Endpoint: `GenericModule/RefreshToolDiscovery`
 
@@ -209,7 +209,7 @@ class GenericModule(Base):
     ) -> None:
         """|coro|
 
-        Reloads the Generic config of the Instance.
+        Reload the Generic config of the Instance.
 
         Endpoint: `GenericModule/ReloadGenericConfig`
 
@@ -242,7 +242,7 @@ class GenericModule(Base):
     ) -> None:
         """|coro|
 
-        Requests the server info from the Instance.
+        Request the server info from the Instance.
 
         Endpoint: `GenericModule/RequestServerInfo`
 

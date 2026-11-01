@@ -71,7 +71,7 @@ class AnalyticsPlugin(Base):
         Endpoint: `AnalyticsPlugin/GetAnalyticsSummary`
 
         .. versionchanged:: 5.0.0
-            `start_date` is sent as an ISO 8601 string, which is AMP's `DateTime` format. 4.x sent a POSIX timestamp.
+            `start_date` is sent as an ISO 8601 string instead of a POSIX timestamp.
 
         Parameters
         ----------
@@ -82,7 +82,7 @@ class AnalyticsPlugin(Base):
         filters : Union[:class:`AnalyticsFilter`, None], optional
             Filters results based upon the supplied dataclass values. See :class:`AnalyticsFilter`, by default None.
         player_count : Union[:class:`int`, None], optional
-            The player count AMP uses for the summary, by default None, which leaves AMP's default.
+            The player count AMP uses for the summary, by default None.
 
             .. versionadded:: 5.0.0
         format_data : Union[:class:`bool`, None], optional
@@ -148,13 +148,13 @@ class AnalyticsPlugin(Base):
 
 
         .. note::
-            AMP answers with JSON null when it has no data for the player. This method returns None for that,
-            through the `allow_null` response option. Every other error is raised as normal.
+            AMP answers with JSON null when it has no data for the player and we return None for that.
+            Every other error is raised as normal.
 
 
         .. note::
             The Instance needs `AnalyticsPlugin.Privacy.EnableAnalytics` and `AnalyticsPlugin.Privacy.UserSpecificData`
-            turned on. AMP looks the player up by name; a UUID answers null.
+            turned on. AMP looks the player up by name, so a UUID answers null.
 
 
         .. versionadded:: 5.0.0
@@ -177,7 +177,7 @@ class AnalyticsPlugin(Base):
 
         """
         await self._reauth()
-        # AMP answers JSON null when it has no data for the player, which is not an error here.
+        # No data for the player is a JSON null, not an error
         response_params["allow_null"] = True
         parameters: dict[str, str] = {"Username": username}
         result: ResponseAliasFull = await self._post(
