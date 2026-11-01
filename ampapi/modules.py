@@ -225,21 +225,7 @@ def attribute_converter(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _field_values(instance: Any) -> dict[str, Any]:
-    """Collect a dataclass instance's field values into a dict.
-
-    A `slots=True` dataclass has no `__dict__`, and `vars(self)` raises on it. The `__repr__` methods use this instead.
-
-    Parameters
-    ----------
-    instance : Any
-        The dataclass instance.
-
-    Returns
-    -------
-    dict[:class:`str`, Any]
-        Field name to value, in field order.
-
-    """
+    """Collect a dataclass instance's field values into a dict, since `vars` fails on `slots=True`."""
     return {field_.name: getattr(instance, field_.name) for field_ in fields(instance)}
 
 
@@ -247,14 +233,7 @@ def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
     """Deconstruct a dataclass into an API parameter dict.
 
     .. note::
-        Keys are the dataclass field names verbatim; AMP takes these nested payload objects in
-        `snake_case`, so no key conversion happens here. Attributes set to None are omitted
-        entirely rather than sent as ``null``.
-
-
-    .. note::
-        :class:`Enum` attributes are unwrapped to their ``.value``; :func:`json.dumps` cannot
-        serialize an Enum, so leaving them intact raises when the request is built.
+        Enums are sent as their ``.value`` and None values are omitted.
 
 
     Parameters
@@ -329,23 +308,20 @@ class ResponseData:
 
     """
 
-    # Empty, so a `slots=True` subclass doesn't get a `__dict__` back from this base.
+    # This keeps slots=True subclasses from getting a __dict__
     __slots__ = ()
 
-    # Class/key pairs already reported. Each unknown key AMP sends is logged once, not on every response.
+    # These are the unknown keys we've already logged
     _reported_unknown_keys: ClassVar[set[tuple[str, str]]] = set()
-    # The converter of every field of each class, worked out once per class.
+    # These are the converters for each class's fields
     _build_plans: ClassVar[dict[type, dict[str, Any]]] = {}
 
     @staticmethod
     def _converter(hint: Any) -> Callable[[Any], Any] | None:
-        """The function that turns a response value into what the type hint names, worked out once from the hint.
-
-        Returns None when the hint holds no dataclass or list. The value is then used as sent.
-        """
+        """Get the function that converts a response value to its hinted type, None if the hint needs none."""
         origin = typing.get_origin(hint)
-        # A union tries each member in order and takes the first that converts.
-        # `list[Consumes] | list[ConsumesResponse]` builds Consumes.
+        # A union takes the first member that converts
+        # `list[Consumes] | list[ConsumesResponse]` builds Consumes
         if origin is Union or origin is types.UnionType:
             options: list[Callable[[Any], Any]] = []
             for option in typing.get_args(hint):
@@ -368,7 +344,6 @@ class ResponseData:
             return convert_union
 
         if isinstance(hint, type) and issubclass(hint, ResponseData):
-            # Bound once here, so each nested value doesn't look the classmethod up again.
             from_response = hint.from_response
             return lambda value: from_response(value) if _is_json_object(value) else value
 
@@ -381,14 +356,13 @@ class ResponseData:
 
     @classmethod
     def _build_plan(cls) -> dict[str, Callable[[Any], Any] | None]:
-        """Each field name of this dataclass and the converter for its value, worked out once per class."""
+        """Map each field name of this dataclass to its converter."""
         plan = cls._build_plans.get(cls)
         if plan is None:
-            # `modules.py` imports its TypedDicts only for type checking. The `_types` names are added for the hints
-            # that mention them.
+            # The TypedDicts are only imported for type checking, so add the `_types` names
             namespace: dict[str, Any] = {**vars(_types), **vars(sys.modules[cls.__module__])}
             field_types = typing.get_type_hints(cls, globalns=namespace)
-            # Only `from_response` calls this, after it has checked the class is a dataclass.
+            # from_response checks for a dataclass first
             plan = {
                 entry.name: ResponseData._converter(field_types[entry.name])
                 for entry in fields(cls)  # pyright: ignore[reportArgumentType]
@@ -400,7 +374,7 @@ class ResponseData:
     def from_response(cls, data: Mapping[str, Any]) -> Self:
         """Build this dataclass from an AMP response, converting nested dataclasses from the field type hints.
 
-        Keys the dataclass doesn't declare are dropped and logged once, instead of raising a :exc:`TypeError`.
+        Keys the dataclass doesn't declare are dropped and logged once.
 
         .. versionadded:: 5.0.0
 
@@ -424,7 +398,6 @@ class ResponseData:
             msg = f"from_response() needs a dataclass, got {cls!r}."
             raise TypeError(msg)
 
-        # The cache is read here first, which skips a classmethod call on every response after the first.
         plan = ResponseData._build_plans.get(cls)
         if plan is None:
             plan = cls._build_plan()
@@ -435,10 +408,10 @@ class ResponseData:
                 if (cls.__name__, key) not in cls._reported_unknown_keys:
                     cls._reported_unknown_keys.add((cls.__name__, key))
                     LOGGER.warning(
-                        "<%s> | %s has no field %r, AMP sent a key the library doesn't know yet and it was left out.",
+                        "<%s> | We encountered an unknown key %r on %s and left it out.",
                         "from_response",
-                        cls.__name__,
                         key,
+                        cls.__name__,
                     )
                 continue
             convert = plan[key]
@@ -471,7 +444,7 @@ class ActionResult(ResponseData):
     status: bool
     reason: Union[str, None] = field(default=None)
     result: Union[str, dict[str, Any], None] = field(default=None)
-    # Added in AMP 2.8 (confirmed against 2.8.0.8); defaulted so older responses still construct.
+    # Added in AMP 2.8, so they default
     support_url: Union[str, None] = field(default=None)
     support_title: Union[str, None] = field(default=None)
 
@@ -662,21 +635,21 @@ class AnalyticsSummary(ResponseData):
         The period with the most sessions, default is an empty :class:`AnalyticsGraphData`.
 
         .. versionchanged:: 5.0.0
-            Is an :class:`AnalyticsGraphData`, was a dict.
+            Is an :class:`AnalyticsGraphData` instead of a dict.
     country_data : list[:class:`AnalyticsCountryData`] | list[:class:`AnalyticsCountryDataResponse`]
         The Country information for the summary, default is a list.
     graph_data : list[:class:`AnalyticsGraphData`] | list[:class:`AnalyticsGraphDataResponse`]
         The Data displayed on the Web UI panel Analytics Menu, default is a list.
 
         .. versionchanged:: 5.0.0
-            Holds :class:`AnalyticsGraphData`, was a list of dicts.
+            Holds :class:`AnalyticsGraphData` instead of dicts.
     is_demo : :class:`bool`
         UNK, default is False.
     quietest_time : :class:`AnalyticsGraphData` | :class:`AnalyticsGraphDataResponse`
         The period with the fewest sessions, default is an empty :class:`AnalyticsGraphData`.
 
         .. versionchanged:: 5.0.0
-            Is an :class:`AnalyticsGraphData`, was a dict.
+            Is an :class:`AnalyticsGraphData` instead of a dict.
     stats : list[:class:`AnalyticsStats`] | list[:class:`AnalyticsStatsResponse`]
         The Analytics Stats of the summary, default is a list.
     top_players : list[:class:`AnalyticsTopPlayers`] | list[:class:`AnalyticsTopPlayersResponse`]
@@ -795,7 +768,7 @@ class AnalyticsUserDetails(ResponseData):
     recent_sessions: dict[str, str]
 
     def __post_init__(self) -> None:  # noqa: D105
-        # AMP sends these without a timezone. They match `UserApplicationData.join_time`, which AMP marks as UTC.
+        # AMP sends these without a timezone, but they are UTC
         if isinstance(self.first_session, str):
             self.first_session = timestamp_converter(timestamp=self.first_session).replace(tzinfo=datetime.UTC)
         if isinstance(self.last_session, str):
@@ -837,8 +810,7 @@ class APIParams:
     _sessions: dict[str, APISession] = field(init=False, default_factory=dict[str, "APISession"])
 
     def __post_init__(self) -> None:
-        """Strips a trailing `/` from :attr:`url`."""
-        # We drop any trailing slash once here so every URL built from `url` is right.
+        """Strip a trailing `/` from :attr:`url`."""
         self.url = self.url.rstrip("/")
 
 
@@ -922,10 +894,9 @@ class Application(ResponseData):
     module_name: str
     no_commercial_usage: bool
     supported_platforms: int
-    # Not in 4.6.0's dataclass; defaulted so older responses still construct.
     deprecated_reason: str | None = field(default=None)
     is_multi_ip_aware: bool = field(default=False)
-    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    # Added in AMP 2.8.0.4, so they default
     resource_usage_info: str | None = field(default=None)
     settings: dict[str, str] = field(default_factory=dict[str, str])
 
@@ -1090,7 +1061,7 @@ class Backup(ResponseData):
     taken_by: str
     total_size_bytes: int
     timestamp: str | datetime.datetime
-    # Confirmed against AMP 2.8.0.8 (FretsServer01); defaulted so older responses still construct.
+    # Older AMP versions may not send these, so they default
     compressed_size_bytes: Union[int, None] = field(default=None)
     hash_sha1: Union[str, None] = field(default=None)
     meta: Any = field(default=None)
@@ -1230,8 +1201,8 @@ class BuildInfo(ResponseData):
             return data
         return temp
 
+    # It is mutable, so it is unhashable
     __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         return (
@@ -1243,7 +1214,7 @@ class BuildInfo(ResponseData):
         )
 
     def __lt__(self, other: object) -> bool:  # noqa: D105
-        # Compared part by part like any version number, so 2.5.0.0 is older than 2.6.0.0.
+        # We compare part by part like any version number
         return isinstance(other, self.__class__) and (self.major, self.minor, self.revision, self.minor_revision) < (
             other.major,
             other.minor,
@@ -1366,7 +1337,7 @@ class ConsoleEntries(ResponseData):
     source: str
     type: str
     timestamp: str | datetime.datetime
-    # Confirmed against getupdates.json; only ever seen as None, defaulted so older responses still construct.
+    # This has only ever been seen as None
     source_id: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:  # noqa: D105
@@ -1399,7 +1370,7 @@ class Consumes(ResponseData):
         The values to be used for "input_type" if Any, default is None.
 
         .. versionchanged:: 5.0.0
-            Is None when the argument has no values, was "".
+            Is None when the argument has no values, instead of "".
     placeholder : :class:`str`, optional
         The placeholder text the web panel shows in the input, default is "".
 
@@ -1413,7 +1384,7 @@ class Consumes(ResponseData):
 
         .. versionadded:: 5.0.0
     selection_source : Union[:class:`str`, None], optional
-        Where the choices come from, default is None. Only seen as null so far.
+        UNK, only seen as null, default is None.
 
         .. versionadded:: 5.0.0
     locked : :class:`bool`, optional
@@ -1421,11 +1392,11 @@ class Consumes(ResponseData):
 
         .. versionadded:: 5.0.0
     locked_value : Union[:class:`str`, None], optional
-        The value the argument is locked to, default is None. Only seen as null so far.
+        UNK, only seen as null, default is None.
 
         .. versionadded:: 5.0.0
     locked_reason : Union[:class:`str`, None], optional
-        Why the argument is locked, default is None. Only seen as null so far.
+        UNK, only seen as null, default is None.
 
         .. versionadded:: 5.0.0
 
@@ -1435,7 +1406,7 @@ class Consumes(ResponseData):
     input_type: str
     name: str
     value_type: str
-    # AMP sends null for this as well as a dict (captured in getscheduledata.json).
+    # AMP sends null as well as a dict
     enum_values: Union[dict[str, str], None] = field(default=None)
     placeholder: str = field(default="")
     suffix: str = field(default="")
@@ -1445,8 +1416,8 @@ class Consumes(ResponseData):
     locked_value: Union[str, None] = field(default=None)
     locked_reason: Union[str, None] = field(default=None)
 
+    # It is mutable, so it is unhashable
     __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
@@ -1526,7 +1497,7 @@ class CreateInstance:
         See :attr:`Controller.available_ips`.
 
         .. versionchanged:: 5.0.0
-            The default is ``"0.0.0.0"``; it was ``"192.168.0.1"``.
+            The default is ``"0.0.0.0"`` instead of ``"192.168.0.1"``.
     admin_username : :class:`str`
         The username of the Instance's admin user, default is "admin". AMP rejects an empty username.
     admin_password : :class:`str`
@@ -1599,7 +1570,6 @@ class CreateInstance:
         return data
 
 
-# The hand-written class before 5.0.0, when it became a dataclass built with `from_response`.
 # class DeploymentTemplate:
 #     """Used for :meth:`ADSModule.update_deployment_template` function call.
 #
@@ -1707,7 +1677,7 @@ class DeploymentTemplate(ResponseData):
         Your pre-created data structure to be parsed for the required API parameters.
 
     .. versionchanged:: 5.0.0
-        A dataclass built with :meth:`DeploymentTemplate.from_response`. An unknown key is logged instead of raising.
+        A dataclass built with :meth:`DeploymentTemplate.from_response`, which logs an unknown key instead of raising.
 
     Attributes
     ----------
@@ -1868,11 +1838,11 @@ class Diagnostics(ResponseData):
     last_executable: str
     last_arguments: str
     last_process_id: str
-    # These appear to be Minecraft Instances only.
+    # These appear to be Minecraft Instances only
     server_jar: str = ""
     server_type: str = ""
     java_version: str = ""
-    # Generic Instances (GenericModule) only, eg. a Counter-Strike: Source server sends "3".
+    # Generic Instances (GenericModule) only, eg. a Counter-Strike: Source server sends "3"
     config_version: str = ""
 
     def __repr__(self) -> str:  # noqa: D105
@@ -2052,7 +2022,7 @@ class ImportConfig(ResponseData):
     """Represents the JSON response data from :meth:`GenericModule.import_config`.
 
     .. note::
-        Only empty lists have been observed, so the element types are unconfirmed.
+        Only empty lists have been seen, so the element types are UNK.
 
     Attributes
     ----------
@@ -2069,8 +2039,8 @@ class ImportConfig(ResponseData):
 
     """
 
-    # TODO: Confirm the element types against a real import.
-    # Only empty lists were seen, so they are typed as Any for now.
+    # TODO: Need the element types from a real import
+    # Only empty lists were seen, so they are Any for now
     settings: dict[str, Any] = field(default_factory=dict[str, Any])
     imported: list[Any] = field(default_factory=list[Any])
     not_imported: list[Any] = field(default_factory=list[Any])
@@ -2133,7 +2103,7 @@ class InstanceDatastore(ResponseData):
     instance_limit: Union[int, str] = field(default=0)
     active: bool = field(default=True)
     current_usage_mb: int = field(default=-1)
-    # AMP sends the British spelling.
+    # AMP sends the British spelling
     sanitised_name: str = field(default="None")
 
     def to_dict(self) -> dict[str, Any]:
@@ -2142,7 +2112,7 @@ class InstanceDatastore(ResponseData):
         Returns
         -------
         dict[:class:`str`, Any]
-            The class attributes as a key, value paired dict; attributes set to None are omitted.
+            The class attributes as a key, value paired dict, with None values omitted.
 
         """
         return _dataclass_to_dict(self)
@@ -2153,7 +2123,7 @@ class InstanceInfo:
     """Represents the JSON response data for :meth:`ADSModule.update_instance_info`.
 
     .. versionchanged:: 5.0.0
-        Only `instance_id` is required. A field left as None is not sent, so AMP leaves that value unchanged.
+        Only `instance_id` is required, and a field left as None is not sent.
         Gains `container_swap`, `container_cpu_set`, `custom_mount_bindings`, `extra_container_packages`,
         `is_multi_ip_aware`, `use_host_mode_network`, `display_group` and `save_only`.
 
@@ -2162,46 +2132,46 @@ class InstanceInfo:
     instance_id : :class:`str`
         The Instance GUID.
     friendly_name : Union[:class:`str`, None], optional
-        The friendly name of the Instance; default is None, which leaves the value unchanged.
+        The friendly name of the Instance, default is None.
     description : Union[:class:`str`, None], optional
-        The description of the Instance; default is None, which leaves the value unchanged.
+        The description of the Instance, default is None.
     suspended : Union[:class:`bool`, None], optional
-        If the Instance is suspended; default is None, which leaves the value unchanged.
+        If the Instance is suspended or not, default is None.
     exclude_from_firewall : Union[:class:`bool`, None], optional
-        If the Instance should be excluded from the firewall; default is None, which leaves the value unchanged.
+        If the Instance should be excluded from the firewall or not, default is None.
     run_in_container : Union[:class:`bool`, None], optional
-        If the Instance should be run in a container; default is None, which leaves the value unchanged.
+        If the Instance should be run in a container or not, default is None.
     container_memory : Union[:class:`int`, None], optional
-        The amount of memory allocated to the container in MB; default is None, which leaves the value unchanged.
+        The amount of memory allocated to the container in MB, default is None.
     container_max_cpu : Union[:class:`float`, None], optional
-        The maximum amount of CPU cores allocated to the container; default is None, which leaves the value unchanged.
+        The maximum amount of CPU cores allocated to the container, default is None.
 
         .. versionchanged:: 5.0.0
-            A :class:`float`, which is AMP's `Single`. 4.x annotated it as a :class:`str`.
+            A :class:`float`, which is AMP's `Single`, instead of a :class:`str`.
     container_image : Union[:class:`str`, None], optional
-        The container/docker image to use; default is None, which leaves the value unchanged.
+        The container/docker image to use, default is None.
     memory_policy : Union[:class:`ContainerMemoryPolicyState`, None], optional
-        The memory policy of the Instance; default is None, which leaves the value unchanged.
+        The memory policy of the Instance, default is None.
     start_on_boot : Union[:class:`bool`, None], optional
-        If the Instance should start on boot; default is None, which leaves the value unchanged.
+        If the Instance should start on boot or not, default is None.
     welcome_message : Union[:class:`str`, None], optional
-        The welcome message of the Instance; default is None, which leaves the value unchanged.
+        The welcome message of the Instance, default is None.
     container_swap : Union[:class:`int`, None], optional
-        The swap memory allocated to the container in MB; default is None, which leaves the value unchanged.
+        The swap memory allocated to the container in MB, default is None.
     container_cpu_set : Union[:class:`str`, None], optional
-        The CPU cores the container is pinned to; default is None, which leaves the value unchanged.
+        The CPU cores the container is pinned to, default is None.
     custom_mount_bindings : Union[dict[:class:`str`, :class:`str`], None], optional
-        The custom mount bindings of the container; default is None, which leaves the value unchanged.
+        The custom mount bindings of the container, default is None.
     extra_container_packages : Union[list[:class:`str`], None], optional
-        The extra packages installed in the container; default is None, which leaves the value unchanged.
+        The extra packages installed in the container, default is None.
     is_multi_ip_aware : Union[:class:`bool`, None], optional
-        If the Instance is aware of multiple IP addresses; default is None, which leaves the value unchanged.
+        If the Instance is aware of multiple IP addresses or not, default is None.
     use_host_mode_network : Union[:class:`bool`, None], optional
-        If the container uses the host's network mode; default is None, which leaves the value unchanged.
+        If the container uses the host's network mode or not, default is None.
     display_group : Union[:class:`str`, None], optional
-        The group the Instance is displayed under; default is None, which leaves the value unchanged.
+        The group the Instance is displayed under, default is None.
     save_only : Union[:class:`bool`, None], optional
-        Save the changes without applying them to the Instance; default is None, which leaves AMP's default.
+        Save the changes without applying them to the Instance, default is None.
 
     """
 
@@ -2223,7 +2193,7 @@ class InstanceInfo:
     run_in_container: Union[bool, None] = field(default=None)
     container_memory: Union[int, None] = field(default=None)
     # container_max_cpu: Union[str, None] = field(default=None)  # Unsure exactly what this field is or does.
-    # The maximum CPU cores for the container; AMP's `ContainerMaxCPU` is a Single.
+    # AMP's `ContainerMaxCPU` is a Single
     container_max_cpu: Union[float, None] = field(default=None)
     container_image: Union[str, None] = field(default=None)
     memory_policy: Union[ContainerMemoryPolicyState, None] = field(default=None)
@@ -2247,7 +2217,7 @@ class InstanceInfo:
         Returns
         -------
         dict[:class:`str`, Any]
-            The class attributes keyed by their AMP API parameter names; attributes set to None are omitted.
+            The class attributes keyed by their AMP API parameter names, with None values omitted.
 
         """
         # return _dataclass_to_dict(self)
@@ -2342,7 +2312,7 @@ class LicenceInfo(ResponseData):
     expires : Union[:class:`str`, :class:`datetime.datetime`]
         When the licence expires, converted to a naive :class:`datetime.datetime`. AMP sends no timezone, and none is added.
     usage : :class:`int`
-        How many times the licence has been used. Its meaning is unconfirmed. Only one value has been seen.
+        UNK. Only one value has been seen.
 
     """
 
@@ -2359,7 +2329,7 @@ class LicenceInfo(ResponseData):
             self.expires = timestamp_converter(timestamp=self.expires)
 
     def __repr__(self) -> str:  # noqa: D105
-        # The licence key stays out of the repr, which is what ends up in logs.
+        # Keep the key out of the repr, since logs print it
         return pformat({key: value for key, value in _field_values(self).items() if key != "licence_key"})
 
 
@@ -2388,12 +2358,12 @@ class LoginResults(ResponseData):
 
     success: bool
     result: int
-    # A failed login sends None for these three (confirmed against AMP 2.8.0.8).
+    # A failed login sends None for these three
     permissions: Union[list[str], None] = field(default_factory=list[str])
     result_reason: str = ""
     session_id: Union[str, None] = ""
     remember_me_token: Union[str, None] = ""
-    # LoginUserInfoResponse, not UserInfoResponse; only the login shape carries the username.
+    # LoginUserInfoResponse, not UserInfoResponse, because only the login shape carries the username
     user_info: Union[LoginUserInfo | LoginUserInfoResponse, None] = field(default=None)
 
 
@@ -2484,7 +2454,7 @@ class MessageParameters(ResponseData):
     """
 
     instance_id: Union[str, None] = field(default=None)
-    # AMP sends `state` as an int and __post_init__ converts it.
+    # AMP sends `state` as an int and __post_init__ converts it
     metrics: Union[Metrics, MetricsResponse, None] = field(default=None)
     uptime: Union[Uptime, UptimeResponse, None] = field(default=None)
     state: Union[InstanceState, int, None] = field(default=None)
@@ -2531,8 +2501,7 @@ class Messages(ResponseData):
     id: str
     message: str
     source: str
-    # Confirmed against getupdates.json; defaulted so older responses still construct.
-    # `from_response` builds it by (source, message), anything else stays as AMP sent it.
+    # `from_response` builds it by (source, message) and anything else stays as AMP sent it
     parameters: Union[
         MessageParameters,
         RunningTask,
@@ -2563,7 +2532,7 @@ class Messages(ResponseData):
             The built dataclass, with `parameters` built too.
 
         """
-        # Keyed by (source, lowercase message). Read in here because `RunningTask` is defined after this class.
+        # This is keyed by (source, lowercase message) and built here because `RunningTask` is defined after this class
         parameter_classes: dict[tuple[str, str], type[ResponseData]] = {
             ("ADSModule", "metrics"): MessageParameters,
             ("LocalFileBackupPlugin", "backupfailed"): MessageParameters,
@@ -2574,11 +2543,10 @@ class Messages(ResponseData):
             ("Core", "userlistchanged"): UserApplicationData,
         }
 
-        # Taken out of a copy first, so the converter doesn't build every dict as `MessageParameters`.
+        # Pop it from a copy, because the converter would build every dict as `MessageParameters`
         remaining: dict[str, Any] = dict(data)
         parameters: Any = remaining.pop("parameters", None)
-        # An explicit `super(Messages, cls)`, because `slots=True` builds a new class and a bare `super()`
-        # in this classmethod raises a TypeError.
+        # slots=True makes a new class, so a bare super() fails here
         message = super(Messages, cls).from_response(remaining)
 
         parameter_class = parameter_classes.get((str(data.get("source")), str(data.get("message")).lower()))
@@ -2618,15 +2586,14 @@ class Methods(ResponseData):
     id: str = ""
     name: str = ""
     description: str = ""
-    # Confirmed against getscheduledata.json.
     category: str = ""
     display_format: Union[str, None] = field(default=None)
-    # `Methods.from_response(entry)` turns these into Consumes.
+    # `Methods.from_response(entry)` turns these into Consumes
     consumes: list[Consumes] | list[ConsumesResponse] = field(default_factory=list[Consumes])
     notice: Union[str, None] = field(default=None)
 
+    # It is mutable, so it is unhashable
     __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
@@ -2659,7 +2626,7 @@ class Metrics(ResponseData):
     active_users: MetricsData
     cpu_usage: MetricsData
     memory_usage: MetricsData
-    # Confirmed against AMP 2.8.0.8; which of these are sent depends on the Instance type.
+    # Which of these are sent depends on the Instance type
     physical_ram_usage: Union[MetricsData, None] = field(default=None)
     swap_usage: Union[MetricsData, None] = field(default=None)
     tps: Union[MetricsData, None] = field(default=None)
@@ -2697,7 +2664,7 @@ class MetricsData(ResponseData):
     color: Union[str, None] = field(default=None)
     color2: Union[str, None] = field(default=None)
     color3: Union[str, None] = field(default=None)
-    # Present on every metric in getstatus.json; defaulted so older responses still construct.
+    # Older AMP versions may not send this, so it defaults
     short_name: Union[str, None] = field(default=None)
 
 
@@ -2729,7 +2696,7 @@ class Module(ResponseData):
         The branding data.
 
         .. versionchanged:: 5.0.0
-            Is a :class:`Branding`, was a dict.
+            Is a :class:`Branding` instead of a dict.
     build_spec : :class:`str`
         The build spec.
     display_base_uri : :class:`str`
@@ -2745,11 +2712,11 @@ class Module(ResponseData):
     instance_name : :class:`str`
         The Instance name.
     is_oidc_enabled : :class:`bool`
-        Whether OIDC login is enabled.
+        If OIDC login is enabled or not.
     is_remote_instance : :class:`bool`
-        Whether the Instance is remote.
+        If the Instance is remote or not.
     local_login_enabled : :class:`bool`, optional
-        Whether logging in with a local AMP user is enabled, default is True.
+        If logging in with a local AMP user is enabled or not, default is True.
 
         .. versionadded:: 5.0.0
     loaded_plugins : :class:`list[str]`
@@ -2763,9 +2730,9 @@ class Module(ResponseData):
     primary_endpoint : :class:`str`
         The primary endpoint.
     requires_full_load : :class:`bool`
-        Whether the Instance requires full load.
+        If the Instance requires full load or not.
     supports_sleep : :class:`bool`
-        Whether the Instance supports sleep.
+        If the Instance supports sleep or not.
     timestamp : :class:`str`
         The current timestamp.
     tools_version : :class:`str`
@@ -2851,16 +2818,14 @@ class OPWhitelist(ResponseData):
 class ParameterMapping(ResponseData):
     """Represents the JSON response data for :attr:`TriggerTasks.parameter_mapping`.
 
-    The arguments a task passes to its method. An argument the task's method doesn't take is None.
+    Hold the arguments a task passes to its method, with None for one the method doesn't take.
     AMP sends every value as a string (eg. `"true"`, `"55"`), which can hold a trigger variable (eg. `{@User}`).
-    An empty string in a converted field becomes None.
+    An empty string becomes None and a value that doesn't parse stays a string.
 
     .. versionchanged:: 5.0.0
         Renamed from `DCParameterMapping`.
-        Holds the arguments of every task method in AMP-2.8.0.8, not only `user`, `reason`, `title` and `subtitle`.
-        An argument the task doesn't hold is None, not "".
+        Holds the arguments of every task method.
         Booleans, numbers, `state`, `operation`, `priority` and `when` are converted from AMP's strings.
-        A value that doesn't parse stays a string.
 
     Attributes
     ----------
@@ -3088,7 +3053,7 @@ class ParameterMapping(ResponseData):
     z_angle: Union[float, str, None] = field(default=None)
 
     def __post_init__(self) -> None:  # noqa: D105
-        # AMP sends every value as a string. An empty one becomes None, a value that doesn't parse stays as sent.
+        # AMP sends every value as a string. An empty one becomes None and one that doesn't parse stays as sent
         for name in self._bool_fields:
             raw_value = getattr(self, name)
             if raw_value == "":
@@ -3144,7 +3109,7 @@ class ParameterMapping(ResponseData):
             self.when = None
         elif isinstance(self.when, str):
             raw_when = self.when
-            # AMP keeps an ISO value as sent, and rewrites one with seconds as month/day/year.
+            # AMP keeps an ISO value as sent, and rewrites one with seconds as month/day/year
             try:
                 self.when = datetime.datetime.fromisoformat(raw_when)
             except ValueError:
@@ -3159,7 +3124,7 @@ class PermissionNode(ResponseData):
     """Represents the JSON response data from :meth:`Core.get_permissions_spec`.
 
     .. versionchanged:: 5.0.0
-        Is a dataclass, was a `TypedDict` in 4.6.0 (now :class:`PermissionNodeResponse`).
+        Is a dataclass instead of a `TypedDict`, which is now :class:`PermissionNodeResponse`.
 
     Attributes
     ----------
@@ -3202,7 +3167,7 @@ class PlatformInfo(ResponseData):
     virtualization : :class:`int`
         The virtualization.
     is_shared_setup : :class:`bool`
-        Whether the Instance is shared setup.
+        If the Instance is shared setup or not.
     admin_rights : :class:`int`
         The admin rights level.
     hardware_platform_name : :class:`str`
@@ -3228,8 +3193,8 @@ class PlatformInfo(ResponseData):
     admin_rights: int = field(default=0)
     hardware_platform_name: str = field(default="")
     installed_glibc_version: str = field(default="")  # "AMPVersionInfo"
-    # GetTargetInfo omits the four fields above; the `platform` block on a GetInstances target sends them
-    # plus `max_swap_mb`. Everything here is defaulted so both shapes construct.
+    # GetTargetInfo omits the four fields above, but the `platform` block on a GetInstances target sends them
+    # plus `max_swap_mb`
     docker_network_is_host_mode: bool = field(default=False)
     has_memory_limit: bool = field(default=False)
     max_swap_mb: int = field(default=0)
@@ -3332,7 +3297,7 @@ class Port(ResponseData):
     protocol: int
     required: Union[bool, None] = field(default=None)
     is_delayed_open: Union[bool, None] = field(default=None)
-    # Added in AMP 2.8; defaulted so older responses still construct.
+    # Added in AMP 2.8, so they default
     listening_count: Union[int, None] = field(default=None)
     range: Union[int, None] = field(default=None)
     min_listening: Union[int, None] = field(default=None)
@@ -3364,7 +3329,7 @@ class PortInfo(ResponseData):
     verified : :class:`bool`
         Whether the port is verified.
     is_firewall_target : :class:`bool`
-        Whether the port is targeted by a firewall rule, defaults to False.
+        If the port is targeted by a firewall rule or not, defaults to False.
 
     """
 
@@ -3376,7 +3341,7 @@ class PortInfo(ResponseData):
     range: int
     verified: bool
     is_firewall_target: bool = field(default=False)
-    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    # Added in AMP 2.8.0.4, so they default
     is_child: bool = field(default=False)
     min_listening: int = field(default=0)
     offset: int = field(default=0)
@@ -3384,7 +3349,7 @@ class PortInfo(ResponseData):
     parent_ref: Union[str, None] = field(default=None)
 
     def __post_init__(self) -> None:  # noqa: D105
-        # AMP sends the protocol as an int; convert it so the annotation holds true.
+        # AMP sends the protocol as an int, so we convert it to match the annotation
         if isinstance(self.protocol, int):
             self.protocol = Protocols(self.protocol)
 
@@ -3396,7 +3361,7 @@ class Provision(ResponseData):
     Attributes
     ----------
     available : :class:`bool`
-        Whether the Instance is available.
+        If the Instance is available or not.
     cpu_service_ratio : :class:`float`
         The CPU service ratio.
     free_disk_mb : :class:`int`
@@ -3437,7 +3402,7 @@ class ProvisionSettingInfo(ResponseData):
         The default value.
 
         .. versionchanged:: 5.0.0
-            Can be an int, a list or None, where 4.x had a str.
+            Can also be an int, a list or None.
     description : :class:`str`
         The description.
     endpoint_name : :class:`str`
@@ -3467,7 +3432,7 @@ class ProvisionSettingInfo(ResponseData):
     custom_field_type: Union[str, None] = field(default=None)
     related_setting: Union[str, None] = field(default=None)
     endpoint_format: Union[str, None] = field(default=None)
-    # Added in AMP 2.8.0.4; defaulted so 2.6.5.0 responses still construct.
+    # Added in AMP 2.8.0.4, so they default
     hidden: bool = field(default=False)
     min_listening: int = field(default=0)
 
@@ -3493,7 +3458,7 @@ class RemoteTargetInfo(ResponseData):
     """
 
     ip_address_list: list[str]
-    # `RemoteTargetInfo.from_response(result)` turns these into dataclasses.
+    # `RemoteTargetInfo.from_response(result)` turns these into dataclasses
     platform_info: PlatformInfo
     datastores: list[TargetDatastore]
     deploys_in_containers: bool
@@ -3537,7 +3502,7 @@ class Role(ResponseData):
     description: str
     hidden: bool
     permissions: list[str]
-    # `Role.from_response(result)` turns these into dataclasses.
+    # `Role.from_response(result)` turns these into dataclasses
     members: list[RoleMember]
     is_instance_specific: bool
     is_common_role: bool
@@ -3572,7 +3537,7 @@ class RunningTask(ResponseData):
     is_primary_task : :class:`bool`
         If the task is the primary task or not.
     start_time : :class:`str` | :class:`datetime.datetime`
-        The start time of the task; converted to a :class:`datetime` object.
+        The start time of the task, converted to a :class:`datetime` object.
     id : :class:`str`
         The ID of the task.
     remote_instance_id : :class:`str` | None
@@ -3588,11 +3553,11 @@ class RunningTask(ResponseData):
     fast_dismiss : :class:`bool`
         If the task is fast dismiss or not.
     last_update_pushed : :class:`str` | :class:`datetime.datetime`
-        The last update pushed of the task; converted to a :class:`datetime` object.
+        The last update pushed of the task, converted to a :class:`datetime` object.
     progress_percent : :class:`float`
         The progress percent of the task.
     speed : :class:`str` | None
-        UNK - The task's throughput, if it reports one. Has only ever been observed as None.
+        UNK, only seen as None.
     is_cancellable : :class:`bool`
         If the task is cancellable or not.
     origin : :class:`str`
@@ -3606,7 +3571,7 @@ class RunningTask(ResponseData):
     state_message : :class:`str` | None
         The message tied to the current state, otherwise None.
     end_time : :class:`str` | :class:`datetime.datetime` | None
-        The end time of the task; converted to a :class:`datetime` object. None while the task is still running.
+        The end time of the task, converted to a :class:`datetime` object. None while the task is still running.
     status : :class:`bool`
         The status of the task.
     reason : :class:`str` | None
@@ -3651,7 +3616,7 @@ class RunningTask(ResponseData):
             self.last_update_pushed = timestamp_converter(timestamp=self.last_update_pushed)
         if isinstance(self.start_time, str):
             self.start_time = timestamp_converter(timestamp=self.start_time)
-        # end_time stays None until the task finishes, so it can't be converted unconditionally.
+        # end_time is None until the task finishes
         if isinstance(self.end_time, str):
             self.end_time = timestamp_converter(timestamp=self.end_time)
 
@@ -3706,7 +3671,7 @@ class SecurityCheck(ResponseData):
     resolution : :class:`str`
         How to fix the check when it fails.
     severity : :class:`int`
-        How serious a failed check is. Only ``1`` and ``2`` have been seen, and the meaning of each is unconfirmed.
+        UNK. Only ``1`` and ``2`` have been seen.
     passed : :class:`bool`
         If the check passed or not. AMP sends this as `Pass`.
     hidden : :class:`bool`
@@ -3796,12 +3761,12 @@ class SettingSpec(ResponseData):
         The highest value the setting accepts, default is None.
 
         .. versionchanged:: 5.0.0
-            An int or a float, where 4.x hinted None.
+            An int or a float instead of None.
     min_value : Union[:class:`int`, :class:`float`, None]
         The lowest value the setting accepts, default is None.
 
         .. versionchanged:: 5.0.0
-            An int or a float, where 4.x hinted None.
+            An int or a float instead of None.
     meta : Union[:class:`str`, None]
         UNK, all fields are "" or null in data, default is "".
 
@@ -3844,7 +3809,7 @@ class SettingSpec(ResponseData):
 
         .. versionadded:: 5.0.0
     warn_when_value : Any, optional
-        The value that triggers `warn_text`, default is None. Only seen as null so far.
+        UNK, only seen as null, default is None.
 
         .. versionadded:: 5.0.0
 
@@ -3894,12 +3859,12 @@ class SettingSpec(ResponseData):
         # determines the current value type and converts the data into the respective dataclass if needed.
         _table = SettingSpecTable().table
         # if self.node in _table and isinstance(self.current_value, int):
-        # A bool is an int, so it is left alone and not turned into an Enum.
+        # A bool is an int, so we skip it
         if self.node in _table and isinstance(self.current_value, int) and not isinstance(self.current_value, bool):
             self.current_value = _table[self.node](self.current_value)
 
+    # It is mutable, so it is unhashable
     __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.name == other.name
@@ -4059,10 +4024,8 @@ class SettingsSpecParent(ResponseData):
 
     """
 
-    # Every category arrives as a list of raw setting dicts, the same shape Core.get_config returns for a
-    # single node. from_response() turns them into SettingSpec.
-    # Spelled as a union of lists rather than list[SettingSpec | SettingSpecResponse], because list is invariant in its
-    # element type and the raw response would not be assignable to the combined form.
+    # Each category arrives as raw setting dicts, and from_response() builds the SettingSpec
+    # list is invariant, so each is a union of lists
     backups: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
     branding: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
     external_services: list[SettingSpec] | list[SettingSpecResponse] = field(default_factory=list[SettingSpec])
@@ -4093,8 +4056,7 @@ class SettingsSpecParent(ResponseData):
             The built dataclass, with `modules` built too.
 
         """
-        # An explicit `super(SettingsSpecParent, cls)`, because `slots=True` builds a new class and a bare `super()`
-        # in this classmethod raises a TypeError.
+        # slots=True makes a new class, so a bare super() fails here
         parent = super(SettingsSpecParent, cls).from_response(data)
         parent.modules = {
             name: [SettingSpec.from_response(entry) if isinstance(entry, dict) else entry for entry in entries]
@@ -4139,12 +4101,11 @@ class Status(ResponseData):
 
     """
 
-    # AMP sends these raw; from_response() converts the nested ones and __post_init__ converts the state, so the first
-    # annotation of each holds true.
+    # AMP sends these raw, so from_response() and __post_init__ convert them
     state: InstanceState | int
     uptime: str
     metrics: Metrics | MetricsResponse
-    # Added in AMP 2.8; defaulted so older responses still construct.
+    # Added in AMP 2.8, so it defaults
     ports: list[Port] | list[PortResponse] = field(default_factory=list[Port])
 
     def __repr__(self) -> str:  # noqa: D105
@@ -4259,7 +4220,7 @@ class Template:
         Returns
         -------
         dict[:class:`str`, Any]
-            The class attributes keyed by their AMP API parameter names; attributes set to None are omitted.
+            The class attributes keyed by their AMP API parameter names, with None values omitted.
 
         """
         # return _dataclass_to_dict(self)
@@ -4290,7 +4251,7 @@ class TimedTrigger(ResponseData):
         If the Timed Trigger is enabled or not, AMP sends 0 or 1.
 
         .. versionchanged:: 5.0.0
-            An int, where 4.x hinted a bool.
+            An int instead of a bool.
     id : :class:`str`
         The ID of the Timed Trigger, these are unique per Instance.
     match_days : list[:class:`int`]
@@ -4328,11 +4289,8 @@ class TimedTrigger(ResponseData):
     match_months: list[int]
     name: str
     order: int
-    # AMP sends a dict of raw task dicts keyed by task ID; from_response() turns it into a list of TriggerTasks.
-    # Spelled as a union of lists rather than list[TriggerTasks | TriggerTasksResponse]; list is invariant
-    # in its element type, so the raw response would not be assignable to the combined form.
+    # AMP sends a dict of raw task dicts keyed by task ID, and from_response() makes it a list of TriggerTasks
     tasks: list[TriggerTasks] | list[TriggerTasksResponse] = field(default_factory=list["TriggerTasks"])
-    # Confirmed live on AMP 2.8.0.8.
     last_executed: Union[str, None] = field(default=None)
 
     @classmethod
@@ -4357,8 +4315,7 @@ class TimedTrigger(ResponseData):
         if _is_json_object(tasks):
             data = {**data, "tasks": list(tasks.values())}
 
-        # An explicit `super(TimedTrigger, cls)`, because `slots=True` builds a new class and a bare `super()`
-        # in this classmethod raises a TypeError.
+        # slots=True makes a new class, so a bare super() fails here
         return super(TimedTrigger, cls).from_response(data)
 
 
@@ -4395,7 +4352,7 @@ class TriggerID:
     the_server_enters_sleep_mode: str
     the_server_wakes_up_from_sleep_mode_due_to_player_connect: str
 
-    # Core.get_triggers feeds this from ScheduleData.available_triggers. Only `description` and `id` are read.
+    # This is fed from ScheduleData.available_triggers
     def __init__(self, data: list[TriggersResponse]) -> None:  # noqa: D107
         for entry in data:
             setattr(self, entry["description"], entry["id"])
@@ -4448,11 +4405,10 @@ class Triggers(ResponseData):
     emits: list[str] = field(default_factory=list[str])
     last_execute_error: bool = field(default=False)
     last_error_reason: str = field(default="")
-    # Confirmed against getscheduledata.json.
     last_run: Union[str, None] = field(default=None)
 
+    # It is mutable, so it is unhashable
     __hash__ = None  # type: ignore[assignment]
-    """Mutable dataclass; intentionally unhashable."""
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         return isinstance(other, self.__class__) and self.description == other.description
@@ -4541,7 +4497,7 @@ class TwoFactorSetupInfo(ResponseData):
     manual_key: str
 
     def __repr__(self) -> str:  # noqa: D105
-        # The secret is in both fields, and the repr is what ends up in logs.
+        # Both fields hold the secret, and logs print the repr
         return "TwoFactorSetupInfo(url=<hidden>, manual_key=<hidden>)"
 
 
@@ -4593,9 +4549,7 @@ class Updates(ResponseData):
 
     """
 
-    # AMP sends all of these raw; from_response() converts them so the first annotation of each holds true.
-    # Spelled as a union of lists rather than list[ConsoleEntries | ConsoleEntriesResponse]; list is invariant
-    # in its element type, so the raw response would not be assignable to the combined form.
+    # AMP sends all of these raw, so from_response() converts them
     console_entries: list[ConsoleEntries] | list[ConsoleEntriesResponse]
     status: Status | StatusResponse
     messages: list[Messages] | list[MessagesResponse]
@@ -4632,7 +4586,6 @@ class Uptime(ResponseData):
     seconds: int
 
 
-# The hand-written class before 5.0.0, when it became a dataclass built with `from_response`.
 # class UserApplicationData:
 #     """Represents the JSON response data from :meth:`Core.get_user_info`."""
 #
@@ -4695,7 +4648,7 @@ class UserApplicationData(ResponseData):
         This is an in-application user (eg. a connected Minecraft player), not an AMP User.
 
     .. versionchanged:: 5.0.0
-        Built like the other response dataclasses, with `display_name` added (sent by AMP-2.8.0.8).
+        Gains `display_name`.
 
     Attributes
     ----------
@@ -4716,9 +4669,9 @@ class UserApplicationData(ResponseData):
     time_logged_in : :class:`str`
         How long the player has been logged in, as AMP's `hh:mm:ss.fffffff` time span.
     session_id : Union[:class:`str`, None]
-        UNK, None in every capture, by default None.
+        UNK, only seen as None, by default None.
     tags : Union[:class:`str`, None]
-        UNK, None in every capture, by default None.
+        UNK, only seen as None, by default None.
     display_name : Union[:class:`str`, None]
         The player's display name, by default None.
 
@@ -4775,7 +4728,7 @@ class UserInfo(ResponseData):
         The email address of the user, None when the user has none.
 
         .. versionchanged:: 5.0.0
-            Can be None, where 4.x hinted a str.
+            Can be None instead of a :class:`str`.
     last_login : :class:`datetime`
         The last login date of the user.
     oidc_sub : Union[:class:`str`, None], optional
