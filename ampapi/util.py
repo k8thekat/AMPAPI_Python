@@ -70,7 +70,7 @@ _SPEC_MODULE_MAP: dict[str, tuple[str, str]] = {
     "steamcmdplugin": ("steamcmd.py", ""),
 }
 
-# Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" style endpoint URLs.
+# Matches "Core/CreateTestTask" and "API/Core/CreateTestTask" URLs
 _ENDPOINT_URL_RE = re.compile(r"^(?:API/)?([A-Za-z]+)/([A-Za-z0-9]+)$")
 _PYTHON_ONLY_PARAMS: frozenset[str] = frozenset({"format_data", "request_params"})
 
@@ -135,7 +135,7 @@ def _method_event_parse(data: list[Methods], title: str = "", title_body: str = 
 
         if len(method.consumes) > 0:
             file.write("Consumes these values:\n")
-            # Methods.consumes holds the raw ConsumesResponse dicts unless a Consumes was handed in.
+            # Methods.consumes can hold raw dicts or Consumes
             consumes: list[Mapping[str, Any]] = [consume if isinstance(consume, dict) else asdict(consume) for consume in method.consumes]
             for entry in sorted(consumes, key=lambda x: x["name"]):
                 # print(entry, type(entry.enum_values), entry.enum_values)
@@ -220,7 +220,7 @@ async def _parse_get_api_spec_to_file(
 
 
 def _parse_api_spec_file(path: Path) -> dict[str, dict[str, str]]:
-    """Parse an API spec .md file into a flat dict of ``{module.endpoint: {field: value}}``."""
+    """Parse an API spec .md file into a dict of endpoints and their fields."""
     endpoints: dict[str, dict[str, str]] = {}
     current_parent = ""
     current_child = ""
@@ -248,27 +248,12 @@ def _parse_api_spec_file(path: Path) -> dict[str, dict[str, str]]:
 
 
 def _write_parameter_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str | None) -> None:
-    """Write a human-readable diff of two parameter lists to `file`.
-
-    Parses the raw stringified parameter lists from the spec files and compares them
-    by parameter name, reporting which parameters were added, removed, or modified
-    between the two versions.
-
-    Parameters
-    ----------
-    file : :class:`TextIOWrapper`
-        The open file handle to write the diff output to.
-    raw_a : Union[:class:`str`, None]
-        The raw parameter string from the older spec version.
-    raw_b : Union[:class:`str`, None]
-        The raw parameter string from the newer spec version.
-
-    """
+    """Write the added, removed and changed parameters between two spec versions to `file`."""
     try:
         params_a: list[dict[str, Any]] = ast.literal_eval(raw_a) if raw_a else []
         params_b: list[dict[str, Any]] = ast.literal_eval(raw_b) if raw_b else []
     except (ValueError, SyntaxError):
-        # Fallback to the raw dump when the parameter string is not parseable.
+        # We dump the raw strings when we can't parse the parameters
         file.write("**parameters**:\n")
         file.write(f"- `{raw_a}`\n")
         file.write(f"+ `{raw_b}`\n\n")
@@ -282,7 +267,7 @@ def _write_parameter_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str | N
     added_params = sorted(names_b - names_a)
     removed_params = sorted(names_a - names_b)
 
-    # Fields worth showing when they change between versions.
+    # These are the fields we show when they change
     _compare_fields = ("type_name", "optional", "description", "param_enum_values")
     modified_params: list[tuple[str, list[str]]] = []
     for name in sorted(names_a & names_b):
@@ -322,21 +307,7 @@ def _write_parameter_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str | N
 
 
 def _write_permissions_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str | None) -> None:
-    """Write a human-readable diff of two permission lists to `file`.
-
-    Parses the raw stringified permission lists from the spec files and compares them
-    as sets, reporting which permissions were added or removed between the two versions.
-
-    Parameters
-    ----------
-    file : :class:`TextIOWrapper`
-        The open file handle to write the diff output to.
-    raw_a : Union[:class:`str`, None]
-        The raw permissions string from the older spec version.
-    raw_b : Union[:class:`str`, None]
-        The raw permissions string from the newer spec version.
-
-    """
+    """Write the added and removed permissions between two spec versions to `file`."""
     try:
         perms_a: set[str] = set(ast.literal_eval(raw_a)) if raw_a and raw_a != "None" else set()
         perms_b: set[str] = set(ast.literal_eval(raw_b)) if raw_b and raw_b != "None" else set()
@@ -346,7 +317,7 @@ def _write_permissions_diff(file: TextIOWrapper, raw_a: str | None, raw_b: str |
         file.write(f"+ `{raw_b}`\n\n")
         return
 
-    # When the old value was literally None (not tracked), label it as newly defined.
+    # An old value of None means the spec didn't define it yet
     was_none = raw_a is None or raw_a == "None"
 
     added_perms = sorted(perms_b - perms_a)
@@ -465,70 +436,41 @@ def compare_api_spec_versions(
     )
 
 
-def _get_endpoint_urls(filepath: Path) -> set[str]:
-    """Return the normalized endpoint URLs a Python source file posts to.
-
-    Collects every string literal passed as a ``url=`` or ``endpoint=`` keyword argument whose
-    value looks like ``Module/EndpointName`` (an optional leading ``API/`` is ignored).
-
-    Parameters
-    ----------
-    filepath : :class:`Path`
-        The path to the Python source file to parse.
-
-    Returns
-    -------
-    set[:class:`str`]
-        The URLs in :func:`_normalize_endpoint` form, eg. ``core/createtesttask``.
-
-    """
-    urls: set[str] = set()
-    tree = ast.parse(filepath.read_text())
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
+def _node_endpoint_urls(node: ast.AST) -> list[str]:
+    """Get the normalized endpoint URLs posted to under `node`, eg. ``core/createtesttask``."""
+    urls: list[str] = []
+    for call in ast.walk(node):
+        if not isinstance(call, ast.Call):
             continue
-        for keyword in node.keywords:
+
+        for keyword in call.keywords:
             if keyword.arg not in ("url", "endpoint"):
                 continue
+
             if not isinstance(keyword.value, ast.Constant) or not isinstance(keyword.value.value, str):
                 continue
+
             match = _ENDPOINT_URL_RE.match(keyword.value.value)
-            if match:
-                urls.add(f"{_normalize_endpoint(match.group(1))}/{_normalize_endpoint(match.group(2))}")
+            # if match:
+            if match is None:
+                continue
+
+            urls.append(f"{_normalize_endpoint(match.group(1))}/{_normalize_endpoint(match.group(2))}")
     return urls
 
 
+def _get_endpoint_urls(filepath: Path) -> set[str]:
+    """Get the normalized endpoint URLs a Python source file posts to."""
+    return set(_node_endpoint_urls(ast.parse(filepath.read_text())))
+
+
 def _normalize_endpoint(name: str) -> str:
-    """Lowercase a name and drop its underscores so `snake_case` and `PascalCase` names compare equal.
-
-    Parameters
-    ----------
-    name : :class:`str`
-        A spec section, a spec endpoint or a URL part, eg. ``get_webauthn_credential_i_ds``.
-
-    Returns
-    -------
-    :class:`str`
-        The normalized name, eg. ``getwebauthncredentialids``.
-
-    """
+    """Lowercase a name and drop its underscores."""
     return name.replace("_", "").lower()
 
 
 def _get_function_signatures(filepath: Path) -> dict[str, list[str]]:
-    """Return all method signatures from a Python source file.
-
-    Parameters
-    ----------
-    filepath : :class:`Path`
-        The path to the Python source file to parse.
-
-    Returns
-    -------
-    dict[:class:`str`, list[:class:`str`]]
-        A mapping of ``{method_name: [param_names]}``, excluding `self`.
-
-    """
+    """Get each function name in a Python source file with its parameter names, excluding `self`."""
     result: dict[str, list[str]] = {}
     tree = ast.parse(filepath.read_text())
     for node in ast.walk(tree):
@@ -543,7 +485,7 @@ def find_missing_endpoints(
     spec_path: Path | None = None,
     ampapi_path: Path | None = None,
     output_path: Path | None = None,
-    suffix_aliases: list[str] | None = None,  # noqa: ARG001 # kept so existing callers still work, see the docstring
+    suffix_aliases: list[str] | None = None,  # noqa: ARG001
 ) -> None:
     """Compare all API spec sheets against their Python implementations and report missing endpoints.
 
@@ -553,8 +495,7 @@ def find_missing_endpoints(
 
     .. note::
         An endpoint counts as implemented when any module in `ampapi_path` posts to its URL (eg.
-        ``url="Core/CreateTestTask"``), whatever the wrapper method is named. This covers renamed wrappers,
-        private ``DEV:`` wrappers and endpoints folded into another method. Spec and URL names are compared
+        ``url="Core/CreateTestTask"``), whatever the wrapper method is named. Spec and URL names are compared
         lowercased with underscores removed, and the spec section must match the URL's module part
         (``ads_module`` -> ``ADSModule/``).
 
@@ -567,8 +508,7 @@ def find_missing_endpoints(
     output_path : Path | None, optional
         Path for the output report. Defaults to ``{spec_path}/missing_endpoints.md``.
     suffix_aliases : list[str] | None, optional
-        Unused here since endpoints are matched on their URL rather than the method name; still accepted so
-        existing calls keep working, by default None.
+        Unused, kept so existing calls still work, by default None.
 
     """
     _logger: Logger = logging.getLogger(__name__)
@@ -597,7 +537,7 @@ def find_missing_endpoints(
 
     _out: Path = output_path if output_path is not None else _spec_dir / "missing_endpoints.md"
 
-    # Every endpoint URL any module posts to; "Core/Login" lives in base.py, so all of the modules are read.
+    # We read every module for endpoint URLs, as Core/Login lives in base.py
     implemented_urls: set[str] = set()
     for module_path in sorted(_ampapi_dir.glob("*.py")):
         implemented_urls |= _get_endpoint_urls(module_path)
@@ -619,7 +559,7 @@ def find_missing_endpoints(
             missing = sorted(ep for ep in spec_endpoints if f"{section_key}/{_normalize_endpoint(ep)}" not in implemented_urls)
             total_missing += len(missing)
 
-            # The link is relative to the report, wherever it is written to.
+            # The link is relative to the report
             py_link: str = Path(os.path.relpath(py_path, _out.parent)).as_posix()
             out_file.write(f"## {section} -> [{py_file}]({py_link})\n\n")
             out_file.write(f"- Spec endpoints : {len(spec_endpoints)}\n")
@@ -639,7 +579,7 @@ def find_parameter_mismatches(
     spec_path: Path | None = None,
     ampapi_path: Path | None = None,
     output_path: Path | None = None,
-    suffix_aliases: list[str] | None = None,  # noqa: ARG001 # kept so existing callers still work, see the docstring
+    suffix_aliases: list[str] | None = None,  # noqa: ARG001
 ) -> None:
     """Compare implemented Python method parameters against their API spec definitions and report mismatches.
 
@@ -655,9 +595,8 @@ def find_parameter_mismatches(
 
 
     .. note::
-        Only the newest spec version directory under `spec_path` is compared (versions compare as numbers, so
-        `2.10.0.0` is newer than `2.8.0.8`). When `spec_path` holds no version directories, every
-        ``*_api_spec.md`` file under it is merged instead.
+        Only the newest spec version directory under `spec_path` is compared, as `2.10.0.0` is newer than `2.8.0.8`.
+        When `spec_path` holds no version directories, every ``*_api_spec.md`` file under it is merged.
 
 
     Parameters
@@ -670,15 +609,14 @@ def find_parameter_mismatches(
     output_path : Path | None, optional
         Path for the output report. Defaults to ``{spec_path}/parameter_mismatches.md``.
     suffix_aliases : list[str] | None, optional
-        Unused here since endpoints are matched on their URL rather than the method name; still accepted so
-        existing calls keep working, by default None.
+        Unused, kept so existing calls still work, by default None.
 
     """
     _logger: Logger = logging.getLogger(__name__)
     _spec_dir: Path = spec_path if spec_path is not None else Path(__file__).parent.parent.joinpath("docs/api_spec_sheets")
     _ampapi_dir: Path = ampapi_path if ampapi_path is not None else Path(__file__).parent
 
-    # Versions compare as int tuples, so 2.10.0.0 sorts after 2.8.0.8.
+    # Int tuples sort 2.10.0.0 after 2.8.0.8
     version_dirs: dict[tuple[int, ...], Path] = {
         tuple(int(part) for part in child.name.split(".")): child
         for child in _spec_dir.iterdir()
@@ -694,28 +632,17 @@ def find_parameter_mismatches(
         for key, fields in _parse_api_spec_file(spec_file).items():
             all_spec.setdefault(key, fields)
 
-    # Every method that posts to a URL, keyed by the URL in `_normalize_endpoint` form.
+    # We key every method that posts to a URL by that URL
     methods_by_url: dict[str, list[tuple[str, str, list[str]]]] = {}
     for module_path in sorted(_ampapi_dir.glob("*.py")):
         signatures = _get_function_signatures(module_path)
         for node in ast.walk(ast.parse(module_path.read_text())):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
-            for call in ast.walk(node):
-                if not isinstance(call, ast.Call):
-                    continue
-                for keyword in call.keywords:
-                    if keyword.arg not in ("url", "endpoint"):
-                        continue
-                    if not isinstance(keyword.value, ast.Constant) or not isinstance(keyword.value.value, str):
-                        continue
-                    match = _ENDPOINT_URL_RE.match(keyword.value.value)
-                    if match is None:
-                        continue
-                    url_key = f"{_normalize_endpoint(match.group(1))}/{_normalize_endpoint(match.group(2))}"
-                    entry = (module_path.name, node.name, signatures[node.name])
-                    if entry not in methods_by_url.setdefault(url_key, []):
-                        methods_by_url[url_key].append(entry)
+            for url_key in _node_endpoint_urls(node):
+                entry = (module_path.name, node.name, signatures[node.name])
+                if entry not in methods_by_url.setdefault(url_key, []):
+                    methods_by_url[url_key].append(entry)
 
     _out: Path = output_path if output_path is not None else _spec_dir / "parameter_mismatches.md"
 
@@ -796,7 +723,7 @@ def find_parameter_mismatches(
                             section_mismatches.extend(f"- `{p}`\n" for p in extra_in_python)
                             section_mismatches.append("\n")
 
-            # The link is relative to the report, wherever it is written to.
+            # The link is relative to the report
             py_link: str = Path(os.path.relpath(py_path, _out.parent)).as_posix()
             out_file.write(f"## {section} -> [{py_file}]({py_link})\n\n")
             if section_mismatches:
@@ -975,7 +902,7 @@ def _settings_node_parse(
         file.write(f"\n{example_note}\n")
 
     # for key in sorted(vars(data)):
-    # SettingsSpecParent is slotted and has no __dict__. Its fields hold the same names.
+    # SettingsSpecParent has no __dict__, so we use its fields
     for key in sorted(field.name for field in fields(data)):
         # Our second headers.
         header: str = "Settings " + key.title() + " Nodes"
@@ -1072,7 +999,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
     await instance.get_instances()
     ads_diag: Diagnostics | DiagnosticsResponse = await instance.get_diagnostics_info()
     # cur_version: None | AMPMinecraftInstance = None
-    # A remote Target's Instances live on its TargetADS, so we look through those too.
+    # A remote Target's Instances live on its TargetADS
     every_instance: set[InstanceTypeAliases] = set(instance.instances)
     for target_ads in instance.targets.values():
         every_instance.update(target_ads.instances)
@@ -1113,7 +1040,7 @@ async def amp_api_update(instance: Controller, sanitize_json: bool) -> None:
                 await _parse_get_api_spec_to_file(instance=entry, sanitize_json=sanitize_json)
                 break
 
-            # A mismatched Instance isn't fatal, we just move on and try the next one.
+            # This isn't fatal, so we try the next Instance
             _logger.warning(
                 "<%s.%s> | Version mismatch between the Instance and the ADS. ADS: %s | Instance: %s",
                 "util",
@@ -1206,7 +1133,7 @@ async def generate_docs_rst(instance: Controller) -> None:
     mc_: bool = False
     gen_: bool = False
     # src_: bool = False
-    # A remote Target's Instances live on its TargetADS, so we look through those too.
+    # A remote Target's Instances live on its TargetADS
     every_instance: set[InstanceTypeAliases] = set(instance.instances)
     for target_ads in instance.targets.values():
         every_instance.update(target_ads.instances)
@@ -1220,7 +1147,7 @@ async def generate_docs_rst(instance: Controller) -> None:
             data = dict_merge(data, mc_data)
             mc_ = True
 
-        # AMP 2.8 reports Generic Instances as "GenericModule", Source (srcds) games included.
+        # AMP 2.8 reports Generic Instances as "GenericModule"
         if gen_ is False and entry.running and entry.module in ("Generic", "GenericModule"):
             generic_data: ScheduleData | ScheduleDataResponse = await entry.get_schedule_data(format_data=False)
             if not isinstance(generic_data, dict):
@@ -1313,7 +1240,7 @@ def str_sanitizer_sphinx(string: str, special_chars: tuple[str, ...]) -> str:
             found_special = False
         _temp += piece
 
-    # A literal still open at the end of the string gets closed, or Sphinx warns about it.
+    # Close a literal left open at the end of the string
     if found_special is True:
         _temp += "``"
     return _temp

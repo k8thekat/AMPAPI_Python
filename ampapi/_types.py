@@ -52,20 +52,16 @@ ResponseTypeAlias = Union[
     "UpdatesResponse",
     "UserInfoResponse",
     "SettingSpecResponse",
-    # One list[Any] covers the list responses (AuditLogEntry, LoginUserInfo, Port, Role, Session and UserInfo).
-    # pyright cannot narrow list[A] | list[B] by inspecting the elements, so each endpoint's own return
-    # annotation carries the precise list type instead (eg. -> list[Session] | list[SessionResponse]).
+    # One list[Any] covers the list responses (AuditLogEntry, LoginUserInfo, Port, Role, Session and UserInfo)
+    # Each endpoint's return annotation has the precise list type, eg. list[Session] | list[SessionResponse]
     list[Any],
 ]
 
-# Key sets used to discriminate a raw response dict into a specific TypedDict.
-# A response matches when it has every key in *_REQUIRED_KEYS and none in *_EXCLUDED_KEYS.
-# The excluded tuples exist because multiple response types share a "status" key; they will need to
-# grow whenever a new TypedDict joining `ResponseTypeAlias` collides with an existing key set.
-# Only "status" is Required[] on ActionResultResponse; "reason" is optional, so requiring it would
-# reject valid responses. This matches the existing core.py narrowing.
+# These key sets tell a raw response dict apart
+# A match needs every REQUIRED key and no EXCLUDED key
+# Only "status" is Required[] on ActionResultResponse, and "reason" is optional
 ACTION_RESULT_REQUIRED_KEYS: tuple[str, ...] = ("status",)
-# "console_entries" excludes UpdatesResponse, "is_primary_task" excludes RunningTaskResponse; both carry a "status".
+# "console_entries" excludes UpdatesResponse and "is_primary_task" excludes RunningTaskResponse, as both carry a "status"
 ACTION_RESULT_EXCLUDED_KEYS: tuple[str, ...] = ("console_entries", "is_primary_task")
 
 ANALYTICS_SUMMARY_REQUIRED_KEYS: tuple[str, ...] = ("stats", "graph_data")
@@ -77,8 +73,7 @@ ANALYTICS_USER_DETAILS_EXCLUDED_KEYS: tuple[str, ...] = ()
 RUNNING_TASK_REQUIRED_KEYS: tuple[str, ...] = ("status", "is_primary_task")
 RUNNING_TASK_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# "state" alone no longer identifies StatusResponse; RunningTaskResponse carries one too, so "uptime"
-# is required to separate them.
+# RunningTaskResponse also carries "state", so "uptime" separates them
 STATUS_REQUIRED_KEYS: tuple[str, ...] = ("state", "uptime")
 STATUS_EXCLUDED_KEYS: tuple[str, ...] = ("is_primary_task",)
 
@@ -88,7 +83,7 @@ APPLICATION_EXCLUDED_KEYS: tuple[str, ...] = ()
 INSTANCE_DATASTORE_REQUIRED_KEYS: tuple[str, ...] = ("id", "sanitised_name")
 INSTANCE_DATASTORE_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# InstanceResponse also carries "instance_id" + "running", so "instance_name" separates the two.
+# InstanceResponse also carries "instance_id" and "running", so "instance_name" separates them
 INSTANCE_STATUS_REQUIRED_KEYS: tuple[str, ...] = ("instance_id", "running")
 INSTANCE_STATUS_EXCLUDED_KEYS: tuple[str, ...] = ("instance_name",)
 
@@ -120,11 +115,11 @@ DIAGNOSTICS_EXCLUDED_KEYS: tuple[str, ...] = ()
 PORT_INFO_REQUIRED_KEYS: tuple[str, ...] = ("port_number", "provision_node_name")
 PORT_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# InstanceResponse shares "instance_id" with several types; "instance_name" + "module" pins it down.
+# InstanceResponse shares "instance_id" with several types, so "instance_name" and "module" pin it down
 INSTANCE_REQUIRED_KEYS: tuple[str, ...] = ("instance_id", "instance_name", "module")
 INSTANCE_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# The `result` of Core/ActivateAMPLicence, confirmed against vm1 (AMP 2.8.0.8, QueryOnly).
+# This is the `result` of Core/ActivateAMPLicence
 LICENCE_INFO_REQUIRED_KEYS: tuple[str, ...] = ("licence_key", "grade", "product", "expires")
 LICENCE_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -134,34 +129,32 @@ SCHEDULE_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 SECURITY_CHECK_REQUIRED_KEYS: tuple[str, ...] = ("title", "resolution", "severity", "passed")
 SECURITY_CHECK_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# Every ADS and Instance sends these two. The other categories vary (eg. `branding` only on some Instances).
+# Every ADS and Instance sends these two, and the other categories vary (eg. `branding` only on some Instances)
 SETTINGS_SPEC_PARENT_REQUIRED_KEYS: tuple[str, ...] = ("system_settings", "security_and_privacy")
 SETTINGS_SPEC_PARENT_EXCLUDED_KEYS: tuple[str, ...] = ()
 
 WEBAUTHN_CREDENTIAL_IDS_REQUIRED_KEYS: tuple[str, ...] = ("ids", "challenge")
 WEBAUTHN_CREDENTIAL_IDS_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# The match_* keys are what separates a time interval trigger from the event triggers in TriggersResponse.
+# The match_* keys separate a time interval trigger from the event triggers in TriggersResponse
 TIMED_TRIGGER_REQUIRED_KEYS: tuple[str, ...] = ("match_days", "match_minutes")
 TIMED_TRIGGER_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# The `result` of Core/EnableTwoFactor, confirmed against vm1 (AMP 2.8.0.8).
+# This is the `result` of Core/EnableTwoFactor
 TWO_FACTOR_SETUP_INFO_REQUIRED_KEYS: tuple[str, ...] = ("url", "manual_key")
 TWO_FACTOR_SETUP_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# user_session_id is the in-application user key; AMP Users (UserInfoResponse) never carry one.
+# user_session_id is the in-application user key, and AMP Users (UserInfoResponse) never carry one
 USER_APPLICATION_DATA_REQUIRED_KEYS: tuple[str, ...] = ("user_session_id", "join_time")
 USER_APPLICATION_DATA_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# Confirmed against a live GetBackups response (AMP 2.8.0.8, a Minecraft Instance backup).
 BACKUP_REQUIRED_KEYS: tuple[str, ...] = ("id", "stored_locally", "stored_remotely")
 BACKUP_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# Confirmed against a live ImportConfig reply (AMP 2.8.0.8, a missing file). Every list was empty.
 IMPORT_CONFIG_REQUIRED_KEYS: tuple[str, ...] = ("settings", "imported", "not_imported", "unrecognised", "rejected")
 IMPORT_CONFIG_EXCLUDED_KEYS: tuple[str, ...] = ()
 
-# `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0, so these keys come from the `OPWhitelist` dataclass.
+# `MinecraftModule/GetOPWhitelist` was removed in AMP 2.6.5.0, so these keys come from the `OPWhitelist` dataclass
 OP_WHITELIST_REQUIRED_KEYS: tuple[str, ...] = ("op_list", "whitelist")
 OP_WHITELIST_EXCLUDED_KEYS: tuple[str, ...] = ()
 
@@ -175,8 +168,8 @@ def is_response_type[ResponseT](
     """Check a response against a key set to narrow it to a specific TypedDict.
 
     .. note::
-        The `response_type` parameter is only used to tell the type checker what the response
-        narrows to; the keys are what actually get validated at runtime.
+        The `response_type` parameter only tells the type checker what the response narrows to.
+        The keys are what get validated at runtime.
 
 
     Parameters
@@ -210,7 +203,7 @@ def is_response_list[ResponseT](
     """Check every entry of a list response against a key set to narrow it to a list of a specific TypedDict.
 
     .. note::
-        An empty list narrows successfully; there is nothing to contradict the key set.
+        An empty list narrows successfully.
 
 
     Parameters
@@ -238,7 +231,7 @@ def is_response_list[ResponseT](
 class ActionResultResponse(TypedDict, total=False):
     status: Required[bool]
     reason: str
-    # A dict for the endpoints the spec types `ActionResult<T>` with an object (eg. `TwoFactorSetupInfo`).
+    # This is a dict for endpoints the spec types `ActionResult<T>` with an object (eg. `TwoFactorSetupInfo`)
     result: Union[str, dict[str, Any]]
     # Added in AMP 2.8.
     support_url: Union[str, None]
@@ -252,14 +245,14 @@ then by method name, with the caption of the action as the value. A module witho
 
 
 class AnalyticsCountryDataResponse(TypedDict):
-    """One item of :attr:`AnalyticsSummaryResponse.country_data`, seen in 18 items of the 2.8.0.8 captures."""
+    """One item of :attr:`AnalyticsSummaryResponse.country_data`."""
 
     country: str
     session_count: int
     sessions_percent: float
     total_session_time: float
     display_session_time: str
-    # AMP sent the string "Infinity" for 1 of 18 items.
+    # AMP can send the string "Infinity"
     session_time_percent: Union[float, str]
     unique_player_count: int
     unique_player_percent: float
@@ -295,17 +288,17 @@ class AnalyticsSummaryResponse(TypedDict):
 
 
 class AnalyticsTopPlayersResponse(TypedDict):
-    """One item of :attr:`AnalyticsSummaryResponse.top_players`, seen in 32 items of the 2.8.0.8 captures."""
+    """One item of :attr:`AnalyticsSummaryResponse.top_players`."""
 
     username: str
     total_session_time: float
     display_session_time: str
-    # AMP sent the string "Infinity" for 1 of 32 items.
+    # AMP can send the string "Infinity"
     percent: Union[float, str]
 
 
 class AnalyticsUserDetailsResponse(TypedDict):
-    """The raw response from :meth:`AnalyticsPlugin.get_user_details`, confirmed live on AMP-2.8.0.8."""
+    """The raw response from :meth:`AnalyticsPlugin.get_user_details`."""
 
     username: str
     first_session: str
@@ -355,7 +348,6 @@ then by method name (eg. `"GetConfig"`).
 """
 
 
-# Replaced by the aliases and TypedDicts above, which match the AMP-2.8.0.8 captures.
 # class ActionSpec(TypedDict):
 #     """ads_module : dict[:class:`str`, Any]
 #
@@ -459,7 +451,7 @@ class ApplicationResponse(TypedDict):
     deprecated_reason: Union[str, None]
     is_service_spec: bool
     is_multi_ip_aware: bool
-    # Added in 2.8.0.4; absent on 2.6.5.0.
+    # Added in 2.8.0.4
     resource_usage_info: NotRequired[Union[str, None]]
 
 
@@ -467,7 +459,7 @@ class AppSummaryResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_supported_app_summaries`.
 
     .. note::
-        A condensed :class:`ApplicationResponse`; it drops `module_name`, `settings` and
+        A condensed :class:`ApplicationResponse` without `module_name`, `settings` and
         `is_multi_ip_aware`. Builds :class:`~ampapi.modules.AppSummary`.
 
     """
@@ -554,7 +546,7 @@ class ConsoleEntriesResponse(TypedDict):
 
     timestamp: str
     source: str
-    # Confirmed against getupdates.json; only ever seen as None.
+    # UNK, by default None
     source_id: Union[str, None]
     type: str
     contents: str
@@ -579,7 +571,7 @@ class ControllerResponse(TypedDict):
     """Represents a single target from :meth:`ADSModule.get_instances`.
 
     .. note::
-        This is a *target*, not an Instance; the Instances live in :attr:`available_instances`.
+        This is a *target*, not an Instance. The Instances live in :attr:`available_instances`.
         A Controller returns one of these per attached target, local and remote.
 
     """
@@ -592,7 +584,7 @@ class ControllerResponse(TypedDict):
     # description: str
     description: Union[str, None]
     disabled: bool
-    # Null on every target observed so far, so its shape is unconfirmed; see the Fitness dataclass.
+    # UNK, see the Fitness dataclass
     fitness: Union[dict[str, Any], None]
     friendly_name: str
     id: int
@@ -606,7 +598,7 @@ class ControllerResponse(TypedDict):
     tags_list: Union[str, None]
     url: str
 
-    # Ver: 2.8.0.4; absent on 2.6.5.0.
+    # Ver: 2.8.0.4
     last_poll_update: NotRequired[str]
     last_push_update: NotRequired[str]
     push_update_throttle_interval: NotRequired[str]
@@ -628,8 +620,8 @@ class CPUInfoResponse(TypedDict):
     total_threads: int
 
 
-# Confirmed live on AMP 2.8.0.8: AMP spells the mapping key `setting_mappings`, and sends null for
-# `description`, `module`, `template_instance`, `template_role` and `template_base_app` on a bare template.
+# AMP spells the mapping key `setting_mappings`, and sends null for `description`, `module`,
+# `template_instance`, `template_role` and `template_base_app` on a bare template
 class DeploymentTemplateResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_deployment_templates`."""
 
@@ -718,8 +710,8 @@ class FileChunkResponse(TypedDict):
 class ImportConfigResponse(TypedDict):
     """The raw response from :meth:`GenericModule.import_config`."""
 
-    # TODO: Confirm the element types against a real import.
-    # Only empty lists were seen, so they are typed as Any for now.
+    # TODO: Confirm the element types
+    # These lists are typed as Any until we see one with entries
     settings: dict[str, Any]
     imported: list[Any]
     not_imported: list[Any]
@@ -741,7 +733,7 @@ class InstanceDatastoreResponse(TypedDict):
     active: bool
     tags: list[str]
     is_internal: bool
-    # Note the British spelling; this is what AMP sends on the wire.
+    # AMP spells this the British way
     sanitised_name: str
 
 
@@ -781,12 +773,10 @@ class InstanceResponse(TypedDict):
     container_cpus: float
     tags: Union[list[str], None]
     module_display_name: Union[str, None]
-    # Keyed by metric name: cpu_usage, memory_usage, active_users (+ tps) on AMP 2.8.0.8; empty while stopped.
-    # An empty object when the Instance is stopped.
+    # This is keyed by metric name and is an empty object when the Instance is stopped
     metrics: Union[MetricsResponse, None]
     display_image_source: Union[str, None]
     description: Union[str, None]
-    # Confirmed against getinstances.json on 2.6.5.0; these were absent from the original definition.
     application_ip: Union[str, None]
     container_swap_mb: int
     custom_mount_binds: dict[str, str]
@@ -850,19 +840,18 @@ class LicenceResultResponse(TypedDict, total=False):
 
 
 class LoginResultsResponse(TypedDict):
-    # A failed login sends None for these four (confirmed against AMP 2.8.0.8).
+    # A failed login sends None for these four
     permissions: Union[list[str], None]
     remember_me_token: Union[str, None]
     result: int
     result_reason: str
     session_id: Union[str, None]
     success: bool
-    # Confirmed against login.json; this carries a username, so it is the LoginUserInfo shape and not
-    # the AMP User shape UserInfoResponse.
+    # This is the LoginUserInfo shape since it carries a username, not UserInfoResponse
     user_info: Union[LoginUserInfoResponse, None]
 
 
-# Not total=False, so pyright can narrow the response union to this shape by its keys.
+# This is not total=False and pyright narrows the response union to it by its keys
 class LoginUserInfoResponse(TypedDict):
     id: str
     username: str
@@ -889,8 +878,8 @@ class MCUserResponse(TypedDict):
 class MessageParametersResponse(TypedDict, total=False):
     """Represents the JSON response data for `parameters` in :class:`MessagesResponse`."""
 
-    # Depends on the message. A "metrics" message carries instance_id, metrics, state and uptime,
-    # a backup message carries name and reason.
+    # Depends on the message, as a "metrics" message carries instance_id, metrics, state and uptime
+    # A backup message carries name and reason
     instance_id: str
     metrics: MetricsResponse
     uptime: UptimeResponse
@@ -902,7 +891,7 @@ class MessageParametersResponse(TypedDict, total=False):
 class MessagesResponse(TypedDict):
     """Represents the JSON response data for each entry of :attr:`UpdatesResponse.messages`."""
 
-    # Depends on the message, see :attr:`Messages.parameters`. Messages the library doesn't know stay as sent.
+    # Depends on the message (see :attr:`Messages.parameters`) and unknown messages stay as sent
     parameters: Union[
         MessageParametersResponse,
         RunningTaskResponse,
@@ -921,7 +910,6 @@ class MessagesResponse(TypedDict):
     age_minutes: int
 
 
-# Replaced by MethodsResponse, which matches the AMP-2.8.0.8 captures.
 # class MethodsData(TypedDict):
 #     """id : :class:`str`
 #
@@ -960,7 +948,7 @@ class MetricsDataResponse(TypedDict):
     color: Optional[str]
     color2: Optional[str]
     color3: Optional[str]
-    # Confirmed against getstatus.json; AMP sends a short label for the metric tile (eg "CPU", "RAM"), or null.
+    # This is a short label for the metric tile (eg "CPU", "RAM") or null
     # short_name: NotRequired[str]
     short_name: NotRequired[Union[str, None]]
 
@@ -971,7 +959,7 @@ class MetricsResponse(TypedDict):
     cpu_usage: MetricsDataResponse
     memory_usage: MetricsDataResponse
     active_users: MetricsDataResponse
-    # Confirmed against AMP 2.8.0.8: the ADS sends the two usage keys, some Minecraft Instances send tps.
+    # The ADS sends the two usage keys and some Minecraft Instances send tps
     physical_ram_usage: NotRequired[MetricsDataResponse]
     swap_usage: NotRequired[MetricsDataResponse]
     tps: NotRequired[MetricsDataResponse]
@@ -1266,7 +1254,7 @@ class PortInfoResponse(TypedDict):
     """Represents a single entry from :meth:`ADSModule.get_instance_network_info`.
 
     .. note::
-        `protocol` arrives as an int; see :class:`Protocols` for the mapping.
+        `protocol` arrives as an int. See :class:`Protocols` for the mapping.
 
     """
 
@@ -1278,7 +1266,7 @@ class PortInfoResponse(TypedDict):
     range: int
     is_user_defined: bool
     is_firewall_target: bool
-    # Added in 2.8.0.4; absent on 2.6.5.0.
+    # Added in 2.8.0.4
     is_child: NotRequired[bool]
     min_listening: NotRequired[int]
     offset: NotRequired[int]
@@ -1299,14 +1287,14 @@ class PortResponse(TypedDict):
     min_listening: NotRequired[int]
 
 
-# TODO: Verify these keys against a live response.
-# Derived from the `Provision` dataclass and docs; the endpoint returns a null body on the ADS and Controller.
+# TODO: Verify these keys
+# They come from the `Provision` dataclass and docs, and the endpoint returns a null body on the ADS and Controller
 class ProvisionResponse(TypedDict):
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
     .. note::
         The related :class:`Fitness` dataclass carries two extra fields, `score_description` and
-        `score_zero_factors`; those belong to a target's `fitness` block, not to this endpoint.
+        `score_zero_factors`, which belong to a target's `fitness` block.
 
     """
 
@@ -1334,7 +1322,7 @@ class ProvisionSettingInfoResponse(TypedDict):
     related_setting: Union[str, None]
     endpoint_name: str
     endpoint_format: Union[str, None]
-    # Added in 2.8.0.4; absent on 2.6.5.0.
+    # Added in 2.8.0.4
     hidden: NotRequired[bool]
     min_listening: NotRequired[int]
 
@@ -1344,7 +1332,7 @@ class RemoteTargetInfoResponse(TypedDict):
 
     ip_address_list: list[str]
     platform_info: PlatformInfoResponse
-    # The target payload carries a reduced datastore shape, not a full InstanceDatastoreResponse.
+    # This is a reduced datastore shape, not a full InstanceDatastoreResponse
     datastores: list[TargetDatastoreResponse]
     deploys_in_containers: bool
 
@@ -1427,7 +1415,7 @@ class SessionResponse(TypedDict):
 
 
 class SettingSpecActionResponse(TypedDict):
-    """One item of :attr:`SettingSpecResponse.actions`, seen in 19 items of the 2.8.0.8 captures."""
+    """One item of :attr:`SettingSpecResponse.actions`."""
 
     module: str
     method: str
@@ -1483,7 +1471,7 @@ class SettingSpecResponse(TypedDict):
 
 
 class SettingSpecSelectionSourceResponse(TypedDict):
-    """The raw `selection_source` of :class:`SettingSpecResponse`, seen in 66 specs of the 2.8.0.8 captures."""
+    """The raw `selection_source` of :class:`SettingSpecResponse`."""
 
     deferred: bool
     must_validate: bool
@@ -1491,7 +1479,7 @@ class SettingSpecSelectionSourceResponse(TypedDict):
 
 
 class SettingsSpecAttributeResponse(TypedDict):
-    """The raw `attributes` of :class:`SettingSpecResponse`, seen in 10 specs of the 2.8.0.8 captures."""
+    """The raw `attributes` of :class:`SettingSpecResponse`."""
 
     key_name: str
     value_name: str
@@ -1499,7 +1487,7 @@ class SettingsSpecAttributeResponse(TypedDict):
     value_placeholder: str
     read_only_keys: bool
     key_enum_source: str
-    # A dict in 1 of 10 specs, null in the other 9.
+    # This is a dict or None
     key_enum_values: Union[dict[str, str], None]
     type_id: str
 
@@ -1531,7 +1519,7 @@ class SettingValueUpdateResponse(TypedDict):
     new_value: str
 
 
-# Not total=False, so pyright can narrow the response union to this shape by its keys.
+# This is not total=False and pyright narrows the response union to it by its keys
 class StatusResponse(TypedDict):
     state: int
     uptime: str
@@ -1549,7 +1537,7 @@ class StructuredDiagnosticsResponse(TypedDict):
 
 
 class TargetDatastoreResponse(TypedDict):
-    """The reduced datastore shape carried in :class:`RemoteTargetInfoResponse`; only an ID and a name."""
+    """The reduced datastore shape in :class:`RemoteTargetInfoResponse`, with only an ID and a name."""
 
     id: int
     friendly_name: str
@@ -1559,8 +1547,8 @@ class TimedTriggerResponse(TypedDict):
     """The raw response from :meth:`Core.get_time_interval_trigger`.
 
     .. note::
-        This is *not* :class:`TriggersResponse`; a time interval trigger fires off the ``match_*``
-        schedule fields instead of an event, and carries no `emits` / `!type` keys.
+        This is *not* :class:`TriggersResponse`. A time interval trigger fires off the ``match_*``
+        schedule fields and carries no `emits` / `!type` keys.
 
     """
 
@@ -1575,13 +1563,12 @@ class TimedTriggerResponse(TypedDict):
     match_months: list[int]
     name: str
     order: int
-    # AMP keys this by task ID, and each task carries its own `id` too (every capture on AMP 2.8.0.8).
+    # AMP keys this by task ID, and each task carries its own `id` too
     tasks: dict[str, TriggerTasksResponse]
-    # Confirmed live on AMP 2.8.0.8; an ISO timestamp once the trigger has fired, null before.
+    # This is an ISO timestamp once the trigger has fired and null before
     last_executed: NotRequired[Union[str, None]]
 
 
-# Replaced by TriggersResponse, which matches the AMP-2.8.0.8 captures.
 # class AvailableTriggersResponse(TypedDict):
 #     id: str
 #     type: str
@@ -1679,7 +1666,7 @@ class TwoFactorSetupResultResponse(TypedDict, total=False):
     support_title: Union[str, None]
 
 
-# Not total=False, so pyright can narrow the response union to this shape by its keys.
+# This is not total=False and pyright narrows the response union to it by its keys
 class UpdateInfoResponse(TypedDict):
     update_available: bool
     version: str
@@ -1689,7 +1676,7 @@ class UpdateInfoResponse(TypedDict):
     patch_only: bool
 
 
-# Not total=False, so pyright can narrow the response union to this shape by its keys.
+# This is not total=False and pyright narrows the response union to it by its keys
 class UpdatesResponse(TypedDict):
     status: StatusResponse
     console_entries: list[ConsoleEntriesResponse]

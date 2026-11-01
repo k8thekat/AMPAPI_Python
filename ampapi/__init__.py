@@ -1,4 +1,4 @@
-# ruff: noqa: I001, N815, F821, UP037 # star imports keep their load order; version_info keeps its public field names and is deleted after use
+# ruff: noqa: I001, N815, F821, UP037 # star imports keep their load order and version_info is deleted after use
 """Copyright (C) 2021-2026 Katelynn Cadwallader.
 
 This file is part of AMPAPI_Python.

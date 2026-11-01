@@ -41,14 +41,14 @@ __all__ = ("KeyDriftCheck", "declared_keys", "key_drift")
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-# Matches a `url=` literal such as "Core/GetStatus", with or without a leading "API/".
+# Matches a `url=` literal such as "Core/GetStatus", with or without a leading "API/"
 _ENDPOINT_URL_PATTERN = re.compile(r"^(?:API/)?([A-Za-z]+/[A-Za-z0-9]+)$")
-# The helpers each wrapper narrows its response with; their second argument is the TypedDict.
+# These are what a wrapper narrows its response with, and the second argument is the TypedDict
 _NARROWING_CALLS = ("is_response_type", "is_response_list")
 
 
 def _is_json_object(value: object) -> TypeGuard[Mapping[str, object]]:
-    """If `value` is a decoded JSON object; its keys are always strings."""
+    """If `value` is a decoded JSON object."""
     return isinstance(value, dict)
 
 
@@ -58,7 +58,7 @@ def _is_json_array(value: object) -> TypeGuard[list[object]]:
 
 
 def _unwrap(hint: Any) -> tuple[Any, Union[bool, None]]:
-    """The hint inside `NotRequired[...]` / `Required[...]`, and which of the two it was (`None` for neither)."""
+    """Take `NotRequired` / `Required` off a hint and say which one it was, None for neither."""
     origin = typing.get_origin(hint)
     if origin is NotRequired:
         return typing.get_args(hint)[0], False
@@ -68,7 +68,7 @@ def _unwrap(hint: Any) -> tuple[Any, Union[bool, None]]:
 
 
 def _nested_shape(hint: Any) -> Union[tuple[type, bool], None]:
-    """The TypedDict a key holds, directly or in a list, and if it is a list. `None` for anything else."""
+    """Get the TypedDict a hint holds, directly or in a list, and if it is a list."""
     origin = typing.get_origin(hint)
     # Union[X, None] and X | None
     if origin is Union or origin is types.UnionType:
@@ -91,7 +91,7 @@ def _nested_shape(hint: Any) -> Union[tuple[type, bool], None]:
 def declared_keys(shape: type) -> dict[str, tuple[object, bool]]:
     """Each key a TypedDict declares, with its hint and whether a payload must carry it.
 
-    The annotations are read with `typing.get_type_hints()`, since `__optional_keys__` is empty under
+    The annotations are read with `typing.get_type_hints()`, as `__optional_keys__` is empty under
     `from __future__ import annotations`.
 
     Parameters
@@ -153,8 +153,7 @@ def key_drift(shape: type, payloads: Iterable[Mapping[str, object]]) -> KeyDrift
     Parameters
     ----------
     shape : :class:`type`
-        A TypedDict. Its annotations are read with `typing.get_type_hints()`, since `__optional_keys__` is empty
-        under `from __future__ import annotations`.
+        A TypedDict, read with `typing.get_type_hints()`.
     payloads : Iterable[Mapping[:class:`str`, :class:`object`]]
         The captured payloads, each a decoded and sanitized JSON object.
 
@@ -171,17 +170,17 @@ def key_drift(shape: type, payloads: Iterable[Mapping[str, object]]) -> KeyDrift
 
 
 def _annotation_names(node: Union[ast.expr, None]) -> list[str]:
-    """Every plain name used in an annotation, eg. `list[Backup] | list[BackupResponse]` gives Backup, BackupResponse."""
+    """Get every plain name in an annotation, eg. `list[Backup]` gives Backup."""
     if node is None:
         return []
     return [child.id for child in ast.walk(node) if isinstance(child, ast.Name)]
 
 
 class KeyDriftCheck:
-    """Compares AMP responses with the TypedDict each endpoint narrows to, so AMP changing its keys gets noticed.
+    """Compare AMP responses with the TypedDict each endpoint narrows to, to notice AMP changing its keys.
 
     A dev tool. :meth:`Base._response_handler` uses one when called with ``check_key_drift=True`` and
-    ``to_file=True``; :meth:`check_directory` runs over captures already saved to disk.
+    ``to_file=True``. :meth:`check_directory` runs over captures already saved to disk.
 
     .. code-block:: python
 
@@ -213,22 +212,10 @@ class KeyDriftCheck:
 
     @staticmethod
     def _read_shapes(package: Path) -> dict[str, tuple[type, ...]]:
-        """The TypedDicts each endpoint's response is expected to match, read from the wrapper source.
+        """Read the TypedDicts each endpoint's response should match from the wrapper source.
 
-        Each wrapper method posts to one `url=` literal and narrows the response with
-        `is_response_type()` / `is_response_list()`; the TypedDict it narrows to is its shape. A method that does
-        not narrow falls back to the TypedDicts named in its return annotation (eg. `-> Status | StatusResponse`),
-        so a new wrapper never needs registering by hand.
-
-        Parameters
-        ----------
-        package : :class:`Path`
-            The directory holding the wrapper modules.
-
-        Returns
-        -------
-        dict[:class:`str`, tuple[:class:`type`, ...]]
-            The endpoint URL and its TypedDicts. An endpoint with no TypedDict is left out.
+        A wrapper's shape is the TypedDict it narrows to with `is_response_type()` / `is_response_list()`,
+        or the ones named in its return annotation. An endpoint with no TypedDict is left out.
 
         """
         shapes: dict[str, set[type]] = collections.defaultdict(set)
@@ -252,7 +239,7 @@ class KeyDriftCheck:
                     if isinstance(node.func, ast.Name) and node.func.id in _NARROWING_CALLS and len(node.args) > 1:
                         narrowed.extend(_annotation_names(node.args[1]))
 
-                # A method posting to more than one URL cannot say which response a shape belongs to.
+                # Skip a method with more than one URL, as we can't tell which shape is whose
                 if len(urls) != 1:
                     continue
 
@@ -272,7 +259,7 @@ class KeyDriftCheck:
         endpoint : :class:`str`
             The endpoint URL, eg. `Core/GetStatus`.
         data : :class:`object`
-            The sanitized JSON response; a list response compares each of its objects.
+            The sanitized JSON response. A list compares each of its objects.
 
         Returns
         -------
@@ -297,8 +284,8 @@ class KeyDriftCheck:
         """Compare every capture under `path` with its endpoint's TypedDict and write a Markdown report.
 
         A capture is matched to its endpoint by file name, the way `to_file` names it (`getstatus.json` is
-        `Core/GetStatus`). Error captures (a JSON object with a `title`) and `*.key_drift.json` files are skipped,
-        and empty captures (`[]` or `null`) are listed apart. "No known shape" means the endpoint's wrapper names
+        `Core/GetStatus`). Error captures (a JSON object with a `title`) and `*.key_drift.json` files are skipped.
+        Empty captures (`[]` or `null`) are listed apart. "No known shape" means the endpoint's wrapper names
         no TypedDict, or the file is not named after an endpoint.
 
         Parameters
@@ -330,12 +317,12 @@ class KeyDriftCheck:
             if _is_json_object(data) and "title" in data:
                 continue
 
-            # An empty list or null has no keys to compare.
+            # Empty lists and null have no keys
             if data is None or data == []:
                 empty.append(name)
                 continue
 
-            # Same endpoint name in two modules: keep whichever shape matches best.
+            # The same endpoint can be in two modules, so we keep the best match
             results = [(endpoint, found) for endpoint in by_name.get(capture.stem.lower(), []) if (found := self.check(endpoint, data))]
             if not results:
                 unmatched.append(name)
