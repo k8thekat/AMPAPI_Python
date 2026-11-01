@@ -9,7 +9,6 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 ---
 
 - (#3) Confirm `ProvisionResponse` against a live payload; AMP answers `GetProvisionFitness` with null on the VMs.
-- (#43) `update_datastore` and `add_datastore` send `InstanceDatastore.to_dict()`'s snake_case keys, which AMP reads as a datastore with no name.
 
 ## ampapi/instance.py
 

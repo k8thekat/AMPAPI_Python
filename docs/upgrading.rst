@@ -173,6 +173,12 @@ Changed methods
 - :meth:`~ampapi.adsmodule.ADSModule.deploy_template` sends AMP's parameter names (eg. `TemplateID` and `NewUsername`)
   from :meth:`Template.to_dict <ampapi.modules.Template.to_dict>`, and it returns a
   :class:`~ampapi.modules.RunningTask`, which is what AMP's spec names. 4.x sent the attribute names.
+- :meth:`~ampapi.adsmodule.ADSModule.add_datastore` and :meth:`~ampapi.adsmodule.ADSModule.update_datastore` send
+  AMP's parameter names (eg. `FriendlyName` and `SoftLimitMB`) from
+  :meth:`InstanceDatastore.to_dict <ampapi.modules.InstanceDatastore.to_dict>`. 4.x sent the attribute names, so AMP
+  saved a datastore with no name, and the ADS then failed to start until that datastore was removed.
+  :meth:`~ampapi.adsmodule.ADSModule.update_datastore` also takes the raw dict from
+  :meth:`~ampapi.adsmodule.ADSModule.get_datastore`.
 - ``Base.version_validation()`` takes the `endpoint` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
 - ``Base.clean_up()`` takes a keyword-only `logout` (default False) to call ``Core/Logout`` before closing the session.

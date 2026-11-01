@@ -28,7 +28,6 @@ import sys
 import types
 import typing
 from dataclasses import dataclass, field, fields, is_dataclass
-from enum import Enum
 from operator import attrgetter
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self, TypeGuard, Union
@@ -53,7 +52,6 @@ from ._enums import (
     ReleaseStreamState,
     TwoFactoryModeState,
 )
-from .errors import AMPAPITypeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -229,39 +227,40 @@ def _field_values(instance: Any) -> dict[str, Any]:
     return {field_.name: getattr(instance, field_.name) for field_ in fields(instance)}
 
 
-def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
-    """Deconstruct a dataclass into an API parameter dict.
+# Each `to_dict` now sends AMP's own key names, so nothing uses this
+# def _dataclass_to_dict(dataclass_: Any) -> dict[str, Any]:
+#     """Deconstruct a dataclass into an API parameter dict.
 
-    .. note::
-        Enums are sent as their ``.value`` and None values are omitted.
+#     .. note::
+#         Enums are sent as their ``.value`` and None values are omitted.
 
 
-    Parameters
-    ----------
-    dataclass_ : Any
-        The dataclass instance to deconstruct.
+#     Parameters
+#     ----------
+#     dataclass_ : Any
+#         The dataclass instance to deconstruct.
 
-    Returns
-    -------
-    dict[:class:`str`, Any]
-        The dataclass attributes as a key, value paired dict.
+#     Returns
+#     -------
+#     dict[:class:`str`, Any]
+#         The dataclass attributes as a key, value paired dict.
 
-    Raises
-    ------
-    :exc:`AMPAPITypeError`
-        When the object passed in is not a dataclass instance.
+#     Raises
+#     ------
+#     :exc:`AMPAPITypeError`
+#         When the object passed in is not a dataclass instance.
 
-    """
-    if not is_dataclass(dataclass_):
-        raise AMPAPITypeError(end_point="<dataclass_to_dict>", cur_type=dataclass_, expec_type=dict)
+#     """
+#     if not is_dataclass(dataclass_):
+#         raise AMPAPITypeError(end_point="<dataclass_to_dict>", cur_type=dataclass_, expec_type=dict)
 
-    values: dict[str, Any] = {}
-    for entry in fields(class_or_instance=dataclass_):
-        value: Any = getattr(dataclass_, entry.name)
-        if value is None:
-            continue
-        values[entry.name] = value.value if isinstance(value, Enum) else value
-    return values
+#     values: dict[str, Any] = {}
+#     for entry in fields(class_or_instance=dataclass_):
+#         value: Any = getattr(dataclass_, entry.name)
+#         if value is None:
+#             continue
+#         values[entry.name] = value.value if isinstance(value, Enum) else value
+#     return values
 
 
 def timestamp_converter(timestamp: str) -> datetime.datetime:
@@ -2109,13 +2108,30 @@ class InstanceDatastore(ResponseData):
     def to_dict(self) -> dict[str, Any]:
         """As the function name implies; converts the class to a dict for use as an API parameter.
 
+        .. versionchanged:: 5.0.0
+            The keys are AMP's parameter names (eg. `FriendlyName`), not the attribute names.
+            `current_usage_mb` and `sanitised_name` are not sent.
+
         Returns
         -------
         dict[:class:`str`, Any]
-            The class attributes as a key, value paired dict, with None values omitted.
+            The class attributes keyed by their AMP API parameter names.
 
         """
-        return _dataclass_to_dict(self)
+        # return _dataclass_to_dict(self)
+        # These are the keys AMP's panel sends; AMP works out the usage and sanitised name itself
+        return {
+            "Id": self.id,
+            "FriendlyName": self.friendly_name,
+            "Description": self.description,
+            "Directory": self.directory,
+            "SoftLimitMB": self.soft_limit_mb,
+            "InstanceLimit": self.instance_limit,
+            "Priority": self.priority,
+            "Active": self.active,
+            "Tags": self.tags,
+            "IsInternal": self.is_internal,
+        }
 
 
 @dataclass(slots=True)

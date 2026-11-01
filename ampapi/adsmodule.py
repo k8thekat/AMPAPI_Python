@@ -134,6 +134,9 @@ class ADSModule(Base):
 
         Endpoint: `ADSModule/AddDatastore`
 
+        .. versionchanged:: 5.0.0
+            Sends AMP's parameter names.
+
         Parameters
         ----------
         new_datastore : :class:`InstanceDatastore`
@@ -3608,9 +3611,12 @@ class ADSModule(Base):
 
         Endpoint: `ADSModule/UpdateDatastore`
 
+        .. versionchanged:: 5.0.0
+            Sends AMP's parameter names, and takes an :class:`InstanceDatastoreResponse` as well.
+
         Parameters
         ----------
-        updated_datastore : :class:`InstanceDatastore`
+        updated_datastore : :class:`InstanceDatastore` | :class:`InstanceDatastoreResponse`
             Your pre-created data structure to be parsed for the required API parameters.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
@@ -3627,11 +3633,14 @@ class ADSModule(Base):
         """
         await self._reauth()
         # We take the dataclass or the raw dict
+        # The raw dict has the sanitized keys, so it goes through the dataclass to get AMP's names
         data: dict[str, Any]
-        if isinstance(updated_datastore, InstanceDatastore):  # noqa: SIM108
+        if isinstance(updated_datastore, InstanceDatastore):
             data = updated_datastore.to_dict()
         else:
-            data = dict(updated_datastore)
+            # data = dict(updated_datastore)
+            data = InstanceDatastore.from_response(updated_datastore).to_dict()
+
         parameters: dict[str, Any] = {"updatedDatastore": data}
         result: ResponseAliasFull = await self._post(
             url="ADSModule/UpdateDatastore",

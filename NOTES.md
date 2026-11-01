@@ -175,7 +175,8 @@ Found while triggering them (vm1, 2026-10-24):
   has ever logged one. Restarting vm1's ADS01 left fitness null after two minutes. No setting names fitness, both
   VMs allow 32 Instances and local creation, and their Professional licence's `feature_set` is `RunAMP`,
   `ControllerTargetMode` and `InstanceCloning`. Untried: a different licence edition, and reading the DLL's code.
-  `InstanceDatastore.to_dict()` is fine, because `add_datastore` and `update_datastore` send it as one nested object.
+- `InstanceDatastore.to_dict()` had the same problem, although `add_datastore` and `update_datastore` send it as one
+  nested object (#43, see "Endpoint shapes confirmed on the VMs"). AMP reads the nested object's keys by name too.
 - `CreateInstance.ip_binding` defaulted to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
   that address. It is `"0.0.0.0"` since #28, and an Instance created with the default worked on vm1.
 - `Controller.instance_id` is `'0'`. The local ADS's ID, which `target_ads_instance` needs, is the "Local Instances"
@@ -510,7 +511,15 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   stored a datastore with a null name. Every `GetDatastores` after it was an unhandled exception, and ADS01 then
   crashed on start in `InstanceDatastore.get_SanitisedName()`. Moving `ADS01/datastore.dat` aside let it start with
   only the Default Datastore (the broken file is kept as `datastore.dat.broken-42`). AMP wants its own key names
-  here, so the `_dataclass_to_dict` note about nested payloads in `snake_case` doesn't hold for datastores (#43).
+  here, even inside a nested object (#43).
+  The JSON reader matches names without case, so `id`, `description`, `directory`, `priority`, `tags` and `active`
+  landed, and the update hit the Default Datastore by its ID. The underscored names didn't, so `FriendlyName` was
+  null, and AMP saved the datastore before `get_SanitisedName()` threw on it. The 4.x code sent the same keys.
+  Since #43, `to_dict()` sends the 10 keys AMP's panel sends (`Plugin.js`, `DatastoreVM.asJS`): `Id`,
+  `FriendlyName`, `Description`, `Directory`, `SoftLimitMB`, `InstanceLimit`, `Priority`, `Active`, `Tags` and
+  `IsInternal`. `CurrentUsageMB` and `SanitisedName` are AMP's own. Live on vm1, an add, an update from the
+  dataclass, an update from `get_datastore`'s raw dict, an ADS restart and a delete all worked, and AMP worked out
+  the sanitised name from each new friendly name.
 - `AnalyticsPlugin/GetUserDetails` (confirmed live 2026-10-21, FTBEvolution01): null unless the Instance has
   `AnalyticsPlugin.Privacy.EnableAnalytics` and `UserSpecificData` on (neither needs a restart, and a session already
   running when they were turned on was recorded). It takes the player name, a UUID answers null. Times are minutes,
