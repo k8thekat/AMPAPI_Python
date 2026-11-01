@@ -506,6 +506,11 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
 - `FileManagerPlugin/AppendFileChunk`: answers null and has no visible effect. It creates no file, doesn't append to
   one WriteFileChunk made, and `Delete` True leaves it alone. The panel never calls it.
 - `ADSModule/GetProvisionFitness`: JSON null on the VMs (no fitness data), so its shape is still unknown.
+- `ADSModule/UpdateDatastore` (2026-10-31, vm1): sent with `InstanceDatastore.to_dict()`'s snake_case keys, AMP
+  stored a datastore with a null name. Every `GetDatastores` after it was an unhandled exception, and ADS01 then
+  crashed on start in `InstanceDatastore.get_SanitisedName()`. Moving `ADS01/datastore.dat` aside let it start with
+  only the Default Datastore (the broken file is kept as `datastore.dat.broken-42`). AMP wants its own key names
+  here, so the `_dataclass_to_dict` note about nested payloads in `snake_case` doesn't hold for datastores (#43).
 - `AnalyticsPlugin/GetUserDetails` (confirmed live 2026-10-21, FTBEvolution01): null unless the Instance has
   `AnalyticsPlugin.Privacy.EnableAnalytics` and `UserSpecificData` on (neither needs a restart, and a session already
   running when they were turned on was recorded). It takes the player name, a UUID answers null. Times are minutes,
