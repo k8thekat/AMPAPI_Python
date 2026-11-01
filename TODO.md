@@ -18,6 +18,8 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 
 ---
 
+- (#44) A dead session on an `ActionResult` endpoint comes back as `Status` False with a `Session.Exists` reason, which `_response_handler` doesn't treat as a dead session.
+
 ## ampapi/core.py
 
 ---

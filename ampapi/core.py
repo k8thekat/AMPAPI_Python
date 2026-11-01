@@ -1914,6 +1914,7 @@ class Core(Base):
     async def get_api_spec(
         self,
         *,
+        sanitize_json: bool = True,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> APISpec:
@@ -1926,8 +1927,13 @@ class Core(Base):
         .. note::
             See :ref:`API Reference <Documentation>` for more information.
 
+        .. versionchanged:: 5.0.0
+            Takes `sanitize_json`, the only endpoint method that does.
+
         Parameters
         ----------
+        sanitize_json : :class:`bool`, optional
+            Run the spec through :meth:`sanitize_json`, by default True. False keeps AMP's own names.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -1944,6 +1950,7 @@ class Core(Base):
         result: ResponseAliasFull = await self._post(
             url="Core/GetAPISpec",
             request_params=request_params,
+            sanitize_json=sanitize_json,
             **response_params,
         )
         if not isinstance(result, dict):

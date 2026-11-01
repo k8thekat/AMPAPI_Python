@@ -35,6 +35,13 @@ for `set_backup_sticky` or a removed Minecraft method returned None as if it wor
 
 A bool answer (spec `Boolean`, AMP sends a bare `true`) is written by `to_file` before `_response_handler` returns it.
 
+`sanitize_json` is a keyword of `_post` and `Core.get_api_spec` only, not of `ResponseHandlerOptions`. Every narrowing
+check reads the sanitized key names, so an endpoint method given AMP's own names raised a misleading
+`AMPAPITypeError` ("Response: list | Expected: list"), even with `format_data=False` (vm1, 2026-10-31).
+`_response_handler`'s error checks also read `title` and `status`, so raw JSON slipped past them: a failed
+`ActionResult` came back as data, and a dead session didn't log in again. They now read a sanitized copy while the
+caller gets the raw one. `get_api_spec` narrows nothing, which is why `util.py`'s spec dumps take it raw.
+
 `Core/RunSecurityCheck` sends `Pass`, which snake_cases to the keyword `pass`. `Base.json_key_mapping` renames it to
 `passed` for every endpoint. It is the only keyword key seen in the specs and captures so far. A new one goes in the
 same mapping.
@@ -70,6 +77,10 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   can't run anything twice.
 - `restart_amp`, `upgrade_amp`, `update_amp_instance`, `logout` and `clean_up(logout=True)` reset the caller's own
   session when they finish. The next call logs in first instead of sending one that fails.
+- An endpoint whose spec type is `ActionResult` reports a dead session as `{"Status": false, "Reason": "You do not
+  have permission ... requires the Session.Exists permission."}`, not as a `Title` (`DeleteDatastore` on vm1,
+  2026-10-31). `_response_handler` only knows the `Title` form, so that call raises without logging in again (#44).
+  `Core/GetAPISpec` answers without a session at all, so it never finds a dead one.
 - A permission error raises at once, with no login and the session untouched. "Instance Unavailable" (an ADS
   booting, or a stopped Instance) raises and keeps the session, since it is still alive.
 - One login for concurrent calls (#22, Kat's idea of checking the object's own state): a call that logs in sets

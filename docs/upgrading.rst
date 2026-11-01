@@ -253,6 +253,8 @@ Returned data
   what AMP sends. The wrapper expected an `ActionResult` and raised, although the backup was taken.
 - :meth:`~ampapi.instance.Instance.get_updates` and :meth:`~ampapi.instance.Instance.get_application_status` take
   `request_params` and the ``**response_params`` the other methods take (eg. `to_file`).
+- :meth:`~ampapi.Core.get_api_spec` takes `sanitize_json` (default True), and False keeps AMP's own key names. The
+  other endpoint methods always sanitize, because they check the response against the sanitized key names.
 - :class:`~ampapi.modules.ParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
   `seconds`, `message`, `!input`); 4.x kept only `user`, `reason`, `title` and `subtitle`. An argument
   the task doesn't hold is `None`, not ``""``. Booleans, numbers, `state`, `operation` (:class:`~ampapi._enums.IfOperators`),

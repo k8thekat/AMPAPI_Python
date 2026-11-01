@@ -122,8 +122,6 @@ class ResponseHandlerOptions(TypedDict, total=False):
 
     Options:
     --------
-    sanitize_json : :class:`bool`
-        ...
     to_file : :class:`bool`
         ...
     path : :class:`pathlib.Path`
@@ -135,7 +133,8 @@ class ResponseHandlerOptions(TypedDict, total=False):
 
     """
 
-    sanitize_json: bool
+    # The endpoint methods check the sanitized key names, so only `_post` and `Core.get_api_spec` take `sanitize_json`
+    # sanitize_json: bool
     to_file: bool
     path: pathlib.Path
     check_key_drift: bool
@@ -658,6 +657,7 @@ class Base:
         *,
         no_data: Literal[True],
         request_params: Optional[AioHTTPRequestOptions] = None,
+        sanitize_json: bool = True,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> None: ...
 
@@ -669,6 +669,7 @@ class Base:
         *,
         no_data: bool = ...,
         request_params: Optional[AioHTTPRequestOptions] = None,
+        sanitize_json: bool = True,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> ResponseTypeAlias | str | bool | None: ...
 
@@ -679,6 +680,7 @@ class Base:
         *,
         no_data: bool = False,
         request_params: Optional[AioHTTPRequestOptions] = None,
+        sanitize_json: bool = True,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> ResponseTypeAlias | str | bool | None:
         """|coro|
@@ -710,6 +712,9 @@ class Base:
                 headers = {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"}
                 data = json.dumps(parameters)
 
+        sanitize_json : :class:`bool`, optional
+            Run the parsed JSON through :meth:`sanitize_json`, by default True.
+            The endpoint methods need the sanitized keys, so only the dev tools turn it off.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
             Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
@@ -823,9 +828,9 @@ class Base:
                             # return None
                             # A Void endpoint answers JSON null, but a failure still comes back in the body with a 200
                             response_params["allow_null"] = True
-                            await self._response_handler(response=response, **response_params)
+                            await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
                             return None
-                        return await self._response_handler(response=response, **response_params)
+                        return await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
 
                     except _SessionDeadError as dead_session:
                         # A second dead answer, or one to the login itself, is a real failure
@@ -892,6 +897,7 @@ class Base:
             The raw HTTP response to process.
         sanitize_json : :class:`bool`, optional
             Run the parsed JSON through :meth:`sanitize_json` before returning, by default True.
+            The error checks always read a sanitized copy.
         to_file : :class:`bool`, optional
             Write the response JSON to a file at `path`, by default False.
         path : :class:`pathlib.Path` | None, optional
@@ -948,8 +954,13 @@ class Base:
                 return None
             raise AMPAPIResponseError(title="None", url=str(response.url), reason="<ClientResponse> JSON returned <None>.")
 
+        # if sanitize_json is True:
+        #     response_json = self.sanitize_json(response_json)
+        # The error checks below read the sanitized key names, so raw JSON is kept apart for the caller
+        result_json = response_json
+        response_json = self.sanitize_json(response_json)
         if sanitize_json is True:
-            response_json = self.sanitize_json(response_json)
+            result_json = response_json
 
         # None was already returned or raised above
         # if to_file is True and path is not None and response_json is not None:
@@ -958,7 +969,8 @@ class Base:
             if path.exists() is False:
                 msg = "The path provided does not exist. %s"
                 raise FileNotFoundError(msg, path)
-            self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
+            # self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=response_json, path=path)
+            self.write_data_to_file(file_name=response.url.name.lower() + ".json", data=result_json, path=path)
 
         # A bool has no title or status
         if isinstance(response_json, bool):
@@ -1004,9 +1016,11 @@ class Base:
 
         # Errors were already raised, so we only compare good captures
         if check_key_drift is True and to_file is True and path is not None:
-            self._check_key_drift(response=response, data=response_json, path=path, sanitized=sanitize_json)
+            self._check_key_drift(response=response, data=result_json, path=path, sanitized=sanitize_json)
 
-        return response_json
+        # return response_json
+        # An error answer was raised above from the sanitized copy, which pyright can't follow to the raw one
+        return result_json  # pyright: ignore[reportReturnType]
 
     def _check_key_drift(self, response: ClientResponse, data: object, path: pathlib.Path, *, sanitized: bool) -> None:
         """Dev check: compare a captured response with the TypedDict its endpoint narrows to.
