@@ -3630,7 +3630,7 @@ class Core(Base):
 
         """
         # await self._reauth()
-        # A login here would end a new session and leave the stored one alive, so we send the stored one as it is
+        # A login here would end a new session and leave the stored one alive
         stored: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
         if stored is None or stored.id == "0":
             return
@@ -3747,7 +3747,8 @@ class Core(Base):
         .. note::
             The provider flow runs in a browser, so your app catches the redirect to `redirect_uri` and passes the `code`
             and `state` it carries to this method. On success the session is stored for this object, and the next calls
-            use it. In the OIDC mode (:attr:`AuthMode.oidc`) the :class:`Bridge` `user` is set from the login too.
+            use it. In the OIDC mode (:attr:`AuthMode.oidc <ampapi._enums.AuthMode.oidc>`) the :class:`Bridge` `user` is
+            set from the login too.
 
         .. versionchanged:: 5.0.0
             Takes `state` after `code`, `instance_id` is optional, and returns a :class:`LoginResults`.

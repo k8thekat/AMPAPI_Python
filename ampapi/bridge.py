@@ -47,8 +47,8 @@ class Bridge(APIParams):
         _bridge: Bridge = Bridge(api_params=_params)
         del _params
 
-    A user that signs in through an OIDC provider has no password, so set `auth_mode` to :attr:`AuthMode.oidc` on the
-    :class:`APIParams` instead.
+    A user that signs in through an OIDC provider has no password, so set `auth_mode` to
+    :attr:`AuthMode.oidc <ampapi._enums.AuthMode.oidc>` on the :class:`APIParams` instead.
     Your app sends the user to the URL from :meth:`~Core.get_oidc_login_url`, catches the redirect to `redirect_uri` and
     passes the `code` and `state` it carries to :meth:`~Core.oidc_login`. After that every call uses the stored session.
 
@@ -94,11 +94,11 @@ class Bridge(APIParams):
 
     # This is the session we made, and only `clean_up` closes it
     _client_session: Union[aiohttp.ClientSession, None]
-    # A session belongs to the event loop it was made in, so we keep that loop to check against
+    # The event loop our session was made in
     _client_session_loop: Union[asyncio.AbstractEventLoop, None]
     # A session passed in is the caller's, we use it while it is open and never close it
     _external_session: Union[aiohttp.ClientSession, None]
-    # The logins running now, keyed by Instance ID like the stored sessions, so every object on us waits on the same one
+    # The logins running now, keyed by Instance ID like `_sessions`
     _logins_pending: dict[str, asyncio.Future[None]]
 
     @property
@@ -211,6 +211,8 @@ class Bridge(APIParams):
             Nothing is opened here. The :class:`aiohttp.ClientSession` is made on the first call,
             and it is closed on the way out.
 
+        .. versionadded:: 5.0.0
+
 
         Returns
         -------
@@ -232,6 +234,8 @@ class Bridge(APIParams):
 
         .. note::
             Exceptions are not suppressed, so any error propagates.
+
+        .. versionadded:: 5.0.0
 
 
         Parameters

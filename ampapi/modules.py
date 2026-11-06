@@ -796,15 +796,15 @@ class APIParams:
         The URL to access the Web GUI panel home page/login page. A trailing `/` is removed.
     user : :class:`str`
         The AMP User name to login to the Web Panel, default is "".
-        In the `oidc` mode :meth:`Core.oidc_login` fills it in from the login.
+        In the `oidc` mode :meth:`Core.oidc_login <ampapi.Core.oidc_login>` fills it in from the login.
     password : :class:`str`
         The AMP User password to login to the Web Panel, default is "".
     use_2fa : bool
         To use :py:class:`TOTP` 2 Factor Authentication, default is False.
     token : :class:`str`
         The 2 Factor Authentication Token Code to generate a :class:`TOTP` code, default is ""
-    auth_mode : :class:`AuthMode`
-        How to log in to AMP, default is :attr:`AuthMode.password`.
+    auth_mode : :class:`~ampapi._enums.AuthMode`
+        How to log in to AMP, default is :attr:`AuthMode.password <ampapi._enums.AuthMode.password>`.
 
     Raises
     ------

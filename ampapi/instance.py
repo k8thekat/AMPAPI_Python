@@ -452,7 +452,7 @@ class Instance(
             If the Instance's answer to the login isn't a LoginResults.
 
         """
-        # Wait on a login already running for our Instance ID, by any object on the Bridge, then check the stored session again
+        # Wait on any login running for our Instance ID, then check the stored session again
         # If that login failed there is still no session, so we try our own
         running_login: Union[asyncio.Future[None], None] = self._bridge._get_pending_login(self._instance_id)  # pyright: ignore[reportPrivateUsage]
         while running_login is not None:
@@ -465,7 +465,7 @@ class Instance(
         if self._controller is None:
             raise RuntimeError(self._no_controller)
 
-        # There is no `await` since the check above, and other calls wait on this until the login is done
+        # Set with no `await` since the check, so other calls wait on this login
         pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         self._bridge._logins_pending[self._instance_id] = pending  # pyright: ignore[reportPrivateUsage]
         try:

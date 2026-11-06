@@ -111,7 +111,7 @@ def _snake_key(key: str) -> str:
 
 
 # These are the keys we hide in the debug logs, lowercase with any `_` removed
-# They cover the AMP API spec's password, token, code and key parameters, and the responses that send one back
+# From the API spec's password, token, code and key parameters
 _SECRET_KEYS: frozenset[str] = frozenset(
     {
         "adminpassword",
@@ -132,7 +132,7 @@ _SECRET_KEYS: frozenset[str] = frozenset(
 )
 
 
-# These endpoints send the secret back as the whole result, so their response is hidden in the debug logs
+# These endpoints send a secret as their whole result
 _SECRET_ENDPOINTS: frozenset[str] = frozenset({"ADSModule/GetTargetPairingCode", "ADSModule/ManageInstance", "Core/GetRemoteLoginToken"})
 
 
@@ -504,7 +504,7 @@ class Base:
 
     .. note::
         A stored session is used until AMP ends it. Then we log in again and send the call once more.
-        The OIDC mode (:attr:`AuthMode.oidc`) only logs in through :meth:`Core.oidc_login`.\n
+        The OIDC mode (:attr:`AuthMode.oidc <ampapi._enums.AuthMode.oidc>`) only logs in through :meth:`Core.oidc_login`.\n
 
     """
 
@@ -936,6 +936,51 @@ class Base:
 
             if response.content_length == 0:
                 raise AMPAPINetworkError(status=response.status, url=_url, reason="The HTTP Header content length was 0.")
+
+            # match response.status:
+            #     case status if 200 <= status < 300:
+            #         if no_data is True:
+            #             return None
+            #         return await self._response_handler(response=response, **response_params)
+            #
+            #     case 400:
+            #         return ActionResultError(status=False, reason="Bad Request", result=ValueError(f"Bad Request [400]: {url}"))
+            #     case 401:
+            #         return ActionResultError(status=False, reason="Unauthorized", result=PermissionError(f"Unauthorized [401]: {url}"))
+            #     case 403:
+            #         return ActionResultError(status=False, reason="Forbidden", result=PermissionError(f"Forbidden [403]: {url}"))
+            #     case 404:
+            #         return ActionResultError(status=False, reason="Not Found", result=ConnectionError(f"Not Found [404]: {url}"))
+            #     case 408:
+            #         return ActionResultError(status=False, reason="Request Timeout", result=TimeoutError(f"Request Timeout [408]: {url}"))
+            #     case 429:
+            #         return ActionResultError(
+            #             status=False,
+            #             reason="Too Many Requests",
+            #             result=ConnectionError(f"Too Many Requests [429]: {url}"),
+            #         )
+            #     case 500:
+            #         return ActionResultError(
+            #             status=False,
+            #             reason="Internal Server Error",
+            #             result=ConnectionError(f"Internal Server Error [500]: {url}"),
+            #         )
+            #     case 502:
+            #         return ActionResultError(status=False, reason="Bad Gateway", result=ConnectionError(f"Bad Gateway [502]: {url}"))
+            #     case 503:
+            #         return ActionResultError(
+            #             status=False,
+            #             reason="Service Unavailable",
+            #             result=ConnectionError(f"Service Unavailable [503]: {url}"),
+            #         )
+            #     case 504:
+            #         return ActionResultError(status=False, reason="Gateway Timeout", result=TimeoutError(f"Gateway Timeout [504]: {url}"))
+            #     case _:
+            #         return ActionResultError(
+            #             status=False,
+            #             reason=f"Unexpected status [{response.status}]",
+            #             result=ConnectionError(f"Unexpected status [{response.status}]: {url}"),
+            #         )
             # Anything outside 2xx raises with the HTTP reason, eg. "Not Found"
             if response.status < 200 or response.status >= 300:
                 raise AMPAPINetworkError(
@@ -951,7 +996,6 @@ class Base:
                     # A Void endpoint answers JSON null, but a failure still comes back in the body with a 200
                     response_params["allow_null"] = True
                 result: ResponseAliasFull = await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
-
             except _SessionDeadError as dead_session:
                 # A second dead answer, or one to the login itself, is a real failure
                 if session_retried is True or url == "Core/Login":
@@ -1217,7 +1261,8 @@ class Base:
         .. note::
             If Applicable handles your 2FA using :class:`TOTP` \n
             Stores the session ID via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
-            In the OIDC mode (:attr:`AuthMode.oidc`) this hands off to :meth:`_oidc_reauth` and sends no password login.
+            In the OIDC mode (:attr:`AuthMode.oidc <ampapi._enums.AuthMode.oidc>`) this hands off to :meth:`_oidc_reauth`
+            and sends no password login.
 
 
         Returns
@@ -1242,7 +1287,7 @@ class Base:
         if self._bridge.auth_mode is AuthMode.oidc:
             return await self._oidc_reauth()
 
-        # Wait on a login already running for our Instance ID, by any object on the Bridge, then check the stored session again
+        # Wait on any login running for our Instance ID, then check the stored session again
         # If that login failed there is still no session, so we try our own
         running_login: Union[asyncio.Future[None], None] = self._bridge._get_pending_login(self._instance_id)  # pyright: ignore[reportPrivateUsage]
         while running_login is not None:
@@ -1270,7 +1315,7 @@ class Base:
         if session.id != "0":
             return None
 
-        # There is no `await` since the check above, and other calls wait on this until the login is done
+        # Set with no `await` since the check, so other calls wait on this login
         pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         self._bridge._logins_pending[self._instance_id] = pending  # pyright: ignore[reportPrivateUsage]
         try:
@@ -1392,6 +1437,7 @@ class Base:
         """|coro|
 
         Close the :class:`aiohttp.ClientSession` our :class:`Bridge` made, which every object on it shares.
+
         The next call makes a new one.
 
         .. note::
@@ -1438,6 +1484,8 @@ class Base:
             Nothing is opened here. Our :class:`Bridge` makes the :class:`aiohttp.ClientSession` on the first
             call, and :meth:`clean_up` runs on the way out.
 
+        .. versionadded:: 5.0.0
+
 
         Returns
         -------
@@ -1459,6 +1507,8 @@ class Base:
 
         .. note::
             Exceptions are not suppressed, so any error propagates.
+
+        .. versionadded:: 5.0.0
 
 
         Parameters

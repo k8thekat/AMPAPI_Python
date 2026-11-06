@@ -110,7 +110,7 @@ class AppStartupModeState(Enum):
 
 
 class AuthMode(Enum):
-    """How the :class:`Bridge` logs in to AMP. This is a library setting, not an AMP node.
+    """How the :class:`~ampapi.Bridge` logs in to AMP. This is a library setting, not an AMP node.
 
     .. versionadded:: 5.0.0
     """

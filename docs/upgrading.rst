@@ -59,6 +59,8 @@ Everything public is still available straight from `ampapi`.
 - `ampapi.types_` -> `ampapi._types`
 - `ampapi.util` holds developer tools and is no longer star-imported, so its functions (eg. `amp_api_update`,
   `find_missing_endpoints`) are no longer on `ampapi`. Import the module instead: ``from ampapi import util``.
+- `ampapi.backoff` and its `ExponentialBackoff` were removed. Only the library's RuntimeError retry used it, and that
+  retry now happens only when the Bridge has a different session, with no wait.
 
 
 Changed methods
@@ -80,8 +82,6 @@ Changed methods
   every call uses that session until AMP ends it. A call with no session raises the new
   :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
   itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
-- `ExponentialBackoff` (`ampapi.backoff`) is removed. Only the library's RuntimeError retry used it, and that retry now
-  happens only when the Bridge has a different session, with no wait.
 - `session_ttl` is removed. A stored session is used until AMP ends it, then the library logs in again and resends the
   call. 4.x logged in again every 240 seconds, and AMP kept each old session alive.
 - The repr of :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) leaves out `password`, `token` and
@@ -148,7 +148,8 @@ Changed methods
   `UpdateInstanceInfo` takes. 4.x could not send them.
 - :meth:`~ampapi.Core.oidc_login` is now ``oidc_login(code, state, redirect_uri, instance_id=None)``. AMP requires
   `state`, and 4.x never sent it, so the call always failed. `instance_id` is optional and AMP is sent null without it.
-  It needs no session, so it no longer logs in first, and it stores the session of a successful login.
+  It needs no session, so it no longer logs in first, and it stores the session of a successful login. With
+  ``AuthMode.oidc`` it also sets the Bridge's `user` from the login.
 - :meth:`~ampapi.Core.get_oidc_login_url` needs no session either, so it no longer logs in first.
 - :meth:`~ampapi.Core.logout` ends the stored session as it is, and does nothing without one. 4.x could log in first and
   then end that new session, which left the stored one alive on AMP.
@@ -203,8 +204,9 @@ Changed methods
   own on to the Instances it built.
 - :meth:`~ampapi.Base.clean_up` is new. It closes the Bridge's session, and with `logout` (default False) it calls
   ``Core/Logout`` first. On an Instance a Controller built it leaves the session open, since the Controller and its
-  other Instances share it. :meth:`Bridge.clean_up <ampapi.Bridge.clean_up>` and ``async with bridge:`` close it too,
-  and a later call makes a new one.
+  other Instances share it. ``async with Controller() as controller:`` (or any other class) calls it on the way out.
+  :meth:`Bridge.clean_up <ampapi.Bridge.clean_up>` and ``async with bridge:`` close it too, and a later call makes a
+  new one.
 - Your own session goes to the :class:`~ampapi.Bridge` as `session`, or set
   :attr:`Bridge.session <ampapi.Bridge.session>`. Every object on that Bridge uses it while it is open, and the library
   never closes it. 4.x took it on a :class:`~ampapi.instance.Controller` (or any other class) and used it only there
