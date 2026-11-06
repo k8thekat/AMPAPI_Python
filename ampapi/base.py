@@ -526,6 +526,9 @@ class Base:
     _oidc_instance_login_failed: ClassVar[str] = "Failed to login to the Instance '%s' with a ManageInstance token (AMP result %s)."
     _oidc_manage_failed: ClassVar[str] = "ManageInstance sent no token to login to the Instance '%s'."
     _oidc_session_ended: ClassVar[str] = "There is no OIDC session. Log in through the provider and call <Controller>.oidc_login again."
+    _passed_session_failed: ClassVar[str] = (
+        "%s. A session passed to the <Bridge> belongs to the event loop it was made in, so pass one made in this loop."
+    )
     _no_cache: ClassVar[str] = "'%s.%s' has not been populated yet. You must call <%s>.%s first."
     _stale_cache: ClassVar[str] = (
         "'%s.%s' was cached %s seconds ago and the timeout is %s seconds. The value may be stale. Call <%s>.%s to refresh it."
@@ -826,10 +829,7 @@ class Base:
         library_headers: bool = "headers" not in request_params
 
         # A dead session gets one login and one resend per call
-        # TODO: The RuntimeError retry below has no limit
         session_retried: bool = False
-        # This counts the retries for the log line
-        runtime_retries: int = 0
 
         while True:
             api_session: APISession = self._bridge._sessions.get(  # pyright: ignore[reportPrivateUsage]
@@ -872,9 +872,6 @@ class Base:
                 # The next pass asks the Bridge again, and it replaces a closed session
 
                 # retry: int | float = self._backoff.delay()
-                # Backoff can return 0, so we wait at least 1 second
-                retry: int | float = max(1, self._backoff.delay())
-                runtime_retries += 1
                 # LOGGER.error(
                 #     "<%s.%s> encountered an <RuntimeError> and will retry in %s. | Exception: %s",
                 #     __class__.__name__,
@@ -882,15 +879,7 @@ class Base:
                 #     retry,
                 #     e,
                 # )
-                LOGGER.error(
-                    "<%s.%s> encountered an <RuntimeError>, retry %s in %ss. | Exception: %s",
-                    __class__.__name__,
-                    "_post",
-                    runtime_retries,
-                    retry,
-                    e,
-                )
-                await asyncio.sleep(delay=retry)
+                # await asyncio.sleep(delay=retry)
                 # return await self._post(
                 #     url=url,
                 #     parameters=parameters,
@@ -898,8 +887,20 @@ class Base:
                 #     request_params=request_params,
                 #     **response_params,
                 # )
-                # This does the same as the old recursive call
-                continue
+
+                # A retry only helps when the Bridge has a different session for us, eg. ours was closed
+                # The same session fails the same way, eg. a passed-in session from a finished event loop
+                next_session: aiohttp.ClientSession = await self._bridge._get_client_session()  # pyright: ignore[reportPrivateUsage]
+                if next_session is not client_session:
+                    LOGGER.warning("<%s.%s> | The session failed, retrying with a new one | Exception: %s", __class__.__name__, "_post", e)
+                    continue
+
+                reason: str = str(e)
+                # We never replace a session the caller passed in, so we say why it can't send
+                if client_session is self._bridge._external_session:  # pyright: ignore[reportPrivateUsage]
+                    reason = self._passed_session_failed % e
+                LOGGER.error("<%s.%s> encountered an <RuntimeError> | Exception: %s", __class__.__name__, "_post", reason)
+                raise AMPAPINetworkError(status=0, url=_url, reason=reason) from e
 
             # ? Suggestion
             # Further see what exceptions may be raised to narrow this comparison as the noqa can be avoided.
