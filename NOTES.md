@@ -56,8 +56,14 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - `Base._request` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
   4, 8, 8 seconds, as the web panel does), and every module call goes through `Session`'s single relogin on a dead
   session.
-- Per-call `request_params` (5.x has them on every method) are left out for now, waiting on Kat: the `ClientSession`
-  handed to `Session` already carries SSL, timeouts and proxies for every call.
+- No per-call `request_params` (Kat, 2026-11-06): the `ClientSession` handed to `Session` already carries SSL,
+  timeouts and proxies for every call.
+- Modules so far: `AccountModule`, `AnalyticsModule` (audit and player analytics), `CredentialModule`,
+  `PlatformModule`, `SpireModule` (with `Spire`, in `spires.py` to avoid a circular import) and `TaskModule`.
+  `ShardModule` and `TemplateModule` come next (#47.7).
+- A method built from the web panel's code but never answered live carries a "Not yet seen live" warning and returns
+  `Any`; a list only ever seen empty is `list[Any]`. Each one is typed properly once a capture shows it.
+- `.scripts/amp3/panel_check.py` is the live check for the modules; `session_check.py` for `Session`.
 
 ## AMP 3 API shape
 

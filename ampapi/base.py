@@ -22,9 +22,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
-from .errors import AMPAPIRequestError
+from .errors import (
+    AMPAPIRequestError,
+    _is_json_object,  # pyright: ignore[reportPrivateUsage]
+)
 
 if TYPE_CHECKING:
     from ._types import QueryParameters
@@ -60,7 +63,7 @@ class Base:
         method: str,
         path: str,
         *,
-        data: Optional[dict[str, Any]] = None,
+        data: Optional[Union[dict[str, Any], list[Any]]] = None,
         parameters: Optional[QueryParameters] = None,
         use_token: bool = True,
     ) -> Any:
@@ -75,8 +78,8 @@ class Base:
             The HTTP method, eg. ``"GET"``.
         path : :class:`str`
             The path, eg. ``"/api/licence"``.
-        data : Union[dict[:class:`str`, Any], None], optional
-            The JSON body, by default None.
+        data : Union[dict[:class:`str`, Any], list[Any], None], optional
+            The JSON body, by default None. A few calls take a list.
         parameters : Union[:class:`QueryParameters`, None], optional
             The query string, by default None.
             A list value repeats its key, eg. ``{"shard": ["a", "b"]}`` is sent as ``shard=a&shard=b``.
@@ -93,37 +96,41 @@ class Base:
         ------
         AMPAPIRequestError
             If AMP answers with an error status, or is still down after the last delay.
+            A login this call needs is not retried; a 503 there raises at once.
 
         """
         # TODO: Raw byte and text replies, for the file and snapshot downloads (#47.7).
         # `Session._send` only decodes JSON for now.
-        for delay in self._outage_delays:
-            try:
-                return await self.session._request(  # pyright: ignore[reportPrivateUsage]
-                    method=method,
-                    path=path,
-                    data=data,
-                    parameters=parameters,
-                    use_token=use_token,
-                )
-            except AMPAPIRequestError as error:
-                if error.status != 503 or error.code not in self._outage_codes:
-                    raise
-                LOGGER.warning(
-                    "<%s.%s> | AMP is unavailable, trying again in %s seconds | Code: %s | Path: %s",
-                    __class__.__name__,
-                    "_request",
-                    delay,
-                    error.code,
-                    path,
-                )
-                await asyncio.sleep(delay=delay)
-
-        # AMP is still down after the last delay, so this try's error goes to the caller.
-        return await self.session._request(  # pyright: ignore[reportPrivateUsage]
+        status, body = await self.session._send_with_login(  # pyright: ignore[reportPrivateUsage]
             method=method,
             path=path,
             data=data,
             parameters=parameters,
             use_token=use_token,
         )
+        # We check the reply before building an error, so a retried outage only logs our warning.
+        for delay in self._outage_delays:
+            code: Optional[str] = body.get("code") if _is_json_object(value=body) else None
+            if status != 503 or code not in self._outage_codes:
+                break
+
+            LOGGER.warning(
+                "<%s.%s> | AMP is unavailable, trying again in %s seconds | Code: %s | Path: %s",
+                __class__.__name__,
+                "_request",
+                delay,
+                code,
+                path,
+            )
+            await asyncio.sleep(delay=delay)
+            status, body = await self.session._send_with_login(  # pyright: ignore[reportPrivateUsage]
+                method=method,
+                path=path,
+                data=data,
+                parameters=parameters,
+                use_token=use_token,
+            )
+
+        if not 200 <= status < 300:
+            raise AMPAPIRequestError(status=status, method=method, path=path, data=body)
+        return body

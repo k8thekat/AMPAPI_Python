@@ -32,11 +32,15 @@ from typing import Literal, NamedTuple
 
 from ._types import *
 from .accounts import *
+from .analytics import *
 from .base import *
+from .credentials import *
 from .errors import *
 from .panel import *
 from .platform import *
 from .session import *
+from .spires import *
+from .tasks import *
 
 
 class VersionInfo(NamedTuple):

@@ -123,7 +123,7 @@ class AMPAPIRequestError(AMPAPIError):
     code : Union[:class:`str`, None]
         AMP's dotted error key, eg. ``"auth.error.reproofRejected"``, when it sent one (as `code`, or `reason`).
     message : Union[:class:`str`, None]
-        AMP's message, when it sent one.
+        AMP's message, when it sent one. A body of only ``{"error": ...}`` lands here, a dotted key and a sentence alike.
     params : Union[dict[:class:`str`, Any], None]
         Values for the `code` translation, when AMP sent any.
     errors : Union[list[:class:`str`], dict[:class:`str`, list[:class:`str`]], None]
@@ -147,7 +147,8 @@ class AMPAPIRequestError(AMPAPIError):
         if _is_json_object(value=data):
             # A refused recovery code carries its dotted key as `reason`, everything else as `code`.
             self.code = data.get("code", data.get("reason"))
-            self.message = data.get("message", data.get("title"))
+            # Invites, running tasks and spire enrolment send `{error}`, with a dotted key or an English sentence in it.
+            self.message = data.get("message", data.get("title", data.get("error")))
             self.params = data.get("params")
             self.errors = data.get("errors")
 

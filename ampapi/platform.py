@@ -21,18 +21,29 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from .base import Base
 
 if TYPE_CHECKING:
     from ._types import (
+        BrandingResponse,
+        DiagnosticsResponse,
+        FirewallResponse,
+        GatewayEligibilityResponse,
         HealthStatusResponse,
+        HTTPSSetupStatusResponse,
         HTTPSStateResponse,
+        LicenceAgreementResponse,
         LicenceQueryResponse,
         LicenceResponse,
         LicenceStatusResponse,
+        LicenceTermsAcceptance,
+        MessageBusStatsResponse,
+        MonitoringThresholdsResponse,
         SettingsManifestResponse,
+        SystemBusResponse,
+        UpdateStatusResponse,
     )
 
 __all__ = ("PlatformModule",)
@@ -41,15 +52,68 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class PlatformModule(Base):
-    """The panel-wide calls: health, licences, settings and HTTPS.
+    """The panel-wide calls: health, branding, licences, settings, HTTPS, networking, monitoring, updates and support.
 
     .. versionadded:: 6.0.0
 
     """
 
-    # TODO: Add branding, networking, monitoring, system, updates, support and the rest of licence and settings (#47.10).
+    # TODO: The diagnostics bundle download, which comes back as a zip (#47.7's raw replies).
 
-    async def activate_licence(self, key: str, *, terms: Optional[dict[str, Any]] = None) -> LicenceResponse:
+    async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
+        """Accept the terms for a licence that is already active, eg. one whose `standing` is ``"TermsRequired"``.
+
+        |coro|
+
+        Endpoint: ``POST /api/licence/{spire_id}/{grade_id}/terms``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        spire_id : :class:`str`
+            The licence's `spireId`.
+        grade_id : :class:`str`
+            The licence's `gradeId`.
+        key : :class:`str`
+            The licence key; a wrong one gets its own error code.
+        terms : :class:`LicenceTermsAcceptance`
+            The terms acceptance, filled from :meth:`get_licence_agreement`.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        data: dict[str, Any] = {**terms, "key": key}
+        return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
+
+    async def acknowledge_platform_warning(self, warning_id: str) -> Any:
+        """Dismiss one of the panel's warnings.
+
+        |coro|
+
+        Endpoint: ``POST /api/monitoring/platform-warnings/acknowledge``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads the warnings left from it.
+
+        Parameters
+        ----------
+        warning_id : :class:`str`
+            The warning's `id` from :meth:`get_platform_warnings`.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
+
+    async def activate_licence(self, key: str, *, terms: Optional[LicenceTermsAcceptance] = None) -> LicenceResponse:
         """Activate a licence key on this panel.
 
         |coro|
@@ -64,9 +128,10 @@ class PlatformModule(Base):
         ----------
         key : :class:`str`
             The licence key.
-        terms : Union[dict[:class:`str`, Any], None], optional
+        terms : Union[:class:`LicenceTermsAcceptance`, None], optional
             The licence terms acceptance, by default None.
             Only a key whose `LicenceQueryResponse.termsRequired` is `True` needs one, see :meth:`query_licence`.
+            Sending one is not yet seen live.
 
         Returns
         -------
@@ -74,10 +139,153 @@ class PlatformModule(Base):
             The licence AMP activated.
 
         """
-        # TODO: Type `terms` once the terms agreement is captured (#47.10).
-        # The web panel builds it from GET /api/licence/terms/agreement: termsVersion, agreementHash, attestation,
-        # locale and clickedAt.
         return await self._request(method="POST", path="/api/licence", data={"key": key, "terms": terms})
+
+    async def apply_panel_update(self) -> Any:
+        """Update the panel's AMP to the latest version on its stream; the panel restarts.
+
+        |coro|
+
+        Endpoint: ``POST /api/updates/apply``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. The web panel then watches
+            :meth:`get_health_status` and :meth:`get_update_status` while the panel restarts.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/updates/apply", data={})
+
+    async def check_https(self, host_name: str) -> Any:
+        """Check a domain name is ready for AMP's own HTTPS setup, before :meth:`start_https_setup`.
+
+        |coro|
+
+        Endpoint: ``POST /api/https/check``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        host_name : :class:`str`
+            The domain name, which has to point at this panel.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
+
+    async def create_gateway(self, shard_id: str, front_spire_id: str) -> Any:
+        """Bind a shard to a front spire, so players reach it through that spire.
+
+        |coro|
+
+        Endpoint: ``POST /api/networking/gateways``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+        front_spire_id : :class:`str`
+            The front spire's ID.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
+        return await self._request(method="POST", path="/api/networking/gateways", data=data)
+
+    async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> Any:
+        """Forward a public port on a front spire to a shard's port.
+
+        |coro|
+
+        Endpoint: ``POST /api/networking/publications``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        front_spire_id : :class:`str`
+            The front spire's ID.
+        public_port : :class:`int`
+            The port players connect to.
+        shard_id : :class:`str`
+            The shard's ID.
+        port_reference : :class:`str`
+            The shard port's name in its template, eg. ``"ServerPort"``.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        data: dict[str, Any] = {"frontSpireId": front_spire_id, "publicPort": public_port, "shardId": shard_id, "portRef": port_reference}
+        return await self._request(method="POST", path="/api/networking/publications", data=data)
+
+    async def delete_gateway(self, gateway_id: str) -> Any:
+        """Remove a gateway.
+
+        |coro|
+
+        Endpoint: ``DELETE /api/networking/gateways/{gateway_id}``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        gateway_id : :class:`str`
+            The gateway's ID.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="DELETE", path=f"/api/networking/gateways/{gateway_id}")
+
+    async def delete_licence(self, spire_id: str, grade_id: str) -> Any:
+        """Remove a licence from the panel.
+
+        |coro|
+
+        Endpoint: ``DELETE /api/licence/{spire_id}/{grade_id}``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        spire_id : :class:`str`
+            The licence's `spireId`.
+        grade_id : :class:`str`
+            The licence's `gradeId`.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
 
     async def delete_own_proxy(self) -> Any:
         """Stop trusting the reverse proxy :meth:`set_own_proxy` set.
@@ -97,6 +305,149 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path="/api/https/own-proxy")
 
+    async def delete_publication(self, publication_id: str) -> Any:
+        """Remove a public port forward.
+
+        |coro|
+
+        Endpoint: ``DELETE /api/networking/publications/{publication_id}``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        publication_id : :class:`str`
+            The publication's ID.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="DELETE", path=f"/api/networking/publications/{publication_id}")
+
+    async def delete_setting_secret(self, field_name: str) -> Any:
+        """Clear a stored secret setting.
+
+        |coro|
+
+        Endpoint: ``DELETE /api/settings/secrets/{field_name}``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        field_name : :class:`str`
+            The setting's `fieldName`, one in `SettingsManifestResponse.secretHasValue`.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="DELETE", path=f"/api/settings/secrets/{field_name}")
+
+    async def expand_message_bus(self) -> Any:
+        """Open the message bus to other machines, which a new spire needs to join.
+
+        |coro|
+
+        Endpoint: ``POST /api/system/bus/expand``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. It changes how the panel is reached, and there's
+            no call to close the bus again.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/system/bus/expand")
+
+    async def get_branding(self) -> BrandingResponse:
+        """Get the names and logo the login page shows.
+
+        |coro|
+
+        Endpoint: ``GET /api/branding``
+
+        Returns
+        -------
+        :class:`BrandingResponse`
+            The product name, welcome text, logo and default theme.
+
+        """
+        return await self._request(method="GET", path="/api/branding")
+
+    async def get_diagnostics(self) -> DiagnosticsResponse:
+        """Get the details a support request asks for.
+
+        |coro|
+
+        Endpoint: ``GET /api/support/diagnostics``
+
+        Returns
+        -------
+        :class:`DiagnosticsResponse`
+            AMP's version, the machine, the message bus and the container runtime.
+
+        """
+        return await self._request(method="GET", path="/api/support/diagnostics")
+
+    async def get_firewall(self) -> FirewallResponse:
+        """Get the firewall rules AMP keeps on the host.
+
+        |coro|
+
+        Endpoint: ``GET /api/networking/firewall``
+
+        Returns
+        -------
+        :class:`FirewallResponse`
+            The rules applied and anything held back.
+
+        """
+        return await self._request(method="GET", path="/api/networking/firewall")
+
+    async def get_gateway_eligibility(self) -> GatewayEligibilityResponse:
+        """Get the shards and front spires that can take part in a gateway.
+
+        |coro|
+
+        Endpoint: ``GET /api/networking/gateway-eligibility``
+
+        Returns
+        -------
+        :class:`GatewayEligibilityResponse`
+            The shard and front spire IDs.
+
+        """
+        return await self._request(method="GET", path="/api/networking/gateway-eligibility")
+
+    async def get_gateways(self) -> list[dict[str, Any]]:
+        """Get the gateways, each binding a shard to a front spire.
+
+        |coro|
+
+        Endpoint: ``GET /api/networking/gateways``
+
+        .. warning::
+            Only seen empty (it needs a second spire), so the shape of a gateway is unknown.
+
+        Returns
+        -------
+        list[dict[:class:`str`, Any]]
+            The gateways.
+
+        """
+        return await self._request(method="GET", path="/api/networking/gateways")
+
     async def get_health_status(self) -> HealthStatusResponse:
         """Get the panel's state, eg. still in first-run setup or ``"ready"``.
 
@@ -114,6 +465,21 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/health/status", use_token=False)
 
+    async def get_https_setup_status(self) -> HTTPSSetupStatusResponse:
+        """Get the progress of AMP's own HTTPS setup.
+
+        |coro|
+
+        Endpoint: ``GET /api/https/setup/status``
+
+        Returns
+        -------
+        :class:`HTTPSSetupStatusResponse`
+            The setup's phase and checks.
+
+        """
+        return await self._request(method="GET", path="/api/https/setup/status")
+
     async def get_https_state(self) -> HTTPSStateResponse:
         """Get the panel's HTTPS setup and the addresses it is reached on.
 
@@ -128,6 +494,34 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="GET", path="/api/https")
+
+    async def get_licence_agreement(self, version: int, *, language: Optional[str] = None) -> LicenceAgreementResponse:
+        """Get the licence terms a key may need accepted.
+
+        |coro|
+
+        Endpoint: ``GET /api/licence/terms/agreement``
+
+        Parameters
+        ----------
+        version : :class:`int`
+            The terms version, a licence's `requiredTermsVersion`. An unknown one gets 404
+            (``"licence.error.termsUnknownVersion"``).
+        language : Union[:class:`str`, None], optional
+            The language to read them in, eg. ``"fr"``, by default None.
+            AMP sends English when it has no copy in that language.
+
+        Returns
+        -------
+        :class:`LicenceAgreementResponse`
+            The terms, with the hash and attestation a :class:`LicenceTermsAcceptance` sends back.
+
+        """
+        parameters: dict[str, Union[str, int]] = {"version": version}
+        if language is not None:
+            parameters["lang"] = language
+
+        return await self._request(method="GET", path="/api/licence/terms/agreement", parameters=parameters)
 
     async def get_licence_status(self) -> LicenceStatusResponse:
         """Get the panel's licences and how many shards they allow.
@@ -144,6 +538,87 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/licence")
 
+    async def get_message_bus(self) -> SystemBusResponse:
+        """Get the state of the message bus spires talk to the panel over.
+
+        |coro|
+
+        Endpoint: ``GET /api/system/bus``
+
+        Returns
+        -------
+        :class:`SystemBusResponse`
+            If AMP runs the bus, if it's public and how to join it.
+
+        """
+        return await self._request(method="GET", path="/api/system/bus")
+
+    async def get_message_bus_stats(self) -> MessageBusStatsResponse:
+        """Get the message bus's figures, for support.
+
+        |coro|
+
+        Endpoint: ``GET /api/support/message-bus-stats``
+
+        Returns
+        -------
+        :class:`MessageBusStatsResponse`
+            The bus's state, storage and process.
+
+        """
+        return await self._request(method="GET", path="/api/support/message-bus-stats")
+
+    async def get_monitoring_thresholds(self) -> MonitoringThresholdsResponse:
+        """Get when the web panel warns about load, from the monitoring settings.
+
+        |coro|
+
+        Endpoint: ``GET /api/monitoring/thresholds``
+
+        Returns
+        -------
+        :class:`MonitoringThresholdsResponse`
+            The processor, memory and disk limits.
+
+        """
+        return await self._request(method="GET", path="/api/monitoring/thresholds")
+
+    async def get_platform_warnings(self) -> list[dict[str, Any]]:
+        """Get the panel's warnings for whoever runs it.
+
+        |coro|
+
+        Endpoint: ``GET /api/monitoring/platform-warnings``
+
+        .. warning::
+            Only seen empty, so the shape of a warning is unknown; the web panel reads its `id`.
+
+        Returns
+        -------
+        list[dict[:class:`str`, Any]]
+            The warnings.
+
+        """
+        return await self._request(method="GET", path="/api/monitoring/platform-warnings")
+
+    async def get_publications(self) -> list[dict[str, Any]]:
+        """Get the public port forwards from front spires to shards.
+
+        |coro|
+
+        Endpoint: ``GET /api/networking/publications``
+
+        .. warning::
+            Only seen empty (it needs a second spire), so the shape of a publication is unknown.
+
+        Returns
+        -------
+        list[dict[:class:`str`, Any]]
+            The publications.
+
+        """
+        return await self._request(method="GET", path="/api/networking/publications")
+
     async def get_settings_manifest(self) -> SettingsManifestResponse:
         """Get every platform setting with its current value.
 
@@ -158,6 +633,83 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="GET", path="/api/settings/manifest")
+
+    async def get_tunnel_fronts(self) -> list[dict[str, Any]]:
+        """Get the spires that can front a tunnel.
+
+        |coro|
+
+        Endpoint: ``GET /api/networking/tunnel-fronts``
+
+        .. warning::
+            Only seen empty (it needs a second spire), so the shape of an entry is unknown.
+
+        Returns
+        -------
+        list[dict[:class:`str`, Any]]
+            The tunnel fronts.
+
+        """
+        return await self._request(method="GET", path="/api/networking/tunnel-fronts")
+
+    async def get_tunnels(self) -> list[dict[str, Any]]:
+        """Get the network tunnels between spires.
+
+        |coro|
+
+        Endpoint: ``GET /api/networking/tunnels``
+
+        .. warning::
+            Only seen empty (it needs a second spire), so the shape of a tunnel is unknown.
+
+        Returns
+        -------
+        list[dict[:class:`str`, Any]]
+            The tunnels.
+
+        """
+        return await self._request(method="GET", path="/api/networking/tunnels")
+
+    async def get_update_status(self) -> UpdateStatusResponse:
+        """Get the panel's AMP version against the latest one.
+
+        |coro|
+
+        Endpoint: ``GET /api/updates/check``
+
+        Returns
+        -------
+        :class:`UpdateStatusResponse`
+            The versions, the release stream and what can be updated.
+
+        """
+        return await self._request(method="GET", path="/api/updates/check")
+
+    async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> Any:
+        """Check a gateway can be made, before :meth:`create_gateway`.
+
+        |coro|
+
+        Endpoint: ``POST /api/networking/gateways/preflight``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads a `conflicts` list from it.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+        front_spire_id : :class:`str`
+            The front spire's ID.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
+        return await self._request(method="POST", path="/api/networking/gateways/preflight", data=data)
 
     async def query_licence(self, key: str) -> LicenceQueryResponse:
         """Check what a licence key gives, without activating it.
@@ -178,6 +730,65 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="POST", path="/api/licence/query", data={"key": key})
+
+    async def recheck_https(self) -> Any:
+        """Check AMP's own HTTPS again, eg. its certificate.
+
+        |coro|
+
+        Endpoint: ``POST /api/https/recheck``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/https/recheck")
+
+    async def remove_https(self) -> Any:
+        """Remove AMP's own HTTPS; the panel stays on plain HTTP at its own port.
+
+        |coro|
+
+        Endpoint: ``POST /api/https/remove``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/https/remove")
+
+    async def run_setting_action(self, action_id: str) -> Any:
+        """Run one of the settings page's buttons, eg. sending a test email.
+
+        |coro|
+
+        Endpoint: ``POST /api/settings/actions/{action_id}``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads a `detail` text from it.
+
+        Parameters
+        ----------
+        action_id : :class:`str`
+            The action's `id` from `SettingsManifestResponse.actions`, eg. ``"smtp.test"``.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path=f"/api/settings/actions/{action_id}")
 
     async def set_own_proxy(self, address: str, *, api_only: bool = False) -> HTTPSStateResponse:
         """Trust a reverse proxy in front of the panel, such as Caddy or nginx.
@@ -227,3 +838,82 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="POST", path="/api/settings/values", data=values)
+
+    async def set_update_stream(self, stream: str) -> Any:
+        """Move the panel to another release stream.
+
+        |coro|
+
+        Endpoint: ``PUT /api/updates/stream``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads the new update status from it.
+
+        Parameters
+        ----------
+        stream : :class:`str`
+            One of `UpdateStatusResponse.availableStreams`, eg. ``"Mainline"`` or ``"Preview"``.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="PUT", path="/api/updates/stream", data={"stream": stream})
+
+    async def start_https_setup(self, host_name: str) -> Any:
+        """Start AMP's own HTTPS setup, which asks Let's Encrypt for a certificate.
+
+        |coro|
+
+        Endpoint: ``POST /api/https/setup``
+
+        Follow it with :meth:`get_https_setup_status`. Let's Encrypt has to reach the panel, so this can't work on a
+        machine only reachable on its own network.
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown.
+
+        Parameters
+        ----------
+        host_name : :class:`str`
+            The domain name, which has to point at this panel.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        return await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})
+
+    async def update_publication(self, publication_id: str, *, enabled: Optional[bool] = None, public_port: Optional[int] = None) -> Any:
+        """Turn a public port forward on or off, or move it to another port.
+
+        |coro|
+
+        Endpoint: ``PUT /api/networking/publications/{publication_id}``
+
+        .. warning::
+            Not yet seen live, so the shape of AMP's reply is unknown. The web panel sends one change at a time.
+
+        Parameters
+        ----------
+        publication_id : :class:`str`
+            The publication's ID.
+        enabled : Union[:class:`bool`, None], optional
+            If the forward is on or not, by default None.
+        public_port : Union[:class:`int`, None], optional
+            The new public port, by default None.
+
+        Returns
+        -------
+        Any
+            AMP's reply as it came, `None` for an empty one.
+
+        """
+        data: dict[str, Any] = {"enabled": enabled, "publicPort": public_port}
+        # We only send what changes, as the web panel does.
+        data = {key: value for key, value in data.items() if value is not None}
+        return await self._request(method="PUT", path=f"/api/networking/publications/{publication_id}", data=data)

@@ -24,7 +24,11 @@ import logging
 from typing import TYPE_CHECKING, Optional, Self
 
 from .accounts import AccountModule
+from .analytics import AnalyticsModule
+from .credentials import CredentialModule
 from .platform import PlatformModule
+from .spires import SpireModule
+from .tasks import TaskModule
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -32,13 +36,12 @@ if TYPE_CHECKING:
 __all__ = (
     "Panel",
     "Shard",
-    "Spire",
 )
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class Panel(AccountModule, PlatformModule):
+class Panel(AccountModule, AnalyticsModule, CredentialModule, PlatformModule, SpireModule, TaskModule):
     """An AMP 3 panel, with every call this library wraps.
 
     The calls come from the `...Module` classes it is built from, and each one logs in through the :class:`Session` when
@@ -83,14 +86,4 @@ class Shard:
 
     # TODO: Build `Shard` from the shard findings (#47.7).
     # Each method calls the `ShardModule` one with its own ID, eg. `shard.start()` is `panel.start_shard(shard_id)`.
-
-
-class Spire:
-    """A spire, AMP 3's name for an ADS or Target, with the calls that act on it.
-
-    .. versionadded:: 6.0.0
-
-    """
-
-    # TODO: Build `Spire` from the spire findings (#47.8).
-    # Each method calls the `SpireModule` one with its own ID, eg. `spire.get_datastores()`.
+    # It moves to shards.py beside `ShardModule`, as `Spire` sits beside `SpireModule`.

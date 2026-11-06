@@ -25,7 +25,7 @@ import base64
 import json
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, Union
 
 from aiohttp import ClientError, ClientSession
 
@@ -143,7 +143,7 @@ class Session:
         self,
         method: str,
         path: str,
-        data: Optional[dict[str, Any]] = None,
+        data: Optional[Union[dict[str, Any], list[Any]]] = None,
         *,
         parameters: Optional[QueryParameters] = None,
         use_token: bool = True,
@@ -239,24 +239,29 @@ class Session:
                         raise
                     await self.login()
 
-    async def _request(
+    async def _send_with_login(
         self,
         method: str,
         path: str,
-        data: Optional[dict[str, Any]] = None,
+        data: Optional[Union[dict[str, Any], list[Any]]] = None,
         *,
         parameters: Optional[QueryParameters] = None,
         use_token: bool = True,
-    ) -> Any:
-        """Send a request, logging in first when it needs a session and we have to.
+    ) -> tuple[int, Any]:
+        """Send a request, logging in first when it needs a session and we have to. Raises nothing for an error status.
 
         A 401 for a token AMP no longer accepts gets one new login and a second try. With `use_token` set to `False`
         we send no token and never log in, for the calls that need no session.
 
+        Returns
+        -------
+        tuple[:class:`int`, Any]
+            The HTTP status and the decoded JSON body, `None` for an empty one.
+
         Raises
         ------
         AMPAPIRequestError
-            If AMP answers with an error status.
+            If a login this needed was refused.
 
         """
         if use_token is True:
@@ -272,10 +277,35 @@ class Session:
 
         # AMP only says `invalid_token` when we sent one, so a call without a session never gets here.
         if status == 401 and "invalid_token" in authenticate_header:
-            LOGGER.debug("<%s.%s> | Session ended by AMP, logging in again | Path: %s", __class__.__name__, "_request", path)
+            LOGGER.debug("<%s.%s> | Session ended by AMP, logging in again | Path: %s", __class__.__name__, "_send_with_login", path)
             await self._ensure_login(used_token=used_token)
             status, authenticate_header, body = await self._send(method=method, path=path, data=data, parameters=parameters)
+        return status, body
 
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        data: Optional[Union[dict[str, Any], list[Any]]] = None,
+        *,
+        parameters: Optional[QueryParameters] = None,
+        use_token: bool = True,
+    ) -> Any:
+        """Send a request with `_send_with_login`, raising for an error status.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If AMP answers with an error status.
+
+        """
+        status, body = await self._send_with_login(
+            method=method,
+            path=path,
+            data=data,
+            parameters=parameters,
+            use_token=use_token,
+        )
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method=method, path=path, data=body)
         return body
