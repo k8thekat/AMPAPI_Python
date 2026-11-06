@@ -108,6 +108,50 @@ def _snake_key(key: str) -> str:
     return Base.camel_to_snake_re(data=new_key)
 
 
+# These are the keys we hide in the debug logs, lowercase with any `_` removed
+# They cover the AMP API spec's password, token, code and key parameters, and the responses that send one back
+_SECRET_KEYS: frozenset[str] = frozenset(
+    {
+        "adminpassword",
+        "code",
+        "licencekey",
+        "manualkey",
+        "newinstancepassword",
+        "newpassword",
+        "oldpassword",
+        "pairingcode",
+        "password",
+        "remembermetoken",
+        "secret",
+        "token",
+        "twofactorcode",
+        "twofactortoken",
+    },
+)
+
+
+def _hide_secrets(data: Any) -> Any:
+    """Copy `data` for the debug logs, with the value of any key in `_SECRET_KEYS` hidden."""
+    if isinstance(data, dict):
+        # This is a typed local for pyright
+        source_map: dict[str, Any] = data  # pyright: ignore[reportUnknownVariableType]
+        hidden: dict[str, Any] = {}
+        for key, value in source_map.items():
+            if key.replace("_", "").lower() in _SECRET_KEYS:
+                hidden[key] = "<hidden>"
+            else:
+                hidden[key] = _hide_secrets(value)
+        return hidden
+
+    if isinstance(data, list):
+        source_list: list[Any] = data  # pyright: ignore[reportUnknownVariableType]
+        return [_hide_secrets(entry) for entry in source_list]
+    # The 2FA setup link holds the secret too, and AMP sends it under a plain `Url` key
+    if isinstance(data, str) and data.startswith("otpauth://"):
+        return "<hidden>"
+    return data
+
+
 class DumpParameters(TypedDict, total=False):
     skipkeys: bool
     ensure_ascii: bool
@@ -429,7 +473,7 @@ class Base:
 
 
     .. note::
-        A session expires after 240sec of inactivity per Cube Coders AMP.
+        We log in again once the stored session goes 240 seconds without a successful call.
         If for any reason you want to change that value, set the attribute :attr:`session_ttl`.
         The OIDC mode (:attr:`AuthMode.oidc`) doesn't use it, and keeps a session until AMP ends it.\n
 
@@ -542,10 +586,14 @@ class Base:
 
     @property
     def session_ttl(self) -> int:
-        """How long before the session ID expires in seconds, default is 240 seconds.
+        """How many seconds a session can go without a successful call before we log in again, default is 240 seconds.
 
         .. note::
             The OIDC mode (:attr:`AuthMode.oidc`) doesn't use this.
+
+        .. versionchanged:: 5.0.0
+            Counts from the last successful call, not from the login.
+
         """
         return Base._session_ttl
 
@@ -573,7 +621,8 @@ class Base:
 
         if bridge is None:
             try:
-                self._bridge = Bridge._get_bridge()  # pyright: ignore[reportPrivateUsage]
+                # self._bridge = Bridge._get_bridge()
+                bridge = Bridge._get_bridge()  # pyright: ignore[reportPrivateUsage]
             except ValueError:
                 LOGGER.error(
                     "<%s.%s> | Failed to initialize, you must either must use a Singleton <Bridge> object or pass into the __init__.",
@@ -581,8 +630,9 @@ class Base:
                     "__init__",
                 )
                 raise
-        else:
-            self.parse_bridge(bridge=bridge)
+        # else:
+        #     self.parse_bridge(bridge=bridge)
+        self.parse_bridge(bridge=bridge)
 
         self._backoff = ExponentialBackoff(integral=True)
 
@@ -780,7 +830,11 @@ class Base:
                     api_session,
                     self._instance_id,
                 )
-                LOGGER.debug("<%s.%s> | REQ_PARAMS: %s", __class__.__name__, "_post", request_params)
+                # We log the parameters in place of the `data` JSON string, so their secrets can be hidden
+                # Hiding them copies the data, so we only do it when the line is logged
+                if LOGGER.isEnabledFor(logging.DEBUG):
+                    logged_params: dict[str, Any] = _hide_secrets({**request_params, "data": parameters})
+                    LOGGER.debug("<%s.%s> | REQ_PARAMS: %s", __class__.__name__, "_post", logged_params)
                 LOGGER.debug("<%s.%s> | RESP_PARAMS: %s", __class__.__name__, "_post", response_params)
 
             except RuntimeError as e:
@@ -831,58 +885,48 @@ class Base:
 
             if response.content_length == 0:
                 raise AMPAPINetworkError(status=response.status, url=_url, reason="The HTTP Header content length was 0.")
+            # Anything outside 2xx raises with the HTTP reason, eg. "Not Found"
+            if response.status < 200 or response.status >= 300:
+                raise AMPAPINetworkError(
+                    status=response.status,
+                    url=_url,
+                    reason=response.reason or f"Unexpected status [{response.status}]",
+                )
 
-            match response.status:
-                case status if 200 <= status < 300:
-                    try:
-                        if no_data is True:
-                            # response.release()
-                            # return None
-                            # A Void endpoint answers JSON null, but a failure still comes back in the body with a 200
-                            response_params["allow_null"] = True
-                            await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
-                            return None
-                        return await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
+            try:
+                if no_data is True:
+                    # response.release()
+                    # return None
+                    # A Void endpoint answers JSON null, but a failure still comes back in the body with a 200
+                    response_params["allow_null"] = True
+                result: ResponseAliasFull = await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
 
-                    except _SessionDeadError as dead_session:
-                        # A second dead answer, or one to the login itself, is a real failure
-                        if session_retried is True or url == "Core/Login":
-                            raise AMPAPIResponseError(
-                                title=dead_session.title,
-                                url=dead_session.url,
-                                reason=dead_session.reason,
-                            ) from dead_session
+            except _SessionDeadError as dead_session:
+                # A second dead answer, or one to the login itself, is a real failure
+                if session_retried is True or url == "Core/Login":
+                    raise AMPAPIResponseError(
+                        title=dead_session.title,
+                        url=dead_session.url,
+                        reason=dead_session.reason,
+                    ) from dead_session
 
-                        # Only reset if the stored session is the one we sent
-                        stored_session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
-                        if stored_session is not None and stored_session.id == api_session.id:
-                            self._reset_session()
-                        session_retried = True
-                        await self._reauth()
-                        continue
+                # Only reset if the stored session is the one we sent
+                stored_session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+                if stored_session is not None and stored_session.id == api_session.id:
+                    self._reset_session()
+                session_retried = True
+                await self._reauth()
+                continue
 
-                case 400:
-                    raise AMPAPINetworkError(status=400, url=_url, reason="Bad Request")
-                case 401:
-                    raise AMPAPINetworkError(status=401, url=_url, reason="Unauthorized")
-                case 403:
-                    raise AMPAPINetworkError(status=403, url=_url, reason="Forbidden")
-                case 404:
-                    raise AMPAPINetworkError(status=404, url=_url, reason="Not Found")
-                case 408:
-                    raise AMPAPINetworkError(status=408, url=_url, reason="Request Timeout")
-                case 429:
-                    raise AMPAPINetworkError(status=429, url=_url, reason="Too Many Requests")
-                case 500:
-                    raise AMPAPINetworkError(status=500, url=_url, reason="Internal Server Error")
-                case 502:
-                    raise AMPAPINetworkError(status=502, url=_url, reason="Bad Gateway")
-                case 503:
-                    raise AMPAPINetworkError(status=503, url=_url, reason="Service Unavailable")
-                case 504:
-                    raise AMPAPINetworkError(status=504, url=_url, reason="Gateway Timeout")
-                case _:
-                    raise AMPAPINetworkError(status=response.status, url=_url, reason=f"Unexpected status [{response.status}]")
+            # The call worked, so our session's TTL counts from now
+            # A login stores its own new session afterwards, so we leave the old one alone
+            stored_session = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+            if url != "Core/Login" and stored_session is not None and stored_session.id == api_session.id and stored_session.id != "0":
+                stored_session.ttl = datetime.datetime.now(tz=datetime.UTC)
+
+            if no_data is True:
+                return None
+            return result
 
     async def _response_handler(
         self,
@@ -959,7 +1003,9 @@ class Base:
             to_file,
             path,
         )
-        LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", response_json)
+        # LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", response_json)
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", _hide_secrets(response_json))
 
         if response_json is None:
             if allow_null is True:
@@ -1107,7 +1153,7 @@ class Base:
         api_session = APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC))
         self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
 
-    async def _reauth(self) -> Any:
+    async def _reauth(self) -> Union[LoginResultsResponse, None]:
         """|coro|
         Logs into AMP via "API/Core/Login" endpoint using your :class:`Bridge` object.
 
@@ -1149,66 +1195,67 @@ class Base:
         # get our InstanceID and use it to key for session_id
         session: APISession = self._bridge._sessions.get(self._instance_id, APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC)))  # pyright: ignore[reportPrivateUsage]
         # if isinstance(session, APISession):
-        ttl: timedelta = datetime.datetime.now(tz=datetime.UTC) - session.ttl
-        if ttl.total_seconds() > self.session_ttl:
-            session_id = "0"
-        else:
-            session_id: str = session.id
+        # ttl: timedelta = datetime.datetime.now(tz=datetime.UTC) - session.ttl
+        # if ttl.total_seconds() > self.session_ttl:
+        #     session_id = "0"
+        # else:
+        #     session_id: str = session.id
+        #
+        # if session_id == "0":
+        # A session that made a successful call within `session_ttl` is still good
+        session_age: timedelta = datetime.datetime.now(tz=datetime.UTC) - session.ttl
+        if session.id != "0" and session_age.total_seconds() <= self.session_ttl:
+            return None
 
-        if session_id == "0":
-            # There is no `await` since the check above, and other calls wait on this until the login is done
-            pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
-            self._login_pending = pending
-            try:
-                if self._bridge.use_2fa is True:
-                    try:
-                        # Handles time based 2Factory Auth Key/Code
-                        code = TOTP(self._bridge.token).now()
+        # There is no `await` since the check above, and other calls wait on this until the login is done
+        pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._login_pending = pending
+        try:
+            if self._bridge.use_2fa is True:
+                try:
+                    # Handles time based 2Factory Auth Key/Code
+                    code = TOTP(self._bridge.token).now()
 
-                    # pyotp raises binascii.Error (a ValueError) for a bad base32 token
-                    except ValueError as error:
-                        msg = (
-                            "Please check your 2 Factor Code, should not contain spaces, escape characters "
-                            "and it must be enclosed in quotes!"
-                        )
-                        raise ValueError(msg) from error
+                # pyotp raises binascii.Error (a ValueError) for a bad base32 token
+                except ValueError as error:
+                    msg = "Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!"
+                    raise ValueError(msg) from error
 
-                parameters: dict[str, Any] = {
-                    "username": self._bridge.user,
-                    "password": self._bridge.password,
-                    "token": code,
-                    "rememberMe": True,
-                }
+            parameters: dict[str, Any] = {
+                "username": self._bridge.user,
+                "password": self._bridge.password,
+                "token": code,
+                "rememberMe": True,
+            }
 
-                # Network and response errors raise straight through, and their URL names Core/Login
-                # We post directly because `_call_end_point` would log in again
-                result = await self._post(url="Core/Login", parameters=parameters)
-                if not isinstance(result, dict):
-                    raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
-                if not is_response_type(result, LoginResultsResponse, LOGIN_RESULTS_REQUIRED_KEYS, LOGIN_RESULTS_EXCLUDED_KEYS):
-                    raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
+            # Network and response errors raise straight through, and their URL names Core/Login
+            # We post directly because `_call_end_point` would log in again
+            result = await self._post(url="Core/Login", parameters=parameters)
+            if not isinstance(result, dict):
+                raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
+            if not is_response_type(result, LoginResultsResponse, LOGIN_RESULTS_REQUIRED_KEYS, LOGIN_RESULTS_EXCLUDED_KEYS):
+                raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
 
-                # A refused login is still a LoginResults, with `success` False
-                if result["success"] is not True:
-                    # AMP sends no reason, and a wrong password and a wrong 2FA code both give `result: 40`
-                    amp_result: str = str(result["result"])
-                    if result["result"] in self._login_result_names:
-                        amp_result = f"{amp_result}, {self._login_result_names[result['result']]}"
+            # A refused login is still a LoginResults, with `success` False
+            if result["success"] is not True:
+                # AMP sends no reason, and a wrong password and a wrong 2FA code both give `result: 40`
+                amp_result: str = str(result["result"])
+                if result["result"] in self._login_result_names:
+                    amp_result = f"{amp_result}, {self._login_result_names[result['result']]}"
 
-                    reason: str = self._login_failed % (self._bridge.user, amp_result)
-                    LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
-                    raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
+                reason: str = self._login_failed % (self._bridge.user, amp_result)
+                LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
+                raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
 
-                # This is our new sessions table to correlate InstanceID to a sessionID.
-                api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
-                self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
-                return result
-            # Waiters get None, and only the caller that logged in sees the error
-            finally:
-                self._login_pending = None
-                if not pending.done():
-                    pending.set_result(None)
-        return None
+            # This is our new sessions table to correlate InstanceID to a sessionID.
+            api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
+            self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+            return result
+        # Waiters get None, and only the caller that logged in sees the error
+        finally:
+            self._login_pending = None
+            if not pending.done():
+                pending.set_result(None)
 
     async def _oidc_reauth(self) -> None:
         """|coro|
@@ -1585,7 +1632,7 @@ class Base:
         return writer.render(include_imports=include_imports)
 
     def parse_bridge(self, bridge: Bridge) -> None:
-        """Takes the :class:`Bridge` object and set's the :attr:`~Base.url` and sets :attr:`_bridge` to our Bridge object.
+        """Takes the :class:`Bridge` object and sets the :attr:`endpoint_url` and sets :attr:`_bridge` to our Bridge object.
 
         .. note::
             Also validates the 2FA token.
@@ -1599,12 +1646,11 @@ class Base:
         Raises
         ------
         :exc:`ValueError`
-            If 2FA Token is not provided and :attr:`_use_2fa` == True.\n
-            If 2FA Token is not enclosed in single(',') or double(",") quotes.
+            If 2FA Token is not provided and :attr:`~ampapi.modules.APIParams.use_2fa` is True.\n
+            If 2FA Token is shorter than 8 characters.
 
         """
-        # We use this later on in _connect to update `_session_id`;
-        # so all connections will use the same session ID (if possible)
+        # Every object on the same Bridge shares its stored sessions, keyed by Instance ID
         self._bridge = bridge
         self._endpoint_url = bridge.url
 

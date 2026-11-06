@@ -56,8 +56,16 @@ CustomTest01 and MCTest01 each got a new process, and the ADS01 holding them kep
 ## Sessions
 
 Stored per Bridge in `_sessions`, keyed by the object's `_instance_id` (the Controller's key is "0"). Each holds the
-session ID and its login time. `_reauth` logs in when the key is missing, its ID is "0", or it is older than
-`session_ttl` (240 seconds from login, not from the last call).
+session ID and when it logged in or last made a successful call. `_reauth` logs in when the key is missing, its ID is
+"0", or it has gone `session_ttl` (240 seconds) without a successful call. Before #46d it counted from the login, so
+a session in steady use was logged in again every 240 seconds, and each of those logins left the old session alive on
+AMP's side (vm1, 2026-11-05: 1 session became 5 after 4 logins).
+
+The DEBUG logs hide passwords, tokens, 2FA codes and secrets, the OIDC `code` and licence keys by key name, and any
+`otpauth://` link (#46c). The masking copies the data, so it only runs when DEBUG is on (otherwise it cost 314 us per
+`get_updates` and 21.7 ms on the 7 MB application list). Session IDs stay in the logs, since they are short-lived and
+the session handling is debugged by them. The `ManageInstance` and `GetRemoteLoginToken` tokens still show, since AMP
+sends both under a plain `Result` key.
 
 **A session lives and dies with the one AMP process that issued it** (vm1 + vm2, 2026-10-23, process IDs over SSH):
 - An Instance reached through the Controller's proxy (`/API/ADSModule/Servers/<InstanceID>/`) logs in through it and

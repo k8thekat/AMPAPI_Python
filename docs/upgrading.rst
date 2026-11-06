@@ -80,6 +80,10 @@ Changed methods
   every call uses that session until AMP ends it (`session_ttl` isn't read). A call with no session raises the new
   :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
   itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
+- :attr:`~ampapi.Base.session_ttl` counts from the last successful call, so a session in use isn't logged in again.
+  4.x counted from the login and logged in again every 240 seconds.
+- The repr of :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) leaves out `password`, `token` and
+  the stored sessions, so the debug logs don't print them.
 - :meth:`~ampapi.adsmodule.ADSModule.create_instance`, :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`
   and :meth:`~ampapi.adsmodule.ADSModule.apply_instance_configuration` return a :class:`~ampapi.modules.RunningTask`,
   which is what AMP sends. 4.x returned an `ActionResult`, and the last two raised on AMP 2.8's reply.

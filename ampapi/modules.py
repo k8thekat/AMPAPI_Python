@@ -788,6 +788,7 @@ class APIParams:
 
     .. versionchanged:: 5.0.0
         Added `auth_mode`. `user` and `password` default to "" and are required only in the `password` mode.
+        The repr leaves out `password`, `token` and the stored sessions.
 
     Attributes
     ----------
@@ -814,11 +815,12 @@ class APIParams:
 
     url: str
     user: str = ""
-    password: str = ""
+    # The debug logs print the repr, so the secrets are left out of it
+    password: str = field(default="", repr=False)
     use_2fa: bool = False
-    token: str = ""
+    token: str = field(default="", repr=False)
     auth_mode: AuthMode = AuthMode.password
-    _sessions: dict[str, APISession] = field(init=False, default_factory=dict[str, "APISession"])
+    _sessions: dict[str, APISession] = field(init=False, default_factory=dict[str, "APISession"], repr=False)
 
     def __post_init__(self) -> None:
         """Strip a trailing `/` from :attr:`url`, and check a `password` login has its user and password."""
@@ -838,7 +840,8 @@ class APISession:
     id : :class:`str`
         The `session_id` key from the JSON response of :meth:`Core.login`.
     ttl : :class:`datetime`
-        The time to live of the :attr:`id`. This can be adjusted by ::class:`Base.session_ttl` value.
+        When the session logged in or last made a successful call. :attr:`Base.session_ttl <ampapi.Base.session_ttl>`
+        counts from it.
 
     """
 
