@@ -194,7 +194,24 @@ Changed methods
   :meth:`~ampapi.adsmodule.ADSModule.get_datastore`.
 - ``Base.version_validation()`` takes the `endpoint` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
   the :exc:`RuntimeError` instead of returning it.
-- ``Base.clean_up()`` takes a keyword-only `logout` (default False) to call ``Core/Logout`` before closing the session.
+- The :class:`~ampapi.Bridge` holds the `aiohttp.ClientSession`, which it makes on the first call, and every object
+  made with that Bridge sends its calls through it. 4.x gave every object its own session, and a Controller passed its
+  own on to the Instances it built.
+- :meth:`~ampapi.Base.clean_up` is new. It closes the Bridge's session, and with `logout` (default False) it calls
+  ``Core/Logout`` first. On an Instance a Controller built it leaves the session open, since the Controller and its
+  other Instances share it. :meth:`Bridge.clean_up <ampapi.Bridge.clean_up>` and ``async with bridge:`` close it too,
+  and a later call makes a new one.
+- Your own session goes to the :class:`~ampapi.Bridge` as `session`, or set
+  :attr:`Bridge.session <ampapi.Bridge.session>`. Every object on that Bridge uses it while it is open, and the library
+  never closes it. 4.x took it on a :class:`~ampapi.instance.Controller` (or any other class) and used it only there
+  and on the Instances that Controller built.
+- `session` on a Controller or any other class, and setting :attr:`~ampapi.Base.session`, are deprecated. Both still
+  hand the session to the Bridge, with a :exc:`DeprecationWarning`. Reading :attr:`~ampapi.Base.session` gives the
+  Bridge's session, which is None until the first call.
+- `Controller.__del__` and `Controller.__adel__` are removed. Neither closed the session from inside a running event
+  loop, so close it with one of the above.
+- An object used in a second ``asyncio.run`` gets a new session there. 4.x kept retrying the session from the first,
+  closed event loop.
 - Every :class:`~ampapi.instance.Instance` knows the ADS that holds it, :attr:`~ampapi.instance.Instance.ads`: the
   :class:`~ampapi.instance.Controller` for its own Instances, the :class:`~ampapi.instance.TargetADS` for a remote
   Target's. :meth:`~ampapi.instance.Instance.start_instance`, `stop_instance`, `restart_instance`,

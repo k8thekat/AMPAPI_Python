@@ -29,6 +29,7 @@ import keyword
 import logging
 import re
 import time
+import warnings
 from collections.abc import Callable
 from dataclasses import fields
 from json import JSONEncoder
@@ -37,11 +38,9 @@ from pathlib import Path
 # from pprint import pformat
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, ParamSpec, TypedDict, TypeGuard, Union, Unpack, overload
 
-import aiohttp
-from aiohttp import ClientResponse
-
 # from dataclass_wizard import fromdict
 from pyotp import TOTP
+from typing_extensions import deprecated
 
 from ._enums import AuthMode, Module
 from ._types import (
@@ -68,7 +67,9 @@ if TYPE_CHECKING:
     from types import TracebackType
     from typing import Concatenate, Self
 
+    import aiohttp
     from _typeshed import DataclassInstance
+    from aiohttp import ClientResponse
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, TypeVar
 
@@ -146,6 +147,7 @@ def _hide_secrets(data: Any) -> Any:
     if isinstance(data, list):
         source_list: list[Any] = data  # pyright: ignore[reportUnknownVariableType]
         return [_hide_secrets(entry) for entry in source_list]
+
     # The 2FA setup link holds the secret too, and AMP sends it under a plain `Url` key
     if isinstance(data, str) and data.startswith("otpauth://"):
         return "<hidden>"
@@ -477,14 +479,6 @@ class Base:
         If for any reason you want to change that value, set the attribute :attr:`session_ttl`.
         The OIDC mode (:attr:`AuthMode.oidc`) doesn't use it, and keeps a session until AMP ends it.\n
 
-
-    Attributes
-    ----------
-    api_url : :class:`str`
-        The URL to access the Web Panel. This comes from your :class:`APIParams`.
-    session : :class:`aiohttp.ClientSession`
-        A static Session to use, otherwise the class will generate it's own as needed.
-
     """
 
     # Private Attributes
@@ -497,6 +491,8 @@ class Base:
     _session_ttl: ClassVar[int] = 240
     # Other calls wait on this while a login runs, and it only exists during a login
     _login_pending: Union[asyncio.Future[None], None]
+    # An Instance a Controller built sets this False, since it shares the Controller's session
+    _closes_client_session: bool = True
 
     # This is the cache state for attributes filled from an API response instead of __init__
     # `_is_cached` is set once data is applied and `_cached_at` is when
@@ -614,6 +610,26 @@ class Base:
         """The URL to access the AMP Instance API endpoints."""
         return self._endpoint_url
 
+    @property
+    def session(self) -> Union[aiohttp.ClientSession, None]:
+        """The :class:`aiohttp.ClientSession` this object's calls go through, which is :attr:`Bridge.session`.
+
+        Setting it still hands the session to the :class:`Bridge`, so every object made with it uses that session.
+
+        .. versionchanged:: 5.0.0
+            Reads the session from the :class:`Bridge`, which every object made with it shares.
+
+        .. deprecated:: 5.0.0
+            Setting it. Set :attr:`Bridge.session` or pass `session` to :class:`Bridge` instead.
+
+        """
+        return self._bridge.session
+
+    @session.setter
+    @deprecated("Setting <Base>.session is deprecated. Set <Bridge>.session or pass session to <Bridge> instead.")
+    def session(self, value: Union[aiohttp.ClientSession, None]) -> None:
+        self._bridge.session = value
+
     def __init__(self, *, bridge: Optional[Bridge] = None, session: Optional[aiohttp.ClientSession] = None) -> None:  # noqa: D107
         self._endpoint_url = ""
         self._instance_id = "0"
@@ -637,7 +653,13 @@ class Base:
         self._backoff = ExponentialBackoff(integral=True)
 
         LOGGER.debug("<%s.%s> | BRIDGE: %s | SESSION: %s |", __class__.__name__, "__init__", bridge, session)
-        self.session: aiohttp.ClientSession | None = session
+        # self.session: aiohttp.ClientSession | None = session
+        # A session passed in still goes on the Bridge, and without one we keep what the Bridge has
+        if session is not None:
+            msg = "The `session` parameter is deprecated. Pass it to <Bridge> or set <Bridge>.session instead."
+            # This skips our own files, so the warning names the caller's line and Python shows it
+            warnings.warn(msg, DeprecationWarning, skip_file_prefixes=(str(Path(__file__).parent),))
+            self._bridge.session = session
 
     @staticmethod
     def ads_only(
@@ -811,8 +833,10 @@ class Base:
                 self._instance_id,
                 APISession(id="0", ttl=datetime.datetime.now(tz=datetime.UTC)),
             )
-            if self.session is None:
-                self.session = aiohttp.ClientSession()
+            # if self.session is None:
+            #     self.session = aiohttp.ClientSession()
+            # The Bridge gives us an open session made in this event loop
+            client_session: aiohttp.ClientSession = await self._bridge._get_client_session()  # pyright: ignore[reportPrivateUsage]
 
             # request_params.setdefault("headers", {"Accept": "text/javascript", "Authorization": f"Bearer {api_session.id}"})
             # Rebuilt every pass so a resend carries the new session ID
@@ -821,7 +845,8 @@ class Base:
             request_params.setdefault("data", json.dumps(parameters))
 
             try:
-                response: ClientResponse = await self.session.post(url=_url, **request_params)
+                # response: ClientResponse = await self.session.post(url=_url, **request_params)
+                response: ClientResponse = await client_session.post(url=_url, **request_params)
                 LOGGER.debug(
                     "<%s.%s> | POST URL: %s | API_SESSION: %s | INSTANCE_ID: %s",
                     __class__.__name__,
@@ -838,9 +863,10 @@ class Base:
                 LOGGER.debug("<%s.%s> | RESP_PARAMS: %s", __class__.__name__, "_post", response_params)
 
             except RuntimeError as e:
-                # Attempting to re-open the session if it is somehow closed during usage.
-                if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
-                    self.session = aiohttp.ClientSession()
+                # # Attempting to re-open the session if it is somehow closed during usage.
+                # if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
+                #     self.session = aiohttp.ClientSession()
+                # The next pass asks the Bridge again, and it replaces a closed session
 
                 # retry: int | float = self._backoff.delay()
                 # Backoff can return 0, so we wait at least 1 second
@@ -919,10 +945,9 @@ class Base:
                 continue
 
             # The call worked, so our session's TTL counts from now
-            # A login stores its own new session afterwards, so we leave the old one alone
-            stored_session = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
-            if url != "Core/Login" and stored_session is not None and stored_session.id == api_session.id and stored_session.id != "0":
-                stored_session.ttl = datetime.datetime.now(tz=datetime.UTC)
+            # Not for a login, which stores a new session afterwards, or when another call replaced ours
+            if url != "Core/Login" and self._bridge._sessions.get(self._instance_id) is api_session:  # pyright: ignore[reportPrivateUsage]
+                api_session.ttl = datetime.datetime.now(tz=datetime.UTC)
 
             if no_data is True:
                 return None
@@ -1326,18 +1351,22 @@ class Base:
     async def clean_up(self, *, logout: bool = False) -> None:
         """|coro|
 
-        Close any open :class:`aiohttp.ClientSession` belonging to this class.
+        Close the :class:`aiohttp.ClientSession` our :class:`Bridge` made, which every object on it shares.
+        The next call makes a new one.
 
         .. note::
-            Safe to call more than once, since the session is cleared once closed.
+            An Instance a :class:`Controller` built leaves the session open, since the Controller and its other Instances
+            share it. Call `clean_up` on the Controller, or :meth:`Bridge.clean_up`, to close it.
+            A session passed in as `session` is yours, so it is never closed for you.
+            Safe to call more than once.
 
-        .. versionchanged:: 5.0.0
-            `logout` also resets the stored session and skips `Core/Logout` if there is no session.
+        .. versionadded:: 5.0.0
 
         Parameters
         ----------
         logout : :class:`bool`, optional
             If to call `Core/Logout` first or not, by default False.
+            It also resets the stored session, and is skipped when there is no session.
             A failed logout is logged as a warning and the session is still closed.
 
         """
@@ -1353,10 +1382,12 @@ class Base:
             # Reset the stored session either way
             self._reset_session()
 
+        # An Instance a Controller built shares the Controller's session, so we leave it open
+        if self._closes_client_session is False:
+            return
         LOGGER.debug("<%s.%s> | Closing any open `aiohttp.ClientSession`", __class__.__name__, "clean_up")
-        if self.session is not None:
-            await self.session.close()
-            self.session = None
+        # await self.session.close()
+        await self._bridge.clean_up()
 
     async def __aenter__(self) -> Self:
         """|coro|
@@ -1364,8 +1395,8 @@ class Base:
         Enter the async context manager.
 
         .. note::
-            Nothing is opened here. The :class:`aiohttp.ClientSession` is created on the first
-            request. This makes sure the session is closed on the way out.
+            Nothing is opened here. Our :class:`Bridge` makes the :class:`aiohttp.ClientSession` on the first
+            call, and :meth:`clean_up` runs on the way out.
 
 
         Returns
@@ -1384,7 +1415,7 @@ class Base:
     ) -> None:
         """|coro|
 
-        Exit the async context manager, closing any open session.
+        Exit the async context manager, calling :meth:`clean_up`.
 
         .. note::
             Exceptions are not suppressed, so any error propagates.

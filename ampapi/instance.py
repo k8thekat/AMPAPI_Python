@@ -358,6 +358,8 @@ class Instance(
         # typical Instance will not have the :py:class:`ADSModule` API Endpoints.
         self._controller = controller
         self._ads = ads
+        # Built by a Controller, we share its session, so our clean_up leaves it open
+        self._closes_client_session = controller is None
         self._endpoint_url = f"{self._bridge.url}/API/ADSModule/Servers/{self._instance_id}"
 
     def __hash__(self) -> int:  # noqa: D105
@@ -977,7 +979,14 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         bridge : Union[:class:`Bridge`, None], optional
             The Bridge to connect through, uses the Singleton <Bridge> if None, by default None.
         session : Union[:class:`aiohttp.ClientSession`, None], optional
-            A static Session to use, otherwise the class will generate its own as needed, by default None.
+            A session for every object on the Bridge to send its calls through, by default None.
+            It is never closed for you, and without one the Bridge makes its own on the first call.
+
+            .. versionchanged:: 5.0.0
+                Goes on the :class:`Bridge`, so every object made with it uses this session.
+
+            .. deprecated:: 5.0.0
+                Pass it to :class:`Bridge` as `session` instead.
 
         """
         super().__init__(bridge=bridge, session=session)
@@ -1007,9 +1016,9 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
             new_vars[key] = value
         return pformat(new_vars)
 
-    async def __adel__(self) -> None:
-        """Close any open connection when the Controller is discarded."""
-        await self.clean_up()
+    # async def __adel__(self) -> None:
+    #     """Close any open connection when the Controller is discarded."""
+    #     await self.clean_up()
 
     @overload
     def instance_conversion(
@@ -1055,12 +1064,12 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         # An ADS Instance here is a remote Target's, because get_instances leaves our own out
         # We pass ourselves so they can reach ADSModule endpoints
         if instances["module"] == "ADS":
-            return TargetADS(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
+            return TargetADS(data=instances, controller=self, ads=ads, bridge=self._bridge)
 
         if instances["module"] == "Minecraft":
-            return MinecraftInstance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
+            return MinecraftInstance(data=instances, controller=self, ads=ads, bridge=self._bridge)
 
-        return Instance(data=instances, controller=self, ads=ads, bridge=self._bridge, session=self.session)
+        return Instance(data=instances, controller=self, ads=ads, bridge=self._bridge)
 
     def _sync_instances(
         self,
@@ -1441,12 +1450,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
 
             target_ads: Union[TargetADS, None] = self._targets.get(target["instance_id"])
             if target_ads is None or own_ads_data["module"] != target_ads.module:
-                target_ads = TargetADS(
-                    data=own_ads_data,
-                    controller=self,
-                    bridge=self._bridge,
-                    session=self.session,
-                )
+                target_ads = TargetADS(data=own_ads_data, controller=self, bridge=self._bridge)
                 self._targets[target["instance_id"]] = target_ads
             else:
                 target_ads._parse_instance_data(data=own_ads_data)  # pyright: ignore[reportPrivateUsage]

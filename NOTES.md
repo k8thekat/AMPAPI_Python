@@ -67,6 +67,19 @@ The DEBUG logs hide passwords, tokens, 2FA codes and secrets, the OIDC `code` an
 the session handling is debugged by them. The `ManageInstance` and `GetRemoteLoginToken` tokens still show, since AMP
 sends both under a plain `Result` key.
 
+**The `aiohttp.ClientSession` is the Bridge's** (#46b). Each Bridge makes one on the first call and every object on
+it sends its calls through it. Before #46b each object held its own, and `clean_up` on an Instance closed the one its
+Controller shared with it (vm1: the Controller's next call logged an ERROR, slept 1.01 s and made a new one).
+- aiohttp ties a session to the event loop it was made in and has no public way to read that loop, so the Bridge
+  keeps it. A session from a finished loop still says `closed` is False, and its `post` raises "Event loop is
+  closed", so `_get_client_session` replaces one from another loop and closes the old one.
+- `clean_up` on a Controller, Core, ADSModule or standalone Instance closes it. An Instance a Controller built
+  leaves it open (#46j, Kat 2026-11-05).
+- A passed-in session goes to `Bridge(session=)` or `bridge.session` (#46n, Kat 2026-11-06), and the library never
+  closes it. `session=` on an object and setting `Base.session` still work with a `DeprecationWarning`, since they
+  changed every object on the Bridge from one object's parameter. `auth_mode` stays on `APIParams` (#46o): its
+  `__post_init__` checks the password mode's user and password, and a Bridge argument would come too late for that.
+
 **A session lives and dies with the one AMP process that issued it** (vm1 + vm2, 2026-10-23, process IDs over SSH):
 - An Instance reached through the Controller's proxy (`/API/ADSModule/Servers/<InstanceID>/`) logs in through it and
   gets its own session. That session doesn't depend on the session of whoever is logged in to the ADS.

@@ -320,7 +320,7 @@ async def capture_instance_responses(section: str = "LIVE") -> list[EndpointResu
         return results
 
     LOGGER.info("Using Minecraft instance: %s (%s)", mc_data.get("friendly_name"), mc_data.get("instance_id"))
-    mc = MinecraftInstance(data=mc_data, session=ads.session)
+    mc = MinecraftInstance(data=mc_data, bridge=bridge)
     mc._instance_id = mc_data["instance_id"]  # pyright: ignore[reportPrivateUsage]
     mc._endpoint_url = f"{bridge.url}/API/ADSModule/Servers/{mc._instance_id}"  # pyright: ignore[reportPrivateUsage]
 
