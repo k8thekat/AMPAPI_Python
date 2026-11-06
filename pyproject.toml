@@ -40,7 +40,9 @@ line-length = 140
 # unit_test.py is a test file that calls a live AMP server, so it isn't held to the library's rules.
 # exclude = ["docs/extensions/*.py", "unit_test.py"]
 # The workflow scripts are shared with Python_Template and carry a blanket `# ruff: noqa`, so Ruff skips them too.
-exclude = ["docs/extensions/*.py", "unit_test.py", ".github/workflows/scripts/*.py"]
+# exclude = ["docs/extensions/*.py", "unit_test.py", ".github/workflows/scripts/*.py"]
+# The usage sample is documentation for reading, so it isn't held to the library's rules either.
+exclude = ["docs/extensions/*.py", "unit_test.py", ".github/workflows/scripts/*.py", "docs/samples/sample.py"]
 # A file named on the command line (as the editor and check_code pass them) is excluded too.
 force-exclude = true
 
@@ -130,4 +132,6 @@ dev = [
 
 [tool.check_code]
 # unit_test.py is a test file that calls a live AMP server, so pyright skips it as Ruff does.
-skip_pyright = ["unit_test.py"]
+# skip_pyright = ["unit_test.py"]
+# The usage sample is skipped the same way.
+skip_pyright = ["unit_test.py", "docs/samples/sample.py"]

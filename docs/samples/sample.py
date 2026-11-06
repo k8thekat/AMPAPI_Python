@@ -1,43 +1,80 @@
+"""Copyright (C) 2021-2026 Katelynn Cadwallader.
+
+This file is part of AMPAPI_Python.
+
+AMPAPI_Python is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+AMPAPI_Python is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
+
+You should have received a copy of the GNU General Public License
+along with AMPAPI_Python; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
+"""
+
+# This is a sample script, not a module of a package
+# ruff: noqa: INP001
+
 import logging
-from pprint import pprint
 from typing import Union
 
 import aiohttp
 
-from ampapi import AnalyticsFilter, AnalyticsSummary, APIParams, Bridge, Controller, Instance, InstanceState, MinecraftInstance, Players
+from ampapi import (
+    AnalyticsFilter,
+    AnalyticsSummary,
+    APIParams,
+    Bridge,
+    Controller,
+    Instance,
+    InstanceState,
+    MinecraftInstance,
+    Players,
+    Status,
+)
 from ampapi.errors import AMPAPIError
 
-_params = APIParams(url="http://192.168.13.130:8080", user="bot_username", password="bot_password")
+# These are placeholders, fill in your own
+_params = APIParams(url="http://192.168.13.130:8080", user="bot_username", password="bot_password")  # noqa: S106
 
 
-async def Sample_API() -> None:
+async def sample_api() -> None:
     """Example API Function to call Endpoints."""
     # The API also supports the ability to have an existing `aiohttp.ClientSession`;
-    # Simply supply your existing session to the Controller
-    # Make sure to close your session after running any code. (If needed)
+    # Simply supply your existing session to the Bridge, and every API class made with it uses that session
+    # Make sure to close your session after running any code, the API never closes one you passed in. (If needed)
     logger = logging.getLogger(__name__)
-    _bridge = Bridge(api_params=_params)
+    # _bridge = Bridge(api_params=_params)
     session: aiohttp.ClientSession = aiohttp.ClientSession()
-    ADS: Controller = Controller(session=session)
+    _bridge = Bridge(api_params=_params, session=session)
+    # ADS: Controller = Controller(session=session)
+    ads: Controller = Controller()
     # By default all API calls will be formatted into Dataclasses if possible.
     # You can toggle format_data off with ANY of the API classes that inherit Base().
-    ADS.format_data = False
+    ads.format_data = False
 
-    # This would populate the ADS class property .instances
-    await ADS.get_instances(format_data=True)
-    # We convert the ADS.instances attribute to a list for easier iteration.
+    # This would populate the ads class property .instances
+    await ads.get_instances(format_data=True)
+    # We convert the ads.instances attribute to a list for easier iteration.
     # The data is a set to prevent duplicates.
-    ADSinstances = list(ADS.instances)
+    ads_instances = list(ads.instances)
     arkinstance: Union[Instance, None] = None
     mcinstance: Union[Instance, MinecraftInstance, None] = None
     # We can break out all our instances into their own attributes.
-    for instance in ADSinstances:
+    for instance in ads_instances:
         # Pre populated from the dataclass and has the API endpoints too!
-        if isinstance(instance, Instance):
-            if instance.friendly_name == "ArkInstance":
-                arkinstance = instance
-            elif instance.friendly_name == "Minecraft_PVP":
-                mcinstance = instance
+        # if isinstance(instance, Instance):
+        # Every converted Instance is already an `Instance`, so there is nothing to check
+        if instance.friendly_name == "ArkInstance":
+            arkinstance = instance
+        elif instance.friendly_name == "Minecraft_PVP":
+            mcinstance = instance
 
     if arkinstance is None or mcinstance is None or not isinstance(mcinstance, MinecraftInstance):
         return
@@ -48,7 +85,9 @@ async def Sample_API() -> None:
     await arkinstance.take_backup(name="ARK1_backup", description="This is an ARK backup", sticky=True)
 
     # Then you can call instance type specific API endpoints.
-    await mcinstance.mc_add_to_whitelist(user_or_uuid="k8_thekat")
+    # await mcinstance.mc_add_to_whitelist(user_or_uuid="k8_thekat")
+    # AMP 2.6.5.0 removed the whitelist endpoints, so we send the server's own console command instead
+    await mcinstance.send_console_message(msg="whitelist add k8_thekat")
 
     # You can also check attributes and other fields of the instance for easy logic.
     if mcinstance.instance_name == "Test_Server":
@@ -57,7 +96,7 @@ async def Sample_API() -> None:
 
     # The State of the Instance.
     # Can be checked via `Instance.running`.
-    # This is cached, call `ADS.get_instances()` again to refresh it.
+    # This is cached, call `ads.get_instances()` again to refresh it.
     if mcinstance.running is True:
         print(f"{mcinstance.friendly_name} is Running Nyao~")
 
@@ -79,29 +118,38 @@ async def Sample_API() -> None:
     await mcinstance.update_application()
 
     # To get the current Instance State call the function below, it returns a `Status` dataclass.
-    status = await mcinstance.get_status()
-    print(status.state)
-    # You can also check Metrics of an Instance easily.
-    print(status.metrics)
+    # status = await mcinstance.get_status()
+    # print(status.state)
+    # A call gives the raw dict when `format_data` is off, so we ask for the dataclass and check we got it
+    status = await mcinstance.get_status(format_data=True)
+    if isinstance(status, Status):
+        print(status.state)
+        # You can also check Metrics of an Instance easily.
+        print(status.metrics)
 
     # Errors are raised, not returned. Everything we raise inherits from `AMPAPIError` (see `ampapi.errors`).
     # Want to kick a random person? Here ya go~
     try:
-        players: Players = await mcinstance.get_user_list()
+        # players: Players = await mcinstance.get_user_list()
+        players = await mcinstance.get_user_list(format_data=True)
     except AMPAPIError:
         logger.error("Failed to retrieve Players")
         return
-    await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
+    if isinstance(players, Players) and len(players.sorted) > 0:
+        await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
 
     # Analytics Introduction -
     # Simply call the below method.
     # By default it will use current day and time and go back 30 days into the past from now.
     try:
-        stats: AnalyticsSummary = await mcinstance.get_analytics_summary()
+        # stats: AnalyticsSummary = await mcinstance.get_analytics_summary()
+        stats = await mcinstance.get_analytics_summary(format_data=True)
     except AMPAPIError:
         logger.error("Failed to retrieve Stats")
         return
-    pprint(stats)
+    # pprint(stats)
+    if isinstance(stats, AnalyticsSummary):
+        print(stats)
 
     # Let's say you ONLY want US players.
     # First you create a filter, then pass the filter into the function call.
