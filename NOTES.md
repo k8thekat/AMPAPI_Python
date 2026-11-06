@@ -115,12 +115,15 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   their own failures ("No such user"), so a `Status` False without `Session.Exists` stays a real failure.
 - A permission error raises at once, with no login and the session untouched. "Instance Unavailable" (an ADS
   booting, or a stopped Instance) raises and keeps the session, since it is still alive.
-- One login for concurrent calls (#22, Kat's idea of checking the object's own state): a call that logs in sets
-  `_login_pending` on the object, and the other calls on it wait for that login and use the session it stored.
-  There's no lock to outlive an event loop, since the marker only exists while a login runs. If that login fails,
-  each waiting call tries its own login, one at a time (Kat's choice). Live on vm1 after an `ampinstmgr -r`: 20
-  concurrent calls made 20 logins before, and 1 after. With a wrong password, 5 calls made 5 failed logins, one at
-  a time, and all raised.
+- One login for concurrent calls (#22, Kat's idea of checking the state instead of a lock): a call that logs in puts
+  a marker in the Bridge's `_logins_pending` under its Instance ID, and the other calls for that ID wait for that
+  login and use the session it stored. There's no lock to outlive an event loop, since the marker only exists while
+  a login runs, and one from a finished loop is dropped. If that login fails, each waiting call tries its own login,
+  one at a time (Kat's choice). Live on vm1 after an `ampinstmgr -r`: 20 concurrent calls made 20 logins before, and
+  1 after. With a wrong password, 5 calls made 5 failed logins, one at a time, and all raised.
+- The marker was on the object until #46g. Two objects for one Instance ID (two Controllers, or a Controller and an
+  `ADSModule()` on one Bridge) each logged in, and AMP kept the extra session (vm1: 10 calls on two Controllers made
+  2 logins). `get_instances` reuses its Instance objects, so a Controller's own Instances never did this.
 - Measured after #18 (vm1/vm2): a reset recovers in two requests (login, then the call) with no log line, and a
   retry in three (the call, login, the resend) with one warning.
 - With `use_2fa`, a retry logs in again with a fresh TOTP code, often the same code as the login before it. AMP
@@ -169,7 +172,7 @@ How #45 handles it (Kat 2026-11-05: a separate function, so the password session
 `_post` is untouched since its dead-session branch already calls `_reauth`.
 - `Base._oidc_reauth` never logs in. A stored session is used whatever its age, and none raises
   `AMPAPIOIDCSessionError`, since only the provider flow can make a new one.
-- `Instance._oidc_reauth` logs in with a `ManageInstance` token, waiting on `_login_pending` like `_reauth` (#22).
+- `Instance._oidc_reauth` logs in with a `ManageInstance` token, waiting on the Bridge's `_logins_pending` like `_reauth` (#22).
 - Checked with the library on vm1 and vm2 (2026-11-05, 31 checks): the Controller past `session_ttl`, CustomTest01
   and MCTest01, 10 concurrent calls on one token, an Instance session AMP dropped, vm2's `TargetADS` and its MCTest01,
   a dead Controller session, `logout`, and the password mode unchanged. No password was sent in the OIDC mode.

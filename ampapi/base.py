@@ -491,8 +491,6 @@ class Base:
     _instance_id: str
     # The session TTL is off for now, a stored session is used until AMP ends it
     # _session_ttl: ClassVar[int] = 240
-    # Other calls wait on this while a login runs, and it only exists during a login
-    _login_pending: Union[asyncio.Future[None], None]
     # An Instance a Controller built sets this False, since it shares the Controller's session
     _closes_client_session: bool = True
 
@@ -639,7 +637,6 @@ class Base:
     def __init__(self, *, bridge: Optional[Bridge] = None, session: Optional[aiohttp.ClientSession] = None) -> None:  # noqa: D107
         self._endpoint_url = ""
         self._instance_id = "0"
-        self._login_pending = None
 
         if bridge is None:
             try:
@@ -1219,10 +1216,12 @@ class Base:
         if self._bridge.auth_mode is AuthMode.oidc:
             return await self._oidc_reauth()
 
-        # Wait on a login already running, then check the stored session again
+        # Wait on a login already running for our Instance ID, by any object on the Bridge, then check the stored session again
         # If that login failed there is still no session, so we try our own
-        while self._login_pending is not None:
-            await asyncio.shield(self._login_pending)
+        running_login: Union[asyncio.Future[None], None] = self._bridge._get_pending_login(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+        while running_login is not None:
+            await asyncio.shield(running_login)
+            running_login = self._bridge._get_pending_login(self._instance_id)  # pyright: ignore[reportPrivateUsage]
 
         code: Union[str, TOTP] = ""
 
@@ -1247,7 +1246,7 @@ class Base:
 
         # There is no `await` since the check above, and other calls wait on this until the login is done
         pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
-        self._login_pending = pending
+        self._bridge._logins_pending[self._instance_id] = pending  # pyright: ignore[reportPrivateUsage]
         try:
             if self._bridge.use_2fa is True:
                 try:
@@ -1291,7 +1290,9 @@ class Base:
             return result
         # Waiters get None, and only the caller that logged in sees the error
         finally:
-            self._login_pending = None
+            # Only our own entry, one from a newer event loop may have replaced it
+            if self._bridge._logins_pending.get(self._instance_id) is pending:  # pyright: ignore[reportPrivateUsage]
+                del self._bridge._logins_pending[self._instance_id]  # pyright: ignore[reportPrivateUsage]
             if not pending.done():
                 pending.set_result(None)
 

@@ -98,6 +98,8 @@ class Bridge(APIParams):
     _client_session_loop: Union[asyncio.AbstractEventLoop, None]
     # A session passed in is the caller's, we use it while it is open and never close it
     _external_session: Union[aiohttp.ClientSession, None]
+    # The logins running now, keyed by Instance ID like the stored sessions, so every object on us waits on the same one
+    _logins_pending: dict[str, asyncio.Future[None]]
 
     @property
     def session(self) -> Union[aiohttp.ClientSession, None]:
@@ -176,6 +178,7 @@ class Bridge(APIParams):
         self._client_session = None
         self._client_session_loop = None
         self._external_session = session
+        self._logins_pending = {}
 
         if singleton:
             self._initialized = True
@@ -297,3 +300,12 @@ class Bridge(APIParams):
         if stale_session is not None:
             await stale_session.close()
         return client_session
+
+    def _get_pending_login(self, instance_id: str) -> Union[asyncio.Future[None], None]:
+        """Get the login running for this Instance ID in the running event loop, if there is one."""
+        pending: Union[asyncio.Future[None], None] = self._logins_pending.get(instance_id)
+        # A login cut off when its event loop ended can't be awaited here, so we drop it
+        if pending is not None and pending.get_loop() is not asyncio.get_running_loop():
+            del self._logins_pending[instance_id]
+            return None
+        return pending

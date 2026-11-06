@@ -452,10 +452,12 @@ class Instance(
             If the Instance's answer to the login isn't a LoginResults.
 
         """
-        # Wait on a login already running, then check the stored session again
+        # Wait on a login already running for our Instance ID, by any object on the Bridge, then check the stored session again
         # If that login failed there is still no session, so we try our own
-        while self._login_pending is not None:
-            await asyncio.shield(self._login_pending)
+        running_login: Union[asyncio.Future[None], None] = self._bridge._get_pending_login(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+        while running_login is not None:
+            await asyncio.shield(running_login)
+            running_login = self._bridge._get_pending_login(self._instance_id)  # pyright: ignore[reportPrivateUsage]
 
         session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
         if session is not None and session.id != "0":
@@ -465,7 +467,7 @@ class Instance(
 
         # There is no `await` since the check above, and other calls wait on this until the login is done
         pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
-        self._login_pending = pending
+        self._bridge._logins_pending[self._instance_id] = pending  # pyright: ignore[reportPrivateUsage]
         try:
             # A dead Controller session raises the OIDC error from in here
             manage_result = await self._controller.manage_instance(instance_id=self._instance_id, format_data=False)
@@ -501,7 +503,9 @@ class Instance(
             self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
         # Waiters get None, and only the caller that logged in sees the error
         finally:
-            self._login_pending = None
+            # Only our own entry, one from a newer event loop may have replaced it
+            if self._bridge._logins_pending.get(self._instance_id) is pending:  # pyright: ignore[reportPrivateUsage]
+                del self._bridge._logins_pending[self._instance_id]  # pyright: ignore[reportPrivateUsage]
             if not pending.done():
                 pending.set_result(None)
 
