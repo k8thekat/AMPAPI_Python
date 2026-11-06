@@ -12,6 +12,12 @@ Items carry a stable number (#N) for reference; `.local_data/plans/todo_index.md
 - (#47.2) A SignalR hub client for live events, logging in with `Session.get_hub_token`.
 - (#47.3) Confirm upstream report 01 (passkey registration needs `transports`) in a browser; trust vm3's Caddy root CA first.
 
+## ampapi/panel.py
+
+---
+
+- (#47.14) Build the rest of the AMP3 library in the agreed layout: `ShardModule` with `Shard`, `SpireModule` with `Spire`, `TemplateModule`, the rest of `AccountModule`, `AnalyticsModule`, `TaskModule`, `CredentialModule`.
+
 ## Test VMs
 
 ---

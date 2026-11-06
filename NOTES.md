@@ -24,6 +24,11 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
 
 ## Tooling in this worktree
 
+**Capture redaction.** `capture.py` hides values under secret-looking keys (by length) and blanks public IP addresses
+under address keys (`host`, `display`, ...). A scrub on 2026-11-06 ~22:55 UTC took four-part version strings for IP
+addresses and ran redaction twice, so captures saved before then show `<redacted str len=22>` instead of the original
+length, and some `agentVersion` values carry a "version lost to a scrub" marker. The build is `3.0.0.6+f3d1a77cea`.
+
 The worktree carries its own copies, all gitignored, so nothing reaches back into the Refactor checkout:
 - `.venv`: the main venv's packages (aiohttp, ruff, pyright, sphinx, pytest, ...) plus `cryptography`.
 - `local.ini`: a copy of the main one, with `[VM_AMP3]` and `[VM_AMP3_B]`. The two now differ, so AMP3 logins live here.
@@ -38,6 +43,21 @@ The worktree carries its own copies, all gitignored, so nothing reaches back int
 - `.local_data/plans/todo_index.md`: the AMP3 TODO index.
 - There is no OpenAPI document. `/openapi/v1.json` is 401 without a token and 404 with one, so the types come from
   captures plus the web panel's own JS (`main-*.js` and its `chunk-*.js`).
+
+## Library layout (#47.13, #47.14)
+
+Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/plan.md`, Decisions 4-7):
+- `Session` is the connection: login, renewal, logout, reauth, second factor, the hub token. It is not renamed `Bridge`.
+- Each API area is a `...Module` mixin on `Base` (`AccountModule`, `PlatformModule`, then shards, spires, templates
+  and the rest), composed into `Panel`, the way 5.x composes `Controller`.
+- A module method carries the resource noun and takes IDs (`panel.start_shard(shard_id)`); a `Shard` or `Spire`
+  object's method drops both (`shard.start()`) and calls the module method, so no name means two things.
+- Calls return TypedDicts. Only `Shard` and `Spire` (and later a task) are classes. There is no `format_data`.
+- `Base._request` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
+  4, 8, 8 seconds, as the web panel does), and every module call goes through `Session`'s single relogin on a dead
+  session.
+- Per-call `request_params` (5.x has them on every method) are left out for now, waiting on Kat: the `ClientSession`
+  handed to `Session` already carries SSL, timeouts and proxies for every call.
 
 ## AMP 3 API shape
 
