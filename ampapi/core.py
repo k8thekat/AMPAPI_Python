@@ -27,11 +27,14 @@ from typing import TYPE_CHECKING, Any, Optional, Union, Unpack
 from pyotp import TOTP
 from typing_extensions import deprecated
 
+from ._enums import AuthMode
 from ._types import (
     ACTION_RESULT_EXCLUDED_KEYS,
     ACTION_RESULT_REQUIRED_KEYS,
     LICENCE_INFO_EXCLUDED_KEYS,
     LICENCE_INFO_REQUIRED_KEYS,
+    LOGIN_RESULTS_EXCLUDED_KEYS,
+    LOGIN_RESULTS_REQUIRED_KEYS,
     RUNNING_TASK_EXCLUDED_KEYS,
     RUNNING_TASK_REQUIRED_KEYS,
     SCHEDULE_DATA_EXCLUDED_KEYS,
@@ -71,6 +74,7 @@ from .base import Base, ResponseAliasFull, ResponseHandlerOptions
 from .errors import AMPAPIKeyError, AMPAPITypeError
 from .modules import (
     ActionResult,
+    APISession,
     AuditLogEntry,
     BuildInfo,
     Diagnostics,
@@ -2316,10 +2320,14 @@ class Core(Base):
 
         __Endpoint__: "Core/GetOIDCLoginURL"
 
+        .. versionchanged:: 5.0.0
+            Needs no session, so it no longer logs in first.
+
         Parameters
         ----------
         redirect_uri : Union[:class:`str`, None], optional
-            UNK, by default None.
+            The URL the provider sends the browser back to. It must be the same in :meth:`oidc_login`, by default None.
+            None uses the panel's own URL, with a trailing `/`.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -2331,7 +2339,8 @@ class Core(Base):
             The OIDC login URL.
 
         """
-        await self._reauth()
+        # await self._reauth()
+        # AMP answers this without a session
         parameters: dict[str, Any] = {"redirect_uri": redirect_uri}
         result: ResponseAliasFull = await self._post(
             url="Core/GetOIDCLoginURL",
@@ -3715,9 +3724,9 @@ class Core(Base):
     async def oidc_login(
         self,
         code: str,
-        redirect_uri: str,
-        instance_id: str,
         state: str,
+        redirect_uri: str,
+        instance_id: Union[str, None] = None,
         *,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
@@ -3730,20 +3739,26 @@ class Core(Base):
 
         __EndPoint__: /API/Core/OIDCLogin
 
+        .. note::
+            The provider flow runs in a browser, so your app catches the redirect to `redirect_uri` and passes the `code`
+            and `state` it carries to this method. On success the session is stored for this object, and the next calls
+            use it. In the OIDC mode (:attr:`AuthMode.oidc`) the :class:`Bridge` `user` is set from the login too.
+
         .. versionchanged:: 5.0.0
-            Takes the required `state` parameter after `instance_id`.
-            Returns a :class:`LoginResults` and not the raw dict.
+            Takes `state` after `code`, `instance_id` is optional, and returns a :class:`LoginResults`.
+            Sends no login first, and stores the session of a successful login.
 
         Parameters
         ----------
         code : :class:`str`
-            UNK.
-        redirect_uri : :class:`str`
-            UNK.
-        instance_id : :class:`str`
-            The Instance ID, see :attr:`~Instance.instance_id`
+            The authorization code the provider sent back to `redirect_uri`.
         state : :class:`str`
-            The OIDC `state` value AMP requires.
+            The `state` value the provider sent back with the code. AMP accepts each one once.
+        redirect_uri : :class:`str`
+            The URL the provider sends the browser back to. It must be the same as in :meth:`get_oidc_login_url`.
+        instance_id : Union[:class:`str`, None], optional
+            The Instance ID, see :attr:`~Instance.instance_id`. None sends null, like the panel does, by default None.
+            An Instance ID still gives a session only the Controller accepts, so leave it None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -3755,9 +3770,10 @@ class Core(Base):
             A :class:`LoginResults` dataclass. A refused login has the same shape, with `success` False.
 
         """
-        await self._reauth()
+        # await self._reauth()
+        # AMP answers this without a session
         # parameters: dict[str, str] = {"code": code, "redirect_uri": redirect_uri, "serverId": instance_id}
-        parameters: dict[str, str] = {
+        parameters: dict[str, Union[str, None]] = {
             "code": code,
             "state": state,
             "redirect_uri": redirect_uri,
@@ -3769,14 +3785,22 @@ class Core(Base):
             request_params=request_params,
             **response_params,
         )
-        # TODO: Confirm the success payload.
-        # A failed login comes back as a LoginResults
+        # A success and a refused login both come back as a LoginResults (seen on vm1)
         if not isinstance(result, dict):
             raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
-
-        if not is_response_type(result, LoginResultsResponse, ("success", "result", "result_reason")):
+        if not is_response_type(result, LoginResultsResponse, LOGIN_RESULTS_REQUIRED_KEYS, LOGIN_RESULTS_EXCLUDED_KEYS):
             raise AMPAPITypeError(end_point="Core/OIDCLogin", cur_type=result, expec_type=dict)
-        return LoginResults.from_response(result)
+
+        login_results: LoginResults = LoginResults.from_response(result)
+        if login_results.success is True and login_results.session_id:
+            api_session = APISession(id=login_results.session_id, ttl=datetime.datetime.now(tz=datetime.UTC))
+            self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+
+            # An Instance logs in with a ManageInstance token and sends this user name
+            if self._bridge.auth_mode is AuthMode.oidc and isinstance(login_results.user_info, LoginUserInfo):
+                self._bridge.user = login_results.user_info.username
+
+        return login_results
 
     async def refresh_setting_value_list(
         self,

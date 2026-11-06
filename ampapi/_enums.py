@@ -27,6 +27,7 @@ __all__ = (
     "AccessModeState",
     "AppStartupModeState",
     "ApplicationUpdatesState",
+    "AuthMode",
     "ContainerMemoryPolicyState",
     "DefaultIPBindingState",
     "IfOperators",
@@ -106,6 +107,16 @@ class AppStartupModeState(Enum):
     update_and_start = 3
     unk = 16
     unk2 = 32
+
+
+class AuthMode(Enum):
+    """How the :class:`Bridge` logs in to AMP. This is a library setting, not an AMP node.
+
+    .. versionadded:: 5.0.0
+    """
+
+    password = 0
+    oidc = 10
 
 
 class ContainerMemoryPolicyState(Enum):

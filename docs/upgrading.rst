@@ -73,6 +73,13 @@ Changed methods
   `set_configs`); passing it now raises a :exc:`TypeError`.
 - `Bridge.api_params` was removed. :class:`~ampapi.Bridge` is an :class:`~ampapi.modules.APIParams` itself, so read
   `bridge.url`, `bridge.user` and the rest straight off it. ``Bridge(api_params=...)`` still works.
+- :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) gains `auth_mode`, an
+  :class:`~ampapi._enums.AuthMode` that defaults to ``AuthMode.password``. `user` and `password` default to ``""``, and
+  the password mode raises a :exc:`ValueError` when either is empty, where 4.x required both.
+- With ``AuthMode.oidc`` the library sends no password login. Log in once with :meth:`~ampapi.Core.oidc_login`, and
+  every call uses that session until AMP ends it (`session_ttl` isn't read). A call with no session raises the new
+  :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
+  itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
 - :meth:`~ampapi.adsmodule.ADSModule.create_instance`, :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`
   and :meth:`~ampapi.adsmodule.ADSModule.apply_instance_configuration` return a :class:`~ampapi.modules.RunningTask`,
   which is what AMP sends. 4.x returned an `ActionResult`, and the last two raised on AMP 2.8's reply.
@@ -133,8 +140,10 @@ Changed methods
 - :class:`~ampapi.modules.InstanceInfo` gains `container_swap`, `container_cpu_set`, `custom_mount_bindings`,
   `extra_container_packages`, `is_multi_ip_aware`, `use_host_mode_network`, `display_group` and `save_only`, which AMP's
   `UpdateInstanceInfo` takes. 4.x could not send them.
-- :meth:`~ampapi.Core.oidc_login` takes the `state` parameter after `instance_id`. AMP requires it, and 4.x never sent
-  it, so the call always failed.
+- :meth:`~ampapi.Core.oidc_login` is now ``oidc_login(code, state, redirect_uri, instance_id=None)``. AMP requires
+  `state`, and 4.x never sent it, so the call always failed. `instance_id` is optional and AMP is sent null without it.
+  It needs no session, so it no longer logs in first, and it stores the session of a successful login.
+- :meth:`~ampapi.Core.get_oidc_login_url` needs no session either, so it no longer logs in first.
 - :meth:`~ampapi.Core.set_config` and :meth:`~ampapi.Core.set_configs` send a list, tuple or dict value as a JSON string.
   AMP needs that for a `List<String>` setting, and 4.x raised "Missing Field" for a list. Both also accept
   :class:`bool` and :class:`int` values.

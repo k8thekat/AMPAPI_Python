@@ -43,8 +43,28 @@ class Bridge(APIParams):
         _bridge: Bridge = Bridge(api_params=_params)
         del _params
 
+    A user that signs in through an OIDC provider has no password, so use the OIDC mode instead.
+    Your app sends the user to the URL from :meth:`~Core.get_oidc_login_url`, catches the redirect to `redirect_uri` and
+    passes the `code` and `state` it carries to :meth:`~Core.oidc_login`. After that every call uses the stored session.
+
+    .. code-block:: python
+        :linenos:
+
+        _params = APIParams(url="http://192.168.13.130:8080", auth_mode=AuthMode.oidc)
+        _bridge: Bridge = Bridge(api_params=_params)
+        controller = Controller()
+
+        # Send the user's browser to this URL
+        login_url = await controller.get_oidc_login_url(redirect_uri="https://example.com/callback")
+
+        # Your app receives the redirect with `code` and `state` in its query
+        await controller.oidc_login(code=code, state=state, redirect_uri="https://example.com/callback")
+
     .. versionadded:: 5.0.0
         :class:`Bridge` added optional parameter to allow for non-singleton usage.
+
+    .. versionchanged:: 5.0.0
+        Takes the `auth_mode` setting from :class:`APIParams`.
 
     Parameters
     ----------

@@ -40,6 +40,7 @@ from ._enums import (
     AMPTheme,
     ApplicationUpdatesState,
     AppStartupModeState,
+    AuthMode,
     ContainerMemoryPolicyState,
     DefaultIPBindingState,
     IfOperators,
@@ -785,32 +786,47 @@ class APIParams:
     .. warning::
         ``**DO NOT SET OR UPDATE**``-> :attr:`APIParams._sessions`.
 
+    .. versionchanged:: 5.0.0
+        Added `auth_mode`. `user` and `password` default to "" and are required only in the `password` mode.
 
     Attributes
     ----------
     url : :class:`str`
         The URL to access the Web GUI panel home page/login page. A trailing `/` is removed.
     user : :class:`str`
-        The AMP User name to login to the Web Panel.
+        The AMP User name to login to the Web Panel, default is "".
+        In the `oidc` mode :meth:`Core.oidc_login` fills it in from the login.
     password : :class:`str`
-        The AMP User password to login to the Web Panel.
+        The AMP User password to login to the Web Panel, default is "".
     use_2fa : bool
         To use :py:class:`TOTP` 2 Factor Authentication, default is False.
     token : :class:`str`
         The 2 Factor Authentication Token Code to generate a :class:`TOTP` code, default is ""
+    auth_mode : :class:`AuthMode`
+        How to log in to AMP, default is :attr:`AuthMode.password`.
+
+    Raises
+    ------
+    :exc:`ValueError`
+        If `auth_mode` is `password` and `user` or `password` is empty.
 
     """
 
     url: str
-    user: str
-    password: str
+    user: str = ""
+    password: str = ""
     use_2fa: bool = False
     token: str = ""
+    auth_mode: AuthMode = AuthMode.password
     _sessions: dict[str, APISession] = field(init=False, default_factory=dict[str, "APISession"])
 
     def __post_init__(self) -> None:
-        """Strip a trailing `/` from :attr:`url`."""
+        """Strip a trailing `/` from :attr:`url`, and check a `password` login has its user and password."""
         self.url = self.url.rstrip("/")
+
+        if self.auth_mode is AuthMode.password and (not self.user or not self.password):
+            msg = "The password login needs a user and a password, or set auth_mode to AuthMode.oidc."
+            raise ValueError(msg)
 
 
 @dataclass(slots=True)

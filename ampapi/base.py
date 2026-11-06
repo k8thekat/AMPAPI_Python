@@ -43,18 +43,21 @@ from aiohttp import ClientResponse
 # from dataclass_wizard import fromdict
 from pyotp import TOTP
 
-from ._enums import Module
+from ._enums import AuthMode, Module
 from ._types import (
     DIAGNOSTICS_EXCLUDED_KEYS,
     DIAGNOSTICS_REQUIRED_KEYS,
+    LOGIN_RESULTS_EXCLUDED_KEYS,
+    LOGIN_RESULTS_REQUIRED_KEYS,
     DiagnosticsResponse,
     EndpointResponseError,
+    LoginResultsResponse,
     ResponseTypeAlias,
     is_response_type,
 )
 from .backoff import ExponentialBackoff
 from .bridge import Bridge
-from .errors import AMPAPIError, AMPAPINetworkError, AMPAPIResponseError
+from .errors import AMPAPIError, AMPAPINetworkError, AMPAPIOIDCSessionError, AMPAPIResponseError, AMPAPITypeError
 from .key_drift import KeyDriftCheck
 from .modules import APISession, BuildInfo, Status, timestamp_converter
 
@@ -427,7 +430,8 @@ class Base:
 
     .. note::
         A session expires after 240sec of inactivity per Cube Coders AMP.
-        If for any reason you want to change that value, set the attribute :attr:`session_ttl`.\n
+        If for any reason you want to change that value, set the attribute :attr:`session_ttl`.
+        The OIDC mode (:attr:`AuthMode.oidc`) doesn't use it, and keeps a session until AMP ends it.\n
 
 
     Attributes
@@ -476,6 +480,10 @@ class Base:
     _login_failed: ClassVar[str] = "Failed to login to AMP as '%s' (AMP result %s). Check the user, password and 2FA token."
     # These are the login result codes, and any other code is reported as its number
     _login_result_names: ClassVar[dict[int, str]] = {0: "Failure", 5: "NoInstanceAccess", 100: "PassthruDisabled"}
+    # These are the OIDC mode messages, where the password login advice in `_login_failed` is wrong
+    _oidc_instance_login_failed: ClassVar[str] = "Failed to login to the Instance '%s' with a ManageInstance token (AMP result %s)."
+    _oidc_manage_failed: ClassVar[str] = "ManageInstance sent no token to login to the Instance '%s'."
+    _oidc_session_ended: ClassVar[str] = "There is no OIDC session. Log in through the provider and call <Controller>.oidc_login again."
     _no_cache: ClassVar[str] = "'%s.%s' has not been populated yet. You must call <%s>.%s first."
     _stale_cache: ClassVar[str] = (
         "'%s.%s' was cached %s seconds ago and the timeout is %s seconds. The value may be stale. Call <%s>.%s to refresh it."
@@ -534,7 +542,11 @@ class Base:
 
     @property
     def session_ttl(self) -> int:
-        """How long before the session ID expires in seconds, default is 240 seconds."""
+        """How long before the session ID expires in seconds, default is 240 seconds.
+
+        .. note::
+            The OIDC mode (:attr:`AuthMode.oidc`) doesn't use this.
+        """
         return Base._session_ttl
 
     @session_ttl.setter
@@ -1102,6 +1114,7 @@ class Base:
         .. note::
             If Applicable handles your 2FA using :class:`TOTP` \n
             Stores the session ID via :class:`APISession` dataclass for future usage inside the :class:`Bridge` object.
+            In the OIDC mode (:attr:`AuthMode.oidc`) this hands off to :meth:`_oidc_reauth` and sends no password login.
 
 
         Returns
@@ -1116,10 +1129,16 @@ class Base:
             - *aka* the :attr:`~Bridge.token` when making the :class:`Bridge` object.
         :exc:`AMPAPIResponseError`
             If AMP refused the login, or answered it with an error.
+        :exc:`AMPAPITypeError`
+            If AMP's answer to the login isn't a LoginResults.
         :exc:`AMPAPINetworkError`
             If the login request itself failed.
 
         """
+        # An OIDC session can't be renewed with a password, see `_oidc_reauth`
+        if self._bridge.auth_mode is AuthMode.oidc:
+            return await self._oidc_reauth()
+
         # Wait on a login already running, then check the stored session again
         # If that login failed there is still no session, so we try our own
         while self._login_pending is not None:
@@ -1164,11 +1183,17 @@ class Base:
                 # Network and response errors raise straight through, and their URL names Core/Login
                 # We post directly because `_call_end_point` would log in again
                 result = await self._post(url="Core/Login", parameters=parameters)
-                if not isinstance(result, dict) or "remember_me_token" not in result or result["success"] is not True:
+                if not isinstance(result, dict):
+                    raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
+                if not is_response_type(result, LoginResultsResponse, LOGIN_RESULTS_REQUIRED_KEYS, LOGIN_RESULTS_EXCLUDED_KEYS):
+                    raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
+
+                # A refused login is still a LoginResults, with `success` False
+                if result["success"] is not True:
                     # AMP sends no reason, and a wrong password and a wrong 2FA code both give `result: 40`
-                    amp_result = result["result"] if isinstance(result, dict) and "remember_me_token" in result else result
-                    if isinstance(amp_result, int) and not isinstance(amp_result, bool) and amp_result in self._login_result_names:
-                        amp_result = f"{amp_result}, {self._login_result_names[amp_result]}"
+                    amp_result: str = str(result["result"])
+                    if result["result"] in self._login_result_names:
+                        amp_result = f"{amp_result}, {self._login_result_names[result['result']]}"
 
                     reason: str = self._login_failed % (self._bridge.user, amp_result)
                     LOGGER.error("<%s.%s> | %s", __class__.__name__, "_reauth", reason)
@@ -1184,6 +1209,30 @@ class Base:
                 if not pending.done():
                     pending.set_result(None)
         return None
+
+    async def _oidc_reauth(self) -> None:
+        """|coro|
+        Check this object holds an OIDC session. :meth:`_reauth` hands off to this in the OIDC mode.
+
+        .. note::
+            A Controller can't log itself in, since the provider flow needs a browser. :meth:`Core.oidc_login` stores its
+            session, and that session is used as it is, whatever its age. :attr:`session_ttl` isn't read.
+
+
+        Raises
+        ------
+        :exc:`AMPAPIOIDCSessionError`
+            If there is no stored session, which is before :meth:`Core.oidc_login`, after :meth:`Core.logout` or after
+            AMP dropped the session.
+
+        """
+        session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+        if session is not None and session.id != "0":
+            return
+
+        reason: str = self._oidc_session_ended
+        LOGGER.error("<%s.%s> | %s", __class__.__name__, "_oidc_reauth", reason)
+        raise AMPAPIOIDCSessionError(title="OIDC Session Ended", url=f"{self._endpoint_url}/API/Core/OIDCLogin", reason=reason)
 
     @property
     def cache_age(self) -> Optional[float]:

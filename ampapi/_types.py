@@ -87,6 +87,10 @@ INSTANCE_DATASTORE_EXCLUDED_KEYS: tuple[str, ...] = ()
 INSTANCE_STATUS_REQUIRED_KEYS: tuple[str, ...] = ("instance_id", "running")
 INSTANCE_STATUS_EXCLUDED_KEYS: tuple[str, ...] = ("instance_name",)
 
+# A refused login is still a LoginResults, with "success" False and "session_id" None
+LOGIN_RESULTS_REQUIRED_KEYS: tuple[str, ...] = ("success", "result", "session_id")
+LOGIN_RESULTS_EXCLUDED_KEYS: tuple[str, ...] = ()
+
 PROVISION_SETTING_INFO_REQUIRED_KEYS: tuple[str, ...] = ("node", "custom_field_type")
 PROVISION_SETTING_INFO_EXCLUDED_KEYS: tuple[str, ...] = ()
 

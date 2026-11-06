@@ -21,6 +21,9 @@ Enums
 .. autoenum:: AppStartupModeState
     :members:
 
+.. autoenum:: AuthMode
+    :members:
+
 .. autoenum:: ContainerMemoryPolicyState
     :members:
 

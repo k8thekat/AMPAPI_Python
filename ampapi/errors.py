@@ -20,7 +20,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 import logging
 
-__all__ = ("AMPAPIError", "AMPAPIKeyError", "AMPAPINetworkError", "AMPAPIResponseError", "AMPAPITypeError")
+__all__ = ("AMPAPIError", "AMPAPIKeyError", "AMPAPINetworkError", "AMPAPIOIDCSessionError", "AMPAPIResponseError", "AMPAPITypeError")
 
 LOGGER = logging.getLogger("AMPAPI_Python.errors")
 
@@ -48,6 +48,16 @@ class AMPAPIResponseError(AMPAPIError):
         message = "We encountered an error handling a response from an AMP API Endpoint. Reason: %s | URL: %s | Title: %s"
         super().__init__(message % (reason, url, title))
         LOGGER.error(message, reason, url, title)
+
+
+class AMPAPIOIDCSessionError(AMPAPIResponseError):
+    """Raised in the OIDC mode when there is no session, so the user has to log in through the provider again.
+
+    That is any call before :meth:`~ampapi.Core.oidc_login`, after :meth:`~ampapi.Core.logout`, or after AMP ended the
+    session. Send the user to :meth:`~ampapi.Core.get_oidc_login_url` and call :meth:`~ampapi.Core.oidc_login` again.
+
+    .. versionadded:: 5.0.0
+    """
 
 
 class AMPAPITypeError(AMPAPIError):

@@ -106,6 +106,52 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   value '' to type 'Boolean'" and "Can not convert Null to Boolean" (vm1 ADS01, 2026-10-24). The spec marks both
   parameters optional, and AMP takes its default when one is left out, so the wrapper doesn't send one that is None
   (#25). Checked on vm1: no argument, `is_temporary` True or False, and both arguments each return a token.
+- An idle session outlives `Webserver.SessionTimeout=5`. OIDC sessions on vm1 (2026-11-01) were still alive after
+  4.5, 6, 8, 12 and 20 minutes without a call, so `session_ttl` (240 seconds) is the library's own margin, not AMP's.
+
+
+## OIDC logins
+
+Tested on vm1 (2026-11-01) against a throwaway provider (`oidc-provider-mock` on port 9400) for #45. Before #45 the
+library couldn't log in an OIDC user: `get_oidc_login_url`, `get_oidc_logout_url` and `oidc_login` all called
+`_reauth` first, and `oidc_login` didn't store the session it got back. The `OIDC_support` branch (`c34ffe1`, on 4.6)
+had an `AuthMode` that skipped `Core/Login`, but it never reached `Refactor`.
+- OIDC needs a licence that allows it. The Professional licence answers "OIDC authentication is not available - no
+  licence present that permits this feature." The Patreon Supporter licence works, after an ADS restart.
+- AMP's settings are the `Login.OIDC*` keys in `AMPConfig.conf` (`UseOIDC`, the client, and the authorize, token,
+  user info, validation and logout endpoints). `Login.OIDCUsernameClaim` (default `name`) names the AMP user.
+- The flow, as AMP's panel runs it: `GetOIDCLoginURL(redirect_uri)` answers without a session and builds the whole
+  provider URL (client, scopes, `state` and `nonce`), so `redirect_uri` is its only parameter. The provider sends the
+  browser back with `code` and `state`, and `OIDCLogin(code, state, redirect_uri, serverId)` answers with a
+  `LoginResults` shape. A `state` works once. The panel sends `serverId` as null, and `"null"` and `"0"` also work.
+- The first login creates the user (`IsOIDCUser` True). Its roles are set from the provider's `roles` or `groups`
+  claim at every login, so a role given in AMP is gone by the next one.
+- `rememberMeToken` is always empty, so nothing renews the session. A dead or logged-out session needs the provider
+  flow again. A password login for an OIDC user answers `result` 150.
+- With the session put into `_sessions` by hand, the library's calls work. Past `session_ttl`, after a logout and
+  in 5.0.0's `oidc_login`, `_reauth` sends a password login, gets `result` 150 and raises "Login Failed ... Check
+  the user, password and 2FA token".
+- An Instance through the proxy refuses the Controller's session, and also the session from `OIDCLogin` with the
+  Instance's ID as `serverId`. The panel's way works: `ADSModule/ManageInstance` with the Controller session gives a
+  token, and the Instance's `Core/Login(username, "", token, False)` gives an Instance session. The token works once.
+  The Instance's own `GetOIDCLoginURL` answers null.
+- `GetOIDCLogoutUrl` needs the session and answers the provider's end-session URL.
+- `GetOIDCLoginURL` with a null `redirect_uri` uses the panel's own URL with a trailing `/`. A reused `state` answers
+  `success` False, `result` 3, "The OIDC state parameter is invalid or has expired."
+
+How #45 handles it (Kat 2026-11-05: a separate function, so the password session handling gets no more complicated).
+`APIParams.auth_mode` picks the mode. In `AuthMode.oidc`, `_reauth`'s first line hands off to `_oidc_reauth`, and
+`_post` is untouched since its dead-session branch already calls `_reauth`.
+- `Base._oidc_reauth` never logs in. A stored session is used whatever its age, and none raises
+  `AMPAPIOIDCSessionError`, since only the provider flow can make a new one.
+- `Instance._oidc_reauth` logs in with a `ManageInstance` token, waiting on `_login_pending` like `_reauth` (#22).
+- Checked with the library on vm1 and vm2 (2026-11-05, 31 checks): the Controller past `session_ttl`, CustomTest01
+  and MCTest01, 10 concurrent calls on one token, an Instance session AMP dropped, vm2's `TargetADS` and its MCTest01,
+  a dead Controller session, `logout`, and the password mode unchanged. No password was sent in the OIDC mode.
+- `Controller.get_instances` logs each remote `TargetADS` in while it reads that Target's Instances, so in the OIDC
+  mode it spends a `ManageInstance` token per Target.
+- An Instance session outlives the Controller's: with the Controller logged out, vm1's MCTest01 still answered on its
+  own session. Only a new Instance login needs the Controller.
 
 
 ## Dataclasses vs. the raw JSON

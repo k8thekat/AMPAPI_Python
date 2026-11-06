@@ -21,26 +21,28 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import asyncio
+import datetime
 import functools
 import logging
 import time
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Self, Union, overload, override
 
+from ._types import LOGIN_RESULTS_EXCLUDED_KEYS, LOGIN_RESULTS_REQUIRED_KEYS, LoginResultsResponse, is_response_type
 from .adsmodule import ADSModule
 from .analytics import AnalyticsPlugin
 from .base import Base
 from .core import Core
 from .emailsender import EmailSenderPlugin
+from .errors import AMPAPIResponseError, AMPAPITypeError
 from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .generic import GenericModule
 from .minecraft import MinecraftModule
-from .modules import ActionResult, BuildInfo, Endpoints, InstanceState, Metrics, PlatformInfo, Status, TargetDatastore, Updates
+from .modules import ActionResult, APISession, BuildInfo, Endpoints, InstanceState, Metrics, PlatformInfo, Status, TargetDatastore, Updates
 from .steamcmd import SteamCMDPlugin
 
 if TYPE_CHECKING:
-    import datetime
     from collections.abc import Callable, Coroutine
     from typing import Concatenate, Unpack
 
@@ -424,6 +426,82 @@ class Instance(
             raise ConnectionError(self._instance_offline)
 
         return wrapper_online
+
+    @override
+    async def _oidc_reauth(self) -> None:
+        """|coro|
+        Log this Instance in with a token from its Controller. :meth:`_reauth` hands off to this in the OIDC mode.
+
+        .. note::
+            An Instance refuses the Controller's OIDC session. The Controller's :meth:`~ADSModule.manage_instance` gives
+            a single-use token, and this Instance's ``Core/Login`` trades it for its own session. A stored session is
+            used as it is, whatever its age.
+
+
+        Raises
+        ------
+        :exc:`RuntimeError`
+            If the :attr:`_controller` attribute has not been set.
+        :exc:`AMPAPIOIDCSessionError`
+            If the Controller has no OIDC session.
+        :exc:`AMPAPIResponseError`
+            If ManageInstance sent no token, or the Instance refused the token.
+        :exc:`AMPAPITypeError`
+            If the Instance's answer to the login isn't a LoginResults.
+
+        """
+        # Wait on a login already running, then check the stored session again
+        # If that login failed there is still no session, so we try our own
+        while self._login_pending is not None:
+            await asyncio.shield(self._login_pending)
+
+        session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+        if session is not None and session.id != "0":
+            return
+        if self._controller is None:
+            raise RuntimeError(self._no_controller)
+
+        # There is no `await` since the check above, and other calls wait on this until the login is done
+        pending: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._login_pending = pending
+        try:
+            # A dead Controller session raises the OIDC error from in here
+            manage_result = await self._controller.manage_instance(instance_id=self._instance_id, format_data=False)
+            token: Union[str, dict[str, Any], None] = manage_result.get("result") if isinstance(manage_result, dict) else None
+            if not isinstance(token, str) or not token:
+                reason: str = self._oidc_manage_failed % self._instance_id
+                LOGGER.error("<%s.%s> | %s", __class__.__name__, "_oidc_reauth", reason)
+                raise AMPAPIResponseError(
+                    title="Login Failed",
+                    url=f"{self._controller.endpoint_url}/API/ADSModule/ManageInstance",
+                    reason=reason,
+                )
+
+            # We post directly because `_call_end_point` would log in again
+            parameters: dict[str, Any] = {"username": self._bridge.user, "password": "", "token": token, "rememberMe": False}
+            result = await self._post(url="Core/Login", parameters=parameters)
+            if not isinstance(result, dict):
+                raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
+            if not is_response_type(result, LoginResultsResponse, LOGIN_RESULTS_REQUIRED_KEYS, LOGIN_RESULTS_EXCLUDED_KEYS):
+                raise AMPAPITypeError(end_point="Core/Login", cur_type=result, expec_type=dict)
+
+            # A refused login is still a LoginResults, with `success` False
+            if result["success"] is not True:
+                amp_result: str = str(result["result"])
+                if result["result"] in self._login_result_names:
+                    amp_result = f"{amp_result}, {self._login_result_names[result['result']]}"
+
+                reason = self._oidc_instance_login_failed % (self._instance_id, amp_result)
+                LOGGER.error("<%s.%s> | %s", __class__.__name__, "_oidc_reauth", reason)
+                raise AMPAPIResponseError(title="Login Failed", url=f"{self._endpoint_url}/API/Core/Login", reason=reason)
+
+            api_session = APISession(id=result["session_id"] or "0", ttl=datetime.datetime.now(tz=datetime.UTC))
+            self._bridge._sessions.update({self._instance_id: api_session})  # pyright: ignore[reportPrivateUsage]
+        # Waiters get None, and only the caller that logged in sees the error
+        finally:
+            self._login_pending = None
+            if not pending.done():
+                pending.set_result(None)
 
     def _parse_instance_data(self, data: InstanceResponse) -> None:
         # We set every field, even when AMP sends null
