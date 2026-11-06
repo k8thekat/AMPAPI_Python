@@ -148,6 +148,8 @@ Changed methods
   `state`, and 4.x never sent it, so the call always failed. `instance_id` is optional and AMP is sent null without it.
   It needs no session, so it no longer logs in first, and it stores the session of a successful login.
 - :meth:`~ampapi.Core.get_oidc_login_url` needs no session either, so it no longer logs in first.
+- :meth:`~ampapi.Core.logout` ends the stored session as it is, and does nothing without one. 4.x could log in first and
+  then end that new session, which left the stored one alive on AMP.
 - :meth:`~ampapi.Core.set_config` and :meth:`~ampapi.Core.set_configs` send a list, tuple or dict value as a JSON string.
   AMP needs that for a `List<String>` setting, and 4.x raised "Missing Field" for a list. Both also accept
   :class:`bool` and :class:`int` values.

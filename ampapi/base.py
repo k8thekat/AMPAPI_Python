@@ -783,6 +783,7 @@ class Base:
         .. note::
             When AMP says the stored session does not exist, this logs in again and sends the request once more.
             A second dead answer raises, and `Core/Login` itself is never sent again.
+            A dead answer to `Core/Logout` only resets the stored session, since it has already ended.
 
 
         Parameters
@@ -944,6 +945,9 @@ class Base:
                 stored_session: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
                 if stored_session is not None and stored_session.id == api_session.id:
                     self._reset_session()
+                # A logout's session has already ended, so there is nothing to log in for
+                if url == "Core/Logout":
+                    return None
                 session_retried = True
                 await self._reauth()
                 continue

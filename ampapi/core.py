@@ -3615,6 +3615,7 @@ class Core(Base):
 
         .. versionchanged:: 5.0.0
             The stored session is cleared, and the next call logs in again.
+            It ends the stored session as it is, with no login first, and does nothing when there is none.
 
         Parameters
         ----------
@@ -3628,7 +3629,11 @@ class Core(Base):
         None
 
         """
-        await self._reauth()
+        # await self._reauth()
+        # A login here would end a new session and leave the stored one alive, so we send the stored one as it is
+        stored: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]
+        if stored is None or stored.id == "0":
+            return
         # return await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
         await self._post(url="Core/Logout", no_data=True, request_params=request_params, **response_params)
         # Our session ended, so we reset it
