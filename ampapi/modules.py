@@ -840,8 +840,7 @@ class APISession:
     id : :class:`str`
         The `session_id` key from the JSON response of :meth:`Core.login`.
     ttl : :class:`datetime`
-        When the session logged in or last made a successful call. :attr:`Base.session_ttl <ampapi.Base.session_ttl>`
-        counts from it.
+        When the session logged in.
 
     """
 

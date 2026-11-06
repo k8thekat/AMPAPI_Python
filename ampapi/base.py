@@ -63,7 +63,9 @@ from .modules import APISession, BuildInfo, Status, timestamp_converter
 if TYPE_CHECKING:
     import pathlib
     from collections.abc import Callable, Coroutine
-    from datetime import timedelta
+
+    # The session TTL is off for now, and it was the only user
+    # from datetime import timedelta
     from types import TracebackType
     from typing import Concatenate, Self
 
@@ -475,9 +477,8 @@ class Base:
 
 
     .. note::
-        We log in again once the stored session goes 240 seconds without a successful call.
-        If for any reason you want to change that value, set the attribute :attr:`session_ttl`.
-        The OIDC mode (:attr:`AuthMode.oidc`) doesn't use it, and keeps a session until AMP ends it.\n
+        A stored session is used until AMP ends it. Then we log in again and send the call once more.
+        The OIDC mode (:attr:`AuthMode.oidc`) only logs in through :meth:`Core.oidc_login`.\n
 
     """
 
@@ -488,7 +489,8 @@ class Base:
     _format_data: ClassVar[bool] = True
     _endpoint_url: str
     _instance_id: str
-    _session_ttl: ClassVar[int] = 240
+    # The session TTL is off for now, a stored session is used until AMP ends it
+    # _session_ttl: ClassVar[int] = 240
     # Other calls wait on this while a login runs, and it only exists during a login
     _login_pending: Union[asyncio.Future[None], None]
     # An Instance a Controller built sets this False, since it shares the Controller's session
@@ -580,22 +582,23 @@ class Base:
     def format_data(self, value: bool) -> None:
         Base._format_data = value
 
-    @property
-    def session_ttl(self) -> int:
-        """How many seconds a session can go without a successful call before we log in again, default is 240 seconds.
-
-        .. note::
-            The OIDC mode (:attr:`AuthMode.oidc`) doesn't use this.
-
-        .. versionchanged:: 5.0.0
-            Counts from the last successful call, not from the login.
-
-        """
-        return Base._session_ttl
-
-    @session_ttl.setter
-    def session_ttl(self, value: int) -> None:
-        Base._session_ttl = value
+    # The session TTL is off for now, see `_reauth`
+    # @property
+    # def session_ttl(self) -> int:
+    #     """How many seconds a session can go without a successful call before we log in again, default is 240 seconds.
+    #
+    #     .. note::
+    #         The OIDC mode (:attr:`AuthMode.oidc`) doesn't use this.
+    #
+    #     .. versionchanged:: 5.0.0
+    #         Counts from the last successful call, not from the login.
+    #
+    #     """
+    #     return Base._session_ttl
+    #
+    # @session_ttl.setter
+    # def session_ttl(self, value: int) -> None:
+    #     Base._session_ttl = value
 
     @property
     def instance_id(self) -> str:
@@ -944,10 +947,11 @@ class Base:
                 await self._reauth()
                 continue
 
-            # The call worked, so our session's TTL counts from now
-            # Not for a login, which stores a new session afterwards, or when another call replaced ours
-            if url != "Core/Login" and self._bridge._sessions.get(self._instance_id) is api_session:  # pyright: ignore[reportPrivateUsage]
-                api_session.ttl = datetime.datetime.now(tz=datetime.UTC)
+            # The session TTL is off for now, so nothing reads this stamp
+            # # The call worked, so our session's TTL counts from now
+            # # Not for a login, which stores a new session afterwards, or when another call replaced ours
+            # if url != "Core/Login" and self._bridge._sessions.get(self._instance_id) is api_session:
+            #     api_session.ttl = datetime.datetime.now(tz=datetime.UTC)
 
             if no_data is True:
                 return None
@@ -1191,7 +1195,7 @@ class Base:
         Returns
         -------
         Union[:class:`LoginResultsResponse`, None]
-            The raw response from ``API/Core/Login``, or None when the stored session is still valid.
+            The raw response from ``API/Core/Login``, or None when there is a stored session.
 
         Raises
         ------
@@ -1228,8 +1232,12 @@ class Base:
         #
         # if session_id == "0":
         # A session that made a successful call within `session_ttl` is still good
-        session_age: timedelta = datetime.datetime.now(tz=datetime.UTC) - session.ttl
-        if session.id != "0" and session_age.total_seconds() <= self.session_ttl:
+        # session_age: timedelta = datetime.datetime.now(tz=datetime.UTC) - session.ttl
+        # if session.id != "0" and session_age.total_seconds() <= self.session_ttl:
+        #     return None
+        # The session TTL is off for now, so a stored session is used until AMP ends it
+        # `_post` logs in again when AMP answers that the session is dead
+        if session.id != "0":
             return None
 
         # There is no `await` since the check above, and other calls wait on this until the login is done
@@ -1288,7 +1296,7 @@ class Base:
 
         .. note::
             A Controller can't log itself in, since the provider flow needs a browser. :meth:`Core.oidc_login` stores its
-            session, and that session is used as it is, whatever its age. :attr:`session_ttl` isn't read.
+            session, and that session is used as it is, whatever its age.
 
 
         Raises

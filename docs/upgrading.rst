@@ -77,11 +77,11 @@ Changed methods
   :class:`~ampapi._enums.AuthMode` that defaults to ``AuthMode.password``. `user` and `password` default to ``""``, and
   the password mode raises a :exc:`ValueError` when either is empty, where 4.x required both.
 - With ``AuthMode.oidc`` the library sends no password login. Log in once with :meth:`~ampapi.Core.oidc_login`, and
-  every call uses that session until AMP ends it (`session_ttl` isn't read). A call with no session raises the new
+  every call uses that session until AMP ends it. A call with no session raises the new
   :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
   itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
-- :attr:`~ampapi.Base.session_ttl` counts from the last successful call, so a session in use isn't logged in again.
-  4.x counted from the login and logged in again every 240 seconds.
+- `session_ttl` is removed. A stored session is used until AMP ends it, then the library logs in again and resends the
+  call. 4.x logged in again every 240 seconds, and AMP kept each old session alive.
 - The repr of :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) leaves out `password`, `token` and
   the stored sessions, so the debug logs don't print them.
 - :meth:`~ampapi.adsmodule.ADSModule.create_instance`, :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`

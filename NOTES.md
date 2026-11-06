@@ -56,10 +56,14 @@ CustomTest01 and MCTest01 each got a new process, and the ADS01 holding them kep
 ## Sessions
 
 Stored per Bridge in `_sessions`, keyed by the object's `_instance_id` (the Controller's key is "0"). Each holds the
-session ID and when it logged in or last made a successful call. `_reauth` logs in when the key is missing, its ID is
-"0", or it has gone `session_ttl` (240 seconds) without a successful call. Before #46d it counted from the login, so
-a session in steady use was logged in again every 240 seconds, and each of those logins left the old session alive on
-AMP's side (vm1, 2026-11-05: 1 session became 5 after 4 logins).
+session ID and its login time. `_reauth` logs in when the key is missing or its ID is "0". A stored session is used
+until AMP ends it, and `_post` logs in again on AMP's dead-session answer.
+- The `session_ttl` check is commented out for now (#46p2, Kat 2026-11-06), with the property and the #46d stamp.
+  It logged in again after 240 seconds (4.x: from the login, #46d: from the last successful call), and each of those
+  logins left the old session alive on AMP's side (vm1, 2026-11-05: 1 session became 5 after 4 logins).
+- AMP's own idle timeout is the panel setting `Core.Privacy.SessionTimeout` (Kat), in minutes, 15 on vm1 and vm2. On
+  vm1, set to 2 minutes, and with `Webserver.SessionTimeout` (AMPConfig.conf only) set to 1, idle API sessions were
+  still alive at 10 minutes, with or without an ADS restart. vm2 kept no session idle past its 15 minutes.
 
 The DEBUG logs hide passwords, tokens, 2FA codes and secrets, the OIDC `code` and licence keys by key name, and any
 `otpauth://` link (#46c). The masking copies the data, so it only runs when DEBUG is on (otherwise it cost 314 us per
@@ -127,8 +131,8 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
   value '' to type 'Boolean'" and "Can not convert Null to Boolean" (vm1 ADS01, 2026-10-24). The spec marks both
   parameters optional, and AMP takes its default when one is left out, so the wrapper doesn't send one that is None
   (#25). Checked on vm1: no argument, `is_temporary` True or False, and both arguments each return a token.
-- An idle session outlives `Webserver.SessionTimeout=5`. OIDC sessions on vm1 (2026-11-01) were still alive after
-  4.5, 6, 8, 12 and 20 minutes without a call, so `session_ttl` (240 seconds) is the library's own margin, not AMP's.
+- OIDC sessions on vm1 (2026-11-01) were still alive after 4.5, 6, 8, 12 and 20 minutes without a call. The idle
+  timeout is `Core.Privacy.SessionTimeout`, not `Webserver.SessionTimeout` (see the top of this section).
 
 
 ## OIDC logins
