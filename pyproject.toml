@@ -1,0 +1,133 @@
+[project]
+name = "cc-ampapi"
+dynamic = ["version"]
+authors = [
+    { name = "k8thekat", email = "Cadwalladerkatelynn+AMPAPI@gmail.com" },
+]
+readme = { file = "README.md", content-type = "text/markdown" }
+description = "A Python wrapper for the AMP API by CubeCoders"
+requires-python = ">=3.12.0"
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: AsyncIO",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+keywords = ["cubecoders", "cube coders", "amp", "api"]
+dependencies = [
+    "aiohttp>=3.7.4.post0",
+    "pyotp>=2.6.0",
+    "typing_extensions>=4.12.0",
+]
+
+[project.urls]
+GitHub = "https://github.com/k8thekat/AMPAPI_Python"
+Changelog = "https://github.com/k8thekat/AMPAPI_Python/blob/main/CHANGELOG.md"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 140
+# exclude = ["docs/extensions/*.py"]
+# unit_test.py is a test file that calls a live AMP server, so it isn't held to the library's rules.
+# exclude = ["docs/extensions/*.py", "unit_test.py"]
+# The workflow scripts are shared with Python_Template and carry a blanket `# ruff: noqa`, so Ruff skips them too.
+exclude = ["docs/extensions/*.py", "unit_test.py", ".github/workflows/scripts/*.py"]
+# A file named on the command line (as the editor and check_code pass them) is excluded too.
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN401",
+    "D101", # Public class without docstring...
+    "D205", # Blank line requirement of docstrings..
+    "D301", # `r` backtick for code in Docstrings.
+    "D400", # First line end with a period. (docstrings)
+    "D401", # Ignore "Imperative Mood" statement for docstrings.
+    "D415", # Ignore docstring punctuation.
+    "ERA001", #Ignore commented out code.
+    "FIX002", # Ignore TODO's telling you to "fix them".
+    "F401",
+    "F402",
+    "F403",
+    "F405",
+    "PERF203",
+    "PLR",
+    "RUF001",
+    "RUF002", # The character U+2013 "–" could be confused with the ASCII character U+002d "-", which is more common in source code.
+    "RUF003", # The character U+2013 "–" could be confused with the ASCII character U+002d "-", which is more common in source code, this is for "COMMENTS"
+    "RUF009",
+    "RUF052", # for filtering "local dummy variable is accessed" eg. - vars using `_`
+    "SIM105",
+    "SLF001", # private function/attribute usage outside of the class it was defined.
+    "TD002", # Ignore TODO's not having a link/url to an issue.
+    "TD003", # Ignore TODO's not having a link/url to an issue.
+    "TRY400", # Ingoring forced `logging.exception` statement's when using try/except.
+    "T201", # Ignore print statements.
+    "UP007",
+    "UP034",
+    "UP045", # Type var `Optional[X]` vs `X | None`
+    "ANN401",
+    "ASYNC240", # Because Umbra said "f anyio~"
+    "C901", # Too complex functions.
+    "D401", # Ignore "Imperative Mood" statement for docstrings.
+    "ERA001", #Ignore commented out code.
+    "FIX002", # Ignore TODO's telling you to "fix them".
+    "FBT001", # Ignore "bool" type arguments and limited functionality statement.
+    "FBT002", # Ignore "bool" type arguments and limited functionality statement.
+    "FURB122", # Keep `for ... file.write()` loops instead of `file.writelines()`.
+]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+combine-as-imports = true
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = "tuple"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*", "**/node_modules", "**/__pycache__", "**/.*"]
+include = ["ampapi"]
+useLibraryCodeForTypes = true
+reportIncompatibleMethodOverride = false
+
+[tool.setuptools]
+packages = ["ampapi"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+ampapi = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ampapi.__version__" }
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "asqlite>=2.0.0",
+]
+
+[tool.check_code]
+# unit_test.py is a test file that calls a live AMP server, so pyright skips it as Ruff does.
+skip_pyright = ["unit_test.py"]

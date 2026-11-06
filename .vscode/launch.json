@@ -1,0 +1,115 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "inputs": [
+        {
+            "id": "credType",
+            "type": "pickString",
+            "description": "Run the scripts with either LIVE or CONTROLLER login creds.",
+            "default": "-live",
+            "options": [
+                "-live",
+                "-controller"
+            ]
+        },
+        {
+            "id": "log_level",
+            "type": "pickString",
+            "description": "Set the Python logging level, default is `INFO`.",
+            "default": "-info",
+            "options": [
+                "-info",
+                "-debug",
+            ]
+        },
+        {
+            "id": "funcID",
+            "type": "pickString",
+            "description": "Prompts a list of args for the local Python file.",
+            "options": [ 
+                "-local",
+                "-dev",
+                "-docs",
+                "-build",
+                "-api",
+                "-rst",
+                "-amp_update_check",
+                "-compare"
+            ]
+        },
+        {
+            "id": "versionA",
+            "type": "promptString",
+            "description": "Base version to compare FROM. Check docs/api_spec_sheets/ for available versions.",
+            "default": ""
+        },
+        {
+            "id": "versionB",
+            "type": "promptString",
+            "description": "Target version to compare TO. Check docs/api_spec_sheets/ for available versions.",
+            "default": ""
+        },
+        {
+            "id": "instanceType",
+            "type": "pickString",
+            "description": "Instance type to compare.",
+            "options": [
+                "ADS",
+                "Minecraft"
+            ]
+        },{
+            "id": "*args",
+            "type": "promptString",
+            "description": "Any additional args needed, default is ''",
+            "default": ""
+        },
+    ],
+    "configurations": [
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Run the ./local.py file with debugpy mode.",
+            "program": "./local.py",
+            "args": [
+                "${input:log_level}",
+                "${input:credType}",
+                "${input:funcID}",
+                "${input:*args}"
+            ]
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Generate API Spec Sheets (LIVE)",
+            "program": "./local.py",
+            "args": [
+                "-live",
+                "-docs",
+                "-api"
+            ]
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "AMP Update Check",
+            "program": "./local.py",
+            "args": [
+                "-amp_update_check"
+            ]
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Compare API Spec Versions",
+            "program": "./local.py",
+            "args": [
+                "-compare",
+                "-version_a", "${input:versionA}",
+                "-version_b", "${input:versionB}",
+                "-instance_type", "${input:instanceType}"
+            ]
+        }
+    ]
+}
