@@ -27,8 +27,9 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
 The worktree carries its own copies, all gitignored, so nothing reaches back into the Refactor checkout:
 - `.venv`: the main venv's packages (aiohttp, ruff, pyright, sphinx, pytest, ...) plus `cryptography`.
 - `local.ini`: a copy of the main one, with `[VM_AMP3]` and `[VM_AMP3_B]`. The two now differ, so AMP3 logins live here.
-- `.scripts/vms.py` and `.scripts/land_check.py`: copies. The `vms.py` copy knows vm4 and AMP3's port 8443, and its
-  AMP2 steps (licence, role, pairing) need the 5.x `ampapi`, so run those from the Refactor checkout.
+- `.scripts/vms.py` and `.scripts/land_check.py`: copies. The `vms.py` copy lists only the AMP3 VMs (vm3, vm4) and
+  keeps only the VM lifecycle (status, start, stop, create, remove, refresh-urls); its AMP2 steps are gone (Kat), so
+  the AMP2 pair is still run from the Refactor checkout.
 - `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), `session_check.py` (the `Session` live check),
   `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM) and `hook_check.py` (pyright as the
   end-of-turn hook runs it). `AMP3_VM=vm3|vm4` picks the panel for all of them.
