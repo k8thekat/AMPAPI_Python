@@ -27,7 +27,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self
 
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession
 
 from .errors import (
     AMPAPILoginError,
@@ -48,6 +48,8 @@ if TYPE_CHECKING:
         PasswordPolicyResponse,
         PermissionsResponse,
         ProfileResponse,
+        RecoveryCodesResponse,
+        RecoveryCodesStatusResponse,
         TokenResponse,
     )
 
@@ -80,7 +82,7 @@ class Session:
         If the login should ask for the long (28 day) token or not, by default False.
     session : Union[:class:`ClientSession`, None], optional
         An aiohttp session to send requests through, by default None.
-        Without one we make our own, and :meth:`clean_up` closes it.
+        Without one we make our own, and :meth:`clean_up` closes it. :meth:`clean_up` logs out either way.
 
     """
 
@@ -120,6 +122,14 @@ class Session:
         await self.clean_up()
 
     @property
+    def enrolment_only(self) -> bool:
+        """If this session may only add a passkey (the token's ``amp:scope`` claim is ``"enrol"``).
+
+        AMP hands these out when the passkey policy is ``"Required"`` and the account has no passkey yet.
+        """
+        return self._claims.get("amp:scope") == "enrol"
+
+    @property
     def expiration(self) -> Optional[datetime]:
         """When the current token runs out, `None` when not logged in."""
         return self._expiration
@@ -151,7 +161,6 @@ class Session:
         """
         if self._session is None:
             self._session = ClientSession()
-
         headers: dict[str, str] = {"Accept": "application/json"}
         if use_token is True and self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
@@ -159,12 +168,12 @@ class Session:
         LOGGER.debug("<%s.%s> | Method: %s | Path: %s", __class__.__name__, "_send", method, path)
         async with self._session.request(method=method, url=self.url + path, json=data, headers=headers) as res:
             text: str = await res.text()
-            challenge: str = res.headers.get("WWW-Authenticate", "")
+            authenticate_header: str = res.headers.get("WWW-Authenticate", "")
             status: int = res.status
 
         # AMP answers some calls (logout, reauth) with an empty 204.
         body: Any = json.loads(text) if text else None
-        return status, challenge, body
+        return status, authenticate_header, body
 
     def _store_token(self, data: TokenResponse) -> TokenResponse:
         """Keep a new token, and work out when to renew it."""
@@ -184,6 +193,13 @@ class Session:
             self._expiration,
             self._renew_after,
         )
+        if self.enrolment_only is True:
+            LOGGER.warning(
+                "<%s.%s> | AMP requires a passkey, this session can only add one | Username: %s",
+                __class__.__name__,
+                "_store_token",
+                self.username,
+            )
         return data
 
     def _forget_token(self) -> None:
@@ -238,12 +254,12 @@ class Session:
         """
         await self._ensure_login()
         used_token: Optional[str] = self._token
-        status, challenge, body = await self._send(method=method, path=path, data=data)
+        status, authenticate_header, body = await self._send(method=method, path=path, data=data)
 
-        if status == 401 and "invalid_token" in challenge:
+        if status == 401 and "invalid_token" in authenticate_header:
             LOGGER.debug("<%s.%s> | Session ended by AMP, logging in again | Path: %s", __class__.__name__, "_request", path)
             await self._ensure_login(used_token=used_token)
-            status, challenge, body = await self._send(method=method, path=path, data=data)
+            status, authenticate_header, body = await self._send(method=method, path=path, data=data)
 
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method=method, path=path, data=body)
@@ -251,7 +267,7 @@ class Session:
 
     async def _request_public(self, path: str) -> Any:
         """GET a call that needs no session."""
-        status, _challenge, body = await self._send(method="GET", path=path, use_token=False)
+        status, _authenticate_header, body = await self._send(method="GET", path=path, use_token=False)
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="GET", path=path, data=body)
         return body
@@ -282,26 +298,51 @@ class Session:
             If the account also needs a second factor.
 
         """
+        path: str = "/api/Auth/change-expired-password"
         data: dict[str, Any] = {"username": self.username, "currentPassword": self._password, "newPassword": new_password}
-        status, _challenge, body = await self._send(method="POST", path="/api/Auth/change-expired-password", data=data, use_token=False)
+        status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:
-            raise AMPAPIRequestError(status=status, method="POST", path="/api/Auth/change-expired-password", data=body)
+            raise AMPAPIRequestError(status=status, method="POST", path=path, data=body)
 
         self._password = new_password
         return self._login_result(data=body)
 
     async def clean_up(self) -> None:
-        """Close the aiohttp session if we made it.
+        """Log out, then close the aiohttp session if we made it.
 
         |coro|
 
-        .. note::
-            This does not log out; AMP keeps the session until it runs out. Call :meth:`logout` first to end it.
+        Logging out here keeps a finished script from leaving its session open on AMP for the rest of its 8 hours.
+        A failed logout is logged and the aiohttp session still closes.
 
         """
+        try:
+            await self.logout()
+        except (AMPAPIRequestError, ClientError) as error:
+            LOGGER.warning("<%s.%s> | Logout failed, closing anyway | Error: %s", __class__.__name__, "clean_up", error)
+
         if self._own_session is True and self._session is not None:
             await self._session.close()
             self._session = None
+
+    async def generate_recovery_codes(self) -> RecoveryCodesResponse:
+        """Make a new set of recovery codes for the logged in account, for :meth:`second_factor`.
+
+        |coro|
+
+        AMP wants a recent proof of the password for this. A fresh login counts; later on, call :meth:`reauth` first if
+        AMP answers ``"auth.error.recentProofRequired"``.
+
+        .. warning::
+            A new set replaces the old one, and AMP never shows the codes again. Keep them somewhere safe.
+
+        Returns
+        -------
+        :class:`RecoveryCodesResponse`
+            The new codes.
+
+        """
+        return await self._request(method="POST", path="/api/profile/recovery-codes", data={})
 
     async def get_capabilities(self) -> CapabilitiesResponse:
         """Get which login methods the panel offers, such as passkeys.
@@ -381,6 +422,19 @@ class Session:
         """
         return await self._request(method="GET", path="/api/profile")
 
+    async def get_recovery_codes_status(self) -> RecoveryCodesStatusResponse:
+        """Get how many of the logged in account's recovery codes are left.
+
+        |coro|
+
+        Returns
+        -------
+        :class:`RecoveryCodesStatusResponse`
+            The codes left out of the set, when it was made, and if it is running low.
+
+        """
+        return await self._request(method="GET", path="/api/profile/recovery-codes")
+
     async def login(self) -> TokenResponse:
         """Log in with the username and password this session was made with.
 
@@ -406,7 +460,7 @@ class Session:
 
         """
         data: dict[str, Any] = {"username": self.username, "password": self._password, "rememberMe": self.remember_me}
-        status, _challenge, body = await self._send(method="POST", path="/api/Auth/login", data=data, use_token=False)
+        status, _authenticate_header, body = await self._send(method="POST", path="/api/Auth/login", data=data, use_token=False)
         if status == 401:
             reason: str = body.get("message", "") if _is_json_object(value=body) else ""
             raise AMPAPILoginError(username=self.username, reason=reason)
@@ -435,7 +489,7 @@ class Session:
             If the session has already ended (401).
 
         """
-        status, _challenge, body = await self._send(method="POST", path="/api/Auth/renew", data={})
+        status, _authenticate_header, body = await self._send(method="POST", path="/api/Auth/renew", data={})
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path="/api/Auth/renew", data=body)
         return self._store_token(data=body)
@@ -446,12 +500,16 @@ class Session:
         |coro|
 
         Other logins of the same user are left alone. A later call that needs a session logs in again.
+        A session AMP had already ended counts as logged out.
         """
         if self._token is None:
             return
 
-        status, _challenge, body = await self._send(method="POST", path="/api/auth/logout", data={})
+        status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/logout", data={})
         self._forget_token()
+        # A 401 means AMP had already ended this session, which is what we were after.
+        if status == 401:
+            return
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path="/api/auth/logout", data=body)
 
@@ -472,18 +530,16 @@ class Session:
             If AMP refuses the password (401, ``"auth.error.reproofRejected"``).
 
         """
-        confirm: str = password if password is not None else self._password
-        await self._request(method="POST", path="/api/auth/reauth", data={"password": confirm})
+        confirm_password: str = password if password is not None else self._password
+        await self._request(method="POST", path="/api/auth/reauth", data={"password": confirm_password})
 
     async def second_factor(self, code: str) -> TokenResponse:
         """Finish a login that needs a second factor, using one of the account's recovery codes.
 
         |coro|
 
-        Call this after :meth:`login` raised :exc:`AMPAPIPasskeyRequiredError`.
-
-        .. warning::
-            Not yet tested live. Passkeys need the panel on HTTPS.
+        Call this after :meth:`login` raised :exc:`AMPAPIPasskeyRequiredError`. Each code works once; see
+        :meth:`generate_recovery_codes`.
 
         Parameters
         ----------
@@ -498,13 +554,14 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If AMP refuses the code.
+            If AMP refuses the code (401, ``"auth.login.recoveryCodeRejected"``), a wrong or already used one alike.
         AMPAPIPasswordChangeRequiredError
             If the account also has to change its password.
 
         """
+        path: str = "/api/Auth/login/second-factor"
         data: dict[str, Any] = {"username": self.username, "password": self._password, "code": code, "rememberMe": self.remember_me}
-        status, _challenge, body = await self._send(method="POST", path="/api/Auth/login/second-factor", data=data, use_token=False)
+        status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:
-            raise AMPAPIRequestError(status=status, method="POST", path="/api/Auth/login/second-factor", data=body)
+            raise AMPAPIRequestError(status=status, method="POST", path=path, data=body)
         return self._login_result(data=body)

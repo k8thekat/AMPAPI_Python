@@ -121,7 +121,7 @@ class AMPAPIRequestError(AMPAPIError):
     path : :class:`str`
         The path of the request, eg. ``/api/me/permissions``.
     code : Union[:class:`str`, None]
-        AMP's dotted error key, eg. ``auth.error.reproofRejected``, when it sent one.
+        AMP's dotted error key, eg. ``"auth.error.reproofRejected"``, when it sent one (as `code`, or `reason`).
     message : Union[:class:`str`, None]
         AMP's message, when it sent one.
     params : Union[dict[:class:`str`, Any], None]
@@ -145,7 +145,8 @@ class AMPAPIRequestError(AMPAPIError):
 
         # Each error shape AMP sends has a different set of these keys, so we take whichever are there.
         if _is_json_object(value=data):
-            self.code = data.get("code")
+            # A refused recovery code carries its dotted key as `reason`, everything else as `code`.
+            self.code = data.get("code", data.get("reason"))
             self.message = data.get("message", data.get("title"))
             self.params = data.get("params")
             self.errors = data.get("errors")

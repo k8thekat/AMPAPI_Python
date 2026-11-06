@@ -29,7 +29,10 @@ __all__ = (
     "HubTokenResponse",
     "LoginResponse",
     "MessageErrorResponse",
+    "PasskeyFlowResponse",
+    "PasskeyRegisteredResponse",
     "PasskeyRequiredResponse",
+    "PasskeyResponse",
     "PasswordChangeRequiredResponse",
     "PasswordPolicyResponse",
     "PermissionNode",
@@ -37,6 +40,9 @@ __all__ = (
     "PreviewStatus",
     "ProblemDetailsResponse",
     "ProfileResponse",
+    "ReasonErrorResponse",
+    "RecoveryCodesResponse",
+    "RecoveryCodesStatusResponse",
     "TokenResponse",
     "ValidationErrorResponse",
 )
@@ -46,15 +52,16 @@ class CapabilitiesResponse(TypedDict):
     """``GET /api/auth/capabilities``, which needs no session."""
 
     passkeysAvailable: bool
+    "If passkeys work for this request; it depends on the address the request came in on."
     passkeyStatus: str
-    """Seen as ``"NotConfigured"`` on a panel served over plain HTTP."""
+    """``"NotConfigured"`` (no public address set), ``"OriginMismatch"`` (not asked at that address) or ``"Eligible"``."""
     passkeyMessageKey: Optional[str]
-    "A translation key for the passkey status, not a message."
+    """A translation key for the status, eg. ``"passkeys.origin.notConfigured"``, not a message."""
     rpId: Optional[str]
-    "The WebAuthn relying party ID, `None` until passkeys are configured."
+    "The WebAuthn relying party ID, the public address's host name; `None` until one is set."
     expectedOrigin: Optional[str]
     passkeyPolicy: str
-    """Seen as ``"Optional"``."""
+    """``"Optional"``, ``"Encouraged"`` or ``"Required"``."""
 
 
 class CodedErrorResponse(TypedDict):
@@ -96,15 +103,44 @@ class MessageErrorResponse(TypedDict):
     message: str
 
 
+class PasskeyFlowResponse(TypedDict):
+    """``POST /api/auth/passkey/begin`` and ``POST /api/profile/passkeys/register/begin``, a WebAuthn ceremony to answer."""
+
+    flowId: str
+    "Sent back with the answer to ``.../complete`` (or ``/api/auth/passkey/abandon``)."
+    options: dict[str, Any]
+    "The WebAuthn options, base64url encoded, for ``navigator.credentials.get`` or ``navigator.credentials.create``."
+
+
+class PasskeyRegisteredResponse(TypedDict):
+    """``POST /api/profile/passkeys/register/complete``."""
+
+    passkey: PasskeyResponse
+    session: Optional[TokenResponse]
+    "Only seen as `None` from a full session."
+
+
 class PasskeyRequiredResponse(TypedDict):
     """A ``POST /api/Auth/login`` answer for an account that needs a second factor; it carries no token.
 
-    .. warning::
-        Not yet seen live. The shape is from the web panel's own check, ``passkeyRequired === true``.
-        Passkeys need the panel on HTTPS.
+    AMP sends it when the passkey policy is ``"Required"`` and the account has a passkey. A recovery code to
+    ``POST /api/Auth/login/second-factor`` finishes the login.
     """
 
     passkeyRequired: Literal[True]
+
+
+class PasskeyResponse(TypedDict):
+    """One passkey from ``GET /api/profile/passkeys``."""
+
+    id: str
+    credentialId: str
+    "The WebAuthn credential ID, base64url."
+    name: str
+    createdAt: str
+    lastUsedAt: Optional[str]
+    backupEligible: bool
+    usable: bool
 
 
 class PasswordChangeRequiredResponse(TypedDict):
@@ -177,6 +213,31 @@ class ProfileResponse(TypedDict):
     displayName: Optional[str]
     email: str
     emailConfirmed: bool
+
+
+class ReasonErrorResponse(TypedDict):
+    """The body of a refused ``POST /api/Auth/login/second-factor`` (401), eg. a wrong or already used recovery code."""
+
+    message: str
+    reason: str
+    """A dotted translation key, eg. ``"auth.login.recoveryCodeRejected"``; other errors send it as `code`."""
+
+
+class RecoveryCodesResponse(TypedDict):
+    """``POST /api/profile/recovery-codes``, a new set of codes. It replaces any earlier set."""
+
+    codes: list[str]
+    "10 codes of 14 characters; each works once, and AMP never shows them again."
+
+
+class RecoveryCodesStatusResponse(TypedDict):
+    """``GET /api/profile/recovery-codes``."""
+
+    remaining: int
+    total: int
+    generatedAt: Optional[str]
+    low: bool
+    "Set when few codes remain (and when none were ever made)."
 
 
 class TokenResponse(TypedDict):

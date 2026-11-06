@@ -8,8 +8,17 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
   (rootless Podman, panel on `:8443`, no HTTPS). Its login is `[VM_AMP3]` in `local.ini`, its licence `[LICENSE] amp3`.
 - The licence is the "Beta Preview" grade, 50 Instances, valid to 2027-02-04. The preview build itself runs out
   2026-12-07 (`HealthStatusResponse.preview`).
+- HTTPS for passkeys (2026-11-06): Caddy on vm3 serves `https://amp3-beta.anime` with its own local CA
+  (`tls internal`) and proxies to `127.0.0.1:8443`. The router's DNS already answers `amp3-beta.Anime` (the LAN search
+  domain). AMP has `public-address.publicUrl` set to that address and trusts Caddy through
+  `POST /api/https/own-proxy {"address": "127.0.0.1", "apiOnly": false}`. AMP's own `POST /api/https/setup` wants
+  Let's Encrypt, which can't reach a LAN VM. A browser needs Caddy's root CA trusted
+  (`/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt` on vm3) before it will use passkeys there.
 - Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
-  kept headers and body.
+  kept headers and body. The helpers that make them are in `.scripts/amp3/` (gitignored): `capture.py` (one call),
+  `poll.py`, `session_check.py` (the `Session` live check) and `passkey_check.py` (a software passkey). Their private
+  files (tokens, the Caddy root CA, the passkey test state, a venv with `cryptography`) are in `.local_data/amp3/`.
+- Upstream reports for CubeCoders are drafted in `.local_data/amp3/upstream_issues/`.
 - There is no OpenAPI document. `/openapi/v1.json` is 401 without a token and 404 with one, so the types come from
   captures plus the web panel's own JS (`main-*.js` and its `chunk-*.js`).
 
@@ -33,19 +42,49 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
     - `{passwordChangeRequired: true, reason: "forced"}` for a user made with `requirePasswordChange`.
       `POST /api/Auth/change-expired-password` with `{username, currentPassword, newPassword}` logs in.
       AMP took the old password again as the new one, so there's no reuse check.
-    - `{passkeyRequired: true}` (from the panel's JS, not seen live). `POST /api/Auth/login/second-factor` takes
-      `{username, password, code, rememberMe}` where `code` is a recovery code. There's no TOTP in AMP 3.
-      Passkeys show `NotConfigured` on vm3, likely because the panel isn't on HTTPS.
+    - `{passkeyRequired: true}`, only that key, when the passkey policy is `Required` and the account has a passkey.
+      `POST /api/Auth/login/second-factor` takes `{username, password, code, rememberMe}` where `code` is a
+      recovery code. There's no TOTP in AMP 3. See "Passkeys and recovery codes" below.
 - `POST /api/auth/reauth` with `{password}` answers 204; AMP asks for it ("reproof") before sensitive changes.
 - `POST /api/auth/hub-token` gives a 60 second token for the SignalR hub (WebSockets), which is where live events
   come from.
 - A wrong password and an unknown user get the same 401 `{message: "Invalid username or password."}`.
   One wrong attempt of each did not lock the admin out; lockout wasn't tested further.
 
+## Passkeys and recovery codes (#47.1)
+
+Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py`) on throwaway users.
+- Passkeys need `public-address.publicUrl` set to an HTTPS domain (not an IP). `GET /api/auth/capabilities` judges
+  each request by the address it came in on: `Eligible` through `https://amp3-beta.anime`, `OriginMismatch` on
+  `http://192.168.4.231:8443`, `NotConfigured` with no public address.
+- The rpId is the public address's host name, credentials are discoverable (`allowCredentials: []`) and user
+  verification is `required`.
+- Register: `POST /api/profile/passkeys/register/begin` gives `{flowId, options}`, then
+  `POST /api/profile/passkeys/register/complete {flowId, response, name}` gives `{passkey, session}`.
+  **It refuses an answer with no `response.transports` (400), and the web panel never sends one**, so `[]` has to be
+  added (upstream report 01).
+- Sign in: `POST /api/auth/passkey/begin` then `POST /api/auth/passkey/complete {flowId, response, rememberMe}`
+  gives a normal `{token, expiration}`. `POST /api/auth/passkey/reauth {flowId, response}` (204) proves a session like
+  a password `reauth`. `POST /api/auth/passkey/abandon {flowId}` (204) ends a flow.
+- Policy (`security.passkeyPolicy`): `Optional` and `Encouraged` change nothing at password login. AMP refuses
+  `Required` (`settings.security.error.needYourOwnPasskey`) until the admin setting it has a passkey. Under
+  `Required`, a password login for an account with a passkey answers `{passkeyRequired: true}`; an account with no
+  passkey gets a token with the claim `amp:scope: "enrol"` (the panel's `enrolmentOnly()`, `Session.enrolment_only`).
+  Sessions that already exist carry on.
+- Recovery codes: `POST /api/profile/recovery-codes` gives `{codes}`, 10 codes of 14 characters, replacing any older
+  set; `GET` gives `{remaining, total, generatedAt, low}`. Each code works once at `/api/Auth/login/second-factor`;
+  a wrong or used one gets 401 `{message, reason: "auth.login.recoveryCodeRejected"}`.
+- AMP refuses assertions with the wrong origin, the wrong rpId or no user verification
+  (`passkeys.error.assertionRejected`). A genuine signature whose counter went backwards gets
+  `passkeys.error.cloneDetected` **and AMP deletes that passkey**.
+- Failed sign-ins are throttled per client IP (it honours the trusted proxy's forwarded address): 429
+  `auth.login.errorThrottled`, with no `Retry-After` header. It also blocks `passkey/begin`.
+
 ## Error shapes
 
-AMP 3 answers errors in five shapes, so `AMPAPIRequestError` reads whichever keys are there:
+AMP 3 answers errors in six shapes, so `AMPAPIRequestError` reads whichever keys are there:
 - `{code, params, message}`, AMP's own: `code` is a dotted translation key, eg. `auth.error.reproofRejected`.
+- `{message, reason}`, only for a refused recovery code; `reason` holds the dotted key.
 - `{errors: [str]}`, eg. a password the policy refuses.
 - `{message}`, only for a refused login.
 - ASP.NET ProblemDetails `{type, title, status, errors: {Field: [str]}, traceId}` for a malformed body.
