@@ -54,7 +54,6 @@ from ._types import (
     ResponseTypeAlias,
     is_response_type,
 )
-from .backoff import ExponentialBackoff
 from .bridge import Bridge
 from .errors import AMPAPIError, AMPAPINetworkError, AMPAPIOIDCSessionError, AMPAPIResponseError, AMPAPITypeError
 from .key_drift import KeyDriftCheck
@@ -511,7 +510,6 @@ class Base:
 
     # Private Attributes
     _bridge: Bridge
-    _backoff: ExponentialBackoff[bool]
     _module: str
     _format_data: ClassVar[bool] = True
     _endpoint_url: str
@@ -679,8 +677,6 @@ class Base:
         # else:
         #     self.parse_bridge(bridge=bridge)
         self.parse_bridge(bridge=bridge)
-
-        self._backoff = ExponentialBackoff(integral=True)
 
         LOGGER.debug("<%s.%s> | BRIDGE: %s | SESSION: %s |", __class__.__name__, "__init__", bridge, session)
         # self.session: aiohttp.ClientSession | None = session

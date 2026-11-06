@@ -45,7 +45,6 @@ from .minecraft import *
 from .modules import *
 from .steamcmd import *
 from ._enums import *
-from .backoff import *
 
 
 class VersionInfo(NamedTuple):

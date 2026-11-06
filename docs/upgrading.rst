@@ -80,6 +80,8 @@ Changed methods
   every call uses that session until AMP ends it. A call with no session raises the new
   :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
   itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
+- `ExponentialBackoff` (`ampapi.backoff`) is removed. Only the library's RuntimeError retry used it, and that retry now
+  happens only when the Bridge has a different session, with no wait.
 - `session_ttl` is removed. A stored session is used until AMP ends it, then the library logs in again and resends the
   call. 4.x logged in again every 240 seconds, and AMP kept each old session alive.
 - The repr of :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) leaves out `password`, `token` and

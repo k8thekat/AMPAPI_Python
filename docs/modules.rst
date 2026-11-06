@@ -80,14 +80,6 @@ SteamCMD Plugin
    :show-inheritance:
 
 
-Exponential Backoff
-~~~~~~~~~~~~~~~~~~~~
-Calculates the delay between retries, growing exponentially with each attempt.
-
-.. autoclass:: ExponentialBackoff
-   :members:
-
-
 Error Classes
 ~~~~~~~~~~~~~
 Every error the library raises inherits from :class:`~ampapi.errors.AMPAPIError`, and all of them are importable from `ampapi`.
