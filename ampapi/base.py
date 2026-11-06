@@ -133,14 +133,41 @@ _SECRET_KEYS: frozenset[str] = frozenset(
 )
 
 
+# These endpoints send the secret back as the whole result, so their response is hidden in the debug logs
+_SECRET_ENDPOINTS: frozenset[str] = frozenset({"ADSModule/GetTargetPairingCode", "ADSModule/ManageInstance", "Core/GetRemoteLoginToken"})
+
+
+def _is_secret_node(name: Any) -> bool:
+    # A setting node is a dotted path, eg. `EmailSenderPlugin.SMTP.Password`, and its last part names it
+    if not isinstance(name, str) or "." not in name:
+        return False
+    last_part: str = name.rsplit(".", 1)[-1].lower()
+    return "password" in last_part or "secret" in last_part or "token" in last_part or last_part.endswith("key")
+
+
 def _hide_secrets(data: Any) -> Any:
-    """Copy `data` for the debug logs, with the value of any key in `_SECRET_KEYS` hidden."""
+    """Copy `data` for the debug logs, with any secret value hidden.
+
+    A value is hidden by its key (`_SECRET_KEYS`), by the setting it belongs to (a Password input, or a node named like a
+    secret), or when it is an `otpauth://` link.
+    """
     if isinstance(data, dict):
         # This is a typed local for pyright
         source_map: dict[str, Any] = data  # pyright: ignore[reportUnknownVariableType]
+        # A setting from a spec (`InputType`, `CurrentValue`) or sent to SetConfig (`node`, `value`) hides its value
+        secret_setting: bool = False
+        for key, value in source_map.items():
+            plain_key: str = key.replace("_", "").lower()
+            if (plain_key == "inputtype" and str(value).lower() == "password") or (plain_key == "node" and _is_secret_node(value)):
+                secret_setting = True
+
         hidden: dict[str, Any] = {}
         for key, value in source_map.items():
-            if key.replace("_", "").lower() in _SECRET_KEYS:
+            plain_key = key.replace("_", "").lower()
+            # SetConfigs sends the settings keyed by their node
+            hidden_by_key: bool = plain_key in _SECRET_KEYS or _is_secret_node(key)
+            hidden_by_setting: bool = secret_setting is True and plain_key in ("currentvalue", "value")
+            if hidden_by_key or hidden_by_setting:
                 hidden[key] = "<hidden>"
             else:
                 hidden[key] = _hide_secrets(value)
@@ -1036,7 +1063,10 @@ class Base:
         )
         # LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", response_json)
         if LOGGER.isEnabledFor(logging.DEBUG):
-            LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", _hide_secrets(response_json))
+            # A proxied Instance's URL holds the Controller's path first, so we take the part after the last `/API/`
+            endpoint: str = response.url.path.rsplit("/API/", 1)[-1]
+            logged_json: Any = "<hidden>" if endpoint in _SECRET_ENDPOINTS else _hide_secrets(response_json)
+            LOGGER.debug("<%s.%s> | RESP_JSON: %s", __class__.__name__, "_response_handler", logged_json)
 
         if response_json is None:
             if allow_null is True:

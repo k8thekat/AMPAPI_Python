@@ -68,8 +68,15 @@ until AMP ends it, and `_post` logs in again on AMP's dead-session answer.
 The DEBUG logs hide passwords, tokens, 2FA codes and secrets, the OIDC `code` and licence keys by key name, and any
 `otpauth://` link (#46c). The masking copies the data, so it only runs when DEBUG is on (otherwise it cost 314 us per
 `get_updates` and 21.7 ms on the 7 MB application list). Session IDs stay in the logs, since they are short-lived and
-the session handling is debugged by them. The `ManageInstance` and `GetRemoteLoginToken` tokens still show, since AMP
-sends both under a plain `Result` key.
+the session handling is debugged by them.
+- A setting's value is hidden by the setting (#46q): a spec entry with `InputType` "Password" (S3 keys, the SMTP
+  password, `ADSModule.Defaults.NewInstanceKey`), or a node whose last part holds "password", "secret" or "token" or
+  ends with "key" (the webhook bearer token is a plain text input). That covers `get_setting_spec`, `get_config(s)`
+  and what `set_config(s)` sends. vm1 had 3 Password inputs with a value, and none reached the log.
+- `_SECRET_ENDPOINTS` hides the whole response of `GetRemoteLoginToken`, `ManageInstance` and
+  `GetTargetPairingCode`, which send the secret as a bare `Result`.
+- Still logged as they are: file contents (`read_file_chunk`), console output, and anything an app keeps in its own
+  config files.
 
 **The `aiohttp.ClientSession` is the Bridge's** (#46b). Each Bridge makes one on the first call and every object on
 it sends its calls through it. Before #46b each object held its own, and `clean_up` on an Instance closed the one its
