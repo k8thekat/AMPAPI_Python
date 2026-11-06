@@ -38,10 +38,14 @@ To install run the below command in a Terminal.
 Basic Usage
 ===========
 1. First you need to fill out the :py:class:`~ampapi.modules.APIParams` class with the required fields (`url`, `user` and `password`).
+    - A user that signs in through an OIDC provider has no password, so set `auth_mode` to ``AuthMode.oidc`` instead. See :py:class:`~ampapi.Bridge`.
 2. Pass the :py:class:`~ampapi.modules.APIParams` class into the :py:class:`~ampapi.Bridge` class parameter `api_params`.
     - You only need to make **ONE** :py:class:`~ampapi.Bridge` class; the rest of the API classes will get the same object and handle logging in for you.
+    - To use your own :class:`aiohttp.ClientSession`, pass it to the :py:class:`~ampapi.Bridge` as `session`. You close it yourself.
 3. You can then use the Parent :py:class:`~ampapi.instance.Controller` or the smaller class :py:class:`~ampapi.instance.Instance` or any of the API classes as a stand alone.
     - See `Quick Example`_ for a visual example.
+4. When you are done, close the session with ``await controller.clean_up()``, or use ``async with Controller() as controller:``.
+    - :meth:`~ampapi.Base.clean_up` with ``logout=True`` ends the AMP session first.
 
 .. _Quick Example: https://github.com/k8thekat/AMPAPI_Python/blob/main/docs/samples/sample.py
 

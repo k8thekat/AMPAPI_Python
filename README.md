@@ -72,10 +72,13 @@ pip install cc-ampapi
 In your IDE Python file. -> `import ampapi`.
 
 1. First you need to fill out the APIParams class with the required fields (`url`, `user` and `password`).
+   - A user that signs in through an OIDC provider has no password, so set `auth_mode=AuthMode.oidc` instead. See the `Bridge` docs.
 2. Pass the APIParams class into the Bridge class parameter api_params.
    - You only need to make ONE bridge class; the rest of the API classes will get the same object and handle logging in for you.
+   - To use your own `aiohttp.ClientSession`, pass it as `Bridge(api_params=..., session=...)`. You close it yourself.
 3. You can then use the Parent class `Controller()` or the smaller class `Instance()` or any of the API classes as a stand alone.
    - See [Quick Example](https://github.com/k8thekat/AMPAPI_Python/blob/main/docs/samples/sample.py) for a visual example.
+4. When you are done, close the session with `await controller.clean_up()`, or use `async with Controller() as controller:`.
 
 ### Quick Example -
 
@@ -137,7 +140,8 @@ async def Sample_API() -> None:
     await arkinstance.take_backup(name="ARK1_backup", description="This is an ARK backup", sticky=True)
 
     # Then you can call instance type specific API endpoints.
-    await mcinstance.mc_add_to_whitelist(user_or_uuid="k8_thekat")
+    # AMP 2.6.5.0 removed the whitelist endpoints, so we send the server's own console command instead
+    await mcinstance.send_console_message(msg="whitelist add k8_thekat")
 
     # You can also check attributes and other fields of the instance for easy logic.
     if mcinstance.instance_name == "Test_Server":
@@ -176,6 +180,9 @@ async def Sample_API() -> None:
     # Want to kick a random person? Here ya go~
     players: Players = await mcinstance.get_user_list()
     await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
+
+    # When you are done, close the session the Bridge made for us.
+    await ADS.clean_up()
 
 
 

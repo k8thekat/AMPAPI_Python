@@ -64,6 +64,9 @@ until AMP ends it, and `_post` logs in again on AMP's dead-session answer.
 - AMP's own idle timeout is the panel setting `Core.Privacy.SessionTimeout` (Kat), in minutes, 15 on vm1 and vm2. On
   vm1, set to 2 minutes, and with `Webserver.SessionTimeout` (AMPConfig.conf only) set to 1, idle API sessions were
   still alive at 10 minutes, with or without an ADS restart. vm2 kept no session idle past its 15 minutes.
+- At vm1's 15 minutes, idle sessions were alive at 14 and 17 minutes and gone, from AMP's own session list too, by
+  20, 25 and 30 (`long_idle.py`, 2026-11-06). AMP ends them on a sweep a few minutes past the setting. With the TTL
+  off, the first call after that takes the dead-session path: three requests and one warning.
 
 The DEBUG logs hide passwords, tokens, 2FA codes and secrets, the OIDC `code` and licence keys by key name, and any
 `otpauth://` link (#46c). The masking copies the data, so it only runs when DEBUG is on (otherwise it cost 314 us per
