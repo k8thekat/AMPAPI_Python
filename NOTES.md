@@ -14,11 +14,27 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
   `POST /api/https/own-proxy {"address": "127.0.0.1", "apiOnly": false}`. AMP's own `POST /api/https/setup` wants
   Let's Encrypt, which can't reach a LAN VM. A browser needs Caddy's root CA trusted
   (`/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt` on vm3) before it will use passkeys there.
+- `vm4` (`amp3-beta2`) is a second AMP3 panel for running tests in parallel, built the same way by
+  `.scripts/amp3/build_vm.py` (#47.4), with HTTPS at `https://amp3-beta2.anime`. Its login is `[VM_AMP3_B]` in the
+  worktree's `local.ini`. The same beta key activated there too (the query showed `usage: 1` first), so one key covers
+  several installations. Each panel throttles sign-ins on its own, which is the main reason to have two.
+- A panel restarts once licensed (`phase: "starting"`); a setting checked before it reads `ready` can look unapplied.
 - Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
-  kept headers and body. The helpers that make them are in `.scripts/amp3/` (gitignored): `capture.py` (one call),
-  `poll.py`, `session_check.py` (the `Session` live check) and `passkey_check.py` (a software passkey). Their private
-  files (tokens, the Caddy root CA, the passkey test state, a venv with `cryptography`) are in `.local_data/amp3/`.
-- Upstream reports for CubeCoders are drafted in `.local_data/amp3/upstream_issues/`.
+  kept headers and body.
+
+## Tooling in this worktree
+
+The worktree carries its own copies, all gitignored, so nothing reaches back into the Refactor checkout:
+- `.venv`: the main venv's packages (aiohttp, ruff, pyright, sphinx, pytest, ...) plus `cryptography`.
+- `local.ini`: a copy of the main one, with `[VM_AMP3]` and `[VM_AMP3_B]`. The two now differ, so AMP3 logins live here.
+- `.scripts/vms.py` and `.scripts/land_check.py`: copies. The `vms.py` copy knows vm4 and AMP3's port 8443, and its
+  AMP2 steps (licence, role, pairing) need the 5.x `ampapi`, so run those from the Refactor checkout.
+- `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), `session_check.py` (the `Session` live check),
+  `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM) and `hook_check.py` (pyright as the
+  end-of-turn hook runs it). `AMP3_VM=vm3|vm4` picks the panel for all of them.
+- `.local_data/amp3/`: their private files (per-VM tokens, setup codes and Caddy root CAs, the passkey test state,
+  the vetted `getamp3.sh`) and the upstream report drafts for CubeCoders (`upstream_issues/`).
+- `.local_data/plans/todo_index.md`: the AMP3 TODO index.
 - There is no OpenAPI document. `/openapi/v1.json` is 401 without a token and 404 with one, so the types come from
   captures plus the web panel's own JS (`main-*.js` and its `chunk-*.js`).
 
@@ -76,7 +92,10 @@ Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py
   a wrong or used one gets 401 `{message, reason: "auth.login.recoveryCodeRejected"}`.
 - AMP refuses assertions with the wrong origin, the wrong rpId or no user verification
   (`passkeys.error.assertionRejected`). A genuine signature whose counter went backwards gets
-  `passkeys.error.cloneDetected` **and AMP deletes that passkey**.
+  `passkeys.error.cloneDetected` **and AMP deletes that passkey**. A forged signature with a low counter is only
+  `assertionRejected` and the passkey stays, so AMP checks the signature first and nobody without the key can get a
+  passkey deleted. The same answer sent twice works once (then `passkeys.error.ceremonyExpired`, a misleading "took
+  too long"), and one flow's answer sent to another is refused.
 - Failed sign-ins are throttled per client IP (it honours the trusted proxy's forwarded address): 429
   `auth.login.errorThrottled`, with no `Retry-After` header. It also blocks `passkey/begin`.
 
