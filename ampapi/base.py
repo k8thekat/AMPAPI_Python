@@ -127,6 +127,7 @@ class Base:
             raw_bytes=raw_bytes,
             use_token=use_token,
         )
+
         # We check the reply before building an error, so a retried outage only logs our warning.
         for delay in self._outage_delays:
             code: Optional[str] = body.get("code") if _is_json_object(value=body) else None

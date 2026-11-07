@@ -166,18 +166,22 @@ class Session:
         """
         if self._session is None:
             self._session = ClientSession()
+
         headers: dict[str, str] = {"Accept": "*/*" if raw_bytes is True else "application/json"}
         if use_token is True and self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
 
         json_body: Optional[Union[dict[str, Any], list[Any]]] = None
         raw_body: Optional[Union[bytes, FormData]] = None
+
         if isinstance(data, bytes):
             raw_body = data
             headers["Content-Type"] = "application/octet-stream"
+
         elif files is not None:
             # A new form for each send, as aiohttp sends a form only once and a dead session sends it again.
             raw_body = FormData()
+
             for relative_path, content in files.items():
                 raw_body.add_field(name="files", value=content, filename=PurePosixPath(relative_path).name)
                 raw_body.add_field(name="paths", value=relative_path)
@@ -300,6 +304,7 @@ class Session:
         """
         if use_token is True:
             await self._ensure_login()
+
         used_token: Optional[str] = self._token
         status, authenticate_header, body = await self._send(
             method=method,
@@ -533,6 +538,7 @@ class Session:
 
         status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/logout", data={})
         self._forget_token()
+
         # A 401 means AMP had already ended this session, which is what we were after.
         if status == 401:
             return

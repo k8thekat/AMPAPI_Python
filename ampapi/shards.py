@@ -1702,6 +1702,7 @@ class ShardModule(Base):
         for line in result["lines"]:
             if line["state"] is not None:
                 line["state"] = self._to_enum(ShardState, line["state"])
+
         return result
 
     async def get_shard_credential(self, shard_id: str) -> ShardCredentialResponse:
@@ -3317,6 +3318,7 @@ class ShardModule(Base):
         """
         upload: ShardUploadSessionResponse = await self.start_shard_file_upload(shard_id=shard_id, path=path, size=len(content))
         received: int = upload["received"]
+
         while received < len(content):
             reply: ShardUploadChunkResponse = await self.send_shard_file_chunk(
                 shard_id=shard_id,
