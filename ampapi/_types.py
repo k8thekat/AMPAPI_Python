@@ -24,18 +24,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union
 
 if TYPE_CHECKING:
-    from ._enums import (
-        CloneContent,
-        GatewayState,
-        MigrationStatus,
-        PublicationState,
-        ShardState,
-        SnapshotContent,
-        SnapshotKind,
-        SnapshotStage,
-        SnapshotState,
-        TaskState,
-    )
+    from ._enums import CloneContent, GatewayState, PublicationState, SnapshotContent, SnapshotKind
 
 __all__ = (
     "AnalyticsAddressUsersResponse",
@@ -66,7 +55,6 @@ __all__ = (
     "BusJoinInfo",
     "CapabilitiesResponse",
     "CodedErrorResponse",
-    "ConsoleLine",
     "CredentialKind",
     "CredentialRequest",
     "CredentialResponse",
@@ -143,7 +131,6 @@ __all__ = (
     "RevokedSessionsResponse",
     "RoleRequest",
     "RoleResponse",
-    "RunningTaskResponse",
     "SSHKeyRequest",
     "SSHKeyResponse",
     "ScheduleCatalogResponse",
@@ -151,7 +138,6 @@ __all__ = (
     "ScheduleCatalogTrigger",
     "ScheduleDefinition",
     "ScheduleEmit",
-    "ScheduleExecutionResponse",
     "ScheduleRetryPolicy",
     "ScheduleRunResponse",
     "ScheduleStatus",
@@ -174,7 +160,6 @@ __all__ = (
     "ShardCloneRequest",
     "ShardCloneResponse",
     "ShardConfigImportResponse",
-    "ShardConsoleHistoryResponse",
     "ShardConsoleRequest",
     "ShardCreateRequest",
     "ShardCreatedResponse",
@@ -193,9 +178,7 @@ __all__ = (
     "ShardInfraSettings",
     "ShardInfraUpdateResponse",
     "ShardManagedFileResponse",
-    "ShardMetricResponse",
     "ShardMigrationRequest",
-    "ShardMigrationResponse",
     "ShardMigrationTargetResponse",
     "ShardPortAssignments",
     "ShardPortOutcome",
@@ -207,16 +190,13 @@ __all__ = (
     "ShardSettingCandidatesResponse",
     "ShardSettingResponse",
     "ShardSleepStatus",
-    "ShardSnapshotsResponse",
     "ShardStateMetrics",
-    "ShardStateResponse",
     "ShardUpdateResponse",
     "ShardUploadChunkResponse",
     "ShardUploadSessionResponse",
     "ShardUsage",
     "SnapshotMetaRequest",
     "SnapshotRequest",
-    "SnapshotResponse",
     "SnapshotSettingsRequest",
     "SnapshotSettingsResponse",
     "SpireCPU",
@@ -239,7 +219,6 @@ __all__ = (
     "SpireRosterResponse",
     "SpireStartupEntry",
     "SpireStartupResponse",
-    "SpireStateResponse",
     "SpireStorageResponse",
     "SpireUsageIntervalResponse",
     "SpireUsageResponse",
@@ -596,31 +575,6 @@ class CodedErrorResponse(TypedDict):
     """Values for the `code` translation, eg. ``{"scope": "shard"}``; often `None`."""
     message: str
     "The English text of `code`."
-
-
-class ConsoleLine(TypedDict):
-    """One console line, from `ShardConsoleHistoryResponse.lines`."""
-
-    streamId: str
-    """eg. ``"main"`` (the game), ``"system"`` (AMP) or ``"update"``."""
-    text: str
-    timestamp: str
-    seq: int
-    "Rises with each line, with gaps."
-    kind: str
-    """eg. ``"line"``, ``"info"``, ``"error"`` or ``"marker"``, which marks a change of `state`."""
-    state: Optional[Union[ShardState, int]]
-    "The status a marker line announces, `None` on other lines."
-    success: Optional[bool]
-    "Set on the markers that end a stop or an update."
-    code: Optional[str]
-    """A translation key for the text, eg. ``"shards.console.marker.stageOf"``."""
-    params: Optional[dict[str, str]]
-    "Values for the `code` translation."
-    level: Optional[str]
-    """The game's log level, eg. ``"INFO"``."""
-    origin: Optional[str]
-    """The game's log source, eg. ``"Server thread"``."""
 
 
 class CredentialRequest(TypedDict):
@@ -1557,61 +1511,6 @@ class RoleResponse(TypedDict):
     createdAt: str
 
 
-# TODO: Drop the failed move sentence once its task leaves with its move (U22c).
-# AMP 3.0.0.6 keeps a failed move's task until it is deleted.
-class RunningTaskResponse(TypedDict):
-    """One long job, such as a shard update, from ``GET /api/running-tasks``.
-
-    A finished task leaves the list on its own after about 7 seconds. A failed move's task stays until
-    `TaskModule.delete_running_task`.
-    """
-
-    id: str
-    tenantId: str
-    type: str
-    """eg. ``"ApplicationUpdate"``, ``"ShardClone"`` or ``"ShardMigration"``."""
-    name: str
-    """eg. ``"Update my-shard"``; empty on a clone or a move, which name themselves with `nameCode`."""
-    nameCode: Optional[str]
-    """A translation key, eg. ``"tasks.migration.move"`` or ``"tasks.migration.clone"``."""
-    nameParams: Optional[dict[str, Any]]
-    """Values for the `nameCode` translation, eg. the shard's `name`."""
-    message: Optional[str]
-    "The current step, eg. a download, or why a move failed."
-    messageCode: Optional[str]
-    """A translation key for the step, eg. ``"tasks.migration.stage.preparing"``."""
-    messageParams: Optional[dict[str, Any]]
-    speed: Optional[str]
-    """How fast a clone or a move copies, eg. ``"56.2 MB/s"``."""
-    progressPercent: int
-    isIndeterminate: bool
-    state: Union[TaskState, int]
-    "A number the library doesn't know stays a plain int."
-    isCancellable: bool
-    "`True` on clones and moves, even once finished, and `False` on updates."
-    isPrimary: bool
-    principal: Principal
-    visibility: int
-    targetType: str
-    """eg. ``"Shard"``."""
-    targetId: str
-    correlationId: WrappedID
-    causationActionId: Optional[WrappedID]
-    actionId: WrappedID
-    origin: int
-    rootPrincipal: Principal
-    ownerSpireId: str
-    "The spire running the task, the target one for a move or a clone."
-    runId: str
-    subTasks: list[Any]
-    startedAt: str
-    completedAt: Optional[str]
-    cancellationRequestedAt: Optional[str]
-    updatedAt: str
-    isTerminal: bool
-    "If the task has finished; only a finished task can be dismissed."
-
-
 class ScheduleCatalogResponse(TypedDict):
     """``GET /api/shards/{id}/schedules/catalog``, the triggers and tasks a shard's schedules can use."""
 
@@ -1678,29 +1577,6 @@ class ScheduleEmit(TypedDict):
     description: str
 
 
-class ScheduleExecutionResponse(TypedDict):
-    """One run of a schedule, from ``GET /api/shards/{id}/schedules/{id}/history``."""
-
-    id: str
-    scheduleId: str
-    tenantId: str
-    shardId: str
-    eventPayload: Optional[Any]
-    canonicalFireTime: str
-    timeout: str
-    queuedAt: str
-    startedAt: str
-    completedAt: str
-    status: str
-    """eg. ``"Succeeded"`` or ``"Skipped"`` (a disabled schedule that was run)."""
-    attemptNumber: int
-    workerNode: Optional[str]
-    "The spire that ran it."
-    errorMessage: Optional[str]
-    stepOutcomes: list[ScheduleStepOutcome]
-    duration: str
-
-
 class ScheduleRetryPolicy(TypedDict):
     """How a schedule tries again after a failed run, from `ScheduleDefinition.retryPolicy`."""
 
@@ -1715,7 +1591,7 @@ class ScheduleRunResponse(TypedDict):
     """``POST /api/shards/{id}/schedules/{id}/run`` (202)."""
 
     executionId: str
-    "The run's `id` in `ScheduleExecutionResponse`."
+    "The run's `id` in `ScheduleExecution`."
 
 
 class ScheduleStatus(TypedDict):
@@ -1753,7 +1629,7 @@ ScheduleStep = TypedDict(
 
 
 class ScheduleStepOutcome(TypedDict):
-    """How one step of a run went, from `ScheduleExecutionResponse.stepOutcomes`."""
+    """How one step of a run went, from `ScheduleExecution.step_outcomes`."""
 
     stepId: str
     "AMP's own ID for the step, not the one it was saved with."
@@ -1997,14 +1873,6 @@ class ShardConfigImportResponse(TypedDict):
     "Settings the file doesn't have."
 
 
-class ShardConsoleHistoryResponse(TypedDict):
-    """``GET /api/shards/{id}/console/history``, the console lines, oldest first."""
-
-    lines: list[ConsoleLine]
-    hasMore: bool
-    "If older lines exist, see `before_seq`."
-
-
 class ShardConsoleRequest(TypedDict):
     """The body of ``POST /api/shards/{id}/console``."""
 
@@ -2235,24 +2103,6 @@ class ShardManagedFileResponse(TypedDict):
     fieldName: Optional[str]
 
 
-class ShardMetricResponse(TypedDict):
-    """One sample of a running shard's load, from ``GET /api/shards/{id}/metrics``; about one every 3 to 5 seconds."""
-
-    shardId: str
-    tenantId: str
-    timestamp: str
-    agentVersion: str
-    cpuPercent: float
-    memoryMb: int
-    memoryLimitMb: int
-    ioReadKbps: float
-    ioWriteKbps: float
-    activeUsers: int
-    maxUsers: int
-    custom: dict[str, Any]
-    listeningPorts: list[int]
-
-
 class ShardMigrationRequest(TypedDict):
     """The body of ``POST /api/shards/{id}/migration/spire``."""
 
@@ -2260,51 +2110,6 @@ class ShardMigrationRequest(TypedDict):
     targetDatastoreId: str
     bringBackups: bool
     stopIfRunning: bool
-
-
-class ShardMigrationResponse(TypedDict):
-    """``GET /api/shards/{id}/migration``, a shard's latest move; AMP answers 204 when there's none."""
-
-    shardId: str
-    tenantId: str
-    ownerSpireId: str
-    "The spire running the move, the target one."
-    runId: str
-    "The move's `RunningTaskResponse.runId` too."
-    sourceDatastoreId: str
-    targetDatastoreId: str
-    sourceShardId: str
-    sourceSpireId: str
-    "All zeros on a move between datastores of one spire."
-    targetSpireId: str
-    "All zeros on a move between datastores of one spire."
-    sourcePath: str
-    "The shard's old folder on a move between datastores of one spire; empty on a move between spires."
-    targetPath: str
-    """The shard's folder on the target, eg. ``"/opt/cubecoders/amp3/data/Datastores/Default/my-shard-ef6e621c"``."""
-    status: Union[MigrationStatus, int]
-    "A number the library doesn't know stays a plain int."
-    filesTotal: int
-    "0 while copying and the real count once done; a shard with no files reads 0 throughout."
-    filesDone: int
-    bytesTotal: int
-    "0 while copying and the real count once done."
-    bytesDone: int
-    error: Optional[str]
-    """An English sentence on a failed move, eg. ``"The move failed. The server was left stopped on its source spire. ..."``,
-    or ``"Cancelled."`` after `ShardModule.cancel_shard_migration`."""
-    startedAt: str
-    finishedAt: Optional[str]
-    startedByUserId: str
-    # TODO: Drop the second half once the record says what AMP does (U22d).
-    # AMP 3.0.0.6 reads `False` for a running shard that moves fine, then starts it on the target.
-    startAfterMove: bool
-    """`True` on a move that stopped the shard and failed. A running shard that moves fine reads `False`, yet starts
-    on the target."""
-    isActive: bool
-    "If the move is still running; `True` only while copying."
-    blocksLaunch: bool
-    "If the shard can't be started meanwhile; `True` only while copying."
 
 
 class ShardMigrationTargetResponse(TypedDict):
@@ -2443,7 +2248,7 @@ class ShardSFTPResponse(TypedDict):
 
 
 class ShardSleepStatus(TypedDict):
-    """If a shard can sleep, from `ShardStateResponse.sleep`."""
+    """If a shard can sleep, from `ShardStatus.sleep`."""
 
     available: bool
     reason: str
@@ -2453,27 +2258,8 @@ class ShardSleepStatus(TypedDict):
     reportedAt: str
 
 
-class ShardSnapshotsResponse(TypedDict):
-    """``GET /api/shards/{id}/snapshots``, a shard's snapshots as a tree, with any restore in progress."""
-
-    shardId: str
-    tenantId: str
-    nodes: list[SnapshotResponse]
-    "Each one's `parentId` links the tree."
-    headId: Optional[str]
-    "The newest snapshot."
-    settings: SnapshotSettingsResponse
-    restoringId: Optional[str]
-    restoreStage: Union[SnapshotStage, int]
-    restoreProcessed: int
-    restoreTotal: int
-    restoreOwnerSpireId: str
-    "All zeros when no restore has run."
-    restoreRunId: str
-
-
 class ShardStateMetrics(TypedDict):
-    """A running shard's load, from `ShardStateResponse.metrics`. The key names differ from `ShardMetricResponse`."""
+    """A running shard's load, from `ShardStatus.metrics`. The key names differ from `ShardMetrics`."""
 
     cpuUsagePercent: float
     memoryUsageMB: int
@@ -2484,37 +2270,6 @@ class ShardStateMetrics(TypedDict):
     diskReadKBps: float
     diskWriteKBps: float
     taskQueueLength: int
-
-
-class ShardStateResponse(TypedDict):
-    """``GET /api/shards/{id}/state``, a shard's live state."""
-
-    shardId: str
-    tenantId: str
-    status: Union[ShardState, int]
-    "A number the library doesn't know stays a plain int."
-    revision: int
-    metrics: Optional[ShardStateMetrics]
-    "`None` while stopped."
-    lastHeartbeat: str
-    activeTaskId: Optional[str]
-    processId: Optional[Any]
-    runningVersion: Optional[str]
-    agentVersion: Optional[str]
-    lastErrorMessage: Optional[str]
-    lastErrorCode: Optional[str]
-    """eg. ``"agent.msg.executableNotFound"``."""
-    lastErrorParams: Optional[dict[str, str]]
-    statusMessage: Optional[str]
-    statusCode: Optional[str]
-    """eg. ``"shards.msg.launchStage.container"``."""
-    statusParams: Optional[dict[str, str]]
-    startedAt: Optional[str]
-    sleep: Optional[ShardSleepStatus]
-    isRunning: bool
-    isStopped: bool
-    acceptsTraffic: bool
-    isBusy: bool
 
 
 class ShardUpdateResponse(TypedDict):
@@ -2575,40 +2330,6 @@ class SnapshotRequest(TypedDict):
     name: str
     description: str
     sticky: bool
-
-
-class SnapshotResponse(TypedDict):
-    """One snapshot (a backup), from `ShardSnapshotsResponse.nodes`; taking or restoring one answers with it too."""
-
-    id: str
-    parentId: Optional[str]
-    "The snapshot this one builds on, `None` for the first."
-    kind: Union[SnapshotKind, int]
-    content: Union[SnapshotContent, int]
-    trigger: int
-    "eg. 0 (taken by a user) or 3 (the one AMP takes before a restore)."
-    status: Union[SnapshotState, int]
-    name: str
-    description: str
-    """AMP fills an empty one, eg. ``"Partial backup of app configuration."``."""
-    sticky: bool
-    "Doesn't stop a delete."
-    failureReason: str
-    skippedFiles: list[str]
-    skippedCount: int
-    archiveMissing: bool
-    createdAt: str
-    createdByUserId: str
-    sizeMb: int
-    uncompressedMb: int
-    fileCount: int
-    ownerSpireId: str
-    runId: str
-    stage: Union[SnapshotStage, int]
-    processedFiles: int
-    totalFiles: int
-    datastoreId: str
-    zipFileName: str
 
 
 class SnapshotSettingsRequest(TypedDict):
@@ -2800,7 +2521,7 @@ class SpireIPOptionResponse(SpireIPAddress):
 
 
 class SpirePlatform(TypedDict):
-    """The machine a spire runs on, from `SpireStateResponse.platform`."""
+    """The machine a spire runs on, from `SpireStatus.platform`."""
 
     os: int
     "eg. 2 on Ubuntu."
@@ -2922,26 +2643,6 @@ class SpireStartupResponse(TypedDict):
     startOnBoot: bool
     order: int
     "A new shard has 100; saving sets each shard sent to its place in the list sent."
-
-
-class SpireStateResponse(TypedDict):
-    """``GET /api/spires/{id}/state``, a spire's live load.
-
-    An unknown spire ID answers 200 with `online` `False`, zeros and no `platform`, not 404.
-    """
-
-    spireId: str
-    online: bool
-    lastHeartbeat: str
-    shardCount: int
-    cpuUsagePercent: float
-    memoryUsedMb: int
-    memoryTotalMb: int
-    networkInKBps: float
-    networkOutKBps: float
-    diskActivePercent: Optional[float]
-    busLatencyMs: float
-    platform: Optional[SpirePlatform]
 
 
 class SpireStorageResponse(TypedDict):

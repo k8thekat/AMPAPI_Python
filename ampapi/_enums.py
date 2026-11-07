@@ -25,6 +25,7 @@ from enum import IntEnum, IntFlag, StrEnum
 __all__ = (
     "CloneContent",
     "GatewayState",
+    "LifecycleKind",
     "MigrationStatus",
     "PublicationState",
     "ShardState",
@@ -66,6 +67,26 @@ class GatewayState(StrEnum):
     disabled = "Disabled"
     fault = "Fault"
     provisioning = "Provisioning"
+
+
+# TODO: Check kinds 1 to 6, 8 and 9 against the hub captures (#3-47.2.1).
+# Only 0 and 7 were seen live; the rest are the web panel's names.
+class LifecycleKind(IntEnum):
+    """A shard hub `Lifecycle` event's `kind`, named as the web panel names it. AMP sends the number.
+
+    .. versionadded:: 6.0.0
+    """
+
+    state_changed = 0
+    update_progress = 1
+    update_complete = 2
+    error = 3
+    user_action_required = 4
+    gateway_key_published = 5
+    sleep_status = 6
+    startup_progress = 7
+    notice = 8
+    information = 9
 
 
 class MigrationStatus(IntEnum):

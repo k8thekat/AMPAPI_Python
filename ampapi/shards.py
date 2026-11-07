@@ -23,9 +23,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
-from ._enums import CloneContent, MigrationStatus, ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState
+from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
 from .base import Base
+from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardSnapshots, ShardStatus, Snapshot
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
         FileACLChange,
         PortProtocol,
         ScheduleCatalogResponse,
-        ScheduleExecutionResponse,
         ScheduleRunResponse,
         ScheduleStep,
         ScheduleTrigger,
@@ -45,7 +45,6 @@ if TYPE_CHECKING:
         ShardCloneRequest,
         ShardCloneResponse,
         ShardConfigImportResponse,
-        ShardConsoleHistoryResponse,
         ShardConsoleRequest,
         ShardCreatedResponse,
         ShardCreateRequest,
@@ -62,9 +61,7 @@ if TYPE_CHECKING:
         ShardInfraResponse,
         ShardInfraUpdateResponse,
         ShardManagedFileResponse,
-        ShardMetricResponse,
         ShardMigrationRequest,
-        ShardMigrationResponse,
         ShardMigrationTargetResponse,
         ShardPortResponse,
         ShardResponse,
@@ -73,15 +70,12 @@ if TYPE_CHECKING:
         ShardSettingCandidatesResponse,
         ShardSettingResponse,
         ShardSFTPResponse,
-        ShardSnapshotsResponse,
-        ShardStateResponse,
         ShardUpdateResponse,
         ShardUploadChunkResponse,
         ShardUploadSessionResponse,
         ShardUsage,
         SnapshotMetaRequest,
         SnapshotRequest,
-        SnapshotResponse,
         SnapshotSettingsRequest,
         SnapshotSettingsResponse,
         SpireIPOptionResponse,
@@ -358,7 +352,7 @@ class Shard:
         """
         return await self._module.get_shard_archive_info(shard_id=self.id, path=path)
 
-    async def get_console_history(self, *, limit: Optional[int] = None, before_seq: Optional[int] = None) -> ShardConsoleHistoryResponse:
+    async def get_console_history(self, *, limit: Optional[int] = None, before_seq: Optional[int] = None) -> ConsoleHistory:
         """Get this shard's console lines, see :meth:`ShardModule.get_shard_console_history`.
 
         |coro|
@@ -464,7 +458,7 @@ class Shard:
         """
         return await self._module.get_shard_managed_files(shard_id=self.id, path=path)
 
-    async def get_metrics(self, *, minutes: Optional[int] = None) -> list[ShardMetricResponse]:
+    async def get_metrics(self, *, minutes: Optional[int] = None) -> list[ShardMetrics]:
         """Get this shard's recent load, see :meth:`ShardModule.get_shard_metrics`.
 
         |coro|
@@ -472,7 +466,7 @@ class Shard:
         """
         return await self._module.get_shard_metrics(shard_id=self.id, minutes=minutes)
 
-    async def get_migration(self) -> Optional[ShardMigrationResponse]:
+    async def get_migration(self) -> Optional[ShardMigration]:
         """Get this shard's latest move, see :meth:`ShardModule.get_shard_migration`.
 
         |coro|
@@ -504,7 +498,7 @@ class Shard:
         """
         return await self._module.get_shard_schedule_catalog(shard_id=self.id)
 
-    async def get_schedule_history(self, schedule_id: str, *, limit: Optional[int] = None) -> list[ScheduleExecutionResponse]:
+    async def get_schedule_history(self, schedule_id: str, *, limit: Optional[int] = None) -> list[ScheduleExecution]:
         """Get the runs of one of this shard's schedules, see :meth:`ShardModule.get_shard_schedule_history`.
 
         |coro|
@@ -560,7 +554,7 @@ class Shard:
         """
         return await self._module.get_shard_snapshot_settings(shard_id=self.id)
 
-    async def get_snapshots(self) -> ShardSnapshotsResponse:
+    async def get_snapshots(self) -> ShardSnapshots:
         """Get this shard's snapshots, see :meth:`ShardModule.get_shard_snapshots`.
 
         |coro|
@@ -568,7 +562,7 @@ class Shard:
         """
         return await self._module.get_shard_snapshots(shard_id=self.id)
 
-    async def get_state(self) -> ShardStateResponse:
+    async def get_state(self) -> ShardStatus:
         """Get this shard's live state, see :meth:`ShardModule.get_shard_state`.
 
         |coro|
@@ -663,7 +657,7 @@ class Shard:
         """
         return await self._module.restore_shard(shard_id=self.id)
 
-    async def restore_snapshot(self, snapshot_id: str) -> SnapshotResponse:
+    async def restore_snapshot(self, snapshot_id: str) -> Snapshot:
         """Put this shard back to one of its snapshots, see :meth:`ShardModule.restore_shard_snapshot`.
 
         |coro|
@@ -855,7 +849,7 @@ class Shard:
         *,
         description: str = "",
         sticky: bool = False,
-    ) -> SnapshotResponse:
+    ) -> Snapshot:
         """Take a snapshot (a backup) of this shard, see :meth:`ShardModule.take_shard_snapshot`.
 
         |coro|
@@ -1698,7 +1692,7 @@ class ShardModule(Base):
         *,
         limit: Optional[int] = None,
         before_seq: Optional[int] = None,
-    ) -> ShardConsoleHistoryResponse:
+    ) -> ConsoleHistory:
         """Get a shard's console lines, oldest first.
 
         |coro|
@@ -1716,23 +1710,18 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`ShardConsoleHistoryResponse`
+        :class:`ConsoleHistory`
             The lines, each marker's `state` a :class:`ShardState`.
 
         """
         filters: dict[str, Optional[int]] = {"limit": limit, "beforeSeq": before_seq}
         parameters: dict[str, int] = self._without_none(mapping=filters)
-        result: ShardConsoleHistoryResponse = await self._request(
+        result: dict[str, Any] = await self._request(
             method="GET",
             path=f"/api/shards/{shard_id}/console/history",
             parameters=parameters,
         )
-
-        for line in result["lines"]:
-            if line["state"] is not None:
-                line["state"] = self._to_enum(ShardState, line["state"])
-
-        return result
+        return ConsoleHistory(data=result)
 
     async def get_shard_credential(self, shard_id: str) -> ShardCredentialResponse:
         """Get the stored secret a shard uses, eg. a Steam login, and the ones it could use.
@@ -2004,7 +1993,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/managed", parameters={"path": path})
 
-    async def get_shard_metrics(self, shard_id: str, *, minutes: Optional[int] = None) -> list[ShardMetricResponse]:
+    async def get_shard_metrics(self, shard_id: str, *, minutes: Optional[int] = None) -> list[ShardMetrics]:
         """Get a running shard's recent load, one sample every few seconds.
 
         |coro|
@@ -2020,14 +2009,15 @@ class ShardModule(Base):
 
         Returns
         -------
-        list[:class:`ShardMetricResponse`]
+        list[:class:`ShardMetrics`]
             The samples, empty while stopped.
 
         """
         parameters: Optional[dict[str, int]] = {"minutes": minutes} if minutes is not None else None
-        return await self._request(method="GET", path=f"/api/shards/{shard_id}/metrics", parameters=parameters)
+        result: list[dict[str, Any]] = await self._request(method="GET", path=f"/api/shards/{shard_id}/metrics", parameters=parameters)
+        return [ShardMetrics(data=entry) for entry in result]
 
-    async def get_shard_migration(self, shard_id: str) -> Optional[ShardMigrationResponse]:
+    async def get_shard_migration(self, shard_id: str) -> Optional[ShardMigration]:
         """Get a shard's latest move, running or done.
 
         |coro|
@@ -2044,16 +2034,12 @@ class ShardModule(Base):
 
         Returns
         -------
-        Union[:class:`ShardMigrationResponse`, None]
+        Union[:class:`ShardMigration`, None]
             The move, its `status` a :class:`MigrationStatus`; `None` when there's none (a 204).
 
         """
-        result: Optional[ShardMigrationResponse] = await self._request(method="GET", path=f"/api/shards/{shard_id}/migration")
-
-        if result is not None:
-            result["status"] = self._to_enum(MigrationStatus, result["status"])
-
-        return result
+        result: Optional[dict[str, Any]] = await self._request(method="GET", path=f"/api/shards/{shard_id}/migration")
+        return ShardMigration(data=result) if result is not None else None
 
     async def get_shard_migration_targets(self, shard_id: str) -> list[ShardMigrationTargetResponse]:
         """Get the other datastores on a shard's own spire it could move to, for :meth:`start_shard_migration`.
@@ -2124,7 +2110,7 @@ class ShardModule(Base):
         schedule_id: str,
         *,
         limit: Optional[int] = None,
-    ) -> list[ScheduleExecutionResponse]:
+    ) -> list[ScheduleExecution]:
         """Get the runs of one of a shard's schedules.
 
         |coro|
@@ -2142,12 +2128,14 @@ class ShardModule(Base):
 
         Returns
         -------
-        list[:class:`ScheduleExecutionResponse`]
+        list[:class:`ScheduleExecution`]
             The runs.
 
         """
         parameters: Optional[dict[str, int]] = {"limit": limit} if limit is not None else None
-        return await self._request(method="GET", path=f"/api/shards/{shard_id}/schedules/{schedule_id}/history", parameters=parameters)
+        path: str = f"/api/shards/{shard_id}/schedules/{schedule_id}/history"
+        result: list[dict[str, Any]] = await self._request(method="GET", path=path, parameters=parameters)
+        return [ScheduleExecution(data=entry) for entry in result]
 
     async def get_shard_schedules(self, shard_id: str) -> list[ShardScheduleResponse]:
         """Get a shard's schedules.
@@ -2287,14 +2275,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots/settings")
 
-    def _snapshot_enums(self, snapshot: SnapshotResponse) -> SnapshotResponse:
-        snapshot["kind"] = self._to_enum(SnapshotKind, snapshot["kind"])
-        snapshot["content"] = self._to_enum(SnapshotContent, snapshot["content"])
-        snapshot["status"] = self._to_enum(SnapshotState, snapshot["status"])
-        snapshot["stage"] = self._to_enum(SnapshotStage, snapshot["stage"])
-        return snapshot
-
-    async def get_shard_snapshots(self, shard_id: str) -> ShardSnapshotsResponse:
+    async def get_shard_snapshots(self, shard_id: str) -> ShardSnapshots:
         """Get a shard's snapshots (backups) as a tree, with any restore in progress.
 
         |coro|
@@ -2308,19 +2289,14 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`ShardSnapshotsResponse`
+        :class:`ShardSnapshots`
             The snapshots, their numbers as the library's enums, eg. `SnapshotKind`.
 
         """
-        result: ShardSnapshotsResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots")
+        result: dict[str, Any] = await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots")
+        return ShardSnapshots(data=result)
 
-        for snapshot in result["nodes"]:
-            self._snapshot_enums(snapshot=snapshot)
-
-        result["restoreStage"] = self._to_enum(SnapshotStage, result["restoreStage"])
-        return result
-
-    async def get_shard_state(self, shard_id: str) -> ShardStateResponse:
+    async def get_shard_state(self, shard_id: str) -> ShardStatus:
         """Get a shard's live state.
 
         |coro|
@@ -2334,13 +2310,12 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`ShardStateResponse`
+        :class:`ShardStatus`
             The state, its `status` a :class:`ShardState`.
 
         """
-        result: ShardStateResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}/state")
-        result["status"] = self._to_enum(ShardState, result["status"])
-        return result
+        result: dict[str, Any] = await self._request(method="GET", path=f"/api/shards/{shard_id}/state")
+        return ShardStatus(data=result)
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # The item shape isn't known yet; the web panel reads `id`, `name` and `sessionId` from each.
@@ -2576,7 +2551,7 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/restore")
 
-    async def restore_shard_snapshot(self, shard_id: str, snapshot_id: str) -> SnapshotResponse:
+    async def restore_shard_snapshot(self, shard_id: str, snapshot_id: str) -> Snapshot:
         """Put a shard back to one of its snapshots. It works on a running shard too.
 
         |coro|
@@ -2594,13 +2569,13 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`SnapshotResponse`
+        :class:`Snapshot`
             The snapshot being restored; follow the restore with :meth:`get_shard_snapshots`.
 
         """
         path: str = f"/api/shards/{shard_id}/snapshots/{snapshot_id}/restore"
-        result: SnapshotResponse = await self._request(method="POST", path=path, data={})
-        return self._snapshot_enums(snapshot=result)
+        result: dict[str, Any] = await self._request(method="POST", path=path, data={})
+        return Snapshot(data=result)
 
     async def run_shard_schedule(self, shard_id: str, schedule_id: str) -> ScheduleRunResponse:
         """Run one of a shard's schedules now. A disabled one is logged as skipped.
@@ -2994,7 +2969,7 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/sleep``
 
-        See `ShardStateResponse.sleep` for if it can; a template whose sleep port doesn't exist can't.
+        See `ShardStatus.sleep` for if it can; a template whose sleep port doesn't exist can't.
 
         Parameters
         ----------
@@ -3138,7 +3113,7 @@ class ShardModule(Base):
         *,
         description: str = "",
         sticky: bool = False,
-    ) -> SnapshotResponse:
+    ) -> Snapshot:
         """Take a snapshot (a backup) of a shard.
 
         |coro|
@@ -3162,13 +3137,13 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`SnapshotResponse`
+        :class:`Snapshot`
             The snapshot, still running; follow it with :meth:`get_shard_snapshots`.
 
         """
         data: SnapshotRequest = {"kind": kind, "content": content, "name": name, "description": description, "sticky": sticky}
-        result: SnapshotResponse = await self._request(method="POST", path=f"/api/shards/{shard_id}/snapshots", data=data)
-        return self._snapshot_enums(snapshot=result)
+        result: dict[str, Any] = await self._request(method="POST", path=f"/api/shards/{shard_id}/snapshots", data=data)
+        return Snapshot(data=result)
 
     async def unsuspend_shard(self, shard_id: str) -> ShardResponse:
         """Let a suspended shard start again.

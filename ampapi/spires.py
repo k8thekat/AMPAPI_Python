@@ -24,6 +24,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from .base import Base
+from .objects import SpireStatus
 
 if TYPE_CHECKING:
     from ._types import (
@@ -48,7 +49,6 @@ if TYPE_CHECKING:
         SpireRosterResponse,
         SpireStartupEntry,
         SpireStartupResponse,
-        SpireStateResponse,
         SpireStorageResponse,
         SpireUsageIntervalResponse,
         SpireUsageResponse,
@@ -268,14 +268,14 @@ class Spire:
         """
         return await self._module.get_spire_startup(spire_id=self.id)
 
-    async def get_state(self) -> SpireStateResponse:
+    async def get_state(self) -> SpireStatus:
         """Get this spire's live load, see :meth:`SpireModule.get_spire_state`.
 
         |coro|
 
         Returns
         -------
-        :class:`SpireStateResponse`
+        :class:`SpireStatus`
             The spire's load, memory, network and machine details.
 
         """
@@ -928,7 +928,7 @@ class SpireModule(Base):
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/startup")
 
-    async def get_spire_state(self, spire_id: str) -> SpireStateResponse:
+    async def get_spire_state(self, spire_id: str) -> SpireStatus:
         """Get a spire's live load and the machine it runs on.
 
         |coro|
@@ -942,11 +942,12 @@ class SpireModule(Base):
 
         Returns
         -------
-        :class:`SpireStateResponse`
+        :class:`SpireStatus`
             The spire's load, memory, network and machine details.
 
         """
-        return await self._request(method="GET", path=f"/api/spires/{spire_id}/state")
+        result: dict[str, Any] = await self._request(method="GET", path=f"/api/spires/{spire_id}/state")
+        return SpireStatus(data=result)
 
     async def get_spire_usage(self, spire_id: str) -> Optional[SpireUsageResponse]:
         """Get a spire's disk use per datastore, from its last scan.

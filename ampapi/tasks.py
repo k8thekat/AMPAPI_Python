@@ -21,13 +21,10 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import Any
 
-from ._enums import TaskState
 from .base import Base
-
-if TYPE_CHECKING:
-    from ._types import RunningTaskResponse
+from .objects import RunningTask
 
 __all__ = ("TaskModule",)
 
@@ -99,7 +96,7 @@ class TaskModule(Base):
 
     # TODO: Drop the failed move sentence once its task leaves with its move (U22c).
     # AMP 3.0.0.6 keeps a failed move's task until it is deleted.
-    async def get_running_tasks(self) -> list[RunningTaskResponse]:
+    async def get_running_tasks(self) -> list[RunningTask]:
         """Get the tasks running now, and those that finished in the last few seconds.
 
         |coro|
@@ -110,13 +107,9 @@ class TaskModule(Base):
 
         Returns
         -------
-        list[:class:`RunningTaskResponse`]
+        list[:class:`RunningTask`]
             The tasks, each `state` a :class:`TaskState`.
 
         """
-        result: list[RunningTaskResponse] = await self._request(method="GET", path="/api/running-tasks")
-
-        for task in result:
-            task["state"] = self._to_enum(TaskState, task["state"])
-
-        return result
+        result: list[dict[str, Any]] = await self._request(method="GET", path="/api/running-tasks")
+        return [RunningTask(data=entry) for entry in result]
