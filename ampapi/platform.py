@@ -28,10 +28,13 @@ from .base import Base
 if TYPE_CHECKING:
     from ._types import (
         BrandingResponse,
+        BusExpandResponse,
         DiagnosticsResponse,
         FirewallResponse,
         GatewayEligibilityResponse,
+        GatewayPreflightResponse,
         HealthStatusResponse,
+        HTTPSCheckResponse,
         HTTPSSetupStatusResponse,
         HTTPSStateResponse,
         LicenceAgreementResponse,
@@ -41,6 +44,8 @@ if TYPE_CHECKING:
         LicenceTermsAcceptance,
         MessageBusStatsResponse,
         MonitoringThresholdsResponse,
+        PublicationResponse,
+        SettingActionResponse,
         SettingsManifestResponse,
         SystemBusResponse,
         UpdateStatusResponse,
@@ -59,7 +64,7 @@ class PlatformModule(Base):
     """
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; no capture shows the response yet.
+    # Only refusals were captured, as the test licence needs no terms.
     async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
         """Accept the terms for a licence that is already active, eg. one whose `standing` is ``"TermsRequired"``.
 
@@ -74,7 +79,7 @@ class PlatformModule(Base):
         grade_id : :class:`str`
             The licence's `gradeId`.
         key : :class:`str`
-            The licence key; a wrong one gets its own error code.
+            The licence key.
         terms : :class:`LicenceTermsAcceptance`
             The terms acceptance, filled from :meth:`get_licence_agreement`.
 
@@ -83,18 +88,27 @@ class PlatformModule(Base):
         Any
             AMP's reply as it came, `None` for an empty one.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If the licence needs no terms (400, ``"licence.error.termsNotApplicable"``), which is the case when
+            :meth:`query_licence` reads `termsRequired` as `False`. A wrong `key` gets 502
+            (``"licence.error.termsUnavailable"``), as AMP asks the licensing service before it checks the key.
+
         """
         data: dict[str, Any] = {**terms, "key": key}
         return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The web panel reads the warnings that are left from it; no capture shows the response yet.
-    async def acknowledge_platform_warning(self, warning_id: str) -> Any:
+    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
+    # Only seen empty, as no warning existed to dismiss; the items are those of `get_platform_warnings`.
+    async def acknowledge_platform_warning(self, warning_id: str) -> list[dict[str, Any]]:
         """Dismiss one of the panel's warnings.
 
         |coro|
 
         Endpoint: ``POST /api/monitoring/platform-warnings/acknowledge``
+
+        An unknown `warning_id` is not an error; AMP answers with the warnings as they are (U20a).
 
         Parameters
         ----------
@@ -103,8 +117,8 @@ class PlatformModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        list[dict[:class:`str`, Any]]
+            The warnings left, as :meth:`get_platform_warnings` lists them.
 
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
@@ -117,8 +131,13 @@ class PlatformModule(Base):
         Endpoint: ``POST /api/licence``
 
         .. note::
-            The panel restarts once licensed. :meth:`get_health_status` reads ``"starting"`` until it is ``"ready"``
-            again, and a setting read before then can look unapplied.
+            The reply comes back before the licence service answers, so its `shardLimit`, `keyShardsTotal`, `issuedAt`
+            and terms versions are `None` and `limitKnown` is `False` (U19b). :meth:`get_licence_status` has them a
+            few seconds later.
+
+        A panel was seen restarting once licensed: :meth:`get_health_status` reads ``"starting"`` until it is ``"ready"``
+        again, and a setting read before then can look unapplied. Activating a key again after :meth:`delete_licence`
+        kept the panel ``"ready"`` with no restart.
 
         Parameters
         ----------
@@ -132,13 +151,13 @@ class PlatformModule(Base):
         Returns
         -------
         :class:`LicenceResponse`
-            The licence AMP activated.
+            The licence AMP activated (201).
 
         """
         return await self._request(method="POST", path="/api/licence", data={"key": key, "terms": terms})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; no capture shows the response yet.
+    # Only the refusal was captured, as no newer version existed on the test panel's stream.
     async def apply_panel_update(self) -> Any:
         """Update the panel's AMP to the latest version on its stream; the panel restarts.
 
@@ -153,12 +172,15 @@ class PlatformModule(Base):
         Any
             AMP's reply as it came, `None` for an empty one.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no newer version on the stream (400, ``"updates.error.noUpdate"``); nothing restarts then.
+
         """
         return await self._request(method="POST", path="/api/updates/apply", data={})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; no capture shows the response yet.
-    async def check_https(self, host_name: str) -> Any:
+    async def check_https(self, host_name: str) -> HTTPSCheckResponse:
         """Check a domain name is ready for AMP's own HTTPS setup, before :meth:`start_https_setup`.
 
         |coro|
@@ -172,14 +194,14 @@ class PlatformModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`HTTPSCheckResponse`
+            The outcome and each check, eg. if the name points at the panel's public address.
 
         """
         return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; it needs a second spire to capture.
+    # Only refusals were captured; a gateway that works needs a front spire other than the shard's own.
     async def create_gateway(self, shard_id: str, front_spire_id: str) -> Any:
         """Bind a shard to a front spire, so players reach it through that spire.
 
@@ -192,20 +214,25 @@ class PlatformModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         front_spire_id : :class:`str`
-            The front spire's ID.
+            The front spire's ID. It needs its ``"spire.publicHost"`` setting set, see
+            :meth:`SpireModule.set_spire_settings`.
 
         Returns
         -------
         Any
             AMP's reply as it came, `None` for an empty one.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If the front spire doesn't exist or has no public host (400, ``"networking.error.frontNotRoutable"``), or
+            the shard already runs on it (400, ``"networking.error.gatewaySameSpire"``).
+
         """
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
         return await self._request(method="POST", path="/api/networking/gateways", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; it needs a second spire to capture.
-    async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> Any:
+    async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> PublicationResponse:
         """Forward a public port on a front spire to a shard's port.
 
         |coro|
@@ -215,25 +242,31 @@ class PlatformModule(Base):
         Parameters
         ----------
         front_spire_id : :class:`str`
-            The front spire's ID.
+            The front spire's ID; it can be the shard's own spire.
         public_port : :class:`int`
             The port players connect to.
         shard_id : :class:`str`
             The shard's ID.
         port_reference : :class:`str`
-            The shard port's name in its template, eg. ``"ServerPort"``.
+            The shard port's `ref`, eg. ``"ServerPort"``, see :meth:`ShardModule.get_shard_ports`.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`PublicationResponse`
+            The publication AMP made (201), turned on, with the `protocol` of the shard's port.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If `public_port` isn't a port number (400, ``"networking.error.invalidPort"``), or the shard has no port
+            named `port_reference` (400, ``"networking.error.portRefMissing"``).
 
         """
         data: dict[str, Any] = {"frontSpireId": front_spire_id, "publicPort": public_port, "shardId": shard_id, "portRef": port_reference}
         return await self._request(method="POST", path="/api/networking/publications", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; it needs a second spire to capture.
+    # Only an unknown gateway's 404 was captured, as no gateway could be made.
     async def delete_gateway(self, gateway_id: str) -> Any:
         """Remove a gateway.
 
@@ -254,14 +287,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/networking/gateways/{gateway_id}")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def delete_licence(self, spire_id: str, grade_id: str) -> Any:
+    async def delete_licence(self, spire_id: str, grade_id: str) -> None:
         """Remove a licence from the panel.
 
         |coro|
 
         Endpoint: ``DELETE /api/licence/{spire_id}/{grade_id}``
+
+        With no licence left, :meth:`get_health_status` reads ``"preview-licence"`` until one is activated again.
 
         Parameters
         ----------
@@ -270,34 +303,34 @@ class PlatformModule(Base):
         grade_id : :class:`str`
             The licence's `gradeId`.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If the panel has no such licence, eg. it was removed already (404).
 
         """
-        return await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
+        await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; the POST to it answers with the HTTPS state.
-    async def delete_own_proxy(self) -> Any:
+    async def delete_own_proxy(self) -> HTTPSStateResponse:
         """Stop trusting the reverse proxy :meth:`set_own_proxy` set.
 
         |coro|
 
         Endpoint: ``DELETE /api/https/own-proxy``
 
+        .. note::
+            For up to 3 seconds after, :meth:`get_https_state` and :meth:`Session.get_capabilities` still show the
+            proxy (U19a). Use the state this returns.
+
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`HTTPSStateResponse`
+            The HTTPS state, with `mode` ``"none"`` and no `trustedProxies`.
 
         """
         return await self._request(method="DELETE", path="/api/https/own-proxy")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; it needs a second spire to capture.
-    async def delete_publication(self, publication_id: str) -> Any:
+    async def delete_publication(self, publication_id: str) -> None:
         """Remove a public port forward.
 
         |coro|
@@ -309,39 +342,38 @@ class PlatformModule(Base):
         publication_id : :class:`str`
             The publication's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no such publication, eg. it was removed already (404).
 
         """
-        return await self._request(method="DELETE", path=f"/api/networking/publications/{publication_id}")
+        await self._request(method="DELETE", path=f"/api/networking/publications/{publication_id}")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def delete_setting_secret(self, field_name: str) -> Any:
+    async def delete_setting_secret(self, field_name: str) -> None:
         """Clear a stored secret setting.
 
         |coro|
 
         Endpoint: ``DELETE /api/settings/secrets/{field_name}``
 
+        Clearing one that holds no value is fine too.
+
         Parameters
         ----------
         field_name : :class:`str`
             The setting's `fieldName`, one in `SettingsManifestResponse.secretHasValue`.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no such setting (400, ``"settings.error.unknownNode"``) or it isn't a secret
+            (400, ``"settings.error.notASecret"``).
 
         """
-        return await self._request(method="DELETE", path=f"/api/settings/secrets/{field_name}")
+        await self._request(method="DELETE", path=f"/api/settings/secrets/{field_name}")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; no capture shows the response yet.
-    async def expand_message_bus(self) -> Any:
+    async def expand_message_bus(self) -> BusExpandResponse:
         """Open the message bus to other machines, which a new spire needs to join.
 
         |coro|
@@ -351,10 +383,12 @@ class PlatformModule(Base):
         .. warning::
             It changes how the panel is reached, and there's no call to close the bus again.
 
+        AMP opens the bus's port on the host's firewall. Calling it again on an open bus answers the same.
+
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`BusExpandResponse`
+            How to reach the bus now, and the port AMP opened.
 
         """
         return await self._request(method="POST", path="/api/system/bus/expand")
@@ -605,9 +639,7 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/monitoring/platform-warnings")
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # Only seen empty, as a publication needs a second spire.
-    async def get_publications(self) -> list[dict[str, Any]]:
+    async def get_publications(self) -> list[PublicationResponse]:
         """Get the public port forwards from front spires to shards.
 
         |coro|
@@ -616,7 +648,7 @@ class PlatformModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
+        list[:class:`PublicationResponse`]
             The publications.
 
         """
@@ -686,14 +718,16 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/updates/check")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The web panel reads a `conflicts` list from it; it needs a second spire to capture.
-    async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> Any:
+    async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> GatewayPreflightResponse:
         """Check a gateway can be made, before :meth:`create_gateway`.
 
         |coro|
 
         Endpoint: ``POST /api/networking/gateways/preflight``
+
+        .. warning::
+            AMP checks little here: an empty body, and a gateway on the shard's own spire that :meth:`create_gateway`
+            refuses, both pass with no conflicts (U20b).
 
         Parameters
         ----------
@@ -704,8 +738,8 @@ class PlatformModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`GatewayPreflightResponse`
+            What stands in the way of the gateway; only seen with no conflicts.
 
         """
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
@@ -732,7 +766,7 @@ class PlatformModule(Base):
         return await self._request(method="POST", path="/api/licence/query", data={"key": key})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; no capture shows the response yet.
+    # Only the refusal was captured, as the test panel uses its own proxy rather than AMP's HTTPS.
     async def recheck_https(self) -> Any:
         """Check AMP's own HTTPS again, eg. its certificate.
 
@@ -745,11 +779,17 @@ class PlatformModule(Base):
         Any
             AMP's reply as it came, `None` for an empty one.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If AMP's own HTTPS isn't set up (409, ``"https.error.notConfigured"``); a proxy from :meth:`set_own_proxy`
+            doesn't count.
+
         """
         return await self._request(method="POST", path="/api/https/recheck")
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; no capture shows the response yet.
+    # The path comes from the web panel's code; not called live, as the test panel has no HTTPS of AMP's own to remove.
     async def remove_https(self) -> Any:
         """Remove AMP's own HTTPS; the panel stays on plain HTTP at its own port.
 
@@ -765,9 +805,7 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/remove")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The web panel reads a `detail` text from it; no capture shows the response yet.
-    async def run_setting_action(self, action_id: str) -> Any:
+    async def run_setting_action(self, action_id: str) -> SettingActionResponse:
         """Run one of the settings page's buttons, eg. sending a test email.
 
         |coro|
@@ -777,12 +815,18 @@ class PlatformModule(Base):
         Parameters
         ----------
         action_id : :class:`str`
-            The action's `id` from `SettingsManifestResponse.actions`, eg. ``"smtp.test"``.
+            The action's `id` from `SettingsManifestResponse.actions`, eg. ``"templates.sync"``.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SettingActionResponse`
+            What the action did, as a sentence.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no such action (400, ``"settings.error.unknownAction"``) or the action failed, eg. Steam
+            refused the key that ``"steam-key.check"`` tests (400, ``"settings.analytics.error.steamKeyRejected"``).
 
         """
         return await self._request(method="POST", path=f"/api/settings/actions/{action_id}")
@@ -801,7 +845,8 @@ class PlatformModule(Base):
         Parameters
         ----------
         address : :class:`str`
-            The proxy's address as AMP sees it, eg. ``"127.0.0.1"`` for a proxy on the same machine.
+            The proxy's IP address as AMP sees it, eg. ``"127.0.0.1"`` for a proxy on the same machine, or a network
+            in CIDR form.
         api_only : :class:`bool`, optional
             If AMP should serve only its API from its next restart, leaving the web app to the proxy, or not,
             by default False.
@@ -809,12 +854,17 @@ class PlatformModule(Base):
         Returns
         -------
         :class:`HTTPSStateResponse`
-            The HTTPS state, with the proxy in `trustedProxies`.
+            The HTTPS state, with `mode` ``"ownProxy"`` and the proxy in `trustedProxies`.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If `address` is neither an IP address nor a network (400, ``"https.error.proxyAddressInvalid"``).
 
         """
         return await self._request(method="POST", path="/api/https/own-proxy", data={"address": address, "apiOnly": api_only})
 
-    async def set_settings(self, values: dict[str, str]) -> Optional[dict[str, Any]]:
+    async def set_settings(self, values: dict[str, str]) -> None:
         """Change one or more platform settings.
 
         |coro|
@@ -825,20 +875,19 @@ class PlatformModule(Base):
         ----------
         values : dict[:class:`str`, :class:`str`]
             Each setting's `SettingSpec.fieldName` to its new value, a string like the manifest's values,
-            eg. ``{"public-address.publicUrl": "https://amp.example.com"}``.
+            eg. ``{"public-address.publicUrl": "https://amp.example.com"}``. A secret setting takes its value here
+            too; the manifest then shows it in `secretHasValue`, never the value.
 
-        Returns
-        -------
-        Union[dict[:class:`str`, Any], None]
-            `None` for the empty 204 AMP sent in every capture so far.
-            The web panel reads a `notices` list from a reply with a body, which we haven't seen yet.
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no such setting (400, ``"settings.error.unknownNode"``) or a value doesn't fit it
+            (400, ``"settings.error.invalidValue"``).
 
         """
-        return await self._request(method="POST", path="/api/settings/values", data=values)
+        await self._request(method="POST", path="/api/settings/values", data=values)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The web panel reads the new update status from it, likely an `UpdateStatusResponse`; not captured yet.
-    async def set_update_stream(self, stream: str) -> Any:
+    async def set_update_stream(self, stream: str) -> UpdateStatusResponse:
         """Move the panel to another release stream.
 
         |coro|
@@ -848,18 +897,24 @@ class PlatformModule(Base):
         Parameters
         ----------
         stream : :class:`str`
-            One of `UpdateStatusResponse.availableStreams`, eg. ``"Mainline"`` or ``"Preview"``.
+            One of `UpdateStatusResponse.availableStreams`, eg. ``"Mainline"`` or ``"Preview"``, in any case.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`UpdateStatusResponse`
+            The update status on the new stream. A stream with no build yet has an empty `latestVersion` and the
+            `note` ``"updates.error.streamMissing"``.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the panel can't follow that stream (400, ``"updates.error.streamInvalid"``).
 
         """
         return await self._request(method="PUT", path="/api/updates/stream", data={"stream": stream})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; a LAN panel can't finish it, so no capture shows the response yet.
+    # Only the refusal was captured, as the test panel uses its own proxy and a LAN panel can't finish it.
     async def start_https_setup(self, host_name: str) -> Any:
         """Start AMP's own HTTPS setup, which asks Let's Encrypt for a certificate.
 
@@ -880,19 +935,29 @@ class PlatformModule(Base):
         Any
             AMP's reply as it came, `None` for an empty one.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If a proxy from :meth:`set_own_proxy` is set (409, ``"https.error.ownProxyActive"``); clear it with
+            :meth:`delete_own_proxy` first.
+
         """
         return await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The body comes from the web panel's code; it needs a second spire to capture.
-    async def update_publication(self, publication_id: str, *, enabled: Optional[bool] = None, public_port: Optional[int] = None) -> Any:
+    async def update_publication(
+        self,
+        publication_id: str,
+        *,
+        enabled: Optional[bool] = None,
+        public_port: Optional[int] = None,
+    ) -> PublicationResponse:
         """Turn a public port forward on or off, or move it to another port.
 
         |coro|
 
         Endpoint: ``PUT /api/networking/publications/{publication_id}``
 
-        The web panel sends one change at a time.
+        The two changes are separate: moving the port leaves `enabled` as it was. With neither, AMP changes nothing.
 
         Parameters
         ----------
@@ -905,8 +970,13 @@ class PlatformModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`PublicationResponse`
+            The publication after the change.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no such publication (404).
 
         """
         data: dict[str, Any] = {"enabled": enabled, "publicPort": public_port}

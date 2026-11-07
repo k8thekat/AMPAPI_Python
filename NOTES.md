@@ -20,7 +20,8 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
   several installations. Each panel throttles sign-ins on its own, which is the main reason to have two.
 - `vm5` (`amp3-spire`, 192.168.4.235) is not a panel of its own: it joined vm4 as a second spire on 2026-11-07
   (#3-47.15), for moving and cloning shards between spires. Its VM login is `[VM_AMP3_SPIRE]`; its API is vm4's.
-- A panel restarts once licensed (`phase: "starting"`); a setting checked before it reads `ready` can look unapplied.
+- A panel restarted once on its first licensing (`phase: "starting"`); a setting checked before it reads `ready` can
+  look unapplied. Activating again after `DELETE /api/licence` (vm4, 2026-11-07) stayed `ready` with no restart.
 - Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
   kept headers and body.
 

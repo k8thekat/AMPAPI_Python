@@ -48,6 +48,8 @@ __all__ = (
     "AuditTreeResponse",
     "AuditUserCount",
     "BrandingResponse",
+    "BusExpandResponse",
+    "BusFirewallOutcome",
     "BusJoinInfo",
     "CapabilitiesResponse",
     "CodedErrorResponse",
@@ -63,6 +65,9 @@ __all__ = (
     "FirewallRule",
     "FirewallStatus",
     "GatewayEligibilityResponse",
+    "GatewayPreflightResponse",
+    "HTTPSCheck",
+    "HTTPSCheckResponse",
     "HTTPSSetupStatusResponse",
     "HTTPSStateResponse",
     "HealthStatusResponse",
@@ -97,6 +102,7 @@ __all__ = (
     "ProblemDetailsResponse",
     "ProfileResponse",
     "ProfileSessionResponse",
+    "PublicationResponse",
     "QueryParameters",
     "ReasonErrorResponse",
     "RecoveryCodesResponse",
@@ -119,6 +125,7 @@ __all__ = (
     "ScheduleTaskParameter",
     "ScheduleTrigger",
     "SettingAction",
+    "SettingActionResponse",
     "SettingCandidate",
     "SettingSpec",
     "SettingsManifestResponse",
@@ -160,7 +167,10 @@ __all__ = (
     "SnapshotResponse",
     "SnapshotSettingsResponse",
     "SpireCPU",
+    "SpireEnrollmentAdmission",
+    "SpireEnrollmentCreatedResponse",
     "SpireEnrollmentHostResponse",
+    "SpireEnrollmentResponse",
     "SpireIPAddress",
     "SpireIPOptionResponse",
     "SpireImportScanResponse",
@@ -478,16 +488,35 @@ class BrandingResponse(TypedDict):
     """Seen as ``"proteus"``, lower case where the settings say ``"Proteus"``."""
 
 
+class BusExpandResponse(TypedDict):
+    """``POST /api/system/bus/expand``, the message bus once it's open to other machines."""
+
+    joinInfo: BusJoinInfo
+    "How to reach the bus now, as `SystemBusResponse.joinInfo` reads from then on."
+    firewall: BusFirewallOutcome
+
+
+class BusFirewallOutcome(TypedDict):
+    """The port AMP opened on the host for the message bus, from `BusExpandResponse.firewall`."""
+
+    outcome: str
+    """Seen as ``"Open"``."""
+    port: int
+    "Seen as 4222."
+    generation: int
+    agentRunning: bool
+
+
 class BusJoinInfo(TypedDict):
     """What another machine needs to reach the message bus, from `SystemBusResponse.joinInfo`."""
 
     servers: list[str]
-    """eg. ``["tls://127.0.0.1:4222"]``."""
+    """eg. ``["tls://127.0.0.1:4222"]``, then the machine's own network address once the bus is open to other machines."""
     prefix: str
     hostCandidates: list[str]
     caCert: str
     joinBlob: str
-    "Empty while the bus isn't open to other machines."
+    "Only seen empty, even with the bus open; the join file comes from `SpireModule.create_spire_enrollment`."
 
 
 class CapabilitiesResponse(TypedDict):
@@ -698,25 +727,69 @@ class FirewallStatus(TypedDict):
 
 
 class GatewayEligibilityResponse(TypedDict):
-    """``GET /api/networking/gateway-eligibility``, what can take part in a gateway. Both were only seen empty."""
+    """``GET /api/networking/gateway-eligibility``, what can take part in a gateway."""
 
     containerShardIds: list[str]
+    "Only seen empty."
     gatewayFrontSpireIds: list[str]
+    """A spire is listed once its ``"spire.publicHost"`` setting is set."""
+
+
+class GatewayPreflightResponse(TypedDict):
+    """``POST /api/networking/gateways/preflight``, what stands in the way of a gateway."""
+
+    conflicts: list[Any]
+    "Only seen empty, even for a gateway `PlatformModule.create_gateway` refuses (U20b)."
 
 
 class HealthStatusResponse(TypedDict):
     """``GET /api/health/status``, which needs no session.
 
     `phase` runs through the first-run setup (``"setup-database"``, ``"setup-admin"``, ``"preview-licence"``) to ``"ready"``.
+    A panel with no licence reads ``"preview-licence"`` again, and one joining as a spire reads ``"starting"`` until it is approved.
     """
 
     phase: str
     message: Optional[str]
+    """A translation key, eg. ``"auth.setup.joining.awaitingApproval"`` while a joining machine waits for
+    `SpireModule.approve_spire_enrollment`."""
     preview: Optional[PreviewStatus]
     "Set on a preview build."
     messageParams: Optional[dict[str, Any]]
-    "Only seen as `None`."
+    """Values for the `message` translation, eg. the `fingerprint` the panel's admin compares before approving."""
     plainText: bool
+
+
+class HTTPSCheck(TypedDict):
+    """One check from `HTTPSCheckResponse.checks`."""
+
+    key: str
+    "Which check it is; its values weren't recorded yet."
+    state: int
+    "Seen as 2 for a pass and 3 for a fail."
+    code: Optional[str]
+    """A translation key for the result, eg. ``"https.check.resolved"`` or ``"https.check.addressMismatch"``."""
+    params: Optional[dict[str, str]]
+    "Values for the `code` translation, eg. `host`, `expected` and `found` on an address mismatch."
+    detail: Optional[str]
+    "Only seen as `None`."
+
+
+class HTTPSCheckResponse(TypedDict):
+    """``POST /api/https/check``, if a domain name is ready for AMP's own HTTPS setup."""
+
+    hostName: str
+    outcome: str
+    """Seen as ``"elsewhere"``, for a name that points at another address than the panel's public one."""
+    checks: list[HTTPSCheck]
+    reachability: str
+    """Seen as ``"Nat"``."""
+    externalAddress: str
+    "The panel's public IP address."
+    internalAddress: str
+    "The panel's address on its own network."
+    addresses: list[str]
+    "The addresses the name resolved to."
 
 
 class HTTPSSetupStatusResponse(TypedDict):
@@ -736,7 +809,7 @@ class HTTPSSetupStatusResponse(TypedDict):
 
 
 class HTTPSStateResponse(TypedDict):
-    """``GET /api/https``, the panel's HTTPS setup. ``POST /api/https/own-proxy`` answers with it too."""
+    """``GET /api/https``, the panel's HTTPS setup. Setting and clearing the own proxy answer with it too."""
 
     mode: str
     """Seen as ``"none"`` and ``"ownProxy"``."""
@@ -902,7 +975,8 @@ class LicenceStatusResponse(TypedDict):
 class LicenceTermsAcceptance(TypedDict):
     """The terms acceptance `PlatformModule.activate_licence` and `PlatformModule.accept_licence_terms` send.
 
-    Its keys come from the web panel's code; not yet seen live. Fill it from `LicenceAgreementResponse`.
+    Its keys come from the web panel's code. AMP's checks on `PlatformModule.accept_licence_terms` require `agreementHash`,
+    `attestation` and `locale`, not `termsVersion` or `clickedAt`. Fill it from `LicenceAgreementResponse`.
     """
 
     termsVersion: int
@@ -1197,6 +1271,24 @@ class ProfileSessionResponse(TypedDict):
     "If it's the session this request came from."
 
 
+class PublicationResponse(TypedDict):
+    """One public port forward from ``GET /api/networking/publications``; making or changing one answers with it too."""
+
+    id: str
+    frontSpireId: str
+    "The spire players connect to; it can be the shard's own spire."
+    publicPort: int
+    protocol: str
+    """Seen as ``"UDP"``, taken from the shard's port."""
+    shardId: str
+    portRef: str
+    """The shard port's name in its template, eg. ``"ServerPort"``."""
+    enabled: bool
+    createdAt: str
+    status: Optional[Any]
+    "Only seen as `None`."
+
+
 class ReasonErrorResponse(TypedDict):
     """The body of a refused ``POST /api/Auth/login/second-factor`` (401), eg. a wrong or already used recovery code."""
 
@@ -1474,6 +1566,13 @@ class SettingAction(TypedDict):
     """eg. ``"smtp.test"`` or ``"templates.sync"``."""
     category: str
     "The `SettingSpec.category` it sits under."
+
+
+class SettingActionResponse(TypedDict):
+    """``POST /api/settings/actions/{id}``, what a settings page button did."""
+
+    detail: str
+    """An English sentence, eg. ``"Synced 2 source(s), 0 updated - 248 templates available."``."""
 
 
 class SettingCandidate(TypedDict):
@@ -2107,6 +2206,39 @@ class SpireCPU(TypedDict):
     totalThreads: int
 
 
+class SpireEnrollmentAdmission(TypedDict):
+    """The machine that used a join file, from `SpireEnrollmentResponse.admission`."""
+
+    fingerprint: str
+    """eg. ``"4W26-457D-1PBK"``; the joining machine shows the same one in `HealthStatusResponse.messageParams`."""
+    machineName: str
+    sourceAddress: str
+    """The address and port it came from, eg. ``"192.168.4.235:33002"``."""
+    requestedAt: str
+    lastSeenAt: str
+    expiresAt: str
+    approvedAt: Optional[str]
+    approvedByName: Optional[str]
+    deniedAt: Optional[str]
+    "Only seen as `None`."
+    deniedByName: Optional[str]
+    "Only seen as `None`."
+    suspect: bool
+    "If another machine presented the same join file, from the web panel's text; only seen as `False`."
+    replayCount: int
+    "How many times another machine presented it."
+    replayFingerprint: Optional[str]
+    "The latest other machine's fingerprint; only seen as `None`."
+
+
+class SpireEnrollmentCreatedResponse(TypedDict):
+    """``POST /api/spires/enrollments`` (201), a new join file."""
+
+    enrollment: SpireEnrollmentResponse
+    joinBlob: str
+    "The join file itself, a secret the new machine's setup takes. The enrolment list doesn't send it again."
+
+
 class SpireEnrollmentHostResponse(TypedDict):
     """One address a new spire could join on, from ``GET /api/spires/enrollments/hosts``."""
 
@@ -2118,6 +2250,39 @@ class SpireEnrollmentHostResponse(TypedDict):
     suggested: bool
     note: Optional[str]
     """Seen as ``"needsForward"`` on the public address."""
+
+
+class SpireEnrollmentResponse(TypedDict):
+    """One join file from ``GET /api/spires/enrollments``, newest first. Approving one answers with it too."""
+
+    id: str
+    label: str
+    createdByName: str
+    createdAt: str
+    expiresAt: str
+    status: str
+    """Seen as ``"pending"`` (made), ``"awaitingapproval"`` (a machine used it), ``"approved"``,
+    ``"redeemed"`` (the machine joined) and ``"revoked"``."""
+    redeemedAt: Optional[str]
+    redeemedSpireId: Optional[str]
+    """The spire the machine became, once `status` is ``"redeemed"``."""
+    revokedAt: Optional[str]
+    revokedReason: Optional[str]
+    "`None` when the revoke sent no reason."
+    role: str
+    """Seen as ``"standard"``."""
+    entryNodeHost: Optional[str]
+    "Only seen as `None`, as are the other entry node and tunnel fields; the types are from the web panel's code."
+    entryNodeState: Optional[str]
+    """The web panel knows ``"waiting"``, ``"notpasted"``, ``"unreachable"``, ``"wrongsecret"`` and ``"collected"``."""
+    entryNodeStateCode: Optional[str]
+    entryNodeStateParams: Optional[dict[str, Any]]
+    entryNodeObservedHost: Optional[str]
+    entryNodeBlockedPort: Optional[int]
+    tunnelPhase: Optional[Any]
+    tunnelFault: Optional[Any]
+    admission: Optional[SpireEnrollmentAdmission]
+    "The machine that used the join file; `None` until one does."
 
 
 class SpireImportScanResponse(TypedDict):
@@ -2206,7 +2371,9 @@ class SpireResponse(TypedDict):
     tenantId: str
     """Seen as ``"_root"``."""
     displayName: str
+    """The enrolment's `label` on a spire that joined."""
     description: str
+    """eg. ``"Enrolled machine."`` on a spire that joined."""
     isLocal: bool
     "If it's the machine the panel runs on."
     platform: int
@@ -2229,6 +2396,7 @@ class SpireResponse(TypedDict):
     createdAt: str
     panelPort: int
     busPort: int
+    "Seen as 4222 on the panel's own spire and 0 on one that joined."
     identityPublicKey: str
     role: int
     "Only seen as 0."
@@ -2240,7 +2408,9 @@ class SpireResponse(TypedDict):
     sftpIdleTimeoutSeconds: int
     sftpMaxSessionsPerUser: int
     shardSigningKeyPublic: str
+    "Empty on the panel's own spire, set on one that joined."
     busUserPublicKey: str
+    "Empty on the panel's own spire, set on one that joined."
     captureAgentOutput: bool
     logProcessLaunches: bool
     isPubliclyRoutable: bool
@@ -2675,14 +2845,15 @@ class TokenResponse(TypedDict):
 
 
 class UpdateStatusResponse(TypedDict):
-    """``GET /api/updates/check``, the panel's AMP version against the latest one."""
+    """``GET /api/updates/check``, the panel's AMP version against the latest one. ``PUT /api/updates/stream`` answers with it too."""
 
     currentVersion: str
     stream: str
-    """Seen as ``"Preview"``."""
+    """Seen as ``"Mainline"`` and ``"Preview"``."""
     availableStreams: list[str]
     """eg. ``["Mainline", "Preview"]``."""
     latestVersion: str
+    "Empty on a stream with no build yet."
     updateAvailable: bool
     mandatory: bool
     codename: str
@@ -2693,7 +2864,7 @@ class UpdateStatusResponse(TypedDict):
     "If the panel can update itself; only seen as `False`."
     canChangeStream: bool
     note: Optional[str]
-    "Only seen as `None`."
+    """A translation key, eg. ``"updates.error.streamMissing"`` on a stream with no build yet."""
     installationVersion: str
     spiresBehind: list[Any]
     "Only seen empty."
