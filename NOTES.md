@@ -90,7 +90,7 @@ Seen live on 2026-11-07, vm5 joining vm4; `.scripts/amp3/join_spire.py` runs ste
 2. The panel issues an enrolment, `POST /api/spires/enrollments {label, expiresInHours, hosts}`, answered with
    `{enrollment, joinBlob}`. `GET /api/spires/enrollments/hosts` lists the addresses it can offer.
 3. The new machine is installed without its own first-run setup. Its setup database step takes the blob instead of
-   database servers, `POST /api/Auth/setup/database {"servers": [], "blob": ...}` (with `X-Setup-Token`), after which
+   database servers, `POST /api/auth/setup/database {"servers": [], "blob": ...}` (with `X-Setup-Token`), after which
    its health reads `starting` with `auth.setup.joining.awaitingApproval` and a `fingerprint` to compare.
 4. The panel approves, `POST /api/spires/enrollments/{id}/approve`; the enrolment goes `awaitingapproval`, `approved`,
    `redeemed` (with `redeemedSpireId`) within a minute, the new machine reads `ready`, and `GET /api/spires` lists both.
@@ -112,24 +112,24 @@ What the two spires showed (2026-11-07, `findings/vm4_vm5_multi_spire.md`):
 
 - REST under `/api/`, JSON bodies, camelCase keys. AMP 2's `POST /API/Module/Method` is gone.
 - An Instance is a **shard** (`/api/shards/{id}/...`) and an ADS/Target is a **spire** (`/api/spires/{id}/...`).
-- Path casing is mixed (`/api/Auth/login` and `/api/auth/logout`); both casings answer, we send the panel's own.
+- AMP's routes ignore case; the library sends every route in lower case (checked live 2026-11-07).
 
 ## Sessions (#3-47)
 
-- Login is `POST /api/Auth/login` with `{username, password, rememberMe}`, answered with `{token, expiration}`.
+- Login is `POST /api/auth/login` with `{username, password, rememberMe}`, answered with `{token, expiration}`.
   The token is an HS256 JWT sent as `Authorization: Bearer`. Its claims carry the user ID, name, email and a `sid`.
 - A token lasts **8 hours**, or **28 days** with `rememberMe`.
-- `POST /api/Auth/renew` swaps the token for a new one in the same session (same `sid`). The old token keeps working
+- `POST /api/auth/renew` swaps the token for a new one in the same session (same `sid`). The old token keeps working
   until the session ends. The web panel renews at 75% of the lifetime, and `Session` does the same.
 - A session is one login. `POST /api/auth/logout` ends it: every token it was given gets 401 with
   `WWW-Authenticate: Bearer error="invalid_token"`. Other logins of the same user carry on.
   An admin's `POST /api/users/{id}/logout` ends all of that user's sessions the same way.
 - A login can answer 200 without a token:
     - `{passwordChangeRequired: true, reason: "forced"}` for a user made with `requirePasswordChange`.
-      `POST /api/Auth/change-expired-password` with `{username, currentPassword, newPassword}` logs in.
+      `POST /api/auth/change-expired-password` with `{username, currentPassword, newPassword}` logs in.
       AMP took the old password again as the new one, so there's no reuse check.
     - `{passkeyRequired: true}`, only that key, when the passkey policy is `Required` and the account has a passkey.
-      `POST /api/Auth/login/second-factor` takes `{username, password, code, rememberMe}` where `code` is a
+      `POST /api/auth/login/second-factor` takes `{username, password, code, rememberMe}` where `code` is a
       recovery code. There's no TOTP in AMP 3. See "Passkeys and recovery codes" below.
 - `POST /api/auth/reauth` with `{password}` answers 204; AMP asks for it ("reproof") before sensitive changes.
 - `POST /api/auth/hub-token` gives a 60 second token for the SignalR hub (WebSockets), which is where live events
@@ -158,7 +158,7 @@ Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py
   passkey gets a token with the claim `amp:scope: "enrol"` (the panel's `enrolmentOnly()`, `Session.enrolment_only`).
   Sessions that already exist carry on.
 - Recovery codes: `POST /api/profile/recovery-codes` gives `{codes}`, 10 codes of 14 characters, replacing any older
-  set; `GET` gives `{remaining, total, generatedAt, low}`. Each code works once at `/api/Auth/login/second-factor`;
+  set; `GET` gives `{remaining, total, generatedAt, low}`. Each code works once at `/api/auth/login/second-factor`;
   a wrong or used one gets 401 `{message, reason: "auth.login.recoveryCodeRejected"}`.
 - AMP refuses assertions with the wrong origin, the wrong rpId or no user verification
   (`passkeys.error.assertionRejected`). A genuine signature whose counter went backwards gets
@@ -182,7 +182,7 @@ AMP 3 answers errors in six shapes, so `AMPAPIRequestError` reads whichever keys
 ## First-run setup
 
 Done through the API on vm3, with the setup code from `/opt/cubecoders/amp3/data/setup-token.txt` sent as
-`X-Setup-Token`: `GET /api/Auth/setup/code`, `POST /api/Auth/setup/database/provision` (AMP sets up its own database,
-done in seconds), `POST /api/Auth/setup/admin` (returns the first token), then `POST /api/licence` with
+`X-Setup-Token`: `GET /api/auth/setup/code`, `POST /api/auth/setup/database/provision` (AMP sets up its own database,
+done in seconds), `POST /api/auth/setup/admin` (returns the first token), then `POST /api/licence` with
 `{key, terms}`. `POST /api/licence/query` checks a key without using it. The privacy, network and HTTPS steps are
 browser-only and optional; `GET /api/health/status` read `ready` after the licence.

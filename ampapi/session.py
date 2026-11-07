@@ -358,6 +358,8 @@ class Session:
 
         |coro|
 
+        Endpoint: ``POST /api/auth/change-expired-password``
+
         Call this after :meth:`login` raised :exc:`AMPAPIPasswordChangeRequiredError`. On success the new password is
         kept for later logins.
 
@@ -379,7 +381,7 @@ class Session:
             If the account also needs a second factor.
 
         """
-        path: str = "/api/Auth/change-expired-password"
+        path: str = "/api/auth/change-expired-password"
         data: dict[str, Any] = {"username": self.username, "currentPassword": self._password, "newPassword": new_password}
         status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:
@@ -392,6 +394,8 @@ class Session:
         """Log out, then close the aiohttp session if we made it.
 
         |coro|
+
+        Endpoint: ``POST /api/auth/logout``
 
         Logging out here keeps a finished script from leaving its session open on AMP for the rest of its 8 hours.
         A failed logout is logged and the aiohttp session still closes.
@@ -411,6 +415,8 @@ class Session:
 
         |coro|
 
+        Endpoint: ``GET /api/auth/capabilities``
+
         Returns
         -------
         :class:`CapabilitiesResponse`
@@ -423,6 +429,8 @@ class Session:
         """Get a short lived token for AMP's SignalR hub, which is where live events come from.
 
         |coro|
+
+        Endpoint: ``POST /api/auth/hub-token``
 
         Returns
         -------
@@ -437,18 +445,22 @@ class Session:
 
         |coro|
 
+        Endpoint: ``GET /api/auth/password-policy``
+
         Returns
         -------
         :class:`PasswordPolicyResponse`
             The password policy.
 
         """
-        return await self._request(method="GET", path="/api/Auth/password-policy", use_token=False)
+        return await self._request(method="GET", path="/api/auth/password-policy", use_token=False)
 
     async def login(self) -> TokenResponse:
         """Log in with the username and password this session was made with.
 
         |coro|
+
+        Endpoint: ``POST /api/auth/login``
 
         You don't usually need this, any call that needs a session logs in first.
 
@@ -470,12 +482,12 @@ class Session:
 
         """
         data: dict[str, Any] = {"username": self.username, "password": self._password, "rememberMe": self.remember_me}
-        status, _authenticate_header, body = await self._send(method="POST", path="/api/Auth/login", data=data, use_token=False)
+        status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/login", data=data, use_token=False)
         if status == 401:
             reason: str = body.get("message", "") if _is_json_object(value=body) else ""
             raise AMPAPILoginError(username=self.username, reason=reason)
         if not 200 <= status < 300:
-            raise AMPAPIRequestError(status=status, method="POST", path="/api/Auth/login", data=body)
+            raise AMPAPIRequestError(status=status, method="POST", path="/api/auth/login", data=body)
 
         LOGGER.debug("<%s.%s> | Username: %s | Remember Me: %s", __class__.__name__, "login", self.username, self.remember_me)
         return self._login_result(data=body)
@@ -484,6 +496,8 @@ class Session:
         """Swap the current token for a fresh one in the same session.
 
         |coro|
+
+        Endpoint: ``POST /api/auth/renew``
 
         Calls renew on their own once 75% of a token's lifetime has passed. The old token keeps working until the
         session ends.
@@ -499,15 +513,17 @@ class Session:
             If the session has already ended (401).
 
         """
-        status, _authenticate_header, body = await self._send(method="POST", path="/api/Auth/renew", data={})
+        status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/renew", data={})
         if not 200 <= status < 300:
-            raise AMPAPIRequestError(status=status, method="POST", path="/api/Auth/renew", data=body)
+            raise AMPAPIRequestError(status=status, method="POST", path="/api/auth/renew", data=body)
         return self._store_token(data=body)
 
     async def logout(self) -> None:
         """End this session; every token it was given stops working.
 
         |coro|
+
+        Endpoint: ``POST /api/auth/logout``
 
         Other logins of the same user are left alone. A later call that needs a session logs in again.
         A session AMP had already ended counts as logged out.
@@ -528,6 +544,8 @@ class Session:
 
         |coro|
 
+        Endpoint: ``POST /api/auth/reauth``
+
         Parameters
         ----------
         password : Union[:class:`str`, None], optional
@@ -547,6 +565,8 @@ class Session:
         """Finish a login that needs a second factor, using one of the account's recovery codes.
 
         |coro|
+
+        Endpoint: ``POST /api/auth/login/second-factor``
 
         Call this after :meth:`login` raised :exc:`AMPAPIPasskeyRequiredError`. Each code works once; see
         :meth:`AccountModule.generate_recovery_codes`.
@@ -569,7 +589,7 @@ class Session:
             If the account also has to change its password.
 
         """
-        path: str = "/api/Auth/login/second-factor"
+        path: str = "/api/auth/login/second-factor"
         data: dict[str, Any] = {"username": self.username, "password": self._password, "code": code, "rememberMe": self.remember_me}
         status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:

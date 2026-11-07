@@ -45,7 +45,7 @@ class TemplateModule(Base):
 
         |coro|
 
-        Endpoint: ``GET /api/Templates/{template_slug}``
+        Endpoint: ``GET /api/templates/{template_slug}``
 
         Parameters
         ----------
@@ -58,14 +58,14 @@ class TemplateModule(Base):
             The template, the same as its entry in :meth:`get_templates`.
 
         """
-        return await self._request(method="GET", path=f"/api/Templates/{template_slug}")
+        return await self._request(method="GET", path=f"/api/templates/{template_slug}")
 
     async def get_templates(self, *, source_id: Optional[str] = None) -> list[TemplateResponse]:
         """Get every template, or one source's.
 
         |coro|
 
-        Endpoint: ``GET /api/Templates``, or ``GET /api/Templates/sources/{source_id}``
+        Endpoint: ``GET /api/templates``, or ``GET /api/templates/sources/{source_id}``
 
         .. note::
             Each template is its whole definition, so the full list is large: 248 templates came to about 29 MB.
@@ -87,7 +87,7 @@ class TemplateModule(Base):
             If there's no source with that ID (404, its `message` an English sentence).
 
         """
-        path: str = "/api/Templates" if source_id is None else f"/api/Templates/sources/{source_id}"
+        path: str = "/api/templates" if source_id is None else f"/api/templates/sources/{source_id}"
         return await self._request(method="GET", path=path)
 
     async def get_template_sources(self) -> list[TemplateSourceResponse]:
@@ -95,7 +95,7 @@ class TemplateModule(Base):
 
         |coro|
 
-        Endpoint: ``GET /api/Templates/sources``
+        Endpoint: ``GET /api/templates/sources``
 
         Returns
         -------
@@ -103,14 +103,14 @@ class TemplateModule(Base):
             The sources, eg. ``"official"`` and ``"amp3"``.
 
         """
-        return await self._request(method="GET", path="/api/Templates/sources")
+        return await self._request(method="GET", path="/api/templates/sources")
 
     async def sync_template_source(self, source_id: str) -> TemplateSyncResponse:
         """Fetch the newest templates from one source.
 
         |coro|
 
-        Endpoint: ``POST /api/Templates/sources/{source_id}/sync``
+        Endpoint: ``POST /api/templates/sources/{source_id}/sync``
 
         Parameters
         ----------
@@ -123,14 +123,14 @@ class TemplateModule(Base):
             The commit the source is now at, and if it changed.
 
         """
-        return await self._request(method="POST", path=f"/api/Templates/sources/{source_id}/sync")
+        return await self._request(method="POST", path=f"/api/templates/sources/{source_id}/sync")
 
     async def sync_template_sources(self) -> list[TemplateSyncResponse]:
         """Fetch the newest templates from every source.
 
         |coro|
 
-        Endpoint: ``POST /api/Templates/sources/sync``
+        Endpoint: ``POST /api/templates/sources/sync``
 
         Returns
         -------
@@ -138,4 +138,4 @@ class TemplateModule(Base):
             One result for each source.
 
         """
-        return await self._request(method="POST", path="/api/Templates/sources/sync")
+        return await self._request(method="POST", path="/api/templates/sources/sync")

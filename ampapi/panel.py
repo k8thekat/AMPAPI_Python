@@ -81,5 +81,7 @@ class Panel(
 
         |coro|
 
+        Endpoint: ``POST /api/auth/logout``
+
         """
         await self.session.clean_up()

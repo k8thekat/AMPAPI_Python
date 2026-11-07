@@ -1099,7 +1099,7 @@ class MessageBusStatsResponse(TypedDict):
 
 
 class MessageErrorResponse(TypedDict):
-    """The body of a refused ``POST /api/Auth/login`` (401); the same text for a wrong password or an unknown user."""
+    """The body of a refused ``POST /api/auth/login`` (401); the same text for a wrong password or an unknown user."""
 
     message: str
 
@@ -1137,10 +1137,10 @@ class PasskeyRegisteredResponse(TypedDict):
 
 
 class PasskeyRequiredResponse(TypedDict):
-    """A ``POST /api/Auth/login`` answer for an account that needs a second factor; it carries no token.
+    """A ``POST /api/auth/login`` answer for an account that needs a second factor; it carries no token.
 
     AMP sends it when the passkey policy is ``"Required"`` and the account has a passkey. A recovery code to
-    ``POST /api/Auth/login/second-factor`` finishes the login.
+    ``POST /api/auth/login/second-factor`` finishes the login.
     """
 
     passkeyRequired: Literal[True]
@@ -1160,7 +1160,7 @@ class PasskeyResponse(TypedDict):
 
 
 class PasswordChangeRequiredResponse(TypedDict):
-    """A ``POST /api/Auth/login`` answer for an account that has to change its password first; it carries no token."""
+    """A ``POST /api/auth/login`` answer for an account that has to change its password first; it carries no token."""
 
     passwordChangeRequired: Literal[True]
     reason: str
@@ -1168,7 +1168,7 @@ class PasswordChangeRequiredResponse(TypedDict):
 
 
 class PasswordPolicyResponse(TypedDict):
-    """``GET /api/Auth/password-policy``, which needs no session."""
+    """``GET /api/auth/password-policy``, which needs no session."""
 
     requiredLength: int
     requiredUniqueChars: int
@@ -1303,7 +1303,7 @@ class Principal(TypedDict):
 
 
 class ProblemDetailsResponse(TypedDict):
-    """ASP.NET's validation error body (RFC 9110), eg. a ``POST /api/Auth/login`` with no username (400)."""
+    """ASP.NET's validation error body (RFC 9110), eg. a ``POST /api/auth/login`` with no username (400)."""
 
     type: str
     title: str
@@ -1382,7 +1382,7 @@ class PublicationStatus(TypedDict):
 
 
 class ReasonErrorResponse(TypedDict):
-    """The body of a refused ``POST /api/Auth/login/second-factor`` (401), eg. a wrong or already used recovery code."""
+    """The body of a refused ``POST /api/auth/login/second-factor`` (401), eg. a wrong or already used recovery code."""
 
     message: str
     reason: str
@@ -2909,7 +2909,7 @@ class TemplatePortReferences(TypedDict):
 
 
 class TemplateResponse(TypedDict):
-    """One game template, from ``GET /api/Templates``: the whole definition, not a summary."""
+    """One game template, from ``GET /api/templates``: the whole definition, not a summary."""
 
     id: str
     schemaVersion: int
@@ -2937,7 +2937,7 @@ class TemplateResponse(TypedDict):
 
 
 class TemplateSourceResponse(TypedDict):
-    """A git repository templates come from, from ``GET /api/Templates/sources``."""
+    """A git repository templates come from, from ``GET /api/templates/sources``."""
 
     id: str
     """eg. ``"official"`` or ``"amp3"``."""
@@ -2953,7 +2953,7 @@ class TemplateSourceResponse(TypedDict):
 
 
 class TemplateSyncResponse(TypedDict):
-    """One source's sync, from ``POST /api/Templates/sources/{id}/sync``."""
+    """One source's sync, from ``POST /api/templates/sources/{id}/sync``."""
 
     sourceId: str
     headSha: str
