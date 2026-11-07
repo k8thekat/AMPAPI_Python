@@ -40,9 +40,10 @@ The worktree carries its own copies, all gitignored, so nothing reaches back int
   keeps only the VM lifecycle (status, start, stop, create, remove, refresh-urls); its AMP2 steps are gone (Kat), so
   the AMP2 pair is still run from the Refactor checkout.
 - `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), the live checks `session_check.py` (`Session`),
-  `panel_check.py` (the modules) and `shard_check.py` (shards and templates, on vm3's test shard), `passkey_check.py`
-  (a software passkey), `build_vm.py` (a whole AMP3 VM), `join_spire.py` (a new VM joining a panel as a spire) and
-  `hook_check.py` (pyright as the end-of-turn hook runs it). `AMP3_VM=vm3|vm4|vm5` picks the panel for all of them.
+  `panel_check.py` (the modules), `shard_check.py` (shards and templates, on vm3's test shard), `move_check.py`
+  (clones and moves between vm4's and vm5's spires) and `datastore_check.py` (a move between datastores on vm4),
+  `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM), `join_spire.py` (a new VM joining a panel
+  as a spire) and `hook_check.py` (pyright as the end-of-turn hook runs it). `AMP3_VM=vm3|vm4|vm5` picks the panel for all of them.
 - `.local_data/amp3/`: their private files (per-VM tokens, setup codes and Caddy root CAs, the passkey test state,
   the vetted `getamp3.sh`) and the upstream report drafts for CubeCoders (`upstream_issues/`).
 - `.local_data/plans/todo_index.md`: the AMP3 TODO index.
@@ -78,7 +79,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   chunked upload in 8 MiB chunks.
 - `set_shard_infra` refuses settings with a field missing before sending, as AMP resets any field a `PATCH /infra`
   leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
-- `.scripts/amp3/session_check.py`, `panel_check.py` and `shard_check.py` are the live checks.
+- `.scripts/amp3/session_check.py`, `panel_check.py`, `shard_check.py`, `move_check.py` and `datastore_check.py` are
+  the live checks; each removes what it makes.
 
 ## A second spire joining a panel (#3-47.15)
 

@@ -23,19 +23,19 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 
 ---
 
-- (#3-47.10) Type the platform writes from the vm4 run (settings, https, bus, enrolments, networking, licence, monitoring, updates); most are still marked `# TODO:`.
+- (#3-47.10) Type the platform writes from the vm4 run (settings, https, bus, enrolments, networking, licence, monitoring, updates). *DONE* except the replies only ever seen refused, still `# TODO:`: HTTPS setup and removal, applying an update, licence terms, gateways.
 
 ## ampapi/shards.py
 
 ---
 
-- (#3-47.7) Type the shard replies still marked `# TODO:`: moves between spires and imports with vm5, then disk, users, wake and the file ACL changes.
+- (#3-47.7) Type the shard replies still marked `# TODO:`: imports, disk, users, wake and the file ACL changes (moves between spires and datastores are done).
 
 ## ampapi/spires.py
 
 ---
 
-- (#3-47.8) Type the enrolment approve and deny replies and a spire's import, now seen with vm5 joining vm4.
+- (#3-47.8) Type the enrolment deny reply (needs a machine waiting to join) and a spire's import; approve is done.
 
 ## Test VMs
 
@@ -43,4 +43,4 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 
 - (#3-47.4) A second AMP3 VM (vm4, `amp3-beta2`) for parallel tests, built by `.scripts/amp3/build_vm.py`. *DONE*
 - (#3-47.5) Teach the Refactor checkout's `.scripts/vms.py` about vm4, and move its login into that checkout's `local.ini`.
-- (#3-47.15) vm5 (`amp3-spire`) joins vm4 as a second spire, for moving and cloning shards between spires and for gateways.
+- (#3-47.15) vm5 (`amp3-spire`) joins vm4 as a second spire, for moving and cloning shards between spires and for gateways. *DONE* except a gateway or publication through another spire, which needs that spire's `spire.publicHost`.
