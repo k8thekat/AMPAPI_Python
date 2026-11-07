@@ -23,10 +23,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
-from .base import Base
+from .base import Base, ListenerRegistry
 from .objects import SpireStatus
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from ._types import (
         DatastoreRequest,
         DatastoreResponse,
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
         SpireUsageIntervalResponse,
         SpireUsageResponse,
     )
+    from .hubs import SpireEvent
 
 __all__ = (
     "Spire",
@@ -331,6 +334,38 @@ class Spire:
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.preflight_spire_import`.
+    def listen(self, event: SpireEvent) -> Callable[[Callable[[Spire, Any], Awaitable[None]]], Callable[[Spire, Any], Awaitable[None]]]:
+        """Register the decorated coroutine function for one of this spire's hub events, eg. ``@spire.listen("spire_state")``.
+
+        The same as `HubModule.listen` with `spire` set; it needs the spire to come from a :class:`Panel`.
+
+        Parameters
+        ----------
+        event : :class:`SpireEvent`
+            The event, eg. ``"spire_state"``.
+
+        Returns
+        -------
+        Callable
+            The decorator, which hands back the function as it was.
+
+        Raises
+        ------
+        TypeError
+            If the spire's module has no hub, ie. it isn't a :class:`Panel`.
+
+        """
+        module: SpireModule = self._module
+        if not isinstance(module, ListenerRegistry):
+            msg = "Listening needs a Panel; this spire's module has no hub."
+            raise TypeError(msg)
+
+        def register(handler: Callable[[Spire, Any], Awaitable[None]]) -> Callable[[Spire, Any], Awaitable[None]]:
+            module.add_listener(handler, event, spire=self.id)
+            return handler
+
+        return register
+
     async def preflight_import(self, items: list[SpireImportItem]) -> Any:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 

@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Optional, Self
 from .accounts import AccountModule
 from .analytics import AnalyticsModule
 from .credentials import CredentialModule
+from .hubs import HubModule
 from .platform import PlatformModule
 from .shards import ShardModule
 from .spires import SpireModule
@@ -44,6 +45,7 @@ class Panel(
     AccountModule,
     AnalyticsModule,
     CredentialModule,
+    HubModule,
     PlatformModule,
     ShardModule,
     SpireModule,
@@ -77,11 +79,12 @@ class Panel(
         await self.clean_up()
 
     async def clean_up(self) -> None:
-        """Log out and close the session, the same as :meth:`Session.clean_up`.
+        """Stop listening to the hubs, then log out and close the session, as :meth:`Session.clean_up` does.
 
         |coro|
 
         Endpoint: ``POST /api/auth/logout``
 
         """
+        await self.stop_listening()
         await self.session.clean_up()

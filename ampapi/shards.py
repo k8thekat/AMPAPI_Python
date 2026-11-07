@@ -25,11 +25,11 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
-from .base import Base
+from .base import Base, ListenerRegistry
 from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardSnapshots, ShardStatus, Snapshot
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Awaitable, Callable, Mapping
 
     from ._types import (
         FileACLChange,
@@ -80,6 +80,7 @@ if TYPE_CHECKING:
         SnapshotSettingsResponse,
         SpireIPOptionResponse,
     )
+    from .hubs import ShardEvent
 
 __all__ = (
     "Shard",
@@ -602,6 +603,38 @@ class Shard:
 
         """
         return await self._module.kill_shard(shard_id=self.id)
+
+    def listen(self, event: ShardEvent) -> Callable[[Callable[[Shard, Any], Awaitable[None]]], Callable[[Shard, Any], Awaitable[None]]]:
+        """Register the decorated coroutine function for one of this shard's hub events, eg. ``@shard.listen("console")``.
+
+        The same as `HubModule.listen` with `shard` set; it needs the shard to come from a :class:`Panel`.
+
+        Parameters
+        ----------
+        event : :class:`ShardEvent`
+            The event, eg. ``"console"``.
+
+        Returns
+        -------
+        Callable
+            The decorator, which hands back the function as it was.
+
+        Raises
+        ------
+        TypeError
+            If the shard's module has no hub, ie. it isn't a :class:`Panel`.
+
+        """
+        module: ShardModule = self._module
+        if not isinstance(module, ListenerRegistry):
+            msg = "Listening needs a Panel; this shard's module has no hub."
+            raise TypeError(msg)
+
+        def register(handler: Callable[[Shard, Any], Awaitable[None]]) -> Callable[[Shard, Any], Awaitable[None]]:
+            module.add_listener(handler, event, shard=self.id)
+            return handler
+
+        return register
 
     async def migrate_to_spire(self, target_spire_id: str, target_datastore_id: str, *, bring_backups: bool, stop_if_running: bool) -> None:
         """Move this shard to another spire, see :meth:`ShardModule.migrate_shard_to_spire`.

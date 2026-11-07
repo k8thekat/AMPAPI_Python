@@ -25,6 +25,7 @@ from typing import Any, Optional, TypeGuard
 
 __all__ = (
     "AMPAPIError",
+    "AMPAPIHubError",
     "AMPAPILoginError",
     "AMPAPIPasskeyRequiredError",
     "AMPAPIPasswordChangeRequiredError",
@@ -50,6 +51,29 @@ def _is_json_object(value: object) -> TypeGuard[dict[str, Any]]:
 
 class AMPAPIError(Exception):
     """The base of every error this library raises."""
+
+
+class AMPAPIHubError(AMPAPIError):
+    """Raised when one of AMP's hubs refuses a call, eg. joining a shard that no longer exists.
+
+    Attributes
+    ----------
+    hub : :class:`str`
+        The hub, eg. ``"shard"``.
+    target : :class:`str`
+        The call it refused, eg. ``"JoinShard"``.
+    error : Any
+        What AMP said: a `{code, params, message}` object for a refused join, or a string for a call it couldn't run.
+
+    """
+
+    def __init__(self, hub: str, target: str, error: Any) -> None:  # noqa: D107
+        self.hub: str = hub
+        self.target: str = target
+        self.error: Any = error
+        message = "An AMP hub refused a call. | Hub: %s | Target: %s | Error: %s"
+        super().__init__(message % (hub, target, error))
+        LOGGER.error(message, hub, target, error)
 
 
 class AMPAPILoginError(AMPAPIError):
