@@ -24,6 +24,7 @@ from enum import IntEnum, IntFlag
 
 __all__ = (
     "CloneContent",
+    "MigrationStatus",
     "ShardState",
     "SnapshotContent",
     "SnapshotKind",
@@ -44,6 +45,23 @@ class CloneContent(IntFlag):
     configuration = 1
     data = 2
     both = 3
+
+
+class MigrationStatus(IntEnum):
+    """A shard move's `status`, named as the web panel's `ShardMigrationStatus` names it. AMP sends the number.
+
+    Seen live: 0 while copying, 2 once the move is done and 3 for a failed one. A done move stays at 2 until
+    :meth:`ShardModule.delete_shard_migration`; it wasn't seen reaching 5 on its own.
+
+    .. versionadded:: 6.0.0
+    """
+
+    copying = 0
+    validating = 1
+    awaiting_cleanup = 2
+    failed = 3
+    interrupted = 4
+    complete = 5
 
 
 class ShardState(IntEnum):
@@ -119,7 +137,7 @@ class SnapshotState(IntEnum):
 class TaskState(IntEnum):
     """A running task's `state`, named as the web panel names it.
 
-    Seen live: 1 at the start, 0 while running and 3 when finished.
+    Seen live: 1 while an update downloads, 0 while a clone or move copies, 3 when finished and 4 for a failed move.
 
     .. versionadded:: 6.0.0
     """

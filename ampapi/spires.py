@@ -60,6 +60,9 @@ class Spire:
     :meth:`SpireModule.get_spires` and :meth:`SpireModule.get_spire` make these. Each method calls the
     :class:`SpireModule` one with this spire's ID, eg. :meth:`get_state` is :meth:`SpireModule.get_spire_state`.
 
+    A spire that joined serves the whole panel API too, so a :class:`Panel` can talk to any of them. The data's
+    `isLocal` is relative to the machine that answered, not a property of the spire.
+
     .. versionadded:: 6.0.0
 
     Parameters
@@ -373,9 +376,7 @@ class Spire:
         """
         return await self._module.purge_spire_orphan_directories(spire_id=self.id, datastore_id=datastore_id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.purge_spire_orphan_directory`.
-    async def purge_orphan_directory(self, datastore_id: str, name: str) -> Any:
+    async def purge_orphan_directory(self, datastore_id: str, name: str) -> SpireUsageResponse:
         """Delete one orphan folder in a datastore, see :meth:`SpireModule.purge_spire_orphan_directory`.
 
         |coro|
@@ -389,8 +390,8 @@ class Spire:
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireUsageResponse`
+            This spire's disk use after.
 
         """
         return await self._module.purge_spire_orphan_directory(spire_id=self.id, datastore_id=datastore_id, name=name)
@@ -527,6 +528,11 @@ class SpireModule(Base):
         -------
         :class:`SpireEnrollmentResponse`
             The enrolment, with `status` ``"approved"``.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If no machine is waiting on the enrolment (409, ``"spire.enroll.error.nothingToApprove"``).
 
         """
         return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/approve")
@@ -678,7 +684,7 @@ class SpireModule(Base):
         await self._request(method="DELETE", path=f"/api/spires/enrollments/{enrollment_id}", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The path comes from the web panel's code; only approving was tried live, when the second machine joined.
+    # Only refusals were captured, as no machine was waiting on a join file when it was tried.
     async def deny_spire_enrollment(self, enrollment_id: str) -> Any:
         """Refuse a machine that used a join file.
 
@@ -695,6 +701,12 @@ class SpireModule(Base):
         -------
         Any
             AMP's reply as it came, `None` for an empty one.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If no machine is waiting on the enrolment, eg. it is pending or revoked
+            (409, ``"spire.enroll.error.nothingToApprove"``), or there's no such enrolment (404).
 
         """
         return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
@@ -1064,14 +1076,15 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The web panel reads the disk use from it, or a 204; no capture shows the response yet.
-    async def purge_spire_orphan_directory(self, spire_id: str, datastore_id: str, name: str) -> Any:
+    async def purge_spire_orphan_directory(self, spire_id: str, datastore_id: str, name: str) -> SpireUsageResponse:
         """Delete one folder in a datastore that no shard owns.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan``
+
+        This is how the copy a :meth:`ShardModule.migrate_shard_to_spire` move leaves behind goes: call it on the old
+        spire's datastore, with the shard's `workingDirName` as `name`.
 
         Parameters
         ----------
@@ -1080,12 +1093,12 @@ class SpireModule(Base):
         datastore_id : :class:`str`
             The datastore's ID.
         name : :class:`str`
-            The folder's name.
+            The folder's name, an ``"Orphan"`` entry's `name` in :meth:`get_spire_usage`.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireUsageResponse`
+            The spire's disk use after.
 
         """
         path: str = f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan"
@@ -1170,8 +1183,9 @@ class SpireModule(Base):
         Endpoint: ``PUT /api/spires/{spire_id}/startup``
 
         .. note::
-            The list is the whole start order: each shard's place in it becomes its `order`, and AMP drops a shard ID
-            it doesn't know.
+            Only the shards sent change: each one's place in the list becomes its `order`, and the rest keep theirs.
+            An empty list changes nothing, so take a shard off by sending it with `startOnBoot` `False`. AMP drops a
+            shard ID it doesn't know.
 
         Parameters
         ----------
@@ -1183,7 +1197,7 @@ class SpireModule(Base):
         Returns
         -------
         list[:class:`SpireStartupResponse`]
-            The start order AMP saved.
+            The entries AMP saved, only those sent; :meth:`get_spire_startup` has the whole order.
 
         """
         return await self._request(method="PUT", path=f"/api/spires/{spire_id}/startup", data=entries)

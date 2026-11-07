@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
-from ._enums import CloneContent, ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState
+from ._enums import CloneContent, MigrationStatus, ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState
 from ._types import ShardInfraSettings
 from .base import Base
 
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
         ShardInfraResponse,
         ShardInfraUpdateResponse,
         ShardMetricResponse,
+        ShardMigrationResponse,
         ShardPortResponse,
         ShardResponse,
         ShardScheduleResponse,
@@ -154,7 +155,7 @@ class Shard:
         """
         await self._module.archive_shard_files(shard_id=self.id, paths=paths, destination=destination)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
+    # TODO: Type the reply once AMP is seen cancelling a move live (#3-47.7).
     # It comes from `ShardModule.cancel_shard_migration`.
     async def cancel_migration(self) -> Any:
         """Stop this shard's move, see :meth:`ShardModule.cancel_shard_migration`.
@@ -267,15 +268,13 @@ class Shard:
         """
         await self._module.delete_shard_file(shard_id=self.id, path=path)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.delete_shard_migration`.
-    async def delete_migration(self) -> Any:
+    async def delete_migration(self) -> None:
         """Dismiss this shard's finished move, see :meth:`ShardModule.delete_shard_migration`.
 
         |coro|
 
         """
-        return await self._module.delete_shard_migration(shard_id=self.id)
+        await self._module.delete_shard_migration(shard_id=self.id)
 
     async def delete_schedule(self, schedule_id: str) -> None:
         """Delete one of this shard's schedules, see :meth:`ShardModule.delete_shard_schedule`.
@@ -459,10 +458,8 @@ class Shard:
         """
         return await self._module.get_shard_metrics(shard_id=self.id, minutes=minutes)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.get_shard_migration`.
-    async def get_migration(self) -> Optional[dict[str, Any]]:
-        """Get this shard's move in progress, see :meth:`ShardModule.get_shard_migration`.
+    async def get_migration(self) -> Optional[ShardMigrationResponse]:
+        """Get this shard's latest move, see :meth:`ShardModule.get_shard_migration`.
 
         |coro|
 
@@ -472,7 +469,7 @@ class Shard:
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # It comes from `ShardModule.get_shard_migration_targets`.
     async def get_migration_targets(self) -> list[dict[str, Any]]:
-        """Get where this shard could move to, see :meth:`ShardModule.get_shard_migration_targets`.
+        """Get the other datastores on this shard's spire it could move to, see :meth:`ShardModule.get_shard_migration_targets`.
 
         |coro|
 
@@ -598,15 +595,13 @@ class Shard:
         """
         return await self._module.kill_shard(shard_id=self.id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.migrate_shard_to_spire`.
-    async def migrate_to_spire(self, target_spire_id: str, target_datastore_id: str, *, bring_backups: bool, stop_if_running: bool) -> Any:
+    async def migrate_to_spire(self, target_spire_id: str, target_datastore_id: str, *, bring_backups: bool, stop_if_running: bool) -> None:
         """Move this shard to another spire, see :meth:`ShardModule.migrate_shard_to_spire`.
 
         |coro|
 
         """
-        return await self._module.migrate_shard_to_spire(
+        await self._module.migrate_shard_to_spire(
             shard_id=self.id,
             target_spire_id=target_spire_id,
             target_datastore_id=target_datastore_id,
@@ -1047,8 +1042,8 @@ class ShardModule(Base):
         data: dict[str, Any] = {"paths": paths, "destination": destination}
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/archive", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # The path comes from the web panel's code; it needs a second datastore or spire to capture.
+    # TODO: Type the reply once AMP is seen cancelling a move live (#3-47.7).
+    # Only the refusal was captured: a move between two spires on one network was done within seconds.
     async def cancel_shard_migration(self, shard_id: str) -> Any:
         """Stop a shard's move.
 
@@ -1065,6 +1060,12 @@ class ShardModule(Base):
         -------
         Any
             AMP's reply as it came, `None` for an empty one.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If no move is copying (409, ``"shards.migration.notRunning"``), eg. one that is done, failed, or was only
+            just started.
 
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/cancel")
@@ -1083,6 +1084,9 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/clone``
 
+        A ``"ShardClone"`` task copies the files, see :meth:`TaskModule.get_running_tasks`. The copy's ports are free
+        ones on its spire, so they can differ from the original's.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -1090,14 +1094,21 @@ class ShardModule(Base):
         new_name : :class:`str`
             The copy's display name.
         content : :class:`CloneContent`, optional
-            What to copy, by default `CloneContent.both`. AMP refuses none (``"shards.error.cloneNothing"``).
+            What to copy, by default `CloneContent.both`.
         target_spire_id : Union[:class:`str`, None], optional
             The spire to put the copy on, by default None (the same one).
 
         Returns
         -------
         :class:`ShardCloneResponse`
-            The copy's ID; the copy is there at once, not yet installed.
+            The copy's ID. The copy is there at once, but its `installedAt` is `None` even when the original was
+            installed, so run :meth:`update_shard` on it before starting it.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If `content` is 0 (400, ``"shards.error.cloneNothing"``) or there's no such spire
+            (400, ``"shards.error.spireNotFound"``).
 
         """
         data: dict[str, Any] = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
@@ -1380,27 +1391,30 @@ class ShardModule(Base):
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # The path comes from the web panel's code; it needs a second datastore or spire to capture.
-    async def delete_shard_migration(self, shard_id: str) -> Any:
-        """Dismiss a shard's finished move.
+    async def delete_shard_migration(self, shard_id: str) -> None:
+        """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has none.
 
         |coro|
 
         Endpoint: ``DELETE /api/shards/{shard_id}/migration``
+
+        It only clears the record. The copy a move leaves on the old spire stays until
+        :meth:`SpireModule.purge_spire_orphan_directory`, and a failed move's task until
+        :meth:`TaskModule.delete_running_task` (U22c).
 
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If the move is still copying or was only just started (500, ``"common.error.unexpected"``) (U22a). The move
+            carries on unharmed.
 
         """
-        return await self._request(method="DELETE", path=f"/api/shards/{shard_id}/migration")
+        await self._request(method="DELETE", path=f"/api/shards/{shard_id}/migration")
 
     async def delete_shard_schedule(self, shard_id: str, schedule_id: str) -> None:
         """Delete one of a shard's schedules.
@@ -1992,14 +2006,15 @@ class ShardModule(Base):
         parameters: Optional[dict[str, int]] = {"minutes": minutes} if minutes is not None else None
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/metrics", parameters=parameters)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Only a 204 was captured; the web panel reads `shardId` and a `status` named Copying to Complete from it.
-    async def get_shard_migration(self, shard_id: str) -> Optional[dict[str, Any]]:
-        """Get a shard's move in progress.
+    async def get_shard_migration(self, shard_id: str) -> Optional[ShardMigrationResponse]:
+        """Get a shard's latest move, running or done.
 
         |coro|
 
         Endpoint: ``GET /api/shards/{shard_id}/migration``
+
+        A move copies (`MigrationStatus.copying`) for a few seconds between two spires on one network, then waits at
+        `MigrationStatus.awaiting_cleanup` until :meth:`delete_shard_migration`.
 
         Parameters
         ----------
@@ -2008,20 +2023,26 @@ class ShardModule(Base):
 
         Returns
         -------
-        Union[dict[:class:`str`, Any], None]
-            The move, `None` when there's none (a 204).
+        Union[:class:`ShardMigrationResponse`, None]
+            The move, its `status` a :class:`MigrationStatus`; `None` when there's none (a 204).
 
         """
-        return await self._request(method="GET", path=f"/api/shards/{shard_id}/migration")
+        result: Optional[ShardMigrationResponse] = await self._request(method="GET", path=f"/api/shards/{shard_id}/migration")
+        if result is not None:
+            result["status"] = self._to_enum(MigrationStatus, result["status"])
+        return result
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # Only seen empty, as the test panel had one datastore and one spire.
+    # Only seen empty, as each test spire had one datastore; it stays empty with a second spire.
     async def get_shard_migration_targets(self, shard_id: str) -> list[dict[str, Any]]:
-        """Get where a shard could move to.
+        """Get the other datastores on a shard's own spire it could move to, for :meth:`start_shard_migration`.
 
         |coro|
 
         Endpoint: ``GET /api/shards/{shard_id}/migration/targets``
+
+        It doesn't list other spires. To move a shard to another spire, pick one from :meth:`SpireModule.get_spires`
+        and a datastore from :meth:`SpireModule.get_spire_datastores`, for :meth:`migrate_shard_to_spire`.
 
         Parameters
         ----------
@@ -2031,7 +2052,7 @@ class ShardModule(Base):
         Returns
         -------
         list[dict[:class:`str`, Any]]
-            The targets, empty when there are none.
+            The targets, empty when the spire has one datastore.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/migration/targets")
@@ -2369,8 +2390,6 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/kill", data={})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # The body comes from the web panel's code; it needs a second spire to capture.
     async def migrate_shard_to_spire(
         self,
         shard_id: str,
@@ -2379,12 +2398,23 @@ class ShardModule(Base):
         *,
         bring_backups: bool,
         stop_if_running: bool,
-    ) -> Any:
+    ) -> None:
         """Move a shard to another spire.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/migration/spire``
+
+        AMP answers at once (202) and a ``"ShardMigration"`` task copies the files; follow it with
+        :meth:`get_shard_migration`. The shard's `spireId` and `datastoreId` change straight away.
+
+        .. note::
+            The copy on the old spire stays, as an ``"Orphan"`` in :meth:`SpireModule.get_spire_usage`, until
+            :meth:`SpireModule.purge_spire_orphan_directory` is called on the **old** spire's datastore with the
+            shard's `workingDirName`. :meth:`delete_shard_migration` doesn't remove it.
+
+        The shard's ports become free ones on the target spire, eg. 8303 became 8305, and they stay so if it moves
+        back. A failed move's task stays in :meth:`TaskModule.get_running_tasks` until it is deleted (U22c).
 
         Parameters
         ----------
@@ -2393,16 +2423,20 @@ class ShardModule(Base):
         target_spire_id : :class:`str`
             The spire to move it to.
         target_datastore_id : :class:`str`
-            The datastore on that spire.
+            A datastore on that spire, see :meth:`SpireModule.get_spire_datastores`.
         bring_backups : :class:`bool`
             If its snapshots move too or not.
         stop_if_running : :class:`bool`
-            If AMP may stop it for the move or not.
+            If AMP may stop a running shard for the move or not. Not yet seen working: on teeworlds, whose stops end in
+            a kill (U18a), the move failed and left the shard stopped on its old spire.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If the shard already lives on that spire (400, an English sentence in `message` and no `code`), there's
+            no such spire (400, ``"shards.error.spireNotFound"``), or the shard is running and `stop_if_running` is
+            `False` (409, ``"shards.error.moveNeedsStop"``). A datastore of another spire gets 409
+            ``"spire.error.internal"`` (U22b).
 
         """
         data: dict[str, Any] = {
@@ -2411,7 +2445,7 @@ class ShardModule(Base):
             "bringBackups": bring_backups,
             "stopIfRunning": stop_if_running,
         }
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/spire", data=data)
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/spire", data=data)
 
     async def move_shard_file(self, shard_id: str, source: str, destination: str) -> None:
         """Move or rename a file or folder inside a shard.
@@ -2987,6 +3021,8 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/migration``
+
+        To move it to another spire, use :meth:`migrate_shard_to_spire`.
 
         Parameters
         ----------

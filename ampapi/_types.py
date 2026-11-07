@@ -24,7 +24,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union
 
 if TYPE_CHECKING:
-    from ._enums import ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState, TaskState
+    from ._enums import MigrationStatus, ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState, TaskState
 
 __all__ = (
     "AnalyticsAddressUsersResponse",
@@ -103,6 +103,7 @@ __all__ = (
     "ProfileResponse",
     "ProfileSessionResponse",
     "PublicationResponse",
+    "PublicationStatus",
     "QueryParameters",
     "ReasonErrorResponse",
     "RecoveryCodesResponse",
@@ -148,6 +149,7 @@ __all__ = (
     "ShardInfraSettings",
     "ShardInfraUpdateResponse",
     "ShardMetricResponse",
+    "ShardMigrationResponse",
     "ShardPortAssignments",
     "ShardPortOutcome",
     "ShardPortResponse",
@@ -1285,8 +1287,30 @@ class PublicationResponse(TypedDict):
     """The shard port's name in its template, eg. ``"ServerPort"``."""
     enabled: bool
     createdAt: str
-    status: Optional[Any]
+    status: Optional[PublicationStatus]
+    "`None` when it's new; the list fills it in once AMP has checked the forward."
+
+
+class PublicationStatus(TypedDict):
+    """A port forward's state, from `PublicationResponse.status`."""
+
+    publicationId: str
+    state: str
+    """Seen as ``"ShardStopped"``."""
+    targetSpireId: str
+    "The shard's spire."
+    resolvedPort: int
+    "The shard's port now, which can differ from the one it had when the forward was made, eg. after a move."
+    bytesIn: int
+    bytesOut: int
+    activeFlows: int
+    tunnelPhase: Optional[Any]
     "Only seen as `None`."
+    faultSpireId: Optional[str]
+    "Only seen as `None`."
+    error: Optional[str]
+    "Only seen as `None`."
+    updatedAt: str
 
 
 class ReasonErrorResponse(TypedDict):
@@ -1339,33 +1363,34 @@ class RoleResponse(TypedDict):
 class RunningTaskResponse(TypedDict):
     """One long job, such as a shard update, from ``GET /api/running-tasks``.
 
-    A finished task leaves the list on its own after about 7 seconds.
+    A finished task leaves the list on its own after about 7 seconds. A failed move's task stays until
+    `TaskModule.delete_running_task` (U22c).
     """
 
     id: str
     tenantId: str
     type: str
-    """Seen as ``"ApplicationUpdate"``."""
+    """Seen as ``"ApplicationUpdate"``, ``"ShardClone"`` and ``"ShardMigration"``."""
     name: str
-    """eg. ``"Update my-shard"``."""
+    """eg. ``"Update my-shard"``; empty on a clone or a move, which name themselves with `nameCode`."""
     nameCode: Optional[str]
-    "Only seen as `None`."
+    """A translation key, eg. ``"tasks.migration.move"`` or ``"tasks.migration.clone"``."""
     nameParams: Optional[dict[str, Any]]
-    "Only seen as `None`."
+    """Values for the `nameCode` translation, eg. the shard's `name`."""
     message: Optional[str]
-    "The current step, eg. a download; `None` once it finishes."
+    "The current step, eg. a download, or why a move failed."
     messageCode: Optional[str]
-    "Only seen as `None`."
+    """A translation key for the step, eg. ``"tasks.migration.stage.preparing"``."""
     messageParams: Optional[dict[str, Any]]
     "Only seen as `None`."
-    speed: Optional[Any]
-    "Only seen as `None`."
+    speed: Optional[str]
+    """How fast a clone or a move copies, eg. ``"56.2 MB/s"``."""
     progressPercent: int
     isIndeterminate: bool
     state: Union[TaskState, int]
-    "Seen as 1 at the start, 0 while running and 3 when finished; a number the library doesn't know stays a plain int."
+    "A number the library doesn't know stays a plain int."
     isCancellable: bool
-    "Only seen as `False`."
+    "Seen as `True` on clones and moves, even once finished, and `False` on updates."
     isPrimary: bool
     principal: Principal
     visibility: int
@@ -1373,11 +1398,12 @@ class RunningTaskResponse(TypedDict):
     """Seen as ``"Shard"``."""
     targetId: str
     correlationId: WrappedID
-    causationActionId: WrappedID
+    causationActionId: Optional[WrappedID]
     actionId: WrappedID
     origin: int
     rootPrincipal: Principal
     ownerSpireId: str
+    "The spire running the task, the target one for a move or a clone."
     runId: str
     subTasks: list[Any]
     "Only seen empty."
@@ -1719,7 +1745,7 @@ class ShardArchiveInfoResponse(TypedDict):
 
 
 class ShardCloneResponse(TypedDict):
-    """``POST /api/shards/{id}/clone``; the copy appears at once, not yet installed."""
+    """``POST /api/shards/{id}/clone``; the copy appears at once, with `installedAt` `None`."""
 
     shardId: str
     "The copy's ID."
@@ -1910,6 +1936,46 @@ class ShardMetricResponse(TypedDict):
     custom: dict[str, Any]
     "Only seen empty."
     listeningPorts: list[int]
+
+
+class ShardMigrationResponse(TypedDict):
+    """``GET /api/shards/{id}/migration``, a shard's latest move; AMP answers 204 when there's none."""
+
+    shardId: str
+    tenantId: str
+    ownerSpireId: str
+    "The spire running the move, the target one."
+    runId: str
+    "The move's `RunningTaskResponse.runId` too."
+    sourceDatastoreId: str
+    targetDatastoreId: str
+    sourceShardId: str
+    "Only seen as all zeros."
+    sourceSpireId: str
+    targetSpireId: str
+    sourcePath: str
+    "Only seen empty."
+    targetPath: str
+    """The shard's folder on the target, eg. ``"/opt/cubecoders/amp3/data/Datastores/Default/my-shard-ef6e621c"``."""
+    status: Union[MigrationStatus, int]
+    "A number the library doesn't know stays a plain int."
+    filesTotal: int
+    "Only seen as 0, even once the move was done."
+    filesDone: int
+    bytesTotal: int
+    "Only seen as 0, even once the move was done."
+    bytesDone: int
+    error: Optional[str]
+    """An English sentence on a failed move, eg. ``"The move failed. The server was left stopped on its source spire. ..."``."""
+    startedAt: str
+    finishedAt: Optional[str]
+    startedByUserId: str
+    startAfterMove: bool
+    "If AMP starts the shard again once it's moved; set when the move stops it."
+    isActive: bool
+    "If the move is still running; `True` only while copying."
+    blocksLaunch: bool
+    "If the shard can't be started meanwhile; `True` only while copying."
 
 
 class ShardPortAssignments(TypedDict):
@@ -2135,7 +2201,8 @@ class ShardUsage(TypedDict):
     """One shard's disk use, from `DatastoreUsage.shards`. A deleted shard stays until it is purged."""
 
     kind: str
-    """Seen as ``"Shard"``."""
+    """Seen as ``"Shard"`` and ``"Orphan"``, a folder no shard owns, eg. the copy a move leaves on the old spire.
+    An orphan's `shardId` is all zeros and its `displayName` empty."""
     shardId: str
     name: str
     "The shard's folder name in the datastore."
@@ -2375,7 +2442,8 @@ class SpireResponse(TypedDict):
     description: str
     """eg. ``"Enrolled machine."`` on a spire that joined."""
     isLocal: bool
-    "If it's the machine the panel runs on."
+    """If it's the machine that answered the call. A spire that joined serves the whole panel API too, so the same
+    spire reads `True` from itself and `False` from the others."""
     platform: int
     "Seen as 2 on Ubuntu, the same number as `SpirePlatform.os`."
     architecture: int
@@ -2445,7 +2513,7 @@ class SpireStartupResponse(TypedDict):
     shardName: str
     startOnBoot: bool
     order: int
-    "A new shard has 100; saving the list sets each one to its place in it."
+    "A new shard has 100; saving sets each shard sent to its place in the list sent."
 
 
 class SpireStateResponse(TypedDict):

@@ -19,7 +19,8 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
   worktree's `local.ini`. The same beta key activated there too (the query showed `usage: 1` first), so one key covers
   several installations. Each panel throttles sign-ins on its own, which is the main reason to have two.
 - `vm5` (`amp3-spire`, 192.168.4.235) is not a panel of its own: it joined vm4 as a second spire on 2026-11-07
-  (#3-47.15), for moving and cloning shards between spires. Its VM login is `[VM_AMP3_SPIRE]`; its API is vm4's.
+  (#3-47.15), for moving and cloning shards between spires. Its VM login is `[VM_AMP3_SPIRE]`; it serves vm4's panel
+  API too, with vm4's admin login.
 - A panel restarted once on its first licensing (`phase: "starting"`); a setting checked before it reads `ready` can
   look unapplied. Activating again after `DELETE /api/licence` (vm4, 2026-11-07) stayed `ready` with no restart.
 - Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
@@ -91,6 +92,19 @@ Seen live on 2026-11-07, vm5 joining vm4; `.scripts/amp3/join_spire.py` runs ste
    its health reads `starting` with `auth.setup.joining.awaitingApproval` and a `fingerprint` to compare.
 4. The panel approves, `POST /api/spires/enrollments/{id}/approve`; the enrolment goes `awaitingapproval`, `approved`,
    `redeemed` (with `redeemedSpireId`) within a minute, the new machine reads `ready`, and `GET /api/spires` lists both.
+
+Once joined, every spire serves the whole panel API: vm5 answers `http://amp3-spire.anime:8443` with vm4's accounts,
+spires, shards and tasks. Only a spire's `isLocal` differs, as it means "the machine that answered this call".
+
+What the two spires showed (2026-11-07, `findings/vm4_vm5_multi_spire.md`):
+- A shard is made on either spire from vm4 (`targetSpireId`); the first one on a new spire waits about 2 minutes while
+  that spire prepares its container image.
+- A clone to the other spire finishes in seconds and is not installed yet (`installedAt: null`).
+- A move between spires (`POST /migration/spire`) switches the shard over at once and leaves the source copy as an
+  orphan folder on the old spire until its datastore's orphan purge runs; dismissing the move doesn't remove it. Ports
+  are re-allocated on the target. `/migration/targets` lists other datastores on the same spire, not other spires.
+- A publication through the shard's own spire needs no public host; a gateway or a publication through another spire
+  needs that spire's `spire.publicHost` set, which hasn't been tried yet.
 
 ## AMP 3 API shape
 

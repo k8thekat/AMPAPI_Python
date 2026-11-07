@@ -226,7 +226,8 @@ class PlatformModule(Base):
         ------
         AMPAPIRequestError
             If the front spire doesn't exist or has no public host (400, ``"networking.error.frontNotRoutable"``), or
-            the shard already runs on it (400, ``"networking.error.gatewaySameSpire"``).
+            the shard already runs on it (400, ``"networking.error.gatewaySameSpire"``). :meth:`preflight_gateway`
+            catches neither (U20b, U20c).
 
         """
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
@@ -242,7 +243,8 @@ class PlatformModule(Base):
         Parameters
         ----------
         front_spire_id : :class:`str`
-            The front spire's ID; it can be the shard's own spire.
+            The front spire's ID. The shard's own spire works as it is; another spire needs its ``"spire.publicHost"``
+            setting set first, see :meth:`SpireModule.set_spire_settings`.
         public_port : :class:`int`
             The port players connect to.
         shard_id : :class:`str`
@@ -258,8 +260,9 @@ class PlatformModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `public_port` isn't a port number (400, ``"networking.error.invalidPort"``), or the shard has no port
-            named `port_reference` (400, ``"networking.error.portRefMissing"``).
+            If the front is another spire with no public host (400, ``"networking.error.frontNoPublicHost"``), which
+            AMP checks before the port. Else if `public_port` isn't a port number (400, ``"networking.error.invalidPort"``),
+            or the shard has no port named `port_reference` (400, ``"networking.error.portRefMissing"``).
 
         """
         data: dict[str, Any] = {"frontSpireId": front_spire_id, "publicPort": public_port, "shardId": shard_id, "portRef": port_reference}
@@ -726,8 +729,8 @@ class PlatformModule(Base):
         Endpoint: ``POST /api/networking/gateways/preflight``
 
         .. warning::
-            AMP checks little here: an empty body, and a gateway on the shard's own spire that :meth:`create_gateway`
-            refuses, both pass with no conflicts (U20b).
+            AMP checks little here: an empty body and a gateway on the shard's own spire pass with no conflicts (U20b),
+            and so does a front spire with no public host (U20c), though :meth:`create_gateway` refuses the last two.
 
         Parameters
         ----------

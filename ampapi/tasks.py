@@ -77,6 +77,9 @@ class TaskModule(Base):
 
         Endpoint: ``DELETE /api/running-tasks/{task_id}``
 
+        A failed shard move's task only leaves this way; it outlives :meth:`ShardModule.delete_shard_migration` and
+        even the shard's purge (U22c).
+
         Parameters
         ----------
         task_id : :class:`str`
@@ -96,6 +99,8 @@ class TaskModule(Base):
         |coro|
 
         Endpoint: ``GET /api/running-tasks``
+
+        A failed shard move's task stays until :meth:`delete_running_task` (U22c).
 
         Returns
         -------
