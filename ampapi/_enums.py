@@ -20,11 +20,13 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
-from enum import IntEnum, IntFlag
+from enum import IntEnum, IntFlag, StrEnum
 
 __all__ = (
     "CloneContent",
+    "GatewayState",
     "MigrationStatus",
+    "PublicationState",
     "ShardState",
     "SnapshotContent",
     "SnapshotKind",
@@ -47,6 +49,23 @@ class CloneContent(IntFlag):
     both = 3
 
 
+class GatewayState(StrEnum):
+    """A gateway's `state`, named as the web panel names it. AMP sends the name, which each member equals.
+
+    Seen live: provisioning, fault while the tunnel still connects (U26b), awaiting_shard until the shard restarts,
+    connecting and active. The web panel also knows disabled.
+
+    .. versionadded:: 6.0.0
+    """
+
+    active = "Active"
+    awaiting_shard = "AwaitingShard"
+    connecting = "Connecting"
+    disabled = "Disabled"
+    fault = "Fault"
+    provisioning = "Provisioning"
+
+
 class MigrationStatus(IntEnum):
     """A shard move's `status`, named as the web panel's `ShardMigrationStatus` names it. AMP sends the number.
 
@@ -64,6 +83,30 @@ class MigrationStatus(IntEnum):
     failed = 3
     interrupted = 4
     complete = 5
+
+
+class PublicationState(StrEnum):
+    """A port forward's `state`, named as the web panel names it. AMP sends the name, which each member equals.
+
+    Seen live: tunnel_provisioning, tunnel_fault on a first publication for about a minute (U26a), active, disabled
+    and shard_stopped. The rest are from the web panel's code.
+
+    .. versionadded:: 6.0.0
+    """
+
+    active = "Active"
+    disabled = "Disabled"
+    error = "Error"
+    pending = "Pending"
+    port_conflict = "PortConflict"
+    port_private = "PortPrivate"
+    port_ref_missing = "PortRefMissing"
+    shard_missing = "ShardMissing"
+    shard_stopped = "ShardStopped"
+    tunnel_down = "TunnelDown"
+    tunnel_fault = "TunnelFault"
+    tunnel_provisioning = "TunnelProvisioning"
+    tunnel_unavailable = "TunnelUnavailable"
 
 
 class ShardState(IntEnum):

@@ -62,8 +62,8 @@ class Base:
         self.session = session
 
     @staticmethod
-    def _to_enum[E: Enum](enum: type[E], value: int) -> Union[E, int]:
-        """`value` as a member of `enum`, or the plain number when AMP sent one the library doesn't know yet."""
+    def _to_enum[E: Enum, V: (int, str)](enum: type[E], value: V) -> Union[E, V]:
+        """`value` as a member of `enum`, or the plain number or name when AMP sent one the library doesn't know yet."""
         try:
             return enum(value)
         except ValueError:

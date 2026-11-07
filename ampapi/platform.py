@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from ._enums import GatewayState, PublicationState
 from .base import Base
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
         FirewallResponse,
         GatewayEligibilityResponse,
         GatewayPreflightResponse,
+        GatewayResponse,
         HealthStatusResponse,
         HTTPSCheckResponse,
         HTTPSSetupStatusResponse,
@@ -48,6 +50,8 @@ if TYPE_CHECKING:
         SettingActionResponse,
         SettingsManifestResponse,
         SystemBusResponse,
+        TunnelFrontResponse,
+        TunnelResponse,
         UpdateStatusResponse,
     )
 
@@ -200,14 +204,22 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only refusals were captured; a gateway that works needs a front spire other than the shard's own.
-    async def create_gateway(self, shard_id: str, front_spire_id: str) -> Any:
-        """Bind a shard to a front spire, so players reach it through that spire.
+    async def create_gateway(self, shard_id: str, front_spire_id: str) -> GatewayResponse:
+        """Route a shard through a front spire, so players reach it at that spire's address.
 
         |coro|
 
         Endpoint: ``POST /api/networking/gateways``
+
+        A gateway is the shard's route over a WireGuard tunnel between its spire and the front spire, which AMP sets up
+        itself (see :meth:`get_tunnels`). The shard gets an `address` on that tunnel, eg. ``"10.83.0.10"``, and an
+        `egressAllowList`. Once it routes, the shard answers on the front spire's address at its own port. Follow it
+        with :meth:`get_gateways`.
+
+        .. note::
+            A shard that was running before the gateway only routes once it restarts (U26e). Until then the gateway
+            reads `GatewayState.awaiting_shard` with `runningWithoutRoute`, though the shard's endpoint already lists
+            the front's address. A new gateway also reads `GatewayState.fault` while its tunnel connects (U26b).
 
         Parameters
         ----------
@@ -219,8 +231,8 @@ class PlatformModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`GatewayResponse`
+            The gateway AMP made (201), its `status` `None` until AMP has set the route up.
 
         Raises
         ------
@@ -231,7 +243,8 @@ class PlatformModule(Base):
 
         """
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
-        return await self._request(method="POST", path="/api/networking/gateways", data=data)
+        result: GatewayResponse = await self._request(method="POST", path="/api/networking/gateways", data=data)
+        return self._gateway_enums(gateway=result)
 
     async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> PublicationResponse:
         """Forward a public port on a front spire to a shard's port.
@@ -239,6 +252,14 @@ class PlatformModule(Base):
         |coro|
 
         Endpoint: ``POST /api/networking/publications``
+
+        Through another spire, AMP sets up a WireGuard tunnel between the two spires (see :meth:`get_tunnels`), and the
+        forward works once :meth:`get_publications` reads it `PublicationState.active`.
+
+        .. note::
+            A first publication through another spire can read `PublicationState.tunnel_fault` with
+            ``"The file does not exist."`` for about a minute, while the tunnel's agent is put in place, then turns
+            active by itself (U26a).
 
         Parameters
         ----------
@@ -255,7 +276,7 @@ class PlatformModule(Base):
         Returns
         -------
         :class:`PublicationResponse`
-            The publication AMP made (201), turned on, with the `protocol` of the shard's port.
+            The publication AMP made (201), turned on, with the `protocol` of the shard's port and `status` `None`.
 
         Raises
         ------
@@ -266,29 +287,30 @@ class PlatformModule(Base):
 
         """
         data: dict[str, Any] = {"frontSpireId": front_spire_id, "publicPort": public_port, "shardId": shard_id, "portRef": port_reference}
-        return await self._request(method="POST", path="/api/networking/publications", data=data)
+        result: PublicationResponse = await self._request(method="POST", path="/api/networking/publications", data=data)
+        return self._publication_enums(publication=result)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only an unknown gateway's 404 was captured, as no gateway could be made.
-    async def delete_gateway(self, gateway_id: str) -> Any:
+    async def delete_gateway(self, gateway_id: str) -> None:
         """Remove a gateway.
 
         |coro|
 
         Endpoint: ``DELETE /api/networking/gateways/{gateway_id}``
 
+        Its tunnel goes some seconds after.
+
         Parameters
         ----------
         gateway_id : :class:`str`
             The gateway's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If there's no such gateway, eg. it was removed already (404).
 
         """
-        return await self._request(method="DELETE", path=f"/api/networking/gateways/{gateway_id}")
+        await self._request(method="DELETE", path=f"/api/networking/gateways/{gateway_id}")
 
     async def delete_licence(self, spire_id: str, grade_id: str) -> None:
         """Remove a licence from the panel.
@@ -473,10 +495,13 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/networking/gateway-eligibility")
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # Only seen empty, as a gateway needs a second spire.
-    async def get_gateways(self) -> list[dict[str, Any]]:
-        """Get the gateways, each binding a shard to a front spire.
+    def _gateway_enums(self, gateway: GatewayResponse) -> GatewayResponse:
+        if gateway["status"] is not None:
+            gateway["status"]["state"] = self._to_enum(GatewayState, gateway["status"]["state"])
+        return gateway
+
+    async def get_gateways(self) -> list[GatewayResponse]:
+        """Get the gateways, each a shard's route through a front spire, see :meth:`create_gateway`.
 
         |coro|
 
@@ -484,11 +509,12 @@ class PlatformModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The gateways.
+        list[:class:`GatewayResponse`]
+            The gateways, each `status.state` a :class:`GatewayState`.
 
         """
-        return await self._request(method="GET", path="/api/networking/gateways")
+        result: list[GatewayResponse] = await self._request(method="GET", path="/api/networking/gateways")
+        return [self._gateway_enums(gateway=gateway) for gateway in result]
 
     async def get_health_status(self) -> HealthStatusResponse:
         """Get the panel's state, eg. still in first-run setup or ``"ready"``.
@@ -642,6 +668,11 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/monitoring/platform-warnings")
 
+    def _publication_enums(self, publication: PublicationResponse) -> PublicationResponse:
+        if publication["status"] is not None:
+            publication["status"]["state"] = self._to_enum(PublicationState, publication["status"]["state"])
+        return publication
+
     async def get_publications(self) -> list[PublicationResponse]:
         """Get the public port forwards from front spires to shards.
 
@@ -652,10 +683,11 @@ class PlatformModule(Base):
         Returns
         -------
         list[:class:`PublicationResponse`]
-            The publications.
+            The publications, each `status.state` a :class:`PublicationState`.
 
         """
-        return await self._request(method="GET", path="/api/networking/publications")
+        result: list[PublicationResponse] = await self._request(method="GET", path="/api/networking/publications")
+        return [self._publication_enums(publication=publication) for publication in result]
 
     async def get_settings_manifest(self) -> SettingsManifestResponse:
         """Get every platform setting with its current value.
@@ -672,10 +704,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/settings/manifest")
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # Only seen empty, as a tunnel front needs a second spire.
-    async def get_tunnel_fronts(self) -> list[dict[str, Any]]:
-        """Get the spires that can front a tunnel.
+    async def get_tunnel_fronts(self) -> list[TunnelFrontResponse]:
+        """Get the spires that can front a tunnel, for a publication or a gateway through them.
 
         |coro|
 
@@ -683,24 +713,26 @@ class PlatformModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The tunnel fronts.
+        list[:class:`TunnelFrontResponse`]
+            The tunnel fronts, empty until a spire has its ``"spire.publicHost"`` setting set.
 
         """
         return await self._request(method="GET", path="/api/networking/tunnel-fronts")
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # Only seen empty, as a tunnel needs a second spire.
-    async def get_tunnels(self) -> list[dict[str, Any]]:
-        """Get the network tunnels between spires.
+    async def get_tunnels(self) -> list[TunnelResponse]:
+        """Get the WireGuard tunnels between spires.
 
         |coro|
 
         Endpoint: ``GET /api/networking/tunnels``
 
+        AMP makes one on demand for a publication or a gateway through another spire, with addresses such as
+        ``"10.83.0.1"`` (the front) and ``"10.83.0.2"`` (the back), and removes it some seconds after it's no longer
+        needed.
+
         Returns
         -------
-        list[dict[:class:`str`, Any]]
+        list[:class:`TunnelResponse`]
             The tunnels.
 
         """
@@ -974,7 +1006,8 @@ class PlatformModule(Base):
         Returns
         -------
         :class:`PublicationResponse`
-            The publication after the change.
+            The publication after the change. Its `status` can still be the old one, eg. active after turning it off
+            (U26c), so read :meth:`get_publications` for the new state.
 
         Raises
         ------
@@ -985,4 +1018,5 @@ class PlatformModule(Base):
         data: dict[str, Any] = {"enabled": enabled, "publicPort": public_port}
         # We only send what changes, as the web panel does.
         data = {key: value for key, value in data.items() if value is not None}
-        return await self._request(method="PUT", path=f"/api/networking/publications/{publication_id}", data=data)
+        result: PublicationResponse = await self._request(method="PUT", path=f"/api/networking/publications/{publication_id}", data=data)
+        return self._publication_enums(publication=result)

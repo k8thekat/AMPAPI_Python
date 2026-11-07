@@ -1174,13 +1174,17 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/settings/spire/{spire_id}/values``
 
+        AMP answers 204. There's no call that reads the values back on their own; they're in
+        :meth:`get_spire_settings_manifest`'s `values`.
+
         Parameters
         ----------
         spire_id : :class:`str`
             The spire's ID.
         values : dict[:class:`str`, :class:`str`]
             Each setting's `fieldName` from :meth:`get_spire_settings_manifest` to its new value, a string like the
-            manifest's values, eg. ``{"spire.publicHost": "amp.example.com"}``, which makes the spire a gateway front.
+            manifest's values. eg. ``{"spire.publicHost": "amp.example.com"}`` lets the spire front a publication or a
+            gateway through it: it reads `isPubliclyRoutable` `True` at once.
 
         Raises
         ------

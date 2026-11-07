@@ -24,7 +24,17 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union
 
 if TYPE_CHECKING:
-    from ._enums import MigrationStatus, ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState, TaskState
+    from ._enums import (
+        GatewayState,
+        MigrationStatus,
+        PublicationState,
+        ShardState,
+        SnapshotContent,
+        SnapshotKind,
+        SnapshotStage,
+        SnapshotState,
+        TaskState,
+    )
 
 __all__ = (
     "AnalyticsAddressUsersResponse",
@@ -67,6 +77,8 @@ __all__ = (
     "FirewallStatus",
     "GatewayEligibilityResponse",
     "GatewayPreflightResponse",
+    "GatewayResponse",
+    "GatewayStatus",
     "HTTPSCheck",
     "HTTPSCheckResponse",
     "HTTPSSetupStatusResponse",
@@ -206,6 +218,11 @@ __all__ = (
     "TemplateUpdateStage",
     "TemplateVersionSource",
     "TokenResponse",
+    "TunnelEnd",
+    "TunnelFrontHost",
+    "TunnelFrontResponse",
+    "TunnelResponse",
+    "TunnelStatus",
     "UpdateStatusResponse",
     "UserResponse",
     "ValidationErrorResponse",
@@ -758,6 +775,41 @@ class GatewayPreflightResponse(TypedDict):
     "Only seen empty, even for a gateway `PlatformModule.create_gateway` refuses (U20b)."
 
 
+class GatewayResponse(TypedDict):
+    """One gateway from ``GET /api/networking/gateways``; making one answers with it too (201).
+
+    A gateway is a shard's route over a WireGuard tunnel between its spire and a front spire.
+    """
+
+    id: str
+    shardId: str
+    shardName: str
+    frontSpireId: str
+    frontSpireName: str
+    enabled: bool
+    egressAllowList: list[str]
+    "Where the shard may reach out to over the route; only seen empty."
+    createdAt: str
+    status: Optional[GatewayStatus]
+    "`None` when it's new; the list fills it in once AMP has set the route up."
+    runningWithoutRoute: bool
+    "If the shard was running before the route existed; it routes only once it restarts (U26e)."
+
+
+class GatewayStatus(TypedDict):
+    """A gateway's state, from `GatewayResponse.status`."""
+
+    bindingId: str
+    "The gateway's `id`."
+    state: Union[GatewayState, str]
+    "A name the library doesn't know stays a plain string."
+    address: str
+    """The shard's address on the tunnel, eg. ``"10.83.0.10"``, set from the start."""
+    error: Optional[str]
+    """Why it's at `GatewayState.fault`, eg. ``"The tunnel this server routes over is not up."``."""
+    updatedAt: str
+
+
 class HealthStatusResponse(TypedDict):
     """``GET /api/health/status``, which needs no session.
 
@@ -1295,35 +1347,37 @@ class PublicationResponse(TypedDict):
     "The spire players connect to; it can be the shard's own spire."
     publicPort: int
     protocol: str
-    """Seen as ``"UDP"``, taken from the shard's port."""
+    """Seen as ``"UDP"`` and ``"Both"`` (TCP and UDP), taken from the shard's port."""
     shardId: str
     portRef: str
     """The shard port's name in its template, eg. ``"ServerPort"``."""
     enabled: bool
     createdAt: str
     status: Optional[PublicationStatus]
-    "`None` when it's new; the list fills it in once AMP has checked the forward."
+    """`None` when it's new; the list fills it in once AMP has checked the forward. A change's reply can carry the
+    old one (U26c)."""
 
 
 class PublicationStatus(TypedDict):
     """A port forward's state, from `PublicationResponse.status`."""
 
     publicationId: str
-    state: str
-    """Seen as ``"ShardStopped"``."""
+    state: Union[PublicationState, str]
+    "A name the library doesn't know stays a plain string."
     targetSpireId: str
-    "The shard's spire."
+    "The shard's spire; all zeros while the forward is disabled."
     resolvedPort: int
-    "The shard's port now, which can differ from the one it had when the forward was made, eg. after a move."
+    "The shard's port now, which can differ from the one it had when the forward was made, eg. after a move; 0 while disabled."
     bytesIn: int
     bytesOut: int
     activeFlows: int
-    tunnelPhase: Optional[Any]
-    "Only seen as `None`."
+    tunnelPhase: Optional[str]
+    """The tunnel's `TunnelStatus.phase` through another spire, eg. ``"Provisioning"`` or ``"AgentRejected"``; `None` once
+    active."""
     faultSpireId: Optional[str]
-    "Only seen as `None`."
+    "The spire at fault, with `error` saying why."
     error: Optional[str]
-    "Only seen as `None`."
+    """eg. ``"The file does not exist."`` while a first tunnel's agent is set up (U26a)."""
     updatedAt: str
 
 
@@ -1712,17 +1766,19 @@ class ShardAddress(TypedDict):
     display: str
     """The address as the web panel shows it, eg. ``"192.168.4.231:25565"``."""
     source: str
-    """Seen as ``"ExternalProbe"`` and ``"LocalAddress"``."""
+    """Seen as ``"ExternalProbe"``, ``"LocalAddress"``, ``"Published"`` (a publication through another spire) and
+    ``"Gateway"`` (the shard's gateway)."""
     uri: Optional[str]
     "Only seen as `None`."
     notes: list[str]
-    """Seen as ``"NeedsForward"`` and ``"NoHairpin"``."""
+    """Seen as ``"NeedsForward"``, ``"NoHairpin"``, ``"ViaFront"`` (served by another spire), ``"NotReady"`` (its
+    tunnel still connecting) and ``"Paused"`` (a disabled publication)."""
     viaSpireId: Optional[str]
-    "Only seen as `None`."
+    "The front spire, on a published or gateway address."
     viaSpireName: Optional[str]
-    "Only seen as `None`."
-    tunnelState: Optional[Any]
-    "Only seen as `None`."
+    tunnelState: Optional[str]
+    """Seen as ``"Connecting"``, ``"Fault"`` and ``"Ok"`` on a published or gateway address. A disabled publication's
+    reads ``"Fault"`` though its tunnel is up (U26d)."""
 
 
 class ShardAgentResponse(TypedDict):
@@ -2963,6 +3019,83 @@ class TokenResponse(TypedDict):
     token: str
     expiration: str
     "ISO 8601 in UTC, eg. ``2026-11-07T04:51:17.405287Z``."
+
+
+class TunnelEnd(TypedDict):
+    """One spire at an end of a tunnel, from `TunnelResponse.front` and `TunnelResponse.back`."""
+
+    spireId: str
+    spireName: str
+    keyPublished: bool
+    agentInstalled: bool
+    "If the spire's tunnel agent is in place; it was seen `False` on first use, then `True` by itself (U26a)."
+    agentReachable: bool
+    agentError: Optional[str]
+    """eg. ``"The file does not exist."`` while `agentInstalled` is `False`."""
+
+
+class TunnelFrontHost(SpireEnrollmentHostResponse):
+    """One address a tunnel front is reached on, from `TunnelFrontResponse.hosts`; the same shape as an enrolment host."""
+
+
+class TunnelFrontResponse(TypedDict):
+    """One spire that can front a tunnel, from ``GET /api/networking/tunnel-fronts``.
+
+    A spire is listed once its ``"spire.publicHost"`` setting is set.
+    """
+
+    spireId: str
+    displayName: str
+    declaredHost: str
+    """The spire's ``"spire.publicHost"``, eg. ``"amp.example.com"``."""
+    hosts: list[TunnelFrontHost]
+    "The declared host, the spire's network address and its public one."
+
+
+class TunnelResponse(TypedDict):
+    """One WireGuard tunnel between two spires, from ``GET /api/networking/tunnels``.
+
+    AMP makes one on demand for a publication or a gateway through another spire, and removes it some seconds after
+    the last one goes.
+    """
+
+    id: str
+    frontSpireId: str
+    backSpireId: str
+    "The spire the shard runs on."
+    slot: int
+    frontEndpointHost: str
+    """The front spire's ``"spire.publicHost"``."""
+    interfaceName: str
+    """eg. ``"amp-4e992d89"``, from the tunnel's `id`."""
+    listenPort: int
+    "Seen as 51820."
+    frontAddress: str
+    """The front's address on the tunnel, eg. ``"10.83.0.1"``."""
+    backAddress: str
+    """The back's address on the tunnel, eg. ``"10.83.0.2"``."""
+    front: TunnelEnd
+    back: TunnelEnd
+    status: Optional[TunnelStatus]
+    "`None` when it's new."
+    createdAt: str
+    permanentForEntryNode: bool
+
+
+class TunnelStatus(TypedDict):
+    """A tunnel's state, from `TunnelResponse.status`."""
+
+    tunnelId: str
+    up: bool
+    rttMs: float
+    "The round trip over the tunnel, eg. 1.5; 0 while it's down."
+    lastProbeAt: str
+    phase: str
+    """Seen as ``"AgentRejected"``, ``"Connecting"``, ``"Up"`` and ``"Releasing"``; the web panel also knows
+    ``"Provisioning"``, ``"AgentUnreachable"`` and ``"Degraded"``."""
+    faultSpireId: Optional[str]
+    "The spire at fault, with `error` saying why."
+    error: Optional[str]
 
 
 class UpdateStatusResponse(TypedDict):
