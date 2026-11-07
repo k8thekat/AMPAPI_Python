@@ -29,7 +29,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 
 ---
 
-- (#3-47.7) Type the shard replies still marked `# TODO:`: imports, disk, users, wake and the file ACL changes (moves between spires and datastores are done).
+- (#3-47.7) Type the shard replies still marked `# TODO:`: imports, users and the shards awaiting action (need players or a game waiting for input), wake (needs a template that can sleep, U18b), kill and abort (U12).
 
 ## ampapi/spires.py
 
