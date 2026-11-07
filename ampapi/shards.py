@@ -2414,7 +2414,9 @@ class ShardModule(Base):
             shard's `workingDirName`. :meth:`delete_shard_migration` doesn't remove it.
 
         The shard's ports become free ones on the target spire, eg. 8303 became 8305, and they stay so if it moves
-        back. A failed move's task stays in :meth:`TaskModule.get_running_tasks` until it is deleted (U22c).
+        back. A failed move's task stays in :meth:`TaskModule.get_running_tasks` until it is deleted (U22c). A shard
+        that was running starts again on the target by itself, once that spire has its container image, although the
+        move's record reads `startAfterMove` `False` (U22d).
 
         Parameters
         ----------
@@ -2427,8 +2429,8 @@ class ShardModule(Base):
         bring_backups : :class:`bool`
             If its snapshots move too or not.
         stop_if_running : :class:`bool`
-            If AMP may stop a running shard for the move or not. Not yet seen working: on teeworlds, whose stops end in
-            a kill (U18a), the move failed and left the shard stopped on its old spire.
+            If AMP may stop a running shard for the move or not. It works when the game stops cleanly (Minecraft); on
+            teeworlds, whose stops end in a kill (U18a), the move failed and left the shard stopped on its old spire.
 
         Raises
         ------
