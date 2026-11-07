@@ -615,6 +615,7 @@ class SpireModule(Base):
 
         """
         data: SpireEnrollmentRequest = {"label": label, "hosts": hosts if hosts is not None else []}
+
         if expires_in_hours is not None:
             data["expiresInHours"] = expires_in_hours
 
@@ -1171,6 +1172,7 @@ class SpireModule(Base):
 
         """
         data: SpireImportScanRequest = {"roots": roots}
+
         if automatic is True:
             data["automatic"] = True
 

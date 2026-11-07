@@ -245,6 +245,7 @@ class Session:
                 "_store_token",
                 self.username,
             )
+
         return data
 
     def _forget_token(self) -> None:
@@ -339,6 +340,7 @@ class Session:
                 parameters=parameters,
                 raw_bytes=raw_bytes,
             )
+
         return status, body
 
     async def _request(
@@ -367,6 +369,7 @@ class Session:
         )
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method=method, path=path, data=body)
+
         return body
 
     async def change_expired_password(self, new_password: str) -> TokenResponse:
@@ -532,6 +535,7 @@ class Session:
         status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/renew", data={})
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path="/api/auth/renew", data=body)
+
         return self._store_token(data=body)
 
     async def logout(self) -> None:
@@ -611,4 +615,5 @@ class Session:
         status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path=path, data=body)
+
         return self._login_result(data=body)

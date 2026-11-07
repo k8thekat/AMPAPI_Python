@@ -77,6 +77,7 @@ class CredentialModule(Base):
 
         """
         data: CredentialRequest = {"kind": kind, "title": title, "username": username, "secret": secret}
+
         if visibility is not None:
             data["visibility"] = visibility
 

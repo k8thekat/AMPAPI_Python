@@ -1215,6 +1215,7 @@ class ShardModule(Base):
             "startNow": start_now,
             "startOnBoot": start_on_boot,
         }
+
         if credential_id is not None:
             data["credentialId"] = credential_id
 
@@ -1324,6 +1325,7 @@ class ShardModule(Base):
             "timeout": run_timeout,
             "enabled": enabled,
         }
+
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/schedules", data=data)
 
     async def delete_shard(self, shard_id: str) -> ShardResponse:
@@ -1725,6 +1727,7 @@ class ShardModule(Base):
             path=f"/api/shards/{shard_id}/console/history",
             parameters=parameters,
         )
+
         for line in result["lines"]:
             if line["state"] is not None:
                 line["state"] = self._to_enum(ShardState, line["state"])
@@ -2046,8 +2049,10 @@ class ShardModule(Base):
 
         """
         result: Optional[ShardMigrationResponse] = await self._request(method="GET", path=f"/api/shards/{shard_id}/migration")
+
         if result is not None:
             result["status"] = self._to_enum(MigrationStatus, result["status"])
+
         return result
 
     async def get_shard_migration_targets(self, shard_id: str) -> list[ShardMigrationTargetResponse]:
@@ -2308,8 +2313,10 @@ class ShardModule(Base):
 
         """
         result: ShardSnapshotsResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots")
+
         for snapshot in result["nodes"]:
             self._snapshot_enums(snapshot=snapshot)
+
         result["restoreStage"] = self._to_enum(SnapshotStage, result["restoreStage"])
         return result
 
@@ -2473,6 +2480,7 @@ class ShardModule(Base):
             "bringBackups": bring_backups,
             "stopIfRunning": stop_if_running,
         }
+
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/spire", data=data)
 
     async def move_shard_file(self, shard_id: str, source: str, destination: str) -> None:
@@ -2844,6 +2852,7 @@ class ShardModule(Base):
 
         """
         missing: list[str] = sorted(ShardInfraSettings.__required_keys__ - settings.keys())
+
         if missing:
             msg = f"The infra settings are missing {', '.join(missing)}, which AMP would reset. Start from get_shard_infra's settings."
             raise ValueError(msg)
@@ -2975,6 +2984,7 @@ class ShardModule(Base):
             "maxTotalStorageMb": max_total_storage_mb,
             "stopWhenNoQuiesce": stop_when_no_quiesce,
         }
+
         return await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/settings", data=data)
 
     async def sleep_shard(self, shard_id: str) -> None:
@@ -3239,6 +3249,7 @@ class ShardModule(Base):
 
         """
         unknown: list[str] = sorted(changes.keys() - ShardInfraChanges.__optional_keys__)
+
         if unknown:
             msg = f"{', '.join(unknown)} aren't infra settings a user can change; see ShardInfraChanges for the names."
             raise ValueError(msg)
@@ -3298,6 +3309,7 @@ class ShardModule(Base):
             "timeout": run_timeout,
             "enabled": enabled,
         }
+
         return await self._request(method="PUT", path=f"/api/shards/{shard_id}/schedules/{schedule_id}", data=data)
 
     async def update_shard_snapshot(self, shard_id: str, snapshot_id: str, name: str, description: str, sticky: bool) -> None:

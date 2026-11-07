@@ -303,6 +303,7 @@ class PlatformModule(Base):
             "shardId": shard_id,
             "portRef": port_reference,
         }
+
         result: PublicationResponse = await self._request(method="POST", path="/api/networking/publications", data=data)
         return self._publication_enums(publication=result)
 
@@ -604,6 +605,7 @@ class PlatformModule(Base):
 
         """
         parameters: dict[str, Union[str, int]] = {"version": version}
+
         if language is not None:
             parameters["lang"] = language
 

@@ -318,6 +318,7 @@ class AccountModule(Base):
             "passwordExpires": password_expires,
             "requirePasswordChange": require_password_change,
         }
+
         return await self._request(method="POST", path="/api/users", data=data)
 
     async def delete_favourite(self, template_slug: str) -> PreferencesResponse:
@@ -738,6 +739,7 @@ class AccountModule(Base):
 
         """
         await self._request(method="POST", path=f"/api/users/{user_id}/reset-password", data={"newPassword": new_password})
+
         if user_id == self.session.user_id:
             self.session._password = new_password  # pyright: ignore[reportPrivateUsage]
 
@@ -811,6 +813,7 @@ class AccountModule(Base):
 
         """
         data: ProfileRequest = {"displayName": display_name}
+
         if email is not None:
             data["email"] = email
 
@@ -892,5 +895,6 @@ class AccountModule(Base):
             "passwordExpires": password_expires,
             "requirePasswordChange": require_password_change,
         }
+
         # We only send what changes, AMP keeps a value that's left out.
         return await self._request(method="PUT", path=f"/api/users/{user_id}", data=self._without_none(mapping=data))

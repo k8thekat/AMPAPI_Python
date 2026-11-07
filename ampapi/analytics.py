@@ -102,8 +102,10 @@ class AnalyticsModule(Base):
 
         """
         parameters: dict[str, str] = {"address": address}
+
         if demo is True:
             parameters["demo"] = "true"
+
         return await self._request(method="GET", path="/api/analytics/addresses/users", parameters=parameters)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
@@ -129,8 +131,10 @@ class AnalyticsModule(Base):
 
         """
         parameters: dict[str, str] = {"q": search}
+
         if demo is True:
             parameters["demo"] = "true"
+
         return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
 
     # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
@@ -209,8 +213,10 @@ class AnalyticsModule(Base):
 
         """
         parameters: dict[str, Union[str, list[str]]] = {"key": user_keys}
+
         if demo is True:
             parameters["demo"] = "true"
+
         return await self._request(method="GET", path="/api/analytics/profiles", parameters=parameters)
 
     async def get_analytics_sessions(
@@ -263,8 +269,10 @@ class AnalyticsModule(Base):
             "topUsers": top_users,
             "demo": "true" if demo is True else None,
         }
+
         # We only send the filters that are set, as the web panel does.
         parameters: dict[str, Union[str, int, list[str]]] = self._without_none(mapping=filters)
+
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
 
     # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
@@ -457,8 +465,10 @@ class AnalyticsModule(Base):
             "pageSize": page_size,
             "sort": sort,
         }
+
         # We only send the filters that are set, as the web panel does.
         parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
+
         return await self._request(method="GET", path="/api/audit", parameters=parameters)
 
     async def get_audit_facets(self) -> AuditFacetsResponse:
@@ -547,7 +557,9 @@ class AnalyticsModule(Base):
             "pageSize": page_size,
             "sort": sort,
         }
+
         parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
+
         return await self._request(method="GET", path="/api/audit/roots", parameters=parameters)
 
     async def get_audit_tree(self, correlation_id: str) -> AuditTreeResponse:

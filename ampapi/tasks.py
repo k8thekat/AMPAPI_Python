@@ -115,6 +115,8 @@ class TaskModule(Base):
 
         """
         result: list[RunningTaskResponse] = await self._request(method="GET", path="/api/running-tasks")
+
         for task in result:
             task["state"] = self._to_enum(TaskState, task["state"])
+
         return result
