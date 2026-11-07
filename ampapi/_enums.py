@@ -50,7 +50,9 @@ class CloneContent(IntFlag):
 class MigrationStatus(IntEnum):
     """A shard move's `status`, named as the web panel's `ShardMigrationStatus` names it. AMP sends the number.
 
-    Seen live: 0 while copying, 2 once the move is done and 3 for a failed one. A done move stays at 2 until
+    Seen live: 0 while copying, 2 once the move is done, and 3 for a failed one or one
+    :meth:`ShardModule.cancel_shard_migration` stopped (its `error` reads ``"Cancelled."``). A move can be done within
+    one round trip: an empty shard read 2 28 ms after the start. The record stays until
     :meth:`ShardModule.delete_shard_migration`; it wasn't seen reaching 5 on its own.
 
     .. versionadded:: 6.0.0

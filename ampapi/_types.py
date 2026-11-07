@@ -150,6 +150,7 @@ __all__ = (
     "ShardInfraUpdateResponse",
     "ShardMetricResponse",
     "ShardMigrationResponse",
+    "ShardMigrationTargetResponse",
     "ShardPortAssignments",
     "ShardPortOutcome",
     "ShardPortResponse",
@@ -1952,30 +1953,46 @@ class ShardMigrationResponse(TypedDict):
     sourceShardId: str
     "Only seen as all zeros."
     sourceSpireId: str
+    "All zeros on a move between datastores of one spire."
     targetSpireId: str
+    "All zeros on a move between datastores of one spire."
     sourcePath: str
-    "Only seen empty."
+    "The shard's old folder on a move between datastores of one spire; empty on a move between spires."
     targetPath: str
     """The shard's folder on the target, eg. ``"/opt/cubecoders/amp3/data/Datastores/Default/my-shard-ef6e621c"``."""
     status: Union[MigrationStatus, int]
     "A number the library doesn't know stays a plain int."
     filesTotal: int
-    "Only seen as 0, even once the move was done."
+    "0 while copying and the real count once done, eg. 664; a shard with no files reads 0 throughout."
     filesDone: int
     bytesTotal: int
-    "Only seen as 0, even once the move was done."
+    "0 while copying and the real count once done, eg. 11733813."
     bytesDone: int
     error: Optional[str]
-    """An English sentence on a failed move, eg. ``"The move failed. The server was left stopped on its source spire. ..."``."""
+    """An English sentence on a failed move, eg. ``"The move failed. The server was left stopped on its source spire. ..."``,
+    or ``"Cancelled."`` after `ShardModule.cancel_shard_migration`."""
     startedAt: str
     finishedAt: Optional[str]
     startedByUserId: str
     startAfterMove: bool
-    "If AMP starts the shard again once it's moved; set when the move stops it."
+    """Seen `True` on a move that stopped the shard and failed; a running shard that moved fine read `False`, yet
+    started on the target (U22d)."""
     isActive: bool
     "If the move is still running; `True` only while copying."
     blocksLaunch: bool
     "If the shard can't be started meanwhile; `True` only while copying."
+
+
+class ShardMigrationTargetResponse(TypedDict):
+    """One datastore a shard could move to, from ``GET /api/shards/{id}/migration/targets``.
+
+    The spire's other datastores, without the one the shard is in.
+    """
+
+    id: str
+    name: str
+    path: str
+    """eg. ``"/opt/cubecoders/amp3/data/Datastores/my_store"``."""
 
 
 class ShardPortAssignments(TypedDict):

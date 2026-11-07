@@ -648,6 +648,11 @@ class SpireModule(Base):
 
         Endpoint: ``DELETE /api/spires/{spire_id}/datastores/{datastore_id}``
 
+        .. warning::
+            AMP accepts it while the datastore still holds an orphan folder (U23). The folder stays on disk, and with
+            the datastore gone the API can't reach it to purge it; adding a datastore at the same path again lists it
+            once more. Purge the orphans first, see :meth:`purge_spire_orphan_directory`.
+
         Parameters
         ----------
         spire_id : :class:`str`
@@ -1083,8 +1088,10 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan``
 
-        This is how the copy a :meth:`ShardModule.migrate_shard_to_spire` move leaves behind goes: call it on the old
-        spire's datastore, with the shard's `workingDirName` as `name`.
+        This is how the copy a move leaves behind goes, from :meth:`ShardModule.migrate_shard_to_spire` or a move between
+        datastores with :meth:`ShardModule.start_shard_migration`. Call it on the old spire and datastore, with the
+        shard's `workingDirName` as `name`. The orphan is only listed once the spire's disk use is measured again, see
+        :meth:`rescan_spire_usage`.
 
         Parameters
         ----------
@@ -1099,6 +1106,11 @@ class SpireModule(Base):
         -------
         :class:`SpireUsageResponse`
             The spire's disk use after.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the datastore has no such folder, eg. it was purged already (409, ``"datastore.error.purgeMissing"``).
 
         """
         path: str = f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan"

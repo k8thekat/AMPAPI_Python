@@ -53,6 +53,7 @@ if TYPE_CHECKING:
         ShardInfraUpdateResponse,
         ShardMetricResponse,
         ShardMigrationResponse,
+        ShardMigrationTargetResponse,
         ShardPortResponse,
         ShardResponse,
         ShardScheduleResponse,
@@ -155,15 +156,13 @@ class Shard:
         """
         await self._module.archive_shard_files(shard_id=self.id, paths=paths, destination=destination)
 
-    # TODO: Type the reply once AMP is seen cancelling a move live (#3-47.7).
-    # It comes from `ShardModule.cancel_shard_migration`.
-    async def cancel_migration(self) -> Any:
+    async def cancel_migration(self) -> None:
         """Stop this shard's move, see :meth:`ShardModule.cancel_shard_migration`.
 
         |coro|
 
         """
-        return await self._module.cancel_shard_migration(shard_id=self.id)
+        await self._module.cancel_shard_migration(shard_id=self.id)
 
     async def clone(
         self,
@@ -466,9 +465,7 @@ class Shard:
         """
         return await self._module.get_shard_migration(shard_id=self.id)
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # It comes from `ShardModule.get_shard_migration_targets`.
-    async def get_migration_targets(self) -> list[dict[str, Any]]:
+    async def get_migration_targets(self) -> list[ShardMigrationTargetResponse]:
         """Get the other datastores on this shard's spire it could move to, see :meth:`ShardModule.get_shard_migration_targets`.
 
         |coro|
@@ -813,15 +810,13 @@ class Shard:
         """
         return await self._module.start_shard_file_upload(shard_id=self.id, path=path, size=size)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.start_shard_migration`.
-    async def start_migration(self, target_datastore_id: str) -> Any:
+    async def start_migration(self, target_datastore_id: str) -> None:
         """Move this shard to another datastore on its spire, see :meth:`ShardModule.start_shard_migration`.
 
         |coro|
 
         """
-        return await self._module.start_shard_migration(shard_id=self.id, target_datastore_id=target_datastore_id)
+        await self._module.start_shard_migration(shard_id=self.id, target_datastore_id=target_datastore_id)
 
     async def stop(self) -> None:
         """Stop this shard's game, see :meth:`ShardModule.stop_shard`.
@@ -1042,33 +1037,30 @@ class ShardModule(Base):
         data: dict[str, Any] = {"paths": paths, "destination": destination}
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/archive", data=data)
 
-    # TODO: Type the reply once AMP is seen cancelling a move live (#3-47.7).
-    # Only the refusal was captured: a move between two spires on one network was done within seconds.
-    async def cancel_shard_migration(self, shard_id: str) -> Any:
+    async def cancel_shard_migration(self, shard_id: str) -> None:
         """Stop a shard's move.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/migration/cancel``
 
+        AMP answers 202, and :meth:`get_shard_migration` then reads `MigrationStatus.failed` with `error`
+        ``"Cancelled."``; the shard stays where it was. A cancel sent straight after the start was taken. Dismiss the
+        record with :meth:`delete_shard_migration` as for any other.
+
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
         Raises
         ------
         AMPAPIRequestError
-            If no move is copying (409, ``"shards.migration.notRunning"``), eg. one that is done, failed, or was only
-            just started.
+            If no move is running (409, ``"shards.migration.notRunning"``), eg. there's none, or it's done, failed,
+            cancelled or dismissed.
 
         """
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/cancel")
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/cancel")
 
     async def clone_shard(
         self,
@@ -2032,9 +2024,7 @@ class ShardModule(Base):
             result["status"] = self._to_enum(MigrationStatus, result["status"])
         return result
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # Only seen empty, as each test spire had one datastore; it stays empty with a second spire.
-    async def get_shard_migration_targets(self, shard_id: str) -> list[dict[str, Any]]:
+    async def get_shard_migration_targets(self, shard_id: str) -> list[ShardMigrationTargetResponse]:
         """Get the other datastores on a shard's own spire it could move to, for :meth:`start_shard_migration`.
 
         |coro|
@@ -2051,8 +2041,8 @@ class ShardModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The targets, empty when the spire has one datastore.
+        list[:class:`ShardMigrationTargetResponse`]
+            The spire's other datastores, without the one the shard is in; empty when the spire has one datastore.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/migration/targets")
@@ -3015,16 +3005,16 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Only an unknown datastore's 409 (U16) was captured, as the test panel had one datastore.
-    async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> Any:
+    async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> None:
         """Move a shard to another datastore on its spire.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/migration``
 
-        To move it to another spire, use :meth:`migrate_shard_to_spire`.
+        AMP answers at once (202); follow it with :meth:`get_shard_migration`. The shard's `datastoreId` changes
+        straight away. A shard with files leaves its old folder as an ``"Orphan"`` in the old datastore, until
+        :meth:`SpireModule.purge_spire_orphan_directory`. To move it to another spire, use :meth:`migrate_shard_to_spire`.
 
         Parameters
         ----------
@@ -3033,13 +3023,14 @@ class ShardModule(Base):
         target_datastore_id : :class:`str`
             The datastore to move it to; see :meth:`get_shard_migration_targets`.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If `target_datastore_id` is the shard's own datastore or an unknown one (409, ``"spire.error.internal"``)
+            (U22b).
 
         """
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/migration", data={"targetDatastoreId": target_datastore_id})
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/migration", data={"targetDatastoreId": target_datastore_id})
 
     async def stop_shard(self, shard_id: str) -> None:
         """Stop a shard's game cleanly.
