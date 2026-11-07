@@ -46,6 +46,7 @@ from ._types import (  # noqa: TC001
     ShardStateMetrics,
     SnapshotSettingsResponse,
     SpirePlatform,
+    SpireResponse,
     WrappedID,
 )
 from .base import Base
@@ -65,7 +66,6 @@ __all__ = (
     "ShardStatus",
     "Snapshot",
     "SpirePresence",
-    "SpireReference",
     "SpireStatus",
 )
 
@@ -110,7 +110,7 @@ class AMPObject:
 
     data: Mapping[str, Any]
     # The attributes `__repr__` shows, the first of these a subclass declares.
-    _repr_names: ClassVar[tuple[str, ...]] = ("id", "shard_id", "spire_id", "name", "status", "state", "kind", "text")
+    _repr_names: ClassVar[tuple[str, ...]] = ("id", "shard_id", "spire_id", "name", "status", "state", "kind", "online", "text")
     # Each subclass's resolved annotations, worked out on its first object.
     _hints: ClassVar[dict[type[AMPObject], dict[str, Any]]] = {}
 
@@ -209,10 +209,22 @@ class ConsoleLine(AMPObject):
     """The game's log source, eg. ``"Server thread"``."""
 
 
-# TODO: Check the kinds other than 0 and 7, and which fields each fills, against the hub captures (#3-47.2.1).
-# The fields are from the vm3 captures; the web panel's code reads `stageIndex`, `totalStages`, `subTask` and `success` too.
+# TODO: Check which fields kinds 4, 6 and 8 fill once a capture shows one (#3-47.2.1).
+# They need a game that asks the user something, a sleep-capable template and a notice.
 class LifecycleEvent(AMPObject):
     """The shard hub's `Lifecycle` event: a step in a shard's start, stop or update.
+
+    Each kind fills a few fields and leaves the rest `None`:
+
+    - `LifecycleKind.state_changed`: `state`, and on some a `message`, eg. ``"Waiting for the shard agent to report in"``.
+    - `LifecycleKind.update_progress`: `task_id`, `stage_index` (from 1), `total_stages`, `progress_percent` and `message`.
+    - `LifecycleKind.information`: the stage's name, with `task_id`, `stage_index` and `total_stages`; an
+      `update_progress` with the same text follows it.
+    - `LifecycleKind.update_complete`: `success` and `message`, just before the update's last `state_changed`.
+    - `LifecycleKind.error`: `message`, `message_code` and `message_params`, eg. ``"agent.msg.executableNotFound"``,
+      sent with a `state_changed` to `ShardState.failed_startup`.
+    - `LifecycleKind.gateway_key_published`: `gateway_public_key` on a start through a gateway, and empty on the stop.
+    - `LifecycleKind.startup_progress`: `progress_percent` and `message`, eg. ``"Preparing spawn area"``.
 
     .. versionadded:: 6.0.0
     """
@@ -244,17 +256,44 @@ class LifecycleEvent(AMPObject):
     timestamp: str
 
 
-# TODO: Type `json` once the hub captures show one (#3-47.2.1).
-# The event is sent as two arguments, `(kind, json)`; the web panel only refetches the endpoints on it.
 class NetworkStatus(AMPObject):
-    """The spire hub's `NetworkStatus` event: something changed in how the panel is reached.
+    """The spire hub's `NetworkStatus` event: a publication, tunnel or gateway changed its status.
+
+    AMP sends `(kind, json)`, the status as a JSON string with PascalCase keys; the library parses it, so its keys
+    become attributes like any other, eg. `PublicationId` is `publication_id`. Each `kind` fills its own fields and
+    the rest are unset. A delete sends nothing for the publication or gateway itself.
 
     .. versionadded:: 6.0.0
     """
 
     kind: str
-    json: str
-    "A JSON document as a string."
+    """``"publication"``, ``"tunnel"`` or ``"gateway"``."""
+    publication_id: str
+    "A publication's ID, on `publication`."
+    tunnel_id: str
+    "A tunnel's ID, on `tunnel`."
+    binding_id: str
+    "A gateway's ID, on `gateway`."
+    state: str
+    """A publication's `PublicationState` name or a gateway's `GatewayState` name, eg. ``"Active"``."""
+    target_spire_id: str
+    "The spire a publication reaches its shard on, all zeros once it's disabled."
+    resolved_port: int
+    "A publication's port on the shard, 0 once it's disabled."
+    tunnel_phase: Optional[str]
+    "A publication's tunnel phase, through another spire."
+    up: bool
+    "If a tunnel is up."
+    rtt_ms: int
+    "A tunnel's round trip time."
+    phase: str
+    """A tunnel's phase, eg. ``"Provisioning"``, ``"Connecting"``, ``"AgentRejected"``, ``"Up"`` or ``"Releasing"``."""
+    address: str
+    """A gateway's address on its tunnel, eg. ``"10.83.0.10"``."""
+    fault_spire_id: Optional[str]
+    "The spire at fault, on `publication` and `tunnel`."
+    error: Optional[str]
+    """eg. ``"The file does not exist."`` while a first tunnel's agent is set up."""
 
 
 class RunningTask(AMPObject):
@@ -269,7 +308,7 @@ class RunningTask(AMPObject):
     id: str
     tenant_id: str
     type: str
-    """eg. ``"ApplicationUpdate"``, ``"ShardClone"`` or ``"ShardMigration"``."""
+    """eg. ``"ApplicationUpdate"``, ``"ShardClone"``, ``"ShardMigration"`` or ``"Snapshot"``."""
     name: str
     """eg. ``"Update my-shard"``; empty on a clone or a move, which name themselves with `name_code`."""
     name_code: Optional[str]
@@ -312,10 +351,11 @@ class RunningTask(AMPObject):
     "If the task has finished; only a finished task can be dismissed."
 
 
-# TODO: Check the hub's `ScheduleRun` payload against this once the hub captures show one (#3-47.2.1).
-# The web panel's code reads `scheduleId` and `id` from it; the fields are the REST history's.
 class ScheduleExecution(AMPObject):
     """One run of a schedule: the shard hub's `ScheduleRun` event, and each of ``GET .../schedules/{id}/history``.
+
+    A run pushes ``"Running"``, then ``"Succeeded"`` with its `step_outcomes`; a disabled schedule's run pushes one
+    ``"Skipped"``.
 
     .. versionadded:: 6.0.0
     """
@@ -331,7 +371,7 @@ class ScheduleExecution(AMPObject):
     started_at: str
     completed_at: str
     status: str
-    """eg. ``"Succeeded"`` or ``"Skipped"`` (a disabled schedule that was run)."""
+    """eg. ``"Running"``, ``"Succeeded"`` or ``"Skipped"`` (a disabled schedule that was run)."""
     attempt_number: int
     worker_node: Optional[str]
     "The spire that ran it."
@@ -363,10 +403,10 @@ class ShardMetrics(AMPObject):
     listening_ports: list[int]
 
 
-# TODO: Check the hub's `Migration` payload against this once the hub captures show one (#3-47.2.1).
-# The web panel's code reads `status` and `shardId` from it; the fields are the REST reply's.
 class ShardMigration(AMPObject):
     """A shard's latest move: the shard hub's `Migration` event, and ``GET /api/shards/{id}/migration``.
+
+    The hub pushes it as the counters move, through `MigrationStatus.copying`, `validating` and `awaiting_cleanup`.
 
     .. versionadded:: 6.0.0
     """
@@ -426,8 +466,6 @@ class ShardPlayer(AMPObject):
     session_id: str
 
 
-# TODO: Check the hub's `Snapshot` payload against this once the hub captures show one (#3-47.2.1).
-# The web panel's code treats it as the same graph as the REST reply.
 class ShardSnapshots(AMPObject):
     """A shard's snapshots as a tree and any restore in progress: the shard hub's `Snapshot` event, and ``GET .../snapshots``.
 
@@ -523,26 +561,22 @@ class Snapshot(AMPObject):
     zip_file_name: str
 
 
-# TODO: Check against the hub captures once a spire joins or leaves (#3-47.2.1).
-# The fields are the web panel's: `{spire: {id, displayName}, online}`.
 class SpirePresence(AMPObject):
-    """The spire hub's `SpirePresence` event: a spire came online or went offline.
+    """One spire and if it's online: the spire hub's `SpirePresence` event, and each of ``GET /api/spires/roster``.
+
+    The hub pushes one when a spire goes offline or comes back, some seconds after it does.
 
     .. versionadded:: 6.0.0
     """
 
-    spire: SpireReference
+    spire: SpireResponse
     online: bool
-
-
-class SpireReference(AMPObject):
-    """A spire named inside another event, eg. `SpirePresence.spire`.
-
-    .. versionadded:: 6.0.0
-    """
-
-    id: str
-    display_name: str
+    last_seen: str
+    "The spire's last contact, when it went offline."
+    version: str
+    behind: bool
+    "If the spire runs an older AMP than the panel."
+    installation_version: str
 
 
 class SpireStatus(AMPObject):

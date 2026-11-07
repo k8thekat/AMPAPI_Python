@@ -24,6 +24,7 @@ import asyncio
 import contextlib
 import json
 import logging
+from collections import deque
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, overload
 
 from aiohttp import ClientError, WSMsgType
@@ -103,20 +104,22 @@ type ShardHandler[P] = Callable[[Shard, P], Awaitable[None]]
 type SpireHandler[P] = Callable[[Spire, P], Awaitable[None]]
 type PlainHandler[P] = Callable[[P], Awaitable[None]]
 
-# Each `/hubs/shard` target: our name for it, the argument that holds the payload and the object it becomes.
-SHARD_TARGETS: dict[str, tuple[ShardEvent, int, type[AMPObject]]] = {
-    "ConsoleLine": ("console", 0, ConsoleLine),
-    "Lifecycle": ("lifecycle", 0, LifecycleEvent),
-    "Metrics": ("metrics", 1, ShardMetrics),
-    "Migration": ("migration", 1, ShardMigration),
-    "ScheduleRun": ("schedule_run", 1, ScheduleExecution),
-    "ShardStateChanged": ("state", 2, ShardStatus),
-    "Snapshot": ("snapshot", 1, ShardSnapshots),
-    "UserJoined": ("player_joined", 1, ShardPlayer),
-    "UserLeft": ("player_left", 1, ShardPlayer),
-    "UserRoster": ("players", 1, ShardPlayer),
+# Each `/hubs/shard` target: our name for it, the argument that holds the payload, the object it becomes, and the
+# argument that holds its shard ID. `None` takes the socket's shard: `ConsoleLine` names none, and `Lifecycle` keeps
+# to its shard's room. `ShardStateChanged` reaches every shard socket, so it can only go by its own shard ID.
+SHARD_TARGETS: dict[str, tuple[ShardEvent, int, type[AMPObject], Optional[int]]] = {
+    "ConsoleLine": ("console", 0, ConsoleLine, None),
+    "Lifecycle": ("lifecycle", 0, LifecycleEvent, None),
+    "Metrics": ("metrics", 1, ShardMetrics, 0),
+    "Migration": ("migration", 1, ShardMigration, 0),
+    "ScheduleRun": ("schedule_run", 1, ScheduleExecution, 0),
+    "ShardStateChanged": ("state", 2, ShardStatus, 1),
+    "Snapshot": ("snapshot", 1, ShardSnapshots, 0),
+    "UserJoined": ("player_joined", 1, ShardPlayer, 0),
+    "UserLeft": ("player_left", 1, ShardPlayer, 0),
+    "UserRoster": ("players", 1, ShardPlayer, 0),
 }
-SHARD_EVENTS: frozenset[str] = frozenset(event for event, _index, _kind in SHARD_TARGETS.values())
+SHARD_EVENTS: frozenset[str] = frozenset(event for event, _index, _kind, _shard_index in SHARD_TARGETS.values())
 SPIRE_EVENTS: frozenset[str] = frozenset(("spire_state", "spire_presence", "network_status"))
 
 
@@ -408,7 +411,11 @@ class HubModule(ShardModule, SpireModule):
 
     :meth:`start_listening` lists the shards and spires, then opens one `/hubs/shard` connection per shard in scope,
     one `/hubs/spire` and one `/hubs/tasks`, as needed. A listener with no `shard` or `spire` covers everything the
-    panel can see; the lists are fetched again every 5 minutes, and when a task names a shard we don't know.
+    panel can see; the lists are fetched again every 5 minutes, and when an event names a shard we don't know.
+
+    AMP sends every shard's `ShardStateChanged` to every shard socket, not only the joined shard's. So a `state` event
+    goes by the shard ID it carries, to the listeners that cover that shard, and the copies the other sockets get are
+    dropped by its `revision`. A console line names no shard, so it goes by its socket.
 
     .. versionadded:: 6.0.0
 
@@ -416,6 +423,8 @@ class HubModule(ShardModule, SpireModule):
 
     # How often the shard and spire lists are fetched again, in seconds.
     _refresh_every: ClassVar[float] = 300.0
+    # How many recent state revisions per shard we remember, to drop the copies the other shard sockets get.
+    _revisions_kept: ClassVar[int] = 64
 
     def __init__(self, session: Session) -> None:  # noqa: D107
         super().__init__(session=session)
@@ -427,6 +436,7 @@ class HubModule(ShardModule, SpireModule):
         self._refresher: Optional[asyncio.Task[None]] = None
         self._refresh_wanted: asyncio.Event = asyncio.Event()
         self._background: set[asyncio.Task[None]] = set()
+        self._state_revisions: dict[str, deque[int]] = {}
 
     @property
     def listening(self) -> bool:
@@ -790,18 +800,7 @@ class HubModule(ShardModule, SpireModule):
     def _dispatch(self, connection: HubConnection, target: str, arguments: list[Any]) -> None:
         """Turn one hub event into its object and queue it for each listener it's for."""
         if connection.hub == "shard":
-            shard: Optional[Shard] = self._hub_shards.get(connection.shard_id or "")
-            known: Optional[tuple[ShardEvent, int, type[AMPObject]]] = SHARD_TARGETS.get(target)
-            if shard is None or known is None or len(arguments) <= known[1]:
-                LOGGER.debug("<%s.%s> | Skipped a shard event | Target: %s", __class__.__name__, "_dispatch", target)
-                return
-
-            event, index, kind = known
-            value: Any = arguments[index]
-            # `UserRoster` sends a list of players; every other event, one object.
-            entries: list[Any] = value if isinstance(value, list) else []  # pyright: ignore[reportUnknownVariableType]
-            payload: Any = [kind(data=entry) for entry in entries] if isinstance(value, list) else kind(data=value)
-            self._deliver(event=event, arguments=(shard, payload), shard_id=shard.id)
+            self._dispatch_shard(connection=connection, target=target, arguments=arguments)
 
         elif connection.hub == "spire":
             self._dispatch_spire(target=target, arguments=arguments)
@@ -813,10 +812,45 @@ class HubModule(ShardModule, SpireModule):
 
             self._deliver(event="task", arguments=(task,))
 
+    def _dispatch_shard(self, connection: HubConnection, target: str, arguments: list[Any]) -> None:
+        """Attribute one shard hub event to its shard, and drop a state another shard socket already delivered."""
+        known: Optional[tuple[ShardEvent, int, type[AMPObject], Optional[int]]] = SHARD_TARGETS.get(target)
+        if known is None or len(arguments) <= known[1]:
+            LOGGER.debug("<%s.%s> | Skipped a shard event | Target: %s", __class__.__name__, "_dispatch_shard", target)
+            return
+
+        event, index, kind, shard_index = known
+        shard_id: Any = connection.shard_id if shard_index is None else arguments[shard_index]
+        shard: Optional[Shard] = self._hub_shards.get(shard_id) if isinstance(shard_id, str) else None
+        if shard is None:
+            # A shard made since the last list; the next refresh brings it in.
+            self._refresh_wanted.set()
+            return
+
+        value: Any = arguments[index]
+        # `UserRoster` sends a list of players; every other event, one object.
+        entries: list[Any] = value if isinstance(value, list) else []  # pyright: ignore[reportUnknownVariableType]
+        payload: Any = [kind(data=entry) for entry in entries] if isinstance(value, list) else kind(data=value)
+
+        # Each shard socket gets every shard's state, so the same revision comes once per socket.
+        if isinstance(payload, ShardStatus):
+            if shard.id not in self._state_revisions:
+                self._state_revisions[shard.id] = deque(maxlen=self._revisions_kept)
+
+            seen: deque[int] = self._state_revisions[shard.id]
+            if payload.revision in seen:
+                return
+
+            seen.append(payload.revision)
+
+        self._deliver(event=event, arguments=(shard, payload), shard_id=shard.id)
+
     def _dispatch_spire(self, target: str, arguments: list[Any]) -> None:
-        # `NetworkStatus` is sent as two arguments, `(kind, json)`.
+        # `NetworkStatus` is sent as two arguments, `(kind, json)`, the second a JSON string with PascalCase keys.
         if target == "NetworkStatus" and len(arguments) >= 2:
-            self._deliver(event="network_status", arguments=(NetworkStatus(data={"kind": arguments[0], "json": arguments[1]}),))
+            status: Any = json.loads(arguments[1]) if isinstance(arguments[1], str) else {}
+            fields: dict[str, Any] = status if isinstance(status, dict) else {}  # pyright: ignore[reportUnknownVariableType]
+            self._deliver(event="network_status", arguments=(NetworkStatus(data={"kind": arguments[0], **fields}),))
             return
 
         if target == "SpireState" and arguments:
@@ -828,7 +862,7 @@ class HubModule(ShardModule, SpireModule):
 
         if target == "SpirePresence" and arguments:
             presence: SpirePresence = SpirePresence(data=arguments[0])
-            spire = self._hub_spires.get(presence.spire.id)
+            spire = self._hub_spires.get(presence.spire["id"])
             if spire is None:
                 # A spire that just joined; the next refresh brings it in.
                 self._refresh_wanted.set()

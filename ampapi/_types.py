@@ -216,7 +216,6 @@ __all__ = (
     "SpirePlatform",
     "SpirePortResponse",
     "SpireResponse",
-    "SpireRosterResponse",
     "SpireStartupEntry",
     "SpireStartupResponse",
     "SpireStorageResponse",
@@ -2614,18 +2613,6 @@ class SpireResponse(TypedDict):
     isPublicEntryNode: bool
     canHostShards: bool
     acceptsNewShards: bool
-
-
-class SpireRosterResponse(TypedDict):
-    """One spire and if it's online, from ``GET /api/spires/roster``."""
-
-    spire: SpireResponse
-    online: bool
-    lastSeen: str
-    version: str
-    behind: bool
-    "If the spire runs an older AMP than the panel."
-    installationVersion: str
 
 
 class SpireStartupEntry(TypedDict):

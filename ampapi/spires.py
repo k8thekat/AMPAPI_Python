@@ -24,7 +24,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from .base import Base, ListenerRegistry
-from .objects import SpireStatus
+from .objects import SpirePresence, SpireStatus
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -48,7 +48,6 @@ if TYPE_CHECKING:
         SpireIPOptionResponse,
         SpirePortResponse,
         SpireResponse,
-        SpireRosterResponse,
         SpireStartupEntry,
         SpireStartupResponse,
         SpireStorageResponse,
@@ -908,7 +907,7 @@ class SpireModule(Base):
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/ports")
 
-    async def get_spire_roster(self) -> list[SpireRosterResponse]:
+    async def get_spire_roster(self) -> list[SpirePresence]:
         """Get every spire with if it's online and its AMP version.
 
         |coro|
@@ -917,11 +916,12 @@ class SpireModule(Base):
 
         Returns
         -------
-        list[:class:`SpireRosterResponse`]
+        list[:class:`SpirePresence`]
             The spires.
 
         """
-        return await self._request(method="GET", path="/api/spires/roster")
+        result: list[dict[str, Any]] = await self._request(method="GET", path="/api/spires/roster")
+        return [SpirePresence(data=entry) for entry in result]
 
     async def get_spire_settings_manifest(self, spire_id: str) -> SettingsManifestResponse:
         """Get a spire's settings with their current values.

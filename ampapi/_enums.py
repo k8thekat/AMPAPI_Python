@@ -69,8 +69,8 @@ class GatewayState(StrEnum):
     provisioning = "Provisioning"
 
 
-# TODO: Check kinds 1 to 6, 8 and 9 against the hub captures (#3-47.2.1).
-# Only 0 and 7 were seen live; the rest are the web panel's names.
+# TODO: Check kinds 4, 6 and 8 once a capture shows one (#3-47.2.1).
+# Their names are the web panel's; every other kind was seen live.
 class LifecycleKind(IntEnum):
     """A shard hub `Lifecycle` event's `kind`, named as the web panel names it. AMP sends the number.
 
