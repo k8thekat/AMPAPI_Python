@@ -54,7 +54,7 @@ class AnalyticsModule(Base):
 
     """
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.11).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
     # The path comes from the web panel's code; no capture shows the response yet.
     async def delete_analytics_user_sessions(self, user_key: str, *, demo: bool = False) -> Any:
         """Erase everything the analytics hold about one player.
@@ -104,7 +104,7 @@ class AnalyticsModule(Base):
             parameters["demo"] = "true"
         return await self._request(method="GET", path="/api/analytics/addresses/users", parameters=parameters)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.11).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
     # Only the 400 for part of an address was captured, as the test panel had no players.
     async def get_analytics_addresses(self, search: str, *, demo: bool = False) -> Any:
         """Search the addresses players were seen at.
@@ -131,7 +131,7 @@ class AnalyticsModule(Base):
             parameters["demo"] = "true"
         return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
 
-    # TODO: Confirm the image once AMP is seen sending one live (#47.11).
+    # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
     # Only the 400 for an unknown key was captured, as the test panel had no players; the web panel reads it as a blob.
     async def get_analytics_avatar(self, user_key: str, *, full: bool = False) -> bytes:
         """Get a player's avatar image.
@@ -161,7 +161,7 @@ class AnalyticsModule(Base):
         parameters: Optional[dict[str, str]] = {"full": "true"} if full is True else None
         return await self._request(method="GET", path=f"/api/analytics/avatars/{user_key}", parameters=parameters, raw_bytes=True)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.11).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
     # An unknown player gave 404 with no body, and what the `user` query value means isn't known yet.
     async def get_analytics_connected_users(self, user_key: str, *, user: Optional[str] = None) -> Any:
         """Get the players connected to one player, as far as the web panel shows.
@@ -265,7 +265,7 @@ class AnalyticsModule(Base):
         parameters: dict[str, Union[str, int, list[str]]] = {key: value for key, value in filters.items() if value is not None}
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
 
-    # TODO: Confirm the image once AMP is seen sending one live (#47.11).
+    # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
     # Only the 400 for an unknown key was captured, as the test panel had no players; the web panel reads it as a blob.
     async def get_analytics_skin(self, user_key: str) -> bytes:
         """Get a Minecraft player's skin image.

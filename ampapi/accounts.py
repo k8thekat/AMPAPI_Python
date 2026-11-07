@@ -732,7 +732,7 @@ class AccountModule(Base):
         if user_id == self.session.user_id:
             self.session._password = new_password  # pyright: ignore[reportPrivateUsage]
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.9).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.9).
     # The body comes from the web panel's code; no capture shows the response yet.
     async def set_passkey_name(self, passkey_id: str, name: str) -> Any:
         """Rename one of the logged in user's passkeys.

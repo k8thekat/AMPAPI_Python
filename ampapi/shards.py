@@ -117,7 +117,7 @@ class Shard:
         self.id = data["id"]
         self.display_name = data["displayName"]
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.abort_shard_update`.
     async def abort_update(self) -> Any:
         """Stop this shard's update, see :meth:`ShardModule.abort_shard_update`.
@@ -154,7 +154,7 @@ class Shard:
         """
         await self._module.archive_shard_files(shard_id=self.id, paths=paths, destination=destination)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.cancel_shard_migration`.
     async def cancel_migration(self) -> Any:
         """Stop this shard's move, see :meth:`ShardModule.cancel_shard_migration`.
@@ -267,7 +267,7 @@ class Shard:
         """
         await self._module.delete_shard_file(shard_id=self.id, path=path)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.delete_shard_migration`.
     async def delete_migration(self) -> Any:
         """Dismiss this shard's finished move, see :meth:`ShardModule.delete_shard_migration`.
@@ -357,7 +357,7 @@ class Shard:
         """
         return await self._module.get_shard_credential(shard_id=self.id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.get_shard_disk`.
     async def get_disk(self) -> Optional[dict[str, Any]]:
         """Get this shard's disk use, see :meth:`ShardModule.get_shard_disk`.
@@ -415,7 +415,7 @@ class Shard:
         """
         return await self._module.get_shard_files(shard_id=self.id, path=path)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.get_shard_import`.
     async def get_import(self) -> Optional[dict[str, Any]]:
         """Get how this shard's import went, see :meth:`ShardModule.get_shard_import`.
@@ -441,7 +441,7 @@ class Shard:
         """
         return await self._module.get_shard_ip_options(shard_id=self.id)
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # It comes from `ShardModule.get_shard_managed_files`.
     async def get_managed_files(self, path: str) -> list[dict[str, Any]]:
         """Get which files under a path AMP writes itself, see :meth:`ShardModule.get_shard_managed_files`.
@@ -459,7 +459,7 @@ class Shard:
         """
         return await self._module.get_shard_metrics(shard_id=self.id, minutes=minutes)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.get_shard_migration`.
     async def get_migration(self) -> Optional[dict[str, Any]]:
         """Get this shard's move in progress, see :meth:`ShardModule.get_shard_migration`.
@@ -469,7 +469,7 @@ class Shard:
         """
         return await self._module.get_shard_migration(shard_id=self.id)
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # It comes from `ShardModule.get_shard_migration_targets`.
     async def get_migration_targets(self) -> list[dict[str, Any]]:
         """Get where this shard could move to, see :meth:`ShardModule.get_shard_migration_targets`.
@@ -567,7 +567,7 @@ class Shard:
         """
         return await self._module.get_shard_state(shard_id=self.id)
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # It comes from `ShardModule.get_shard_users`.
     async def get_users(self) -> list[dict[str, Any]]:
         """Get the players on this shard, see :meth:`ShardModule.get_shard_users`.
@@ -585,7 +585,7 @@ class Shard:
         """
         return await self._module.import_shard_config(shard_id=self.id, path=path, content=content)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.kill_shard`.
     async def kill(self) -> Any:
         """End this shard's game at once, see :meth:`ShardModule.kill_shard`.
@@ -598,7 +598,7 @@ class Shard:
         """
         return await self._module.kill_shard(shard_id=self.id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.migrate_shard_to_spire`.
     async def migrate_to_spire(self, target_spire_id: str, target_datastore_id: str, *, bring_backups: bool, stop_if_running: bool) -> Any:
         """Move this shard to another spire, see :meth:`ShardModule.migrate_shard_to_spire`.
@@ -686,7 +686,7 @@ class Shard:
         """
         return await self._module.send_shard_file_chunk(shard_id=self.id, session_id=session_id, chunk=chunk)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.set_shard_credential`.
     async def set_credential(self, credential_id: str) -> Any:
         """Give this shard a stored secret to use, see :meth:`ShardModule.set_shard_credential`.
@@ -710,7 +710,7 @@ class Shard:
         """
         return await self._module.set_shard_details(shard_id=self.id, display_name=display_name, description=description, tags=tags)
 
-    # TODO: Type the change items once AMP is seen taking one live (#47.7).
+    # TODO: Type the change items once AMP is seen taking one live (#3-47.7).
     # It comes from `ShardModule.set_shard_file_acl`.
     async def set_file_acl(self, path: str, changes: list[dict[str, Any]]) -> ShardFileACLResponse:
         """Change who may do what to a path in this shard, see :meth:`ShardModule.set_shard_file_acl`.
@@ -818,7 +818,7 @@ class Shard:
         """
         return await self._module.start_shard_file_upload(shard_id=self.id, path=path, size=size)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.start_shard_migration`.
     async def start_migration(self, target_datastore_id: str) -> Any:
         """Move this shard to another datastore on its spire, see :meth:`ShardModule.start_shard_migration`.
@@ -948,7 +948,7 @@ class Shard:
         """
         await self._module.upload_shard_files(shard_id=self.id, folder=folder, files=files)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.wake_shard`.
     async def wake(self) -> Any:
         """Wake this sleeping shard, see :meth:`ShardModule.wake_shard`.
@@ -967,7 +967,7 @@ class ShardModule(Base):
 
     """
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # AMP 3.0.0.6 has no such route; the panel's code sends `{}` and ignores the reply.
     async def abort_shard_update(self, shard_id: str) -> Any:
         """Stop a shard's update.
@@ -1047,7 +1047,7 @@ class ShardModule(Base):
         data: dict[str, Any] = {"paths": paths, "destination": destination}
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/archive", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # The path comes from the web panel's code; it needs a second datastore or spire to capture.
     async def cancel_shard_migration(self, shard_id: str) -> Any:
         """Stop a shard's move.
@@ -1380,7 +1380,7 @@ class ShardModule(Base):
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # The path comes from the web panel's code; it needs a second datastore or spire to capture.
     async def delete_shard_migration(self, shard_id: str) -> Any:
         """Dismiss a shard's finished move.
@@ -1602,7 +1602,7 @@ class ShardModule(Base):
         result: list[ShardResponse] = await self._request(method="GET", path="/api/shards", parameters=parameters)
         return [Shard(module=self, data=entry) for entry in result]
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # Only seen empty; the web panel reads `shardId`, `name` and `message` from each.
     async def get_shards_awaiting_action(self) -> list[dict[str, Any]]:
         """Get the shards waiting on a user, eg. for a sign-in prompt.
@@ -1721,7 +1721,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/credential")
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # Always a 204 so far, running or stopped, even with files in the shard.
     async def get_shard_disk(self, shard_id: str) -> Optional[dict[str, Any]]:
         """Get a shard's disk use.
@@ -1883,7 +1883,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # Only a 204 was captured; the web panel reads a `left` list from the import record.
     async def get_shard_import(self, shard_id: str) -> Optional[dict[str, Any]]:
         """Get how the import that made a shard went.
@@ -1945,7 +1945,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/ip-options")
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # Only seen empty, for server.properties as well as a file of our own.
     async def get_shard_managed_files(self, shard_id: str, path: str) -> list[dict[str, Any]]:
         """Get which files under a path AMP writes itself from the settings.
@@ -1992,7 +1992,7 @@ class ShardModule(Base):
         parameters: Optional[dict[str, int]] = {"minutes": minutes} if minutes is not None else None
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/metrics", parameters=parameters)
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # Only a 204 was captured; the web panel reads `shardId` and a `status` named Copying to Complete from it.
     async def get_shard_migration(self, shard_id: str) -> Optional[dict[str, Any]]:
         """Get a shard's move in progress.
@@ -2014,7 +2014,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/migration")
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # Only seen empty, as the test panel had one datastore and one spire.
     async def get_shard_migration_targets(self, shard_id: str) -> list[dict[str, Any]]:
         """Get where a shard could move to.
@@ -2298,7 +2298,7 @@ class ShardModule(Base):
         result["status"] = self._to_enum(ShardState, result["status"])
         return result
 
-    # TODO: Type the items once AMP is seen listing one live (#47.7).
+    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # Only seen empty, as no player joined; the web panel reads `id`, `name` and `sessionId` from each.
     async def get_shard_users(self, shard_id: str) -> list[dict[str, Any]]:
         """Get the players on a shard.
@@ -2344,7 +2344,7 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/config/import", data={"path": path, "content": content})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # AMP 3.0.0.6 has no such route; the panel's code sends `{}` and ignores the reply.
     async def kill_shard(self, shard_id: str) -> Any:
         """End a shard's game at once, without the clean stop.
@@ -2369,7 +2369,7 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/kill", data={})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # The body comes from the web panel's code; it needs a second spire to capture.
     async def migrate_shard_to_spire(
         self,
@@ -2600,7 +2600,7 @@ class ShardModule(Base):
         path: str = f"/api/shards/{shard_id}/files/upload-chunk"
         return await self._request(method="POST", path=path, data=chunk, parameters={"session": session_id})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # Only the 400 for an unknown credential was captured, as none existed.
     async def set_shard_credential(self, shard_id: str, credential_id: str) -> Any:
         """Give a shard a stored secret to use, eg. a Steam login for its downloads.
@@ -2665,7 +2665,7 @@ class ShardModule(Base):
         data = {key: value for key, value in data.items() if value is not None}
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=data)
 
-    # TODO: Type the change items once AMP is seen taking one live (#47.7).
+    # TODO: Type the change items once AMP is seen taking one live (#3-47.7).
     # Only an empty list was sent; a 400 named `PrincipalId`, `Verb` and `State` as the fields of a change.
     async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[dict[str, Any]]) -> ShardFileACLResponse:
         """Change who may read, write and delete a path inside a shard.
@@ -2979,7 +2979,7 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # Only an unknown datastore's 409 (U16) was captured, as the test panel had one datastore.
     async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> Any:
         """Move a shard to another datastore on its spire.
@@ -3307,7 +3307,7 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload", files=files, parameters={"path": folder})
 
-    # TODO: Type the reply once AMP is seen answering it live (#47.7).
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # The test template can't sleep (U18b), so only the 400 for a shard that isn't asleep was captured.
     async def wake_shard(self, shard_id: str) -> Any:
         """Wake a sleeping shard.

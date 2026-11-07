@@ -15,11 +15,11 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
   Let's Encrypt, which can't reach a LAN VM. A browser needs Caddy's root CA trusted
   (`/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt` on vm3) before it will use passkeys there.
 - `vm4` (`amp3-beta2`) is a second AMP3 panel for running tests in parallel, built the same way by
-  `.scripts/amp3/build_vm.py` (#47.4), with HTTPS at `https://amp3-beta2.anime`. Its login is `[VM_AMP3_B]` in the
+  `.scripts/amp3/build_vm.py` (#3-47.4), with HTTPS at `https://amp3-beta2.anime`. Its login is `[VM_AMP3_B]` in the
   worktree's `local.ini`. The same beta key activated there too (the query showed `usage: 1` first), so one key covers
   several installations. Each panel throttles sign-ins on its own, which is the main reason to have two.
 - `vm5` (`amp3-spire`, 192.168.4.235) is not a panel of its own: it joined vm4 as a second spire on 2026-11-07
-  (#47.15), for moving and cloning shards between spires. Its VM login is `[VM_AMP3_SPIRE]`; its API is vm4's.
+  (#3-47.15), for moving and cloning shards between spires. Its VM login is `[VM_AMP3_SPIRE]`; its API is vm4's.
 - A panel restarts once licensed (`phase: "starting"`); a setting checked before it reads `ready` can look unapplied.
 - Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
   kept headers and body.
@@ -47,7 +47,7 @@ The worktree carries its own copies, all gitignored, so nothing reaches back int
 - There is no OpenAPI document. `/openapi/v1.json` is 401 without a token and 404 with one, so the types come from
   captures plus the web panel's own JS (`main-*.js` and its `chunk-*.js`).
 
-## Library layout (#47.13, #47.14)
+## Library layout (#3-47.13, #3-47.14)
 
 Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/plan.md`, Decisions 4-7):
 - `Session` is the connection: login, renewal, logout, reauth, second factor, the hub token. It is not renamed `Bridge`.
@@ -78,7 +78,7 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
 - `.scripts/amp3/session_check.py`, `panel_check.py` and `shard_check.py` are the live checks.
 
-## A second spire joining a panel (#47.15)
+## A second spire joining a panel (#3-47.15)
 
 Seen live on 2026-11-07, vm5 joining vm4; `.scripts/amp3/join_spire.py` runs steps 2 to 4:
 1. The panel's message bus must be open to other hosts first, `POST /api/system/bus/expand`. There is no call to
@@ -97,7 +97,7 @@ Seen live on 2026-11-07, vm5 joining vm4; `.scripts/amp3/join_spire.py` runs ste
 - An Instance is a **shard** (`/api/shards/{id}/...`) and an ADS/Target is a **spire** (`/api/spires/{id}/...`).
 - Path casing is mixed (`/api/Auth/login` and `/api/auth/logout`); both casings answer, we send the panel's own.
 
-## Sessions (#47)
+## Sessions (#3-47)
 
 - Login is `POST /api/Auth/login` with `{username, password, rememberMe}`, answered with `{token, expiration}`.
   The token is an HS256 JWT sent as `Authorization: Bearer`. Its claims carry the user ID, name, email and a `sid`.
@@ -120,7 +120,7 @@ Seen live on 2026-11-07, vm5 joining vm4; `.scripts/amp3/join_spire.py` runs ste
 - A wrong password and an unknown user get the same 401 `{message: "Invalid username or password."}`.
   One wrong attempt of each did not lock the admin out; lockout wasn't tested further.
 
-## Passkeys and recovery codes (#47.1)
+## Passkeys and recovery codes (#3-47.1)
 
 Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py`) on throwaway users.
 - Passkeys need `public-address.publicUrl` set to an HTTPS domain (not an IP). `GET /api/auth/capabilities` judges
