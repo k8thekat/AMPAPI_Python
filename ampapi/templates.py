@@ -68,7 +68,7 @@ class TemplateModule(Base):
         Endpoint: ``GET /api/templates``, or ``GET /api/templates/sources/{source_id}``
 
         .. note::
-            Each template is its whole definition, so the full list is large: 248 templates came to about 29 MB.
+            Each template is its whole definition, so the full list is large (tens of MB).
 
         Parameters
         ----------

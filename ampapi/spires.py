@@ -638,6 +638,8 @@ class SpireModule(Base):
         parameters: Optional[dict[str, str]] = {"force": "true"} if force is True else None
         return await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters=parameters)
 
+    # TODO: Reword the warning once AMP refuses a datastore that still holds an orphan folder (U23).
+    # AMP 3.0.0.6 accepts it, and the folder drops out of the API's sight.
     async def delete_spire_datastore(self, spire_id: str, datastore_id: str) -> list[DatastoreResponse]:
         """Remove a datastore from a spire.
 
@@ -646,7 +648,7 @@ class SpireModule(Base):
         Endpoint: ``DELETE /api/spires/{spire_id}/datastores/{datastore_id}``
 
         .. warning::
-            AMP accepts it while the datastore still holds an orphan folder (U23). The folder stays on disk, and with
+            AMP accepts it while the datastore still holds an orphan folder. The folder stays on disk, and with
             the datastore gone the API can't reach it to purge it; adding a datastore at the same path again lists it
             once more. Purge the orphans first, see :meth:`purge_spire_orphan_directory`.
 
@@ -686,7 +688,7 @@ class SpireModule(Base):
         await self._request(method="DELETE", path=f"/api/spires/enrollments/{enrollment_id}", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # Only refusals were captured, as no machine was waiting on a join file when it was tried.
+    # Only refusals are known; the reply for a machine waiting on a join file isn't.
     async def deny_spire_enrollment(self, enrollment_id: str) -> Any:
         """Refuse a machine that used a join file.
 
@@ -953,8 +955,8 @@ class SpireModule(Base):
         Returns
         -------
         Union[:class:`SpireUsageResponse`, None]
-            The disk use, `None` before the first scan. The web panel reads a 204 that way; not seen live, as a spire
-            scans when it starts.
+            The disk use, `None` before the first scan. The web panel reads a 204 that way, and a spire scans when it
+            starts.
 
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/usage")
@@ -980,7 +982,7 @@ class SpireModule(Base):
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/usage/interval")
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The web panel reads a `taskId` from it; nothing to import was found on the test spire.
+    # The web panel reads a `taskId` from it; the rest of the reply isn't known yet.
     async def import_spire_servers(self, spire_id: str, items: list[dict[str, Any]], *, enter_other_volumes: bool = False) -> Any:
         """Import game servers from other panels into a spire as shards.
 
@@ -1009,7 +1011,7 @@ class SpireModule(Base):
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The web panel reads a `blocked` list from it; nothing to import was found on the test spire.
+    # The web panel reads a `blocked` list from it; the rest of the reply isn't known yet.
     async def preflight_spire_import(self, spire_id: str, items: list[dict[str, Any]]) -> Any:
         """Check game servers can be imported into a spire, before :meth:`import_spire_servers`.
 
@@ -1049,7 +1051,7 @@ class SpireModule(Base):
         Returns
         -------
         :class:`SpireExpiredPurgeResponse`
-            How many shards AMP is purging; only 0 has been seen.
+            How many shards AMP is purging.
 
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/purge-expired-shards")
@@ -1134,7 +1136,7 @@ class SpireModule(Base):
         Returns
         -------
         Union[:class:`SpireUsageResponse`, None]
-            The disk use per datastore. The web panel allows for a 204 here too; not seen live.
+            The disk use per datastore, `None` for a 204, which the web panel allows for here too.
 
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/usage/rescan")

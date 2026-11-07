@@ -68,7 +68,7 @@ class PlatformModule(Base):
     """
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only refusals were captured, as the test licence needs no terms.
+    # Only refusals are known; the reply to accepted terms isn't.
     async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
         """Accept the terms for a licence that is already active, eg. one whose `standing` is ``"TermsRequired"``.
 
@@ -103,8 +103,10 @@ class PlatformModule(Base):
         data: dict[str, Any] = {**terms, "key": key}
         return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
+    # TODO: Reword the docstring once AMP refuses an unknown warning ID (U20a).
+    # AMP 3.0.0.6 answers 200 with the warnings as they are.
     # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # Only seen empty, as no warning existed to dismiss; the items are those of `get_platform_warnings`.
+    # The item shape isn't known yet; the items are those of `get_platform_warnings`.
     async def acknowledge_platform_warning(self, warning_id: str) -> list[dict[str, Any]]:
         """Dismiss one of the panel's warnings.
 
@@ -112,7 +114,7 @@ class PlatformModule(Base):
 
         Endpoint: ``POST /api/monitoring/platform-warnings/acknowledge``
 
-        An unknown `warning_id` is not an error; AMP answers with the warnings as they are (U20a).
+        An unknown `warning_id` is not an error; AMP answers with the warnings as they are.
 
         Parameters
         ----------
@@ -127,6 +129,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
 
+    # TODO: Drop the note once AMP answers with the whole licence (U19b).
+    # AMP 3.0.0.6 answers before the licence service does, with the limit, totals, issue date and terms all `None`.
     async def activate_licence(self, key: str, *, terms: Optional[LicenceTermsAcceptance] = None) -> LicenceResponse:
         """Activate a licence key on this panel.
 
@@ -136,12 +140,11 @@ class PlatformModule(Base):
 
         .. note::
             The reply comes back before the licence service answers, so its `shardLimit`, `keyShardsTotal`, `issuedAt`
-            and terms versions are `None` and `limitKnown` is `False` (U19b). :meth:`get_licence_status` has them a
-            few seconds later.
+            and terms versions are `None` and `limitKnown` is `False`. :meth:`get_licence_status` has them a few
+            seconds later.
 
-        A panel was seen restarting once licensed: :meth:`get_health_status` reads ``"starting"`` until it is ``"ready"``
-        again, and a setting read before then can look unapplied. Activating a key again after :meth:`delete_licence`
-        kept the panel ``"ready"`` with no restart.
+        The panel can restart once licensed: :meth:`get_health_status` reads ``"starting"`` until it is ``"ready"``
+        again, and a setting read before then can look unapplied.
 
         Parameters
         ----------
@@ -150,7 +153,6 @@ class PlatformModule(Base):
         terms : Union[:class:`LicenceTermsAcceptance`, None], optional
             The licence terms acceptance, by default None.
             Only a key whose `LicenceQueryResponse.termsRequired` is `True` needs one, see :meth:`query_licence`.
-            Sending one is not yet seen live.
 
         Returns
         -------
@@ -161,7 +163,7 @@ class PlatformModule(Base):
         return await self._request(method="POST", path="/api/licence", data={"key": key, "terms": terms})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal was captured, as no newer version existed on the test panel's stream.
+    # Only the refusal for no newer version is known; the reply to a real update isn't.
     async def apply_panel_update(self) -> Any:
         """Update the panel's AMP to the latest version on its stream; the panel restarts.
 
@@ -204,6 +206,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
 
+    # TODO: Trim the note once AMP fixes the gateway status gaps (U26b, U26e).
+    # AMP 3.0.0.6 routes a running shard only after it restarts, and reads `Fault` while a new tunnel connects.
     async def create_gateway(self, shard_id: str, front_spire_id: str) -> GatewayResponse:
         """Route a shard through a front spire, so players reach it at that spire's address.
 
@@ -217,9 +221,9 @@ class PlatformModule(Base):
         with :meth:`get_gateways`.
 
         .. note::
-            A shard that was running before the gateway only routes once it restarts (U26e). Until then the gateway
-            reads `GatewayState.awaiting_shard` with `runningWithoutRoute`, though the shard's endpoint already lists
-            the front's address. A new gateway also reads `GatewayState.fault` while its tunnel connects (U26b).
+            A shard that was running before the gateway only routes once it restarts. Until then the gateway reads
+            `GatewayState.awaiting_shard` with `runningWithoutRoute`, though the shard's endpoint already lists the
+            front's address. A new gateway also reads `GatewayState.fault` while its tunnel connects.
 
         Parameters
         ----------
@@ -239,13 +243,15 @@ class PlatformModule(Base):
         AMPAPIRequestError
             If the front spire doesn't exist or has no public host (400, ``"networking.error.frontNotRoutable"``), or
             the shard already runs on it (400, ``"networking.error.gatewaySameSpire"``). :meth:`preflight_gateway`
-            catches neither (U20b, U20c).
+            catches neither.
 
         """
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
         result: GatewayResponse = await self._request(method="POST", path="/api/networking/gateways", data=data)
         return self._gateway_enums(gateway=result)
 
+    # TODO: Drop the note once AMP stops reading `TunnelFault` while a first tunnel is set up (U26a).
+    # AMP 3.0.0.6 reads it for about a minute, then the publication turns active by itself.
     async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> PublicationResponse:
         """Forward a public port on a front spire to a shard's port.
 
@@ -259,7 +265,7 @@ class PlatformModule(Base):
         .. note::
             A first publication through another spire can read `PublicationState.tunnel_fault` with
             ``"The file does not exist."`` for about a minute, while the tunnel's agent is put in place, then turns
-            active by itself (U26a).
+            active by itself.
 
         Parameters
         ----------
@@ -336,6 +342,8 @@ class PlatformModule(Base):
         """
         await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
 
+    # TODO: Drop the note once AMP's reads follow the change at once (U19a).
+    # AMP 3.0.0.6 still shows the proxy in `GET /api/https` and the passkey capabilities for a few seconds.
     async def delete_own_proxy(self) -> HTTPSStateResponse:
         """Stop trusting the reverse proxy :meth:`set_own_proxy` set.
 
@@ -344,8 +352,8 @@ class PlatformModule(Base):
         Endpoint: ``DELETE /api/https/own-proxy``
 
         .. note::
-            For up to 3 seconds after, :meth:`get_https_state` and :meth:`Session.get_capabilities` still show the
-            proxy (U19a). Use the state this returns.
+            For a few seconds after, :meth:`get_https_state` and :meth:`Session.get_capabilities` still show the
+            proxy. Use the state this returns.
 
         Returns
         -------
@@ -652,7 +660,7 @@ class PlatformModule(Base):
         return await self._request(method="GET", path="/api/monitoring/thresholds")
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # Only seen empty; the web panel reads each one's `id`.
+    # The item shape isn't known yet; the web panel reads each one's `id`.
     async def get_platform_warnings(self) -> list[dict[str, Any]]:
         """Get the panel's warnings for whoever runs it.
 
@@ -753,6 +761,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/updates/check")
 
+    # TODO: Trim the warning once AMP's preflight checks what the create checks (U20b, U20c).
+    # AMP 3.0.0.6 passes an empty body, a gateway on the shard's own spire and a front spire with no public host.
     async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> GatewayPreflightResponse:
         """Check a gateway can be made, before :meth:`create_gateway`.
 
@@ -761,8 +771,8 @@ class PlatformModule(Base):
         Endpoint: ``POST /api/networking/gateways/preflight``
 
         .. warning::
-            AMP checks little here: an empty body and a gateway on the shard's own spire pass with no conflicts (U20b),
-            and so does a front spire with no public host (U20c), though :meth:`create_gateway` refuses the last two.
+            AMP checks little here: an empty body and a gateway on the shard's own spire pass with no conflicts, and
+            so does a front spire with no public host, though :meth:`create_gateway` refuses the last two.
 
         Parameters
         ----------
@@ -774,7 +784,7 @@ class PlatformModule(Base):
         Returns
         -------
         :class:`GatewayPreflightResponse`
-            What stands in the way of the gateway; only seen with no conflicts.
+            What stands in the way of the gateway.
 
         """
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
@@ -801,7 +811,7 @@ class PlatformModule(Base):
         return await self._request(method="POST", path="/api/licence/query", data={"key": key})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal was captured, as the test panel uses its own proxy rather than AMP's HTTPS.
+    # Only the refusal for a panel without AMP's own HTTPS is known; the reply to a recheck isn't.
     async def recheck_https(self) -> Any:
         """Check AMP's own HTTPS again, eg. its certificate.
 
@@ -824,7 +834,7 @@ class PlatformModule(Base):
         return await self._request(method="POST", path="/api/https/recheck")
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; not called live, as the test panel has no HTTPS of AMP's own to remove.
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def remove_https(self) -> Any:
         """Remove AMP's own HTTPS; the panel stays on plain HTTP at its own port.
 
@@ -949,7 +959,7 @@ class PlatformModule(Base):
         return await self._request(method="PUT", path="/api/updates/stream", data={"stream": stream})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal was captured, as the test panel uses its own proxy and a LAN panel can't finish it.
+    # Only the refusal for a panel behind its own proxy is known; the reply to a setup that starts isn't.
     async def start_https_setup(self, host_name: str) -> Any:
         """Start AMP's own HTTPS setup, which asks Let's Encrypt for a certificate.
 
@@ -979,6 +989,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})
 
+    # TODO: Drop the old status sentence once AMP answers with the new one (U26c).
+    # AMP 3.0.0.6 answers a publication turned off with its old `Active` status.
     async def update_publication(
         self,
         publication_id: str,
@@ -1006,8 +1018,8 @@ class PlatformModule(Base):
         Returns
         -------
         :class:`PublicationResponse`
-            The publication after the change. Its `status` can still be the old one, eg. active after turning it off
-            (U26c), so read :meth:`get_publications` for the new state.
+            The publication after the change. Its `status` can still be the old one, eg. active after turning it off,
+            so read :meth:`get_publications` for the new state.
 
         Raises
         ------

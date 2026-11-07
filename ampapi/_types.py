@@ -233,15 +233,14 @@ __all__ = (
 class AnalyticsAddressUsersResponse(TypedDict):
     """``GET /api/analytics/addresses/users``, the players seen at one address.
 
-    Only seen with no players, so the shape of a user is unknown.
+    The shape of a user isn't known yet.
     """
 
     address: str
     network: str
     kind: str
-    """Seen as ``"Public"``."""
+    """eg. ``"Public"``."""
     users: list[Any]
-    "Only seen empty."
     serverInfo: dict[str, AnalyticsServerInfo]
     "A shard ID to the shard's name and game."
     isDemo: bool
@@ -258,15 +257,13 @@ class AnalyticsPeriod(TypedDict):
 class AnalyticsProfilesResponse(TypedDict):
     """``GET /api/analytics/profiles``, players' Steam and Minecraft profiles.
 
-    Only seen with no players, so the shape of a profile is unknown.
+    The shape of a profile isn't known yet.
     """
 
     steam: dict[str, Any]
-    "Only seen empty."
     minecraft: dict[str, Any]
-    "Only seen empty."
     state: str
-    """Seen as ``"complete"``."""
+    """eg. ``"complete"``."""
     isDemo: bool
 
 
@@ -291,7 +288,7 @@ class AnalyticsServerInfo(TypedDict):
 class AnalyticsSessionsResponse(TypedDict):
     """``GET /api/analytics/sessions``, the player summary for the analytics page.
 
-    Only seen with no players, so every list was empty and every total 0.
+    The shape of the list items isn't known yet.
     """
 
     window: dict[str, str]
@@ -299,19 +296,15 @@ class AnalyticsSessionsResponse(TypedDict):
     current: AnalyticsTotals
     previous: AnalyticsTotals
     change: dict[str, Optional[float]]
-    "The `AnalyticsTotals` keys, only seen as `None`."
+    "The `AnalyticsTotals` keys."
     activity: list[AnalyticsPeriod]
     "One a day."
     countries: list[Any]
-    "Only seen empty."
     topUsers: list[Any]
-    "Only seen empty."
     busiest: AnalyticsPeriod
     quietest: AnalyticsPeriod
     servers: list[Any]
-    "Only seen empty."
     games: list[Any]
-    "Only seen empty."
     isDemo: bool
     serverInfo: dict[str, AnalyticsServerInfo]
     "A shard ID to the shard's name and game."
@@ -319,7 +312,7 @@ class AnalyticsSessionsResponse(TypedDict):
 
 
 class AnalyticsTotals(TypedDict):
-    """Player totals from `AnalyticsSessionsResponse` and `AnalyticsUserSessionsResponse`; every one only seen as 0."""
+    """Player totals from `AnalyticsSessionsResponse` and `AnalyticsUserSessionsResponse`."""
 
     sessions: int
     uniqueUsers: int
@@ -336,11 +329,10 @@ class AnalyticsTotals(TypedDict):
 class AnalyticsUserAddressesResponse(TypedDict):
     """``GET /api/analytics/users/{key}/addresses``, the addresses one player was seen at.
 
-    Only seen for an unknown player, so the shape of an address is unknown.
+    The shape of an address isn't known yet.
     """
 
     addresses: list[Any]
-    "Only seen empty."
     serverInfo: dict[str, AnalyticsServerInfo]
     isDemo: bool
 
@@ -348,21 +340,16 @@ class AnalyticsUserAddressesResponse(TypedDict):
 class AnalyticsUserSessionsResponse(TypedDict):
     """``GET /api/analytics/sessions/users/{key}``, one player's history.
 
-    An unknown player answers 200 with everything empty, and that is the only one seen.
+    An unknown player answers 200 with everything empty.
     """
 
     userKey: str
     displayName: Optional[str]
-    "Only seen as `None`."
     totals: AnalyticsTotals
     servers: list[Any]
-    "Only seen empty."
     sessions: list[Any]
-    "Only seen empty."
     firstSeen: Optional[str]
-    "Only seen as `None`."
     lastSeen: Optional[str]
-    "Only seen as `None`."
     isActive: bool
     recentVisits: int
     rule: AnalyticsRule
@@ -373,15 +360,13 @@ class AnalyticsUserSessionsResponse(TypedDict):
 class AnalyticsUsersResponse(TypedDict):
     """``GET /api/analytics/users``, a player search.
 
-    Only seen with no players, so the shape of a user is unknown.
+    The shape of a user isn't known yet.
     """
 
     users: list[Any]
-    "Only seen empty."
     serverInfo: dict[str, AnalyticsServerInfo]
     isDemo: bool
     address: Optional[Any]
-    "Only seen as `None`."
 
 
 class AuditActionCount(TypedDict):
@@ -398,7 +383,7 @@ class AuditEvent(TypedDict):
     tenantId: str
     timestamp: str
     severity: int
-    """Seen as 0, 1 and 2; the `min_severity` filter takes the names ``"Info"``, ``"Warning"`` and ``"Security"``."""
+    """One of 0, 1 or 2, which the `min_severity` filter takes as the names ``"Info"``, ``"Warning"`` and ``"Security"``."""
     principal: Principal
     "Who or what did it."
     action: str
@@ -412,7 +397,7 @@ class AuditEvent(TypedDict):
     actionId: WrappedID
     causationActionId: Optional[WrappedID]
     origin: int
-    """Seen as 0, 1 and 2, which the `origin` filter takes as ``"System"``, ``"User"`` and ``"UserFlow"``."""
+    """eg. 0, 1 or 2, which the `origin` filter takes as ``"System"``, ``"User"`` and ``"UserFlow"``."""
     rootPrincipal: Principal
     details: Optional[str]
     "More about the event, as JSON in a string."
@@ -508,7 +493,7 @@ class BrandingResponse(TypedDict):
     loginWelcomeText: str
     logoUrl: str
     defaultTheme: str
-    """Seen as ``"proteus"``, lower case where the settings say ``"Proteus"``."""
+    """eg. ``"proteus"``, lower case where the settings say ``"Proteus"``."""
 
 
 class BusExpandResponse(TypedDict):
@@ -523,9 +508,9 @@ class BusFirewallOutcome(TypedDict):
     """The port AMP opened on the host for the message bus, from `BusExpandResponse.firewall`."""
 
     outcome: str
-    """Seen as ``"Open"``."""
+    """eg. ``"Open"``."""
     port: int
-    "Seen as 4222."
+    "eg. 4222."
     generation: int
     agentRunning: bool
 
@@ -539,7 +524,7 @@ class BusJoinInfo(TypedDict):
     hostCandidates: list[str]
     caCert: str
     joinBlob: str
-    "Only seen empty, even with the bus open; the join file comes from `SpireModule.create_spire_enrollment`."
+    "Empty, even with the bus open; the join file comes from `SpireModule.create_spire_enrollment`."
 
 
 class CapabilitiesResponse(TypedDict):
@@ -573,13 +558,13 @@ class ConsoleLine(TypedDict):
     """One console line, from `ShardConsoleHistoryResponse.lines`."""
 
     streamId: str
-    """Seen as ``"main"`` (the game), ``"system"`` (AMP) and ``"update"``."""
+    """eg. ``"main"`` (the game), ``"system"`` (AMP) or ``"update"``."""
     text: str
     timestamp: str
     seq: int
     "Rises with each line, with gaps."
     kind: str
-    """Seen as ``"line"``, ``"info"``, ``"error"`` and ``"marker"``, which marks a change of `state`."""
+    """eg. ``"line"``, ``"info"``, ``"error"`` or ``"marker"``, which marks a change of `state`."""
     state: Optional[Union[ShardState, int]]
     "The status a marker line announces, `None` on other lines."
     success: Optional[bool]
@@ -600,7 +585,7 @@ class CredentialResponse(TypedDict):
     id: str
     title: str
     kind: str
-    """Seen as ``"SteamCmd"``; AMP also takes ``"Smtp"``, ``"DiscordWebhook"`` and ``"ApiKey"``."""
+    """One of ``"SteamCmd"``, ``"Smtp"``, ``"DiscordWebhook"`` or ``"ApiKey"``."""
     visibility: str
     """``"Private"`` or ``"Public"``."""
     mine: bool
@@ -620,7 +605,6 @@ class DatastoreResponse(TypedDict):
     isDefault: bool
     enabled: bool
     softLimitMb: int
-    "Only seen as 0."
     tags: list[str]
     """AMP sets these itself, eg. ``["HDD"]``."""
 
@@ -639,7 +623,6 @@ class DeletedUserResponse(TypedDict):
     """``DELETE /api/users/{id}``, which answers 200 with a body where other deletes answer 204."""
 
     warnings: list[Any]
-    "Only seen empty."
 
 
 class DiagnosticsResponse(TypedDict):
@@ -649,7 +632,7 @@ class DiagnosticsResponse(TypedDict):
     codename: str
     buildCommit: str
     configuration: str
-    """Seen as ``"Production"``."""
+    """eg. ``"Production"``."""
     operatingSystem: str
     architecture: str
     hardwarePlatform: str
@@ -661,21 +644,22 @@ class DiagnosticsResponse(TypedDict):
     virtualization: str
     """eg. ``"QEMU_KVM"``."""
     natsStatus: str
-    """The message bus, seen as ``"Connected"``."""
+    """The message bus, eg. ``"Connected"``."""
+    # TODO: Drop the field doc once AMP reports its uptime (U11).
+    # AMP 3.0.0.6 sends 0 however long the panel has run.
     uptimeSeconds: int
-    "Only seen as 0, even 40 minutes after the panel started."
+    "Always 0 in AMP 3.0.0.6."
     auditOrphanWrites: int
     auditRelaunchCarriedWrites: int
     ipv6: str
-    """Seen as ``"Unavailable"``, with the reason in `ipv6Detail`."""
+    """eg. ``"Unavailable"``, with the reason in `ipv6Detail`."""
     ipv6Detail: str
     containerRuntime: str
-    """Seen as ``"Podman"``."""
+    """eg. ``"Podman"``."""
     containerRuntimeVersion: str
     containerRuntimeVerdict: str
-    """Seen as ``"Usable"``."""
+    """eg. ``"Usable"``."""
     containerRuntimeReason: Optional[str]
-    "Only seen as `None`."
 
 
 class FileACLChange(TypedDict):
@@ -703,14 +687,13 @@ class FileVerb(TypedDict):
     verb: str
     """``"read"``, ``"write"`` or ``"delete"``."""
     state: str
-    """Seen as ``"allow"`` and ``"deny"``."""
+    """eg. ``"allow"`` or ``"deny"``."""
     explicit: bool
     "If it's set on this path rather than inherited."
     source: Optional[str]
     "The path that sets it, once `explicit`; `None` otherwise."
     inheritedState: str
     inheritedSource: Optional[Any]
-    "Only seen as `None`."
 
 
 class FirewallResponse(TypedDict):
@@ -719,7 +702,6 @@ class FirewallResponse(TypedDict):
     running: bool
     status: FirewallStatus
     withheld: list[Any]
-    "Only seen empty."
 
 
 class FirewallRule(TypedDict):
@@ -727,17 +709,17 @@ class FirewallRule(TypedDict):
 
     port: int
     protocol: str
-    """Seen as ``"Tcp"``."""
+    """eg. ``"Tcp"``."""
     tag: str
     """eg. ``"panel-web"``, ``"nats"`` or ``"sftp"``."""
     label: str
     """eg. ``"AMP panel"``."""
     scope: str
-    """Seen as ``"Any"`` and ``"HostOnly"``."""
+    """eg. ``"Any"`` or ``"HostOnly"``."""
 
 
 class FirewallStatus(TypedDict):
-    """The firewall's state, from `FirewallResponse.status`. The lists past `applied` were only seen empty."""
+    """The firewall's state, from `FirewallResponse.status`. The item shape of the lists past `applied` isn't known yet."""
 
     schema: int
     generation: int
@@ -754,7 +736,6 @@ class FirewallStatus(TypedDict):
     gatewayRejected: list[Any]
     advisories: list[Any]
     error: Optional[str]
-    "Only seen as `None`."
     updatedAt: str
     agentVersion: str
 
@@ -763,7 +744,6 @@ class GatewayEligibilityResponse(TypedDict):
     """``GET /api/networking/gateway-eligibility``, what can take part in a gateway."""
 
     containerShardIds: list[str]
-    "Only seen empty."
     gatewayFrontSpireIds: list[str]
     """A spire is listed once its ``"spire.publicHost"`` setting is set."""
 
@@ -771,8 +751,10 @@ class GatewayEligibilityResponse(TypedDict):
 class GatewayPreflightResponse(TypedDict):
     """``POST /api/networking/gateways/preflight``, what stands in the way of a gateway."""
 
+    # TODO: Drop the field doc once AMP's preflight checks what the create checks (U20b, U20c).
+    # AMP 3.0.0.6 sends no conflicts for gateways the create refuses.
     conflicts: list[Any]
-    "Only seen empty, even for a gateway `PlatformModule.create_gateway` refuses (U20b)."
+    "Empty even for a gateway `PlatformModule.create_gateway` refuses, see `PlatformModule.preflight_gateway`."
 
 
 class GatewayResponse(TypedDict):
@@ -788,12 +770,14 @@ class GatewayResponse(TypedDict):
     frontSpireName: str
     enabled: bool
     egressAllowList: list[str]
-    "Where the shard may reach out to over the route; only seen empty."
+    "Where the shard may reach out to over the route."
     createdAt: str
     status: Optional[GatewayStatus]
     "`None` when it's new; the list fills it in once AMP has set the route up."
+    # TODO: Reword the field doc once a running shard routes without a restart (U26e).
+    # AMP 3.0.0.6 routes a shard that was running only after it restarts.
     runningWithoutRoute: bool
-    "If the shard was running before the route existed; it routes only once it restarts (U26e)."
+    "If the shard was running before the route existed; it routes only once it restarts."
 
 
 class GatewayStatus(TypedDict):
@@ -834,13 +818,12 @@ class HTTPSCheck(TypedDict):
     key: str
     "Which check it is; its values weren't recorded yet."
     state: int
-    "Seen as 2 for a pass and 3 for a fail."
+    "eg. 2 for a pass and 3 for a fail."
     code: Optional[str]
     """A translation key for the result, eg. ``"https.check.resolved"`` or ``"https.check.addressMismatch"``."""
     params: Optional[dict[str, str]]
     "Values for the `code` translation, eg. `host`, `expected` and `found` on an address mismatch."
     detail: Optional[str]
-    "Only seen as `None`."
 
 
 class HTTPSCheckResponse(TypedDict):
@@ -848,10 +831,10 @@ class HTTPSCheckResponse(TypedDict):
 
     hostName: str
     outcome: str
-    """Seen as ``"elsewhere"``, for a name that points at another address than the panel's public one."""
+    """eg. ``"elsewhere"``, for a name that points at another address than the panel's public one."""
     checks: list[HTTPSCheck]
     reachability: str
-    """Seen as ``"Nat"``."""
+    """eg. ``"Nat"``."""
     externalAddress: str
     "The panel's public IP address."
     internalAddress: str
@@ -864,13 +847,10 @@ class HTTPSSetupStatusResponse(TypedDict):
     """``GET /api/https/setup/status``, the progress of AMP's own HTTPS setup."""
 
     phase: str
-    """Seen as ``"idle"``."""
+    """eg. ``"idle"``."""
     hostName: Optional[str]
-    "Only seen as `None`."
     checks: list[Any]
-    "Only seen empty."
     url: Optional[str]
-    "Only seen as `None`."
     certificateVerified: bool
     updatedUtc: str
     """``"0001-01-01T00:00:00+00:00"`` before any setup."""
@@ -880,11 +860,9 @@ class HTTPSStateResponse(TypedDict):
     """``GET /api/https``, the panel's HTTPS setup. Setting and clearing the own proxy answer with it too."""
 
     mode: str
-    """Seen as ``"none"`` and ``"ownProxy"``."""
+    """eg. ``"none"`` or ``"ownProxy"``."""
     hostName: Optional[str]
-    "Only seen as `None`."
     url: Optional[str]
-    "Only seen as `None`."
     certificateVerified: bool
     agentPresent: bool
     agentSupported: bool
@@ -893,11 +871,10 @@ class HTTPSStateResponse(TypedDict):
     externalAddress: str
     "The panel's public IP address."
     reachability: str
-    """Seen as ``"Nat"``."""
+    """eg. ``"Nat"``."""
     internalAddress: str
     "The panel's address on its own network."
     ipv6Address: Optional[str]
-    "Only seen as `None`."
     trustedProxies: list[str]
     "The reverse proxies AMP takes forwarded headers from, set by `PlatformModule.set_own_proxy`."
     serveFrontend: bool
@@ -920,8 +897,10 @@ class InviteAcceptedResponse(TypedDict):
 
     token: str
     expiration: str
+    # TODO: Drop the field doc once AMP lists the roles it drops (U5).
+    # AMP 3.0.0.6 keeps it empty when one of the invite's roles was deleted.
     droppedRoles: list[Any]
-    "Only seen empty, even when one of the invite's roles had been deleted."
+    "Empty even when one of the invite's roles had been deleted."
 
 
 class InvitePreviewResponse(TypedDict):
@@ -945,7 +924,7 @@ class InviteResponse(TypedDict):
     accepted: bool
     acceptedAt: Optional[str]
     status: str
-    """Seen as ``"pending"`` and ``"accepted"``. A revoked invite leaves the list."""
+    """eg. ``"pending"`` or ``"accepted"``. A revoked invite leaves the list."""
 
 
 class InviteTokenResponse(TypedDict):
@@ -960,7 +939,7 @@ class LicenceAgreementResponse(TypedDict):
     """``GET /api/licence/terms/agreement``, the licence terms a key may need accepted."""
 
     version: int
-    "Seen as 2, the current `termsVersion`."
+    "The current `termsVersion`, eg. 2."
     language: str
     title: str
     """eg. ``"AMP 2 to AMP 3 Licence Migration"``."""
@@ -1002,12 +981,12 @@ class LicenceResponse(TypedDict):
     gradeName: str
     """eg. ``"Beta Preview"``."""
     state: str
-    """Seen as ``"Valid"``."""
+    """eg. ``"Valid"``."""
     standing: str
-    """Seen as ``"Active"``; the web panel also checks for ``"TermsRequired"``."""
+    """eg. ``"Active"``, or ``"TermsRequired"``, which the web panel checks for."""
     expires: str
     graceEnds: Optional[str]
-    "Only seen as `None`; the web panel shows it as a date."
+    "The web panel shows it as a date."
     usage: int
     limitKnown: bool
     shardLimit: Optional[int]
@@ -1032,9 +1011,9 @@ class LicenceStatusResponse(TypedDict):
     licensed: bool
     confirmed: bool
     shardLimit: Optional[int]
-    "Seen as 0 with no licence, `None` just after activating one and 50 once the licence service answered."
+    "0 with no licence, and `None` just after activating one until the licence service answers."
     shardCeiling: Optional[int]
-    "Seen as 0 with no licence, `None` just after activating one and 57 with a limit of 50."
+    "0 with no licence, and `None` just after activating one until the licence service answers. It can be above the limit."
     lastVerifiedAt: Optional[str]
     "`None` until the licence service has answered."
     usingMockClient: bool
@@ -1063,7 +1042,7 @@ class MessageBusService(TypedDict):
     """The message bus's own process, from `MessageBusStatsResponse.service`."""
 
     condition: str
-    """Seen as ``"Running"``."""
+    """eg. ``"Running"``."""
     pid: int
     startedAtUtc: str
     binaryVersion: str
@@ -1071,7 +1050,6 @@ class MessageBusService(TypedDict):
     configCurrent: bool
     fileStoreBytes: int
     lastExitReason: Optional[str]
-    "Only seen as `None`."
     updatedAtUtc: str
     serviceVersion: str
     """eg. ``"amp3-host 3.0.0.6+f3d1a77cea"``."""
@@ -1082,12 +1060,11 @@ class MessageBusStatsResponse(TypedDict):
     """``GET /api/support/message-bus-stats``, the NATS message bus's figures."""
 
     state: str
-    """Seen as ``"Open"``."""
+    """eg. ``"Open"``."""
     serverId: str
     serverName: str
     serverVersion: str
     clusterName: Optional[str]
-    "Only seen as `None`."
     rttMs: float
     jetStreamAvailable: bool
     jsStreams: int
@@ -1133,7 +1110,7 @@ class PasskeyRegisteredResponse(TypedDict):
 
     passkey: PasskeyResponse
     session: Optional[TokenResponse]
-    "Only seen as `None` from a full session."
+    "`None` from a full session."
 
 
 class PasskeyRequiredResponse(TypedDict):
@@ -1164,7 +1141,7 @@ class PasswordChangeRequiredResponse(TypedDict):
 
     passwordChangeRequired: Literal[True]
     reason: str
-    """Seen as ``"forced"``, for a user created with `requirePasswordChange`."""
+    """eg. ``"forced"``, for a user created with `requirePasswordChange`."""
 
 
 class PasswordPolicyResponse(TypedDict):
@@ -1206,12 +1183,11 @@ class PortClaimResponse(TypedDict):
     """
 
     kind: str
-    """Seen as ``"SpireService"``."""
+    """eg. ``"SpireService"``."""
     port: int
     protocol: str
-    """Seen as ``"Both"``."""
+    """eg. ``"Both"``."""
     shardId: Optional[str]
-    "Only seen as `None`."
     holderName: str
     """eg. ``"the AMP panel"`` or ``"a WireGuard tunnel"``."""
 
@@ -1224,43 +1200,27 @@ class PreferencesResponse(TypedDict):
     """
 
     theme: Optional[str]
-    """Seen as ``"dark"``."""
+    """eg. ``"dark"``."""
     locale: Optional[str]
-    "Only seen as `None`."
     favouriteAppSlugs: list[str]
     "Template slugs; AMP doesn't check them against the templates."
     pinnedShardIds: list[str]
     notifyOnStateChange: Optional[bool]
-    "Only seen as `None`."
     notifyOnUpdateAvailable: Optional[bool]
-    "Only seen as `None`."
     compactShardHeader: Optional[bool]
     hideUnroutedShards: Optional[bool]
-    "Only seen as `None`."
     hidePrivatePorts: Optional[bool]
-    "Only seen as `None`."
     fileDetailsWidth: Optional[int]
-    "Only seen as `None`."
     ampExperience: Optional[str]
-    "Only seen as `None`."
     showTutorials: Optional[bool]
-    "Only seen as `None`."
     tutorialPromptDismissed: Optional[bool]
-    "Only seen as `None`."
     tutorialsCompleted: list[str]
-    "Only seen empty."
     accessibilityHintsEnabled: Optional[bool]
-    "Only seen as `None`."
     onboardingCompleted: Optional[bool]
-    "Only seen as `None`."
     reducedMotion: Optional[bool]
-    "Only seen as `None`."
     analyticsEnabled: Optional[bool]
-    "Only seen as `None`."
     streamerMode: Optional[bool]
-    "Only seen as `None`."
     timeFormat: Optional[str]
-    "Only seen as `None`."
 
 
 class PreviewStatus(TypedDict):
@@ -1269,35 +1229,29 @@ class PreviewStatus(TypedDict):
     expiresAt: str
     daysRemaining: int
     reason: Optional[str]
-    "Only seen as `None`."
     update: Optional[PreviewUpdate]
     "Often `None`."
 
 
 class PreviewUpdate(TypedDict):
-    """The preview build's update check in `PreviewStatus`; only seen with no update on offer."""
+    """The preview build's update check in `PreviewStatus`."""
 
     state: str
-    """Seen as ``"current"``."""
+    """eg. ``"current"``."""
     version: Optional[str]
-    "Only seen as `None`."
     stream: Optional[str]
-    "Only seen as `None`."
     reason: Optional[str]
-    "Only seen as `None`."
 
 
 class Principal(TypedDict):
     """Who or what did something, from a running task or an audit event."""
 
     kind: int
-    "Seen as 0 for a user and 1 for AMP itself."
+    "eg. 0 for a user and 1 for AMP itself."
     userId: Optional[str]
     userDisplayName: Optional[str]
     onBehalfOfUserId: Optional[str]
-    "Only seen as `None`."
     onBehalfOfUserDisplayName: Optional[str]
-    "Only seen as `None`."
     systemSource: Optional[str]
     """The part of AMP that did it, eg. ``"Auth"`` or ``"Reconciler"``, when `kind` is 1."""
 
@@ -1322,7 +1276,6 @@ class ProfileResponse(TypedDict):
     email: str
     "AMP doesn't check it's an email address."
     emailConfirmed: bool
-    "Only seen as `False`."
 
 
 class ProfileSessionResponse(TypedDict):
@@ -1333,7 +1286,7 @@ class ProfileSessionResponse(TypedDict):
     lastSeenAt: str
     expiresAt: str
     remoteIp: str
-    """IPv4 comes as an IPv6 mapped address, eg. ``"::ffff:192.168.4.51"``."""
+    """IPv4 comes as an IPv6 mapped address, eg. ``"::ffff:192.0.2.1"``."""
     userAgent: str
     isCurrent: bool
     "If it's the session this request came from."
@@ -1347,15 +1300,17 @@ class PublicationResponse(TypedDict):
     "The spire players connect to; it can be the shard's own spire."
     publicPort: int
     protocol: str
-    """Seen as ``"UDP"`` and ``"Both"`` (TCP and UDP), taken from the shard's port."""
+    """eg. ``"UDP"`` or ``"Both"`` (TCP and UDP), taken from the shard's port."""
     shardId: str
     portRef: str
     """The shard port's name in its template, eg. ``"ServerPort"``."""
     enabled: bool
     createdAt: str
+    # TODO: Drop the last sentence once AMP answers a change with the new status (U26c).
+    # AMP 3.0.0.6 answers a publication turned off with its old `Active` status.
     status: Optional[PublicationStatus]
     """`None` when it's new; the list fills it in once AMP has checked the forward. A change's reply can carry the
-    old one (U26c)."""
+    old one."""
 
 
 class PublicationStatus(TypedDict):
@@ -1377,7 +1332,7 @@ class PublicationStatus(TypedDict):
     faultSpireId: Optional[str]
     "The spire at fault, with `error` saying why."
     error: Optional[str]
-    """eg. ``"The file does not exist."`` while a first tunnel's agent is set up (U26a)."""
+    """eg. ``"The file does not exist."`` while a first tunnel's agent is set up."""
     updatedAt: str
 
 
@@ -1428,17 +1383,19 @@ class RoleResponse(TypedDict):
     createdAt: str
 
 
+# TODO: Drop the failed move sentence once its task leaves with its move (U22c).
+# AMP 3.0.0.6 keeps a failed move's task until it is deleted.
 class RunningTaskResponse(TypedDict):
     """One long job, such as a shard update, from ``GET /api/running-tasks``.
 
     A finished task leaves the list on its own after about 7 seconds. A failed move's task stays until
-    `TaskModule.delete_running_task` (U22c).
+    `TaskModule.delete_running_task`.
     """
 
     id: str
     tenantId: str
     type: str
-    """Seen as ``"ApplicationUpdate"``, ``"ShardClone"`` and ``"ShardMigration"``."""
+    """eg. ``"ApplicationUpdate"``, ``"ShardClone"`` or ``"ShardMigration"``."""
     name: str
     """eg. ``"Update my-shard"``; empty on a clone or a move, which name themselves with `nameCode`."""
     nameCode: Optional[str]
@@ -1450,7 +1407,6 @@ class RunningTaskResponse(TypedDict):
     messageCode: Optional[str]
     """A translation key for the step, eg. ``"tasks.migration.stage.preparing"``."""
     messageParams: Optional[dict[str, Any]]
-    "Only seen as `None`."
     speed: Optional[str]
     """How fast a clone or a move copies, eg. ``"56.2 MB/s"``."""
     progressPercent: int
@@ -1458,12 +1414,12 @@ class RunningTaskResponse(TypedDict):
     state: Union[TaskState, int]
     "A number the library doesn't know stays a plain int."
     isCancellable: bool
-    "Seen as `True` on clones and moves, even once finished, and `False` on updates."
+    "`True` on clones and moves, even once finished, and `False` on updates."
     isPrimary: bool
     principal: Principal
     visibility: int
     targetType: str
-    """Seen as ``"Shard"``."""
+    """eg. ``"Shard"``."""
     targetId: str
     correlationId: WrappedID
     causationActionId: Optional[WrappedID]
@@ -1474,11 +1430,9 @@ class RunningTaskResponse(TypedDict):
     "The spire running the task, the target one for a move or a clone."
     runId: str
     subTasks: list[Any]
-    "Only seen empty."
     startedAt: str
     completedAt: Optional[str]
     cancellationRequestedAt: Optional[str]
-    "Only seen as `None`."
     updatedAt: str
     isTerminal: bool
     "If the task has finished; only a finished task can be dismissed."
@@ -1531,7 +1485,7 @@ class ScheduleDefinition(TypedDict):
     steps: list[ScheduleStep]
     retryPolicy: ScheduleRetryPolicy
     misfirePolicy: str
-    """Seen as ``"Skip"``."""
+    """eg. ``"Skip"``."""
     timeout: str
     """A time span, ``"00:30:00"`` when it was made with `None`."""
     enabled: bool
@@ -1558,14 +1512,13 @@ class ScheduleExecutionResponse(TypedDict):
     tenantId: str
     shardId: str
     eventPayload: Optional[Any]
-    "Only seen as `None`."
     canonicalFireTime: str
     timeout: str
     queuedAt: str
     startedAt: str
     completedAt: str
     status: str
-    """Seen as ``"Succeeded"`` and ``"Skipped"`` (a disabled schedule that was run)."""
+    """eg. ``"Succeeded"`` or ``"Skipped"`` (a disabled schedule that was run)."""
     attemptNumber: int
     workerNode: Optional[str]
     "The spire that ran it."
@@ -1598,13 +1551,10 @@ class ScheduleStatus(TypedDict):
     lastRunAt: str
     lastRunStatus: str
     lastError: Optional[str]
-    "Only seen as `None`."
     lastExecutionId: str
     consecutiveFailures: int
     turnedOff: Optional[Any]
-    "Only seen as `None`."
     refusal: Optional[Any]
-    "Only seen as `None`."
     refusalAudited: bool
 
 
@@ -1614,7 +1564,7 @@ class ScheduleStepOutcome(TypedDict):
     stepId: str
     "AMP's own ID for the step, not the one it was saved with."
     lane: str
-    """Seen as ``"main"``."""
+    """eg. ``"main"``."""
     status: str
     detail: str
     """eg. ``"Sent: say hello"``."""
@@ -1628,7 +1578,7 @@ class ScheduleTaskParameter(TypedDict):
     name: str
     """eg. ``"command"`` for ``"app.consoleSend"``."""
     inputType: str
-    """Seen as ``"template"`` (text that can use the trigger's values) and ``"number"``."""
+    """eg. ``"template"`` (text that can use the trigger's values) or ``"number"``."""
     required: bool
 
 
@@ -1666,7 +1616,7 @@ class SettingActionResponse(TypedDict):
     """``POST /api/settings/actions/{id}``, what a settings page button did."""
 
     detail: str
-    """An English sentence, eg. ``"Synced 2 source(s), 0 updated - 248 templates available."``."""
+    """An English sentence with the counts, eg. ``"Synced 2 source(s), 0 updated - N templates available."``."""
 
 
 class SettingCandidate(TypedDict):
@@ -1724,8 +1674,8 @@ class SettingSpec(TypedDict):
     "A translation key, like `displayName`."
     keywords: str
     inputType: str
-    """Seen as ``"text"``, ``"multiline"``, ``"number"``, ``"quantity"``, ``"checkbox"``, ``"select"``, ``"list"``,
-    ``"password"``, ``"credential:Smtp"``, ``"ipbinding"`` (spires), and ``"enum"``, ``"combo"`` and ``"Password"`` (templates)."""
+    """eg. ``"text"``, ``"multiline"``, ``"number"``, ``"quantity"``, ``"checkbox"``, ``"select"``, ``"list"``,
+    ``"password"``, ``"credential:Smtp"``, ``"ipbinding"`` (spires), or ``"enum"``, ``"combo"`` and ``"Password"`` (templates)."""
     isSecret: bool
     placeholder: str
     suffix: str
@@ -1746,7 +1696,6 @@ class SettingSpec(TypedDict):
     "`None` for no upper limit."
     isHostCap: bool
     multiplier: Optional[Any]
-    "Only seen as `None`."
     multipleOf: Optional[float]
     "`None` for any step."
     maxLength: int
@@ -1764,21 +1713,22 @@ class ShardAddress(TypedDict):
     port: int
     showPort: bool
     display: str
-    """The address as the web panel shows it, eg. ``"192.168.4.231:25565"``."""
+    """The address as the web panel shows it, eg. ``"192.0.2.1:25565"``."""
     source: str
-    """Seen as ``"ExternalProbe"``, ``"LocalAddress"``, ``"Published"`` (a publication through another spire) and
+    """eg. ``"ExternalProbe"``, ``"LocalAddress"``, ``"Published"`` (a publication through another spire) or
     ``"Gateway"`` (the shard's gateway)."""
     uri: Optional[str]
-    "Only seen as `None`."
     notes: list[str]
-    """Seen as ``"NeedsForward"``, ``"NoHairpin"``, ``"ViaFront"`` (served by another spire), ``"NotReady"`` (its
-    tunnel still connecting) and ``"Paused"`` (a disabled publication)."""
+    """eg. ``"NeedsForward"``, ``"NoHairpin"``, ``"ViaFront"`` (served by another spire), ``"NotReady"`` (its
+    tunnel still connecting) or ``"Paused"`` (a disabled publication)."""
     viaSpireId: Optional[str]
     "The front spire, on a published or gateway address."
     viaSpireName: Optional[str]
+    # TODO: Drop the disabled publication sentence once AMP reads it as paused (U26d).
+    # AMP 3.0.0.6 reads `Fault` on a disabled publication's endpoint though its tunnel is up.
     tunnelState: Optional[str]
-    """Seen as ``"Connecting"``, ``"Fault"`` and ``"Ok"`` on a published or gateway address. A disabled publication's
-    reads ``"Fault"`` though its tunnel is up (U26d)."""
+    """eg. ``"Connecting"``, ``"Fault"`` or ``"Ok"`` on a published or gateway address. A disabled publication's
+    reads ``"Fault"`` though its tunnel is up."""
 
 
 class ShardAgentResponse(TypedDict):
@@ -1856,9 +1806,8 @@ class ShardCredentialResponse(TypedDict):
 
     required: bool
     credential: Optional[Any]
-    "Only seen as `None`, so the shape of a set credential is unknown."
+    "The shape of a set credential isn't known yet."
     usable: list[Any]
-    "Only seen empty."
 
 
 class ShardEndpointResponse(TypedDict):
@@ -1884,7 +1833,6 @@ class ShardExtractResponse(TypedDict):
     skippedBlocked: int
     skippedManaged: int
     examples: list[Any]
-    "Only seen empty."
 
 
 class ShardFileACLResponse(TypedDict):
@@ -1954,9 +1902,8 @@ class ShardInfraSettings(TypedDict):
     advertisedAddress: str
     advertisedAddressIncludesPort: bool
     containerMode: str
-    """Seen as ``"Podman"`` and ``"Native"``."""
+    """eg. ``"Podman"`` or ``"Native"``."""
     containerImageOverride: Optional[str]
-    "Only seen as `None`."
     memoryLimitMb: int
     "0 for no limit. AMP stores a negative number without complaint."
     memoryReservationMb: int
@@ -1968,16 +1915,13 @@ class ShardInfraSettings(TypedDict):
     minimumSessionTimeForRetention: int
     enableGeoFiltering: bool
     blockedCountries: list[str]
-    "Only seen empty."
     allowedCountries: list[str]
-    "Only seen empty."
     blockUnknownCountries: bool
     geoFilterKickMessage: str
     geoFilterKickCommand: str
     diskLimitMb: int
     importConfigFilesFromSftp: bool
     extraEnvironment: dict[str, str]
-    "Only seen empty."
     updatedAt: str
     updatedByUserId: str
 
@@ -1986,7 +1930,6 @@ class ShardInfraUpdateResponse(ShardInfraSettings):
     """``PATCH /api/shards/{id}/infra``, the settings as AMP saved them."""
 
     clampRefused: Optional[Any]
-    "Only seen as `None`."
 
 
 class ShardManagedFileResponse(TypedDict):
@@ -1995,14 +1938,13 @@ class ShardManagedFileResponse(TypedDict):
     path: str
     """Relative to the shard's root, eg. ``"server.properties"``."""
     kind: str
-    """Seen as ``"merged"`` (AMP merges its settings into the file, eg. ``"server.properties"``) and ``"generated"``
+    """eg. ``"merged"`` (AMP merges its settings into the file, eg. ``"server.properties"``) or ``"generated"``
     (AMP writes the whole file, eg. ``"eula.txt"``)."""
     importable: bool
-    "Seen `True` on the merged file and `False` on the generated one."
+    "`True` on a merged file and `False` on a generated one."
     source: str
-    """Seen as ``"config"``."""
+    """eg. ``"config"``."""
     fieldName: Optional[str]
-    "Only seen as `None`."
 
 
 class ShardMetricResponse(TypedDict):
@@ -2020,7 +1962,6 @@ class ShardMetricResponse(TypedDict):
     activeUsers: int
     maxUsers: int
     custom: dict[str, Any]
-    "Only seen empty."
     listeningPorts: list[int]
 
 
@@ -2036,7 +1977,6 @@ class ShardMigrationResponse(TypedDict):
     sourceDatastoreId: str
     targetDatastoreId: str
     sourceShardId: str
-    "Only seen as all zeros."
     sourceSpireId: str
     "All zeros on a move between datastores of one spire."
     targetSpireId: str
@@ -2048,10 +1988,10 @@ class ShardMigrationResponse(TypedDict):
     status: Union[MigrationStatus, int]
     "A number the library doesn't know stays a plain int."
     filesTotal: int
-    "0 while copying and the real count once done, eg. 664; a shard with no files reads 0 throughout."
+    "0 while copying and the real count once done; a shard with no files reads 0 throughout."
     filesDone: int
     bytesTotal: int
-    "0 while copying and the real count once done, eg. 11733813."
+    "0 while copying and the real count once done."
     bytesDone: int
     error: Optional[str]
     """An English sentence on a failed move, eg. ``"The move failed. The server was left stopped on its source spire. ..."``,
@@ -2059,9 +1999,11 @@ class ShardMigrationResponse(TypedDict):
     startedAt: str
     finishedAt: Optional[str]
     startedByUserId: str
+    # TODO: Drop the second half once the record says what AMP does (U22d).
+    # AMP 3.0.0.6 reads `False` for a running shard that moves fine, then starts it on the target.
     startAfterMove: bool
-    """Seen `True` on a move that stopped the shard and failed; a running shard that moved fine read `False`, yet
-    started on the target (U22d)."""
+    """`True` on a move that stopped the shard and failed. A running shard that moves fine reads `False`, yet starts
+    on the target."""
     isActive: bool
     "If the move is still running; `True` only while copying."
     blocksLaunch: bool
@@ -2088,7 +2030,6 @@ class ShardPortAssignments(TypedDict):
     assignments: dict[str, int]
     """A port's `ref` to its number, eg. ``{"ServerPort": 25565}``."""
     customPorts: list[Any]
-    "Only seen empty."
     privatePortRefs: list[str]
     assignedAt: str
     assignedBySpireId: str
@@ -2099,10 +2040,8 @@ class ShardPortOutcome(TypedDict):
 
     ref: str
     requested: Optional[int]
-    "Only seen as `None`."
     assigned: int
     reason: int
-    "Only seen as 0."
     moved: bool
 
 
@@ -2142,9 +2081,8 @@ class ShardResponse(TypedDict):
     installedAt: Optional[str]
     "`None` until the first update installs the game."
     installedVersion: Optional[str]
-    "Only seen as `None`, even after an update."
+    "`None` even after an update."
     startAfterUpdateTaskId: Optional[str]
-    "Only seen as `None`."
     tags: list[str]
     suspended: bool
     diskWarningAcked: bool
@@ -2162,7 +2100,6 @@ class ShardScheduleResponse(TypedDict):
     nextFireTime: Optional[str]
     "`None` while it's off, or for an event trigger."
     withheld: list[Any]
-    "Only seen empty."
 
 
 class ShardSettingCandidatesResponse(TypedDict):
@@ -2171,7 +2108,6 @@ class ShardSettingCandidatesResponse(TypedDict):
     candidates: list[SettingCandidate]
     fetchedAt: str
     failureReason: Optional[str]
-    "Only seen as `None`."
     fromCache: bool
     age: str
     "How old the list is, as a time span."
@@ -2254,11 +2190,8 @@ class ShardStateResponse(TypedDict):
     "`None` while stopped."
     lastHeartbeat: str
     activeTaskId: Optional[str]
-    "Only seen as `None`."
     processId: Optional[Any]
-    "Only seen as `None`."
     runningVersion: Optional[str]
-    "Only seen as `None`."
     agentVersion: Optional[str]
     lastErrorMessage: Optional[str]
     lastErrorCode: Optional[str]
@@ -2296,14 +2229,14 @@ class ShardUploadSessionResponse(TypedDict):
     received: int
     "How many bytes AMP already holds, so an upload can carry on from there."
     via: str
-    """Seen as ``"direct"``."""
+    """eg. ``"direct"``."""
 
 
 class ShardUsage(TypedDict):
     """One shard's disk use, from `DatastoreUsage.shards`, or `ShardModule.get_shard_disk`. A deleted shard stays until it is purged."""
 
     kind: str
-    """Seen as ``"Shard"`` and ``"Orphan"``, a folder no shard owns, eg. the copy a move leaves on the old spire.
+    """eg. ``"Shard"`` or ``"Orphan"``, a folder no shard owns, eg. the copy a move leaves on the old spire.
     An orphan's `shardId` is all zeros and its `displayName` empty."""
     shardId: str
     name: str
@@ -2315,7 +2248,7 @@ class ShardUsage(TypedDict):
     limitMb: int
     "The shard's disk limit, its infra `diskLimitMb`; 0 for none, and 0 too until the next measure after one is set."
     limitLevel: str
-    """Seen as ``"None"`` and ``"Exceeded"``, against `limitMb` once the disk use is measured."""
+    """eg. ``"None"`` or ``"Exceeded"``, against `limitMb` once the disk use is measured."""
 
 
 class SnapshotResponse(TypedDict):
@@ -2327,7 +2260,7 @@ class SnapshotResponse(TypedDict):
     kind: Union[SnapshotKind, int]
     content: Union[SnapshotContent, int]
     trigger: int
-    "Seen as 0 (taken by a user) and 3 (the one AMP takes before a restore)."
+    "eg. 0 (taken by a user) or 3 (the one AMP takes before a restore)."
     status: Union[SnapshotState, int]
     name: str
     description: str
@@ -2336,7 +2269,6 @@ class SnapshotResponse(TypedDict):
     "Doesn't stop a delete."
     failureReason: str
     skippedFiles: list[str]
-    "Only seen empty."
     skippedCount: int
     archiveMissing: bool
     createdAt: str
@@ -2382,22 +2314,20 @@ class SpireEnrollmentAdmission(TypedDict):
     """eg. ``"4W26-457D-1PBK"``; the joining machine shows the same one in `HealthStatusResponse.messageParams`."""
     machineName: str
     sourceAddress: str
-    """The address and port it came from, eg. ``"192.168.4.235:33002"``."""
+    """The address and port it came from, eg. ``"192.0.2.1:33002"``."""
     requestedAt: str
     lastSeenAt: str
     expiresAt: str
     approvedAt: Optional[str]
     approvedByName: Optional[str]
     deniedAt: Optional[str]
-    "Only seen as `None`."
     deniedByName: Optional[str]
-    "Only seen as `None`."
     suspect: bool
-    "If another machine presented the same join file, from the web panel's text; only seen as `False`."
+    "If another machine presented the same join file, from the web panel's text."
     replayCount: int
     "How many times another machine presented it."
     replayFingerprint: Optional[str]
-    "The latest other machine's fingerprint; only seen as `None`."
+    "The latest other machine's fingerprint."
 
 
 class SpireEnrollmentCreatedResponse(TypedDict):
@@ -2413,12 +2343,12 @@ class SpireEnrollmentHostResponse(TypedDict):
 
     host: str
     kind: str
-    """Seen as ``"internal"`` and ``"external"`` (the public address)."""
+    """eg. ``"internal"`` or ``"external"`` (the public address)."""
     interfaceName: str
     isPrimary: bool
     suggested: bool
     note: Optional[str]
-    """Seen as ``"needsForward"`` on the public address."""
+    """eg. ``"needsForward"`` on the public address."""
 
 
 class SpireEnrollmentResponse(TypedDict):
@@ -2430,8 +2360,8 @@ class SpireEnrollmentResponse(TypedDict):
     createdAt: str
     expiresAt: str
     status: str
-    """Seen as ``"pending"`` (made), ``"awaitingapproval"`` (a machine used it), ``"approved"``,
-    ``"redeemed"`` (the machine joined) and ``"revoked"``."""
+    """eg. ``"pending"`` (made), ``"awaitingapproval"`` (a machine used it), ``"approved"``,
+    ``"redeemed"`` (the machine joined) or ``"revoked"``."""
     redeemedAt: Optional[str]
     redeemedSpireId: Optional[str]
     """The spire the machine became, once `status` is ``"redeemed"``."""
@@ -2439,9 +2369,9 @@ class SpireEnrollmentResponse(TypedDict):
     revokedReason: Optional[str]
     "`None` when the revoke sent no reason."
     role: str
-    """Seen as ``"standard"``."""
+    """eg. ``"standard"``."""
     entryNodeHost: Optional[str]
-    "Only seen as `None`, as are the other entry node and tunnel fields; the types are from the web panel's code."
+    "The types of this and the other entry node and tunnel fields are from the web panel's code."
     entryNodeState: Optional[str]
     """The web panel knows ``"waiting"``, ``"notpasted"``, ``"unreachable"``, ``"wrongsecret"`` and ``"collected"``."""
     entryNodeStateCode: Optional[str]
@@ -2458,21 +2388,18 @@ class SpireExpiredPurgeResponse(TypedDict):
     """``POST /api/spires/{id}/purge-expired-shards``, how many deleted shards AMP is purging."""
 
     purging: int
-    "Only seen as 0: a shard deleted but not past its keeping time stays."
+    "A shard deleted but not past its keeping time stays, and isn't purged."
 
 
 class SpireImportScanResponse(TypedDict):
     """``POST /api/spires/{id}/import/scan``, game servers from other panels that could be imported.
 
-    Every list was empty on the test spire, so the shape of a found server is unknown.
+    The shape of a found server isn't known yet.
     """
 
     servers: list[Any]
-    "Only seen empty."
     unreadable: list[Any]
-    "Only seen empty."
     truncatedRoots: list[Any]
-    "Only seen empty."
     timedOut: bool
 
 
@@ -2483,7 +2410,6 @@ class SpireIPAddress(TypedDict):
     isV6: bool
     isInternal: bool
     isDhcp: Optional[bool]
-    "Only seen as `None`."
     isPrimary: bool
     isTunnel: bool
     interfaceName: str
@@ -2493,29 +2419,28 @@ class SpireIPOptionResponse(SpireIPAddress):
     """One address a shard can bind to, from ``GET /api/spires/{id}/ip-options``."""
 
     role: str
-    """Seen as ``"all"`` (``"0.0.0.0"``), ``"localhost"``, ``"address"`` and ``"auto"`` (``"@auto-pool"``)."""
+    """eg. ``"all"`` (``"0.0.0.0"``), ``"localhost"``, ``"address"`` or ``"auto"`` (``"@auto-pool"``)."""
 
 
 class SpirePlatform(TypedDict):
     """The machine a spire runs on, from `SpireStateResponse.platform`."""
 
     os: int
-    "Seen as 2 on Ubuntu."
+    "eg. 2 on Ubuntu."
     architecture: int
-    "Seen as 1 on x86_64."
+    "eg. 1 on x86_64."
     osName: str
     hardwareName: str
     hostname: str
     cpu: SpireCPU
     installedRamMb: int
     virtualization: int
-    "Seen as 5 on a QEMU/KVM VM."
+    "eg. 5 on a QEMU/KVM VM."
     reportedIps: list[SpireIPAddress]
     installedJava: list[Any]
-    "Only seen empty."
     externalIp: str
     reachability: str
-    """Seen as ``"Nat"``."""
+    """eg. ``"Nat"``."""
     freeDiskMb: int
     totalDiskMb: int
     freeRamMb: int
@@ -2528,7 +2453,7 @@ class SpirePortResponse(TypedDict):
 
     port: int
     protocol: str
-    """Seen as ``"TCP"`` and ``"UDP"``."""
+    """eg. ``"TCP"`` or ``"UDP"``."""
     ref: str
     """The port's name in the template, eg. ``"ServerPort"``."""
     name: str
@@ -2545,7 +2470,7 @@ class SpireResponse(TypedDict):
 
     id: str
     tenantId: str
-    """Seen as ``"_root"``."""
+    """eg. ``"_root"``."""
     displayName: str
     """The enrolment's `label` on a spire that joined."""
     description: str
@@ -2554,29 +2479,26 @@ class SpireResponse(TypedDict):
     """If it's the machine that answered the call. A spire that joined serves the whole panel API too, so the same
     spire reads `True` from itself and `False` from the others."""
     platform: int
-    "Seen as 2 on Ubuntu, the same number as `SpirePlatform.os`."
+    "eg. 2 on Ubuntu, the same number as `SpirePlatform.os`."
     architecture: int
     tags: list[str]
-    "Only seen empty."
     ipPool: list[str]
-    "Only seen empty."
     natsPrefix: str
     allocatablePortRange: str
     """eg. ``"1024:65535"``."""
     acceptsDeployments: bool
     maxShards: int
     defaultContainerMode: str
-    """Seen as ``"Podman"``; the spire settings offer ``"Native"``, ``"Docker"`` and ``"Podman"``."""
+    """One of ``"Native"``, ``"Docker"`` or ``"Podman"``, as the spire settings offer."""
     defaultContainerModeChosen: bool
     preferredContainerMode: str
     defaultShardIpBinding: str
     createdAt: str
     panelPort: int
     busPort: int
-    "Seen as 4222 on the panel's own spire and 0 on one that joined."
+    "eg. 4222 on the panel's own spire, and 0 on one that joined."
     identityPublicKey: str
     role: int
-    "Only seen as 0."
     publicHost: str
     sftpEnabled: bool
     sftpPort: int
@@ -2678,13 +2600,12 @@ class SSHKeyResponse(TypedDict):
     id: str
     label: str
     keyType: str
-    """Seen as ``"ssh-ed25519"``."""
+    """eg. ``"ssh-ed25519"``."""
     fingerprint: str
     """eg. ``"SHA256:MDGpHMbb3VwX0o1eKeHlX3rRfBMWpZmlRlINSshWK28"``."""
     bits: int
     addedAt: str
     lastUsedAt: Optional[str]
-    "Only seen as `None`."
     expiresAt: Optional[str]
 
 
@@ -2697,7 +2618,6 @@ class SystemBusResponse(TypedDict):
     "If other machines can reach it; a new spire can only join once it's public."
     joinInfo: BusJoinInfo
     servers: list[Any]
-    "Only seen empty."
 
 
 class TemplateConfigFile(TypedDict):
@@ -2711,7 +2631,7 @@ class TemplateConfigFile(TypedDict):
     configHeaderFormat: str
     configHeaderRegex: str
     configType: str
-    """Seen as ``"ini"``, ``"json"``, ``"kvp"`` and ``"template"``."""
+    """eg. ``"ini"``, ``"json"``, ``"kvp"`` or ``"template"``."""
     configEncoding: str
     autoMap: bool
     importable: bool
@@ -2738,7 +2658,7 @@ class TemplateConsole(TypedDict):
     serverAuthAckRegex: str
     userJoinRegex: str
     userIdKind: str
-    """Seen as ``"steam64"`` and ``"minecraft-uuid"``, or empty."""
+    """eg. ``"steam64"``, ``"minecraft-uuid"`` or empty."""
     userLeaveRegex: str
     userChatRegex: str
     preConnectRegex: str
@@ -2845,7 +2765,7 @@ class TemplateMetadata(TypedDict):
     created: str
     updated: str
     os: int
-    "Seen as 3 on every template."
+    "eg. 3."
     aarchSupport: int
     arch: int
     author: str
@@ -2864,9 +2784,7 @@ class TemplateMetadata(TypedDict):
     containerPolicyReason: str
     extraSetupStepsURI: str
     prerequisites: list[Any]
-    "Only seen empty."
     extraContainerPackages: list[Any]
-    "Only seen empty."
     configReleaseState: int
     noCommercialUsage: bool
     eulaLocation: str
@@ -2876,7 +2794,6 @@ class TemplateMetadata(TypedDict):
     deprecatedReason: str
     minAMPVersion: str
     minAgentVersion: Optional[str]
-    "Only seen as `None`."
     appIsMultiIPAware: bool
 
 
@@ -2947,7 +2864,6 @@ class TemplateSourceResponse(TypedDict):
     isArchive: bool
     branch: str
     localPath: Optional[str]
-    "Only seen as `None`."
     priority: int
     disabled: bool
 
@@ -2960,7 +2876,6 @@ class TemplateSyncResponse(TypedDict):
     "The git commit the source is now at."
     changed: bool
     error: Optional[str]
-    "Only seen as `None`."
 
 
 class TemplateUpdateStage(TypedDict):
@@ -3018,7 +2933,7 @@ class TokenResponse(TypedDict):
 
     token: str
     expiration: str
-    "ISO 8601 in UTC, eg. ``2026-11-07T04:51:17.405287Z``."
+    "ISO 8601 in UTC, eg. ``2026-01-01T12:00:00.000000Z``."
 
 
 class TunnelEnd(TypedDict):
@@ -3028,7 +2943,7 @@ class TunnelEnd(TypedDict):
     spireName: str
     keyPublished: bool
     agentInstalled: bool
-    "If the spire's tunnel agent is in place; it was seen `False` on first use, then `True` by itself (U26a)."
+    "If the spire's tunnel agent is in place; `False` until AMP puts it there by itself on first use."
     agentReachable: bool
     agentError: Optional[str]
     """eg. ``"The file does not exist."`` while `agentInstalled` is `False`."""
@@ -3069,7 +2984,7 @@ class TunnelResponse(TypedDict):
     interfaceName: str
     """eg. ``"amp-4e992d89"``, from the tunnel's `id`."""
     listenPort: int
-    "Seen as 51820."
+    "eg. 51820."
     frontAddress: str
     """The front's address on the tunnel, eg. ``"10.83.0.1"``."""
     backAddress: str
@@ -3091,8 +3006,8 @@ class TunnelStatus(TypedDict):
     "The round trip over the tunnel, eg. 1.5; 0 while it's down."
     lastProbeAt: str
     phase: str
-    """Seen as ``"AgentRejected"``, ``"Connecting"``, ``"Up"`` and ``"Releasing"``; the web panel also knows
-    ``"Provisioning"``, ``"AgentUnreachable"`` and ``"Degraded"``."""
+    """One of ``"Provisioning"``, ``"AgentRejected"``, ``"AgentUnreachable"``, ``"Connecting"``, ``"Up"``,
+    ``"Degraded"`` or ``"Releasing"``, as the web panel's code knows them."""
     faultSpireId: Optional[str]
     "The spire at fault, with `error` saying why."
     error: Optional[str]
@@ -3103,7 +3018,7 @@ class UpdateStatusResponse(TypedDict):
 
     currentVersion: str
     stream: str
-    """Seen as ``"Mainline"`` and ``"Preview"``."""
+    """eg. ``"Mainline"`` or ``"Preview"``."""
     availableStreams: list[str]
     """eg. ``["Mainline", "Preview"]``."""
     latestVersion: str
@@ -3115,17 +3030,15 @@ class UpdateStatusResponse(TypedDict):
     releaseNotesUrl: str
     supervised: bool
     canApply: bool
-    "If the panel can update itself; only seen as `False`."
+    "If the panel can update itself."
     canChangeStream: bool
     note: Optional[str]
     """A translation key, eg. ``"updates.error.streamMissing"`` on a stream with no build yet."""
     installationVersion: str
     spiresBehind: list[Any]
-    "Only seen empty."
     canUpdateSpires: bool
     packageManaged: bool
     rolledBack: Optional[bool]
-    "Only seen as `None`."
 
 
 class UserResponse(TypedDict):

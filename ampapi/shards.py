@@ -122,6 +122,8 @@ class Shard:
         self.id = data["id"]
         self.display_name = data["displayName"]
 
+    # TODO: Remove this warning once AMP answers the route (U12).
+    # AMP 3.0.0.6 answers 404 to POST /update/abort.
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.abort_shard_update`.
     async def abort_update(self) -> Any:
@@ -130,7 +132,7 @@ class Shard:
         |coro|
 
         .. warning::
-            AMP 3.0.0.6 answers 404, as the route isn't there yet, so this doesn't work (U12).
+            AMP 3.0.0.6 doesn't answer this route yet (404).
 
         """
         return await self._module.abort_shard_update(shard_id=self.id)
@@ -578,6 +580,8 @@ class Shard:
         """
         return await self._module.import_shard_config(shard_id=self.id, path=path, content=content)
 
+    # TODO: Remove this warning once AMP answers the route (U12).
+    # AMP 3.0.0.6 answers 404 to POST /kill.
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
     # It comes from `ShardModule.kill_shard`.
     async def kill(self) -> Any:
@@ -586,7 +590,7 @@ class Shard:
         |coro|
 
         .. warning::
-            AMP 3.0.0.6 answers 404, as the route isn't there yet, so this doesn't work (U12).
+            AMP 3.0.0.6 doesn't answer this route yet (404).
 
         """
         return await self._module.kill_shard(shard_id=self.id)
@@ -952,8 +956,10 @@ class ShardModule(Base):
 
     """
 
+    # TODO: Remove this warning once AMP answers the route (U12).
+    # AMP 3.0.0.6 answers 404 to POST /update/abort.
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # AMP 3.0.0.6 has no such route; the panel's code sends `{}` and ignores the reply.
+    # The web panel's code sends `{}` and ignores the reply.
     async def abort_shard_update(self, shard_id: str) -> Any:
         """Stop a shard's update.
 
@@ -962,7 +968,7 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/update/abort``
 
         .. warning::
-            AMP 3.0.0.6 answers 404, as the route isn't there yet, so this doesn't work (U12).
+            AMP 3.0.0.6 doesn't answer this route yet (404).
 
         Parameters
         ----------
@@ -1137,6 +1143,8 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/copy", data={"from": source, "to": destination})
 
+    # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
+    # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.
     async def create_shard(
         self,
         template_slug: str,
@@ -1155,7 +1163,7 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards``
 
         .. note::
-            A shard that was never updated still starts, then fails after pulling its container (U15).
+            A shard that was never updated still starts, then fails after pulling its container.
 
         Parameters
         ----------
@@ -1168,7 +1176,7 @@ class ShardModule(Base):
         description : :class:`str`, optional
             A description, by default "".
         start_now : :class:`bool`, optional
-            If the shard should start once made or not, by default False. Not yet seen live with `True`.
+            If the shard should start once made or not, by default False.
         start_on_boot : :class:`bool`, optional
             If the shard starts when its spire boots or not, by default False.
         credential_id : Union[:class:`str`, None], optional
@@ -1247,6 +1255,8 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/folder", data={"path": path})
 
+    # TODO: Drop the 500 from Raises once AMP answers a step with no `type` with a 400 (U16).
+    # AMP 3.0.0.6 answers 500 to a schedule step that has no `type` key.
     async def create_shard_schedule(
         self,
         shard_id: str,
@@ -1289,7 +1299,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If a step or the trigger has an unknown `type` (400). A step with no `type` at all gets a 500 (U16).
+            If a step or the trigger has an unknown `type` (400). A step with no `type` at all gets a 500.
 
         """
         data: dict[str, Any] = {
@@ -1380,6 +1390,8 @@ class ShardModule(Base):
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
+    # TODO: Reword the docstring once AMP clears a failed move's task and refuses an early dismissal cleanly (U22a, U22c).
+    # AMP 3.0.0.6 keeps the task in `get_running_tasks`, and answers 500 to a dismissal while the move is starting or copying.
     async def delete_shard_migration(self, shard_id: str) -> None:
         """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has none.
 
@@ -1389,7 +1401,7 @@ class ShardModule(Base):
 
         It only clears the record. The copy a move leaves on the old spire stays until
         :meth:`SpireModule.purge_spire_orphan_directory`, and a failed move's task until
-        :meth:`TaskModule.delete_running_task` (U22c).
+        :meth:`TaskModule.delete_running_task`.
 
         Parameters
         ----------
@@ -1399,7 +1411,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the move is still copying or was only just started (500, ``"common.error.unexpected"``) (U22a). The move
+            If the move is still copying or was only just started (500, ``"common.error.unexpected"``). The move
             carries on unharmed.
 
         """
@@ -1510,7 +1522,7 @@ class ShardModule(Base):
         Returns
         -------
         :class:`bytes`
-            The zip as it came, all of it in memory; a full Minecraft snapshot was about 125 MB.
+            The zip as it came, all of it in memory.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/download", raw_bytes=True)
@@ -1606,7 +1618,7 @@ class ShardModule(Base):
         return [Shard(module=self, data=entry) for entry in result]
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # Only seen empty; the web panel reads `shardId`, `name` and `message` from each.
+    # The item shape isn't known yet; the web panel reads `shardId`, `name` and `message` from each.
     async def get_shards_awaiting_action(self) -> list[dict[str, Any]]:
         """Get the shards waiting on a user, eg. for a sign-in prompt.
 
@@ -1891,7 +1903,7 @@ class ShardModule(Base):
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Only a 204 was captured; the web panel reads a `left` list from the import record.
+    # Only the 204 for no record is known; the web panel reads a `left` list from an import record.
     async def get_shard_import(self, shard_id: str) -> Optional[dict[str, Any]]:
         """Get how the import that made a shard went.
 
@@ -2310,7 +2322,7 @@ class ShardModule(Base):
         return result
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # Only seen empty, as no player joined; the web panel reads `id`, `name` and `sessionId` from each.
+    # The item shape isn't known yet; the web panel reads `id`, `name` and `sessionId` from each.
     async def get_shard_users(self, shard_id: str) -> list[dict[str, Any]]:
         """Get the players on a shard.
 
@@ -2345,7 +2357,7 @@ class ShardModule(Base):
         path : :class:`str`
             The config file's path, eg. ``"server.properties"``.
         content : Union[:class:`str`, None], optional
-            The file's text to read instead of the file on disk, by default None. Not yet seen live with text.
+            The file's text to read instead of the file on disk, by default None.
 
         Returns
         -------
@@ -2355,8 +2367,10 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/config/import", data={"path": path, "content": content})
 
+    # TODO: Remove this warning once AMP answers the route (U12).
+    # AMP 3.0.0.6 answers 404 to POST /kill.
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # AMP 3.0.0.6 has no such route; the panel's code sends `{}` and ignores the reply.
+    # The web panel's code sends `{}` and ignores the reply.
     async def kill_shard(self, shard_id: str) -> Any:
         """End a shard's game at once, without the clean stop.
 
@@ -2365,7 +2379,7 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/kill``
 
         .. warning::
-            AMP 3.0.0.6 answers 404, as the route isn't there yet, so this doesn't work (U12).
+            AMP 3.0.0.6 doesn't answer this route yet (404).
 
         Parameters
         ----------
@@ -2380,6 +2394,9 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/kill", data={})
 
+    # TODO: Trim the move notes once AMP fixes the gaps in U22b, U22c, U22d and U22e.
+    # AMP 3.0.0.6 answers 409 to another spire's datastore, keeps a failed move's task, starts a moved running shard
+    # though `startAfterMove` is `False`, and fails the move of a stopped shard that was never updated.
     async def migrate_shard_to_spire(
         self,
         shard_id: str,
@@ -2403,10 +2420,10 @@ class ShardModule(Base):
             :meth:`SpireModule.purge_spire_orphan_directory` is called on the **old** spire's datastore with the
             shard's `workingDirName`. :meth:`delete_shard_migration` doesn't remove it.
 
-        The shard's ports become free ones on the target spire, eg. 8303 became 8305, and they stay so if it moves
-        back. A failed move's task stays in :meth:`TaskModule.get_running_tasks` until it is deleted (U22c). A shard
-        that was running starts again on the target by itself, once that spire has its container image, although the
-        move's record reads `startAfterMove` `False` (U22d).
+        The shard's ports become free ones on the target spire, and they stay so if it moves back. A failed move's
+        task stays in :meth:`TaskModule.get_running_tasks` until it is deleted. A shard that was running starts again
+        on the target by itself, once that spire has its container image, although the move's record reads
+        `startAfterMove` `False`.
 
         Parameters
         ----------
@@ -2419,8 +2436,8 @@ class ShardModule(Base):
         bring_backups : :class:`bool`
             If its snapshots move too or not.
         stop_if_running : :class:`bool`
-            If AMP may stop a running shard for the move or not. It works when the game stops cleanly (Minecraft); on
-            teeworlds, whose stops end in a kill (U18a), the move failed and left the shard stopped on its old spire.
+            If AMP may stop a running shard for the move or not. It works when the game stops cleanly. A game whose
+            stop ends in a kill makes the move fail, and the shard is left stopped on its old spire.
 
         Raises
         ------
@@ -2428,12 +2445,12 @@ class ShardModule(Base):
             If the shard already lives on that spire (400, an English sentence in `message` and no `code`), there's
             no such spire (400, ``"shards.error.spireNotFound"``), or the shard is running and `stop_if_running` is
             `False` (409, ``"shards.error.moveNeedsStop"``). A datastore of another spire gets 409
-            ``"spire.error.internal"`` (U22b).
+            ``"spire.error.internal"``.
 
         .. note::
             A shard that was never updated, its `installedAt` `None` (eg. a fresh clone), fails its move in the
             ``"tasks.migration.stage.preparing"`` stage with "Stop the server before moving it to another spire",
-            though it is stopped (U22e). Run :meth:`update_shard` on it first.
+            though it is stopped. Run :meth:`update_shard` on it first.
 
         """
         data: dict[str, Any] = {
@@ -2694,6 +2711,8 @@ class ShardModule(Base):
         data = {key: value for key, value in data.items() if value is not None}
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=data)
 
+    # TODO: Reword the warning and Raises once AMP lets a deny be undone and answers a bad `state` with a 400 (U24a, U24b).
+    # AMP 3.0.0.6 answers both with 403 "files.acl.error.notYoursToGrant".
     async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may read, write and delete a path inside a shard.
 
@@ -2703,7 +2722,7 @@ class ShardModule(Base):
 
         .. warning::
             A user who denies themself a verb can't undo it: sending ``"inherit"`` or ``"allow"`` back answers 403
-            ``"files.acl.error.notYoursToGrant"``, even for the admin, and only deleting the shard cleared it (U24a).
+            ``"files.acl.error.notYoursToGrant"``, even for the admin, and the deny stays until the shard is deleted.
             The deny itself takes effect, eg. writing the file then gets 403.
 
         Parameters
@@ -2724,7 +2743,7 @@ class ShardModule(Base):
         ------
         AMPAPIRequestError
             If the change needs access the user doesn't hold (403, ``"files.acl.error.notYoursToGrant"``). A `state`
-            that isn't one of the three gets the same 403, not a 400 (U24b).
+            that isn't one of the three gets the same 403, not a 400.
 
         """
         return await self._request(
@@ -2777,6 +2796,8 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/ignore", data={"paths": paths, "ignored": ignored})
 
+    # TODO: Loosen the whole-settings check once AMP's PATCH leaves the fields it isn't sent alone (U13).
+    # AMP 3.0.0.6 resets every infra field a PATCH body leaves out, `containerMode` to Native among them.
     async def set_shard_infra(self, shard_id: str, settings: ShardInfraSettings) -> ShardInfraUpdateResponse:
         """Replace how a shard runs with the whole of `settings`: container, limits, boot and analytics.
 
@@ -2786,10 +2807,10 @@ class ShardModule(Base):
 
         .. warning::
             AMP reads only the body's top-level fields, ignores keys it doesn't know (a `settings` wrapper among them),
-            and resets every field the body doesn't name at the top level; one partial body switched a container shard
-            to Native (U13). So we refuse `settings` with any field missing, which also catches :meth:`get_shard_infra`'s
-            wrapped reply. Take them from its inner `settings`, or use :meth:`update_shard_infra` to change a few. A
-            change takes effect when the shard next starts.
+            and resets every field the body doesn't name at the top level, so a partial body changes the rest too. We
+            refuse `settings` with any field missing, which also catches :meth:`get_shard_infra`'s wrapped reply. Take
+            them from its inner `settings`, or use :meth:`update_shard_infra` to change a few. A change takes effect
+            when the shard next starts.
 
         Parameters
         ----------
@@ -2950,7 +2971,7 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/sleep``
 
-        See `ShardStateResponse.sleep` for if it can; a template whose sleep port doesn't exist can't (U18b).
+        See `ShardStateResponse.sleep` for if it can; a template whose sleep port doesn't exist can't.
 
         Parameters
         ----------
@@ -2966,6 +2987,8 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/sleep")
 
+    # TODO: Remove the second sentence once AMP refuses to start a shard that was never updated (U15).
+    # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.
     async def start_shard(self, shard_id: str) -> None:
         """Start a shard's game.
 
@@ -2974,7 +2997,7 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/start``
 
         Follow it with :meth:`get_shard_state`; AMP answers before the game is up. A shard never updated starts too,
-        then fails after pulling its container (U15), so run :meth:`update_shard` first.
+        then fails after pulling its container, so run :meth:`update_shard` first.
 
         Parameters
         ----------
@@ -3018,6 +3041,8 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
+    # TODO: Reword Raises once AMP refuses a bad target datastore with its own error (U22b).
+    # AMP 3.0.0.6 answers 409 "spire.error.internal" to the shard's own datastore or an unknown one.
     async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> None:
         """Move a shard to another datastore on its spire.
 
@@ -3039,8 +3064,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `target_datastore_id` is the shard's own datastore or an unknown one (409, ``"spire.error.internal"``)
-            (U22b).
+            If `target_datastore_id` is the shard's own datastore or an unknown one (409, ``"spire.error.internal"``).
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration", data={"targetDatastoreId": target_datastore_id})
@@ -3171,6 +3195,8 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/update")
 
+    # TODO: Send only the changes once AMP's PATCH leaves the fields it isn't sent alone (U13).
+    # AMP 3.0.0.6 resets every infra field a PATCH body leaves out.
     async def update_shard_infra(self, shard_id: str, changes: dict[str, Any]) -> ShardInfraUpdateResponse:
         """Change a few of how a shard runs, keeping the rest: we read the settings, change them and send them whole.
 
@@ -3179,7 +3205,7 @@ class ShardModule(Base):
         Endpoints: ``GET /api/shards/{shard_id}/infra``, then ``PATCH /api/shards/{shard_id}/infra``
 
         It sends the reply's inner `settings` at the top level, as AMP ignores a `settings` wrapper and resets every
-        field the body doesn't name there (U13).
+        field the body doesn't name there.
 
         Parameters
         ----------
@@ -3354,7 +3380,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload", files=files, parameters={"path": folder})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # The test template can't sleep (U18b), so only the 400 for a shard that isn't asleep was captured.
+    # Only the 400 for a shard that isn't asleep is known; the reply to waking a sleeping shard isn't.
     async def wake_shard(self, shard_id: str) -> Any:
         """Wake a sleeping shard.
 

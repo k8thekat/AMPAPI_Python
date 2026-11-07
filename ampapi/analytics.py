@@ -47,8 +47,8 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 class AnalyticsModule(Base):
     """The calls for player analytics and the audit log.
 
-    The analytics calls were only seen on a panel with no players, so most of their lists have no known item shape.
-    Each takes `demo`, which the web panel uses for a demo mode; it changed nothing on the test panel.
+    Most of the analytics lists have no known item shape yet. Each call takes `demo`, which the web panel uses for a
+    demo mode.
 
     .. versionadded:: 6.0.0
 
@@ -105,7 +105,7 @@ class AnalyticsModule(Base):
         return await self._request(method="GET", path="/api/analytics/addresses/users", parameters=parameters)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
-    # Only the 400 for part of an address was captured, as the test panel had no players.
+    # Only the 400 for part of an address is known; the shape of a match isn't.
     async def get_analytics_addresses(self, search: str, *, demo: bool = False) -> Any:
         """Search the addresses players were seen at.
 
@@ -132,7 +132,7 @@ class AnalyticsModule(Base):
         return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
 
     # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
-    # Only the 400 for an unknown key was captured, as the test panel had no players; the web panel reads it as a blob.
+    # Only the 400 for an unknown key is known; the web panel reads the image as a blob.
     async def get_analytics_avatar(self, user_key: str, *, full: bool = False) -> bytes:
         """Get a player's avatar image.
 
@@ -162,7 +162,7 @@ class AnalyticsModule(Base):
         return await self._request(method="GET", path=f"/api/analytics/avatars/{user_key}", parameters=parameters, raw_bytes=True)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
-    # An unknown player gave 404 with no body, and what the `user` query value means isn't known yet.
+    # An unknown player answers 404 with no body, and what the `user` query value means isn't known yet.
     async def get_analytics_connected_users(self, user_key: str, *, user: Optional[str] = None) -> Any:
         """Get the players connected to one player, as far as the web panel shows.
 
@@ -240,7 +240,7 @@ class AnalyticsModule(Base):
         country : Union[:class:`str`, None], optional
             Only players from this country code, eg. ``"US"``, by default None.
         user : Union[:class:`str`, None], optional
-            Only this player, by default None. Not yet seen live.
+            Only this player, by default None.
         top_users : Union[:class:`int`, None], optional
             How many top players to list, by default None.
         demo : :class:`bool`, optional
@@ -266,7 +266,7 @@ class AnalyticsModule(Base):
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
 
     # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
-    # Only the 400 for an unknown key was captured, as the test panel had no players; the web panel reads it as a blob.
+    # Only the 400 for an unknown key is known; the web panel reads the image as a blob.
     async def get_analytics_skin(self, user_key: str) -> bytes:
         """Get a Minecraft player's skin image.
 

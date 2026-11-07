@@ -43,6 +43,8 @@ class TaskModule(Base):
 
     # TODO: A `Task` object, once the tasks hub gives live progress (#3-47.2).
 
+    # TODO: Remove the warning once AMP honours a clone's cancel (U25).
+    # AMP 3.0.0.6 answers it with 202, and the clone carries on copying.
     async def cancel_running_task(self, task_id: str) -> None:
         """Ask AMP to stop a running task.
 
@@ -50,12 +52,12 @@ class TaskModule(Base):
 
         Endpoint: ``POST /api/running-tasks/{task_id}/cancel``
 
-        Only clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have been seen with `isCancellable` set;
-        an update never. To stop a shard move, :meth:`ShardModule.cancel_shard_migration` was seen working.
+        Clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have `isCancellable` set, an update doesn't. To
+        stop a shard move, use :meth:`ShardModule.cancel_shard_migration`.
 
         .. warning::
             A clone's cancel is answered 202 and its task reads `TaskState.cancelling`, then it carries on copying and
-            the clone completes (U25).
+            the clone completes.
 
         Parameters
         ----------
@@ -70,6 +72,8 @@ class TaskModule(Base):
         """
         await self._request(method="POST", path=f"/api/running-tasks/{task_id}/cancel", data={})
 
+    # TODO: Reword the docstring once a failed move's task leaves with its move (U22c).
+    # AMP 3.0.0.6 keeps the task through the move's dismissal and the shard's purge.
     async def delete_running_task(self, task_id: str) -> None:
         """Dismiss a finished task, so it leaves the list at once.
 
@@ -78,7 +82,7 @@ class TaskModule(Base):
         Endpoint: ``DELETE /api/running-tasks/{task_id}``
 
         A failed shard move's task only leaves this way; it outlives :meth:`ShardModule.delete_shard_migration` and
-        even the shard's purge (U22c).
+        even the shard's purge.
 
         Parameters
         ----------
@@ -93,6 +97,8 @@ class TaskModule(Base):
         """
         await self._request(method="DELETE", path=f"/api/running-tasks/{task_id}")
 
+    # TODO: Drop the failed move sentence once its task leaves with its move (U22c).
+    # AMP 3.0.0.6 keeps a failed move's task until it is deleted.
     async def get_running_tasks(self) -> list[RunningTaskResponse]:
         """Get the tasks running now, and those that finished in the last few seconds.
 
@@ -100,7 +106,7 @@ class TaskModule(Base):
 
         Endpoint: ``GET /api/running-tasks``
 
-        A failed shard move's task stays until :meth:`delete_running_task` (U22c).
+        A failed shard move's task stays until :meth:`delete_running_task`.
 
         Returns
         -------

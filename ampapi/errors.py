@@ -78,7 +78,7 @@ class AMPAPIPasskeyRequiredError(AMPAPIError):
     Send one of the account's recovery codes to :meth:`~ampapi.Session.second_factor`. A passkey itself needs a browser.
 
     .. warning::
-        Not yet seen live. Passkeys need the panel on HTTPS.
+        Passkeys need the panel on HTTPS.
 
     Attributes
     ----------
