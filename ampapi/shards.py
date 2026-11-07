@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from ._types import (
+        FileACLChange,
         ScheduleCatalogResponse,
         ScheduleExecutionResponse,
         ScheduleRunResponse,
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
         ShardFileResponse,
         ShardInfraResponse,
         ShardInfraUpdateResponse,
+        ShardManagedFileResponse,
         ShardMetricResponse,
         ShardMigrationResponse,
         ShardMigrationTargetResponse,
@@ -65,6 +67,7 @@ if TYPE_CHECKING:
         ShardUpdateResponse,
         ShardUploadChunkResponse,
         ShardUploadSessionResponse,
+        ShardUsage,
         SnapshotResponse,
         SnapshotSettingsResponse,
         SpireIPOptionResponse,
@@ -355,9 +358,7 @@ class Shard:
         """
         return await self._module.get_shard_credential(shard_id=self.id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.get_shard_disk`.
-    async def get_disk(self) -> Optional[dict[str, Any]]:
+    async def get_disk(self) -> Optional[ShardUsage]:
         """Get this shard's disk use, see :meth:`ShardModule.get_shard_disk`.
 
         |coro|
@@ -439,9 +440,7 @@ class Shard:
         """
         return await self._module.get_shard_ip_options(shard_id=self.id)
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # It comes from `ShardModule.get_shard_managed_files`.
-    async def get_managed_files(self, path: str) -> list[dict[str, Any]]:
+    async def get_managed_files(self, path: str) -> list[ShardManagedFileResponse]:
         """Get which files under a path AMP writes itself, see :meth:`ShardModule.get_shard_managed_files`.
 
         |coro|
@@ -678,9 +677,7 @@ class Shard:
         """
         return await self._module.send_shard_file_chunk(shard_id=self.id, session_id=session_id, chunk=chunk)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.set_shard_credential`.
-    async def set_credential(self, credential_id: str) -> Any:
+    async def set_credential(self, credential_id: str) -> ShardCredentialResponse:
         """Give this shard a stored secret to use, see :meth:`ShardModule.set_shard_credential`.
 
         |coro|
@@ -702,9 +699,7 @@ class Shard:
         """
         return await self._module.set_shard_details(shard_id=self.id, display_name=display_name, description=description, tags=tags)
 
-    # TODO: Type the change items once AMP is seen taking one live (#3-47.7).
-    # It comes from `ShardModule.set_shard_file_acl`.
-    async def set_file_acl(self, path: str, changes: list[dict[str, Any]]) -> ShardFileACLResponse:
+    async def set_file_acl(self, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may do what to a path in this shard, see :meth:`ShardModule.set_shard_file_acl`.
 
         |coro|
@@ -1336,6 +1331,8 @@ class ShardModule(Base):
 
         Endpoint: ``DELETE /api/shards/{shard_id}/credential``
 
+        A shard with none is fine too.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -1727,14 +1724,16 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/credential")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Always a 204 so far, running or stopped, even with files in the shard.
-    async def get_shard_disk(self, shard_id: str) -> Optional[dict[str, Any]]:
-        """Get a shard's disk use.
+    async def get_shard_disk(self, shard_id: str) -> Optional[ShardUsage]:
+        """Get a shard's disk use against its disk limit.
 
         |coro|
 
         Endpoint: ``GET /api/shards/{shard_id}/disk``
+
+        AMP only answers it for a shard with a disk limit, its `diskLimitMb` in :meth:`get_shard_infra`; for any other
+        it is a 204, running or stopped and even after :meth:`SpireModule.rescan_spire_usage`. An exceeded limit
+        doesn't list the shard in :meth:`get_shards_awaiting_action`.
 
         Parameters
         ----------
@@ -1743,8 +1742,9 @@ class ShardModule(Base):
 
         Returns
         -------
-        Union[dict[:class:`str`, Any], None]
-            The disk use, `None` when AMP has none (a 204).
+        Union[:class:`ShardUsage`, None]
+            The shard's entry from :meth:`SpireModule.get_spire_usage`, its `limitLevel` ``"Exceeded"`` once the use
+            passes the limit; `None` with no disk limit (a 204).
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/disk")
@@ -1951,9 +1951,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/ip-options")
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # Only seen empty, for server.properties as well as a file of our own.
-    async def get_shard_managed_files(self, shard_id: str, path: str) -> list[dict[str, Any]]:
+    async def get_shard_managed_files(self, shard_id: str, path: str) -> list[ShardManagedFileResponse]:
         """Get which files under a path AMP writes itself from the settings.
 
         |coro|
@@ -1965,12 +1963,13 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         path : :class:`str`
-            The path.
+            The path. Only the shard's root (``""`` or ``"/"``) has listed anything; a folder or a file gives an empty
+            list, even ``"server.properties"`` itself.
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The managed files.
+        list[:class:`ShardManagedFileResponse`]
+            The managed files, eg. a Minecraft shard's ``"server.properties"`` and ``"eula.txt"``.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/managed", parameters={"path": path})
@@ -2430,6 +2429,11 @@ class ShardModule(Base):
             `False` (409, ``"shards.error.moveNeedsStop"``). A datastore of another spire gets 409
             ``"spire.error.internal"`` (U22b).
 
+        .. note::
+            A shard that was never updated, its `installedAt` `None` (eg. a fresh clone), fails its move in the
+            ``"tasks.migration.stage.preparing"`` stage with "Stop the server before moving it to another spire",
+            though it is stopped (U22e). Run :meth:`update_shard` on it first.
+
         """
         data: dict[str, Any] = {
             "targetSpireId": target_spire_id,
@@ -2626,9 +2630,7 @@ class ShardModule(Base):
         path: str = f"/api/shards/{shard_id}/files/upload-chunk"
         return await self._request(method="POST", path=path, data=chunk, parameters={"session": session_id})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Only the 400 for an unknown credential was captured, as none existed.
-    async def set_shard_credential(self, shard_id: str, credential_id: str) -> Any:
+    async def set_shard_credential(self, shard_id: str, credential_id: str) -> ShardCredentialResponse:
         """Give a shard a stored secret to use, eg. a Steam login for its downloads.
 
         |coro|
@@ -2644,8 +2646,8 @@ class ShardModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`ShardCredentialResponse`
+            As :meth:`get_shard_credential` reads it after, with the credential set.
 
         Raises
         ------
@@ -2691,14 +2693,17 @@ class ShardModule(Base):
         data = {key: value for key, value in data.items() if value is not None}
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=data)
 
-    # TODO: Type the change items once AMP is seen taking one live (#3-47.7).
-    # Only an empty list was sent; a 400 named `PrincipalId`, `Verb` and `State` as the fields of a change.
-    async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[dict[str, Any]]) -> ShardFileACLResponse:
+    async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may read, write and delete a path inside a shard.
 
         |coro|
 
         Endpoint: ``PUT /api/shards/{shard_id}/files/acl``
+
+        .. warning::
+            A user who denies themself a verb can't undo it: sending ``"inherit"`` or ``"allow"`` back answers 403
+            ``"files.acl.error.notYoursToGrant"``, even for the admin, and only deleting the shard cleared it (U24a).
+            The deny itself takes effect, eg. writing the file then gets 403.
 
         Parameters
         ----------
@@ -2706,13 +2711,19 @@ class ShardModule(Base):
             The shard's ID.
         path : :class:`str`
             The path.
-        changes : list[dict[:class:`str`, Any]]
-            The changes, each naming a principal, a verb and a state.
+        changes : list[:class:`FileACLChange`]
+            The changes, each a principal, a verb and the state to give it; ``"inherit"`` clears an explicit one.
 
         Returns
         -------
         :class:`ShardFileACLResponse`
             Who may do what to the path now.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the change needs access the user doesn't hold (403, ``"files.acl.error.notYoursToGrant"``). A `state`
+            that isn't one of the three gets the same 403, not a 400 (U24b).
 
         """
         return await self._request(
@@ -2773,10 +2784,11 @@ class ShardModule(Base):
         Endpoint: ``PATCH /api/shards/{shard_id}/infra``
 
         .. warning::
-            AMP resets every field the body leaves out, so a partial body changes the rest too; one switched a
-            container shard to Native (U13). So we refuse `settings` with any field missing. Take them from
-            :meth:`get_shard_infra`'s `settings`, or use :meth:`update_shard_infra` to change a few. A change takes
-            effect when the shard next starts.
+            AMP reads only the body's top-level fields, ignores keys it doesn't know (a `settings` wrapper among them),
+            and resets every field the body doesn't name at the top level; one partial body switched a container shard
+            to Native (U13). So we refuse `settings` with any field missing, which also catches :meth:`get_shard_infra`'s
+            wrapped reply. Take them from its inner `settings`, or use :meth:`update_shard_infra` to change a few. A
+            change takes effect when the shard next starts.
 
         Parameters
         ----------
@@ -3164,6 +3176,9 @@ class ShardModule(Base):
         |coro|
 
         Endpoints: ``GET /api/shards/{shard_id}/infra``, then ``PATCH /api/shards/{shard_id}/infra``
+
+        It sends the reply's inner `settings` at the top level, as AMP ignores a `settings` wrapper and resets every
+        field the body doesn't name there (U13).
 
         Parameters
         ----------

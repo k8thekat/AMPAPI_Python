@@ -139,7 +139,8 @@ class SnapshotState(IntEnum):
 class TaskState(IntEnum):
     """A running task's `state`, named as the web panel names it.
 
-    Seen live: 1 while an update downloads, 0 while a clone or move copies, 3 when finished and 4 for a failed move.
+    Seen live: 1 while an update downloads, 0 while a clone or move copies, 3 when finished, 4 for a failed move or
+    update and 6 for a cancelled move. A cancelled clone read 5, then went back to 0 and finished (U25).
 
     .. versionadded:: 6.0.0
     """

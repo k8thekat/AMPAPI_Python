@@ -426,14 +426,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/support/diagnostics")
 
-    # TODO: Confirm the zip once AMP is seen sending one live (#3-47.10).
-    # The path comes from the web panel's code, which saves it as amp-diagnostics.zip; no capture shows it yet.
     async def get_diagnostics_bundle(self) -> bytes:
         """Get the diagnostics bundle a support request asks for, a zip of logs and details.
 
         |coro|
 
         Endpoint: ``GET /api/support/diagnostics/bundle``
+
+        AMP sends it as an attachment named ``"amp-diagnostics-<yyyymmdd-hhmmss>.zip"``, a few KB.
 
         Returns
         -------

@@ -59,6 +59,7 @@ __all__ = (
     "DatastoreUsage",
     "DeletedUserResponse",
     "DiagnosticsResponse",
+    "FileACLChange",
     "FilePrincipal",
     "FileVerb",
     "FirewallResponse",
@@ -148,6 +149,7 @@ __all__ = (
     "ShardInfraResponse",
     "ShardInfraSettings",
     "ShardInfraUpdateResponse",
+    "ShardManagedFileResponse",
     "ShardMetricResponse",
     "ShardMigrationResponse",
     "ShardMigrationTargetResponse",
@@ -174,6 +176,7 @@ __all__ = (
     "SpireEnrollmentCreatedResponse",
     "SpireEnrollmentHostResponse",
     "SpireEnrollmentResponse",
+    "SpireExpiredPurgeResponse",
     "SpireIPAddress",
     "SpireIPOptionResponse",
     "SpireImportScanResponse",
@@ -658,6 +661,16 @@ class DiagnosticsResponse(TypedDict):
     "Only seen as `None`."
 
 
+class FileACLChange(TypedDict):
+    """One change `ShardModule.set_shard_file_acl` sends, as the web panel sends it."""
+
+    principalId: str
+    "A user's or a role's ID, a `FilePrincipal.id`."
+    verb: Literal["read", "write", "delete"]
+    state: Literal["allow", "deny", "inherit"]
+    """``"inherit"`` clears an explicit state, so the path follows its folder again."""
+
+
 class FilePrincipal(TypedDict):
     """A user or role and what they may do to a path, from `ShardFileACLResponse.principals`."""
 
@@ -673,11 +686,11 @@ class FileVerb(TypedDict):
     verb: str
     """``"read"``, ``"write"`` or ``"delete"``."""
     state: str
-    """Seen as ``"allow"``."""
+    """Seen as ``"allow"`` and ``"deny"``."""
     explicit: bool
     "If it's set on this path rather than inherited."
-    source: Optional[Any]
-    "Only seen as `None`."
+    source: Optional[str]
+    "The path that sets it, once `explicit`; `None` otherwise."
     inheritedState: str
     inheritedSource: Optional[Any]
     "Only seen as `None`."
@@ -1920,6 +1933,22 @@ class ShardInfraUpdateResponse(ShardInfraSettings):
     "Only seen as `None`."
 
 
+class ShardManagedFileResponse(TypedDict):
+    """One file AMP writes itself from a shard's settings, from ``GET /api/shards/{id}/files/managed``."""
+
+    path: str
+    """Relative to the shard's root, eg. ``"server.properties"``."""
+    kind: str
+    """Seen as ``"merged"`` (AMP merges its settings into the file, eg. ``"server.properties"``) and ``"generated"``
+    (AMP writes the whole file, eg. ``"eula.txt"``)."""
+    importable: bool
+    "Seen `True` on the merged file and `False` on the generated one."
+    source: str
+    """Seen as ``"config"``."""
+    fieldName: Optional[str]
+    "Only seen as `None`."
+
+
 class ShardMetricResponse(TypedDict):
     """One sample of a running shard's load, from ``GET /api/shards/{id}/metrics``; about one every 3 to 5 seconds."""
 
@@ -2215,7 +2244,7 @@ class ShardUploadSessionResponse(TypedDict):
 
 
 class ShardUsage(TypedDict):
-    """One shard's disk use, from `DatastoreUsage.shards`. A deleted shard stays until it is purged."""
+    """One shard's disk use, from `DatastoreUsage.shards`, or `ShardModule.get_shard_disk`. A deleted shard stays until it is purged."""
 
     kind: str
     """Seen as ``"Shard"`` and ``"Orphan"``, a folder no shard owns, eg. the copy a move leaves on the old spire.
@@ -2228,9 +2257,9 @@ class ShardUsage(TypedDict):
     deletedAt: Optional[str]
     displayName: str
     limitMb: int
-    "Only seen as 0."
+    "The shard's disk limit, its infra `diskLimitMb`; 0 for none, and 0 too until the next measure after one is set."
     limitLevel: str
-    """Seen as ``"None"``."""
+    """Seen as ``"None"`` and ``"Exceeded"``, against `limitMb` once the disk use is measured."""
 
 
 class SnapshotResponse(TypedDict):
@@ -2367,6 +2396,13 @@ class SpireEnrollmentResponse(TypedDict):
     tunnelFault: Optional[Any]
     admission: Optional[SpireEnrollmentAdmission]
     "The machine that used the join file; `None` until one does."
+
+
+class SpireExpiredPurgeResponse(TypedDict):
+    """``POST /api/spires/{id}/purge-expired-shards``, how many deleted shards AMP is purging."""
+
+    purging: int
+    "Only seen as 0: a shard deleted but not past its keeping time stays."
 
 
 class SpireImportScanResponse(TypedDict):

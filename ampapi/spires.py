@@ -33,6 +33,7 @@ if TYPE_CHECKING:
         SpireEnrollmentCreatedResponse,
         SpireEnrollmentHostResponse,
         SpireEnrollmentResponse,
+        SpireExpiredPurgeResponse,
         SpireImportScanResponse,
         SpireIPOptionResponse,
         SpirePortResponse,
@@ -341,24 +342,20 @@ class Spire:
         """
         return await self._module.preflight_spire_import(spire_id=self.id, items=items)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.purge_spire_expired_shards`.
-    async def purge_expired_shards(self) -> Any:
+    async def purge_expired_shards(self) -> SpireExpiredPurgeResponse:
         """Remove for good this spire's deleted shards that are past keeping, see :meth:`SpireModule.purge_spire_expired_shards`.
 
         |coro|
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireExpiredPurgeResponse`
+            How many shards AMP is purging.
 
         """
         return await self._module.purge_spire_expired_shards(spire_id=self.id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.purge_spire_orphan_directories`.
-    async def purge_orphan_directories(self, datastore_id: str) -> Any:
+    async def purge_orphan_directories(self, datastore_id: str) -> SpireUsageResponse:
         """Delete every orphan folder in a datastore, see :meth:`SpireModule.purge_spire_orphan_directories`.
 
         |coro|
@@ -370,8 +367,8 @@ class Spire:
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireUsageResponse`
+            This spire's disk use after.
 
         """
         return await self._module.purge_spire_orphan_directories(spire_id=self.id, datastore_id=datastore_id)
@@ -1035,14 +1032,14 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/preflight", data={"items": items})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def purge_spire_expired_shards(self, spire_id: str) -> Any:
+    async def purge_spire_expired_shards(self, spire_id: str) -> SpireExpiredPurgeResponse:
         """Remove for good a spire's deleted shards that are past keeping.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/purge-expired-shards``
+
+        A shard deleted but not yet past its keeping time stays; use :meth:`ShardModule.purge_shard` for one now.
 
         Parameters
         ----------
@@ -1051,20 +1048,21 @@ class SpireModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireExpiredPurgeResponse`
+            How many shards AMP is purging; only 0 has been seen.
 
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/purge-expired-shards")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The web panel reads the disk use from it, or a 204; no capture shows the response yet.
-    async def purge_spire_orphan_directories(self, spire_id: str, datastore_id: str) -> Any:
+    async def purge_spire_orphan_directories(self, spire_id: str, datastore_id: str) -> SpireUsageResponse:
         """Delete every folder in a datastore that no shard owns.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans``
+
+        AMP measures the disk use again for the reply, so it needs no :meth:`rescan_spire_usage` after. A datastore
+        with no orphans gets the same reply.
 
         Parameters
         ----------
@@ -1075,8 +1073,13 @@ class SpireModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireUsageResponse`
+            The spire's disk use after.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the spire has no such datastore (409, ``"datastore.error.notFound"``).
 
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans")

@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ._enums import TaskState
 from .base import Base
@@ -43,32 +43,32 @@ class TaskModule(Base):
 
     # TODO: A `Task` object, once the tasks hub gives live progress (#3-47.2).
 
-    # TODO: Type the reply once AMP is seen cancelling a task live (#3-47.11).
-    # Every task seen had `isCancellable` set to `False`, so only the 409 refusal was captured.
-    async def cancel_running_task(self, task_id: str) -> Any:
+    async def cancel_running_task(self, task_id: str) -> None:
         """Ask AMP to stop a running task.
 
         |coro|
 
         Endpoint: ``POST /api/running-tasks/{task_id}/cancel``
 
+        Only clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have been seen with `isCancellable` set;
+        an update never. To stop a shard move, :meth:`ShardModule.cancel_shard_migration` was seen working.
+
+        .. warning::
+            A clone's cancel is answered 202 and its task reads `TaskState.cancelling`, then it carries on copying and
+            the clone completes (U25).
+
         Parameters
         ----------
         task_id : :class:`str`
             The task's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
         Raises
         ------
         AMPAPIRequestError
-            If the task can't be cancelled or has finished (409).
+            If the task can't be cancelled (409), or it has left the list (404).
 
         """
-        return await self._request(method="POST", path=f"/api/running-tasks/{task_id}/cancel", data={})
+        await self._request(method="POST", path=f"/api/running-tasks/{task_id}/cancel", data={})
 
     async def delete_running_task(self, task_id: str) -> None:
         """Dismiss a finished task, so it leaves the list at once.
