@@ -60,15 +60,14 @@ class PlatformModule(Base):
 
     # TODO: The diagnostics bundle download, which comes back as a zip (#47.7's raw replies).
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; no capture shows the response yet.
     async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
         """Accept the terms for a licence that is already active, eg. one whose `standing` is ``"TermsRequired"``.
 
         |coro|
 
         Endpoint: ``POST /api/licence/{spire_id}/{grade_id}/terms``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -90,15 +89,14 @@ class PlatformModule(Base):
         data: dict[str, Any] = {**terms, "key": key}
         return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The web panel reads the warnings that are left from it; no capture shows the response yet.
     async def acknowledge_platform_warning(self, warning_id: str) -> Any:
         """Dismiss one of the panel's warnings.
 
         |coro|
 
         Endpoint: ``POST /api/monitoring/platform-warnings/acknowledge``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads the warnings left from it.
 
         Parameters
         ----------
@@ -141,6 +139,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/licence", data={"key": key, "terms": terms})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; no capture shows the response yet.
     async def apply_panel_update(self) -> Any:
         """Update the panel's AMP to the latest version on its stream; the panel restarts.
 
@@ -148,9 +148,7 @@ class PlatformModule(Base):
 
         Endpoint: ``POST /api/updates/apply``
 
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel then watches
-            :meth:`get_health_status` and :meth:`get_update_status` while the panel restarts.
+        The web panel then watches :meth:`get_health_status` and :meth:`get_update_status` while the panel restarts.
 
         Returns
         -------
@@ -160,15 +158,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/updates/apply", data={})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; no capture shows the response yet.
     async def check_https(self, host_name: str) -> Any:
         """Check a domain name is ready for AMP's own HTTPS setup, before :meth:`start_https_setup`.
 
         |coro|
 
         Endpoint: ``POST /api/https/check``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -183,15 +180,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; it needs a second spire to capture.
     async def create_gateway(self, shard_id: str, front_spire_id: str) -> Any:
         """Bind a shard to a front spire, so players reach it through that spire.
 
         |coro|
 
         Endpoint: ``POST /api/networking/gateways``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -209,15 +205,14 @@ class PlatformModule(Base):
         data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
         return await self._request(method="POST", path="/api/networking/gateways", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; it needs a second spire to capture.
     async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> Any:
         """Forward a public port on a front spire to a shard's port.
 
         |coro|
 
         Endpoint: ``POST /api/networking/publications``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -239,15 +234,14 @@ class PlatformModule(Base):
         data: dict[str, Any] = {"frontSpireId": front_spire_id, "publicPort": public_port, "shardId": shard_id, "portRef": port_reference}
         return await self._request(method="POST", path="/api/networking/publications", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; it needs a second spire to capture.
     async def delete_gateway(self, gateway_id: str) -> Any:
         """Remove a gateway.
 
         |coro|
 
         Endpoint: ``DELETE /api/networking/gateways/{gateway_id}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -262,15 +256,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/networking/gateways/{gateway_id}")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def delete_licence(self, spire_id: str, grade_id: str) -> Any:
         """Remove a licence from the panel.
 
         |coro|
 
         Endpoint: ``DELETE /api/licence/{spire_id}/{grade_id}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -287,15 +280,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; the POST to it answers with the HTTPS state.
     async def delete_own_proxy(self) -> Any:
         """Stop trusting the reverse proxy :meth:`set_own_proxy` set.
 
         |coro|
 
         Endpoint: ``DELETE /api/https/own-proxy``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Returns
         -------
@@ -305,15 +297,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path="/api/https/own-proxy")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; it needs a second spire to capture.
     async def delete_publication(self, publication_id: str) -> Any:
         """Remove a public port forward.
 
         |coro|
 
         Endpoint: ``DELETE /api/networking/publications/{publication_id}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -328,15 +319,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/networking/publications/{publication_id}")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def delete_setting_secret(self, field_name: str) -> Any:
         """Clear a stored secret setting.
 
         |coro|
 
         Endpoint: ``DELETE /api/settings/secrets/{field_name}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -351,6 +341,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/settings/secrets/{field_name}")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; no capture shows the response yet.
     async def expand_message_bus(self) -> Any:
         """Open the message bus to other machines, which a new spire needs to join.
 
@@ -359,8 +351,7 @@ class PlatformModule(Base):
         Endpoint: ``POST /api/system/bus/expand``
 
         .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. It changes how the panel is reached, and there's
-            no call to close the bus again.
+            It changes how the panel is reached, and there's no call to close the bus again.
 
         Returns
         -------
@@ -430,15 +421,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/networking/gateway-eligibility")
 
+    # TODO: Type the items once AMP is seen listing one live (#47.10).
+    # Only seen empty, as a gateway needs a second spire.
     async def get_gateways(self) -> list[dict[str, Any]]:
         """Get the gateways, each binding a shard to a front spire.
 
         |coro|
 
         Endpoint: ``GET /api/networking/gateways``
-
-        .. warning::
-            Only seen empty (it needs a second spire), so the shape of a gateway is unknown.
 
         Returns
         -------
@@ -583,15 +573,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/monitoring/thresholds")
 
+    # TODO: Type the items once AMP is seen listing one live (#47.10).
+    # Only seen empty; the web panel reads each one's `id`.
     async def get_platform_warnings(self) -> list[dict[str, Any]]:
         """Get the panel's warnings for whoever runs it.
 
         |coro|
 
         Endpoint: ``GET /api/monitoring/platform-warnings``
-
-        .. warning::
-            Only seen empty, so the shape of a warning is unknown; the web panel reads its `id`.
 
         Returns
         -------
@@ -601,15 +590,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/monitoring/platform-warnings")
 
+    # TODO: Type the items once AMP is seen listing one live (#47.10).
+    # Only seen empty, as a publication needs a second spire.
     async def get_publications(self) -> list[dict[str, Any]]:
         """Get the public port forwards from front spires to shards.
 
         |coro|
 
         Endpoint: ``GET /api/networking/publications``
-
-        .. warning::
-            Only seen empty (it needs a second spire), so the shape of a publication is unknown.
 
         Returns
         -------
@@ -634,15 +622,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/settings/manifest")
 
+    # TODO: Type the items once AMP is seen listing one live (#47.10).
+    # Only seen empty, as a tunnel front needs a second spire.
     async def get_tunnel_fronts(self) -> list[dict[str, Any]]:
         """Get the spires that can front a tunnel.
 
         |coro|
 
         Endpoint: ``GET /api/networking/tunnel-fronts``
-
-        .. warning::
-            Only seen empty (it needs a second spire), so the shape of an entry is unknown.
 
         Returns
         -------
@@ -652,15 +639,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/networking/tunnel-fronts")
 
+    # TODO: Type the items once AMP is seen listing one live (#47.10).
+    # Only seen empty, as a tunnel needs a second spire.
     async def get_tunnels(self) -> list[dict[str, Any]]:
         """Get the network tunnels between spires.
 
         |coro|
 
         Endpoint: ``GET /api/networking/tunnels``
-
-        .. warning::
-            Only seen empty (it needs a second spire), so the shape of a tunnel is unknown.
 
         Returns
         -------
@@ -685,15 +671,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/updates/check")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The web panel reads a `conflicts` list from it; it needs a second spire to capture.
     async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> Any:
         """Check a gateway can be made, before :meth:`create_gateway`.
 
         |coro|
 
         Endpoint: ``POST /api/networking/gateways/preflight``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads a `conflicts` list from it.
 
         Parameters
         ----------
@@ -731,15 +716,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/licence/query", data={"key": key})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def recheck_https(self) -> Any:
         """Check AMP's own HTTPS again, eg. its certificate.
 
         |coro|
 
         Endpoint: ``POST /api/https/recheck``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Returns
         -------
@@ -749,15 +733,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/recheck")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def remove_https(self) -> Any:
         """Remove AMP's own HTTPS; the panel stays on plain HTTP at its own port.
 
         |coro|
 
         Endpoint: ``POST /api/https/remove``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Returns
         -------
@@ -767,15 +750,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/remove")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The web panel reads a `detail` text from it; no capture shows the response yet.
     async def run_setting_action(self, action_id: str) -> Any:
         """Run one of the settings page's buttons, eg. sending a test email.
 
         |coro|
 
         Endpoint: ``POST /api/settings/actions/{action_id}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads a `detail` text from it.
 
         Parameters
         ----------
@@ -839,15 +821,14 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/settings/values", data=values)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The web panel reads the new update status from it, likely an `UpdateStatusResponse`; not captured yet.
     async def set_update_stream(self, stream: str) -> Any:
         """Move the panel to another release stream.
 
         |coro|
 
         Endpoint: ``PUT /api/updates/stream``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads the new update status from it.
 
         Parameters
         ----------
@@ -862,6 +843,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="PUT", path="/api/updates/stream", data={"stream": stream})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; a LAN panel can't finish it, so no capture shows the response yet.
     async def start_https_setup(self, host_name: str) -> Any:
         """Start AMP's own HTTPS setup, which asks Let's Encrypt for a certificate.
 
@@ -871,9 +854,6 @@ class PlatformModule(Base):
 
         Follow it with :meth:`get_https_setup_status`. Let's Encrypt has to reach the panel, so this can't work on a
         machine only reachable on its own network.
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -888,6 +868,8 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.10).
+    # The body comes from the web panel's code; it needs a second spire to capture.
     async def update_publication(self, publication_id: str, *, enabled: Optional[bool] = None, public_port: Optional[int] = None) -> Any:
         """Turn a public port forward on or off, or move it to another port.
 
@@ -895,8 +877,7 @@ class PlatformModule(Base):
 
         Endpoint: ``PUT /api/networking/publications/{publication_id}``
 
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel sends one change at a time.
+        The web panel sends one change at a time.
 
         Parameters
         ----------

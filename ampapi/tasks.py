@@ -42,16 +42,14 @@ class TaskModule(Base):
 
     # TODO: A `Task` object, once the tasks hub gives live progress (#47.2).
 
+    # TODO: Type the reply once AMP is seen cancelling a task live (#47.11).
+    # Every task seen had `isCancellable` set to `False`, so only the 409 refusal was captured.
     async def cancel_running_task(self, task_id: str) -> Any:
         """Ask AMP to stop a running task.
 
         |coro|
 
         Endpoint: ``POST /api/running-tasks/{task_id}/cancel``
-
-        .. warning::
-            Not yet seen live working: every task seen had `isCancellable` set to `False`, so the shape of AMP's reply
-            is unknown.
 
         Parameters
         ----------

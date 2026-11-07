@@ -89,13 +89,12 @@ class Spire:
         self.id = data["id"]
         self.display_name = data["displayName"]
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.apply_spire_update`.
     async def apply_update(self) -> Any:
         """Update this spire's AMP, see :meth:`SpireModule.apply_spire_update`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Returns
         -------
@@ -135,13 +134,12 @@ class Spire:
             enabled=enabled,
         )
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.delete_spire`.
     async def delete(self, *, force: bool = False) -> Any:
         """Remove this spire from the panel, see :meth:`SpireModule.delete_spire`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -296,13 +294,12 @@ class Spire:
         """
         return await self._module.get_spire_usage_interval(spire_id=self.id)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.import_spire_servers`.
     async def import_servers(self, items: list[dict[str, Any]], *, enter_other_volumes: bool = False) -> Any:
         """Import game servers found by :meth:`scan_imports`, see :meth:`SpireModule.import_spire_servers`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -319,13 +316,12 @@ class Spire:
         """
         return await self._module.import_spire_servers(spire_id=self.id, items=items, enter_other_volumes=enter_other_volumes)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.preflight_spire_import`.
     async def preflight_import(self, items: list[dict[str, Any]]) -> Any:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -340,13 +336,12 @@ class Spire:
         """
         return await self._module.preflight_spire_import(spire_id=self.id, items=items)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.purge_spire_expired_shards`.
     async def purge_expired_shards(self) -> Any:
         """Remove for good this spire's deleted shards that are past keeping, see :meth:`SpireModule.purge_spire_expired_shards`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Returns
         -------
@@ -356,13 +351,12 @@ class Spire:
         """
         return await self._module.purge_spire_expired_shards(spire_id=self.id)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.purge_spire_orphan_directories`.
     async def purge_orphan_directories(self, datastore_id: str) -> Any:
         """Delete every orphan folder in a datastore, see :meth:`SpireModule.purge_spire_orphan_directories`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -377,13 +371,12 @@ class Spire:
         """
         return await self._module.purge_spire_orphan_directories(spire_id=self.id, datastore_id=datastore_id)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.purge_spire_orphan_directory`.
     async def purge_orphan_directory(self, datastore_id: str, name: str) -> Any:
         """Delete one orphan folder in a datastore, see :meth:`SpireModule.purge_spire_orphan_directory`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -433,13 +426,12 @@ class Spire:
         """
         return await self._module.scan_spire_imports(spire_id=self.id, roots=roots, automatic=automatic)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # It comes from `SpireModule.set_spire_settings`.
     async def set_settings(self, values: dict[str, str]) -> Any:
         """Change some of this spire's settings, see :meth:`SpireModule.set_spire_settings`.
 
         |coro|
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -498,15 +490,14 @@ class SpireModule(Base):
 
     """
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The body comes from the web panel's code; no capture shows the response yet.
     async def apply_spire_update(self, spire_id: str) -> Any:
         """Update a spire's AMP to the panel's version.
 
         |coro|
 
         Endpoint: ``POST /api/updates/spires/{spire_id}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -521,15 +512,14 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/updates/spires/{spire_id}", data={})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The path comes from the web panel's code; it needs a second machine to capture.
     async def approve_spire_enrollment(self, enrollment_id: str) -> Any:
         """Let a machine that used a join file become a spire.
 
         |coro|
 
         Endpoint: ``POST /api/spires/enrollments/{enrollment_id}/approve``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -581,6 +571,8 @@ class SpireModule(Base):
         data: dict[str, Any] = {"name": name, "path": path, "isDefault": is_default, "enabled": enabled}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The web panel reads `enrollment` and a secret `joinBlob` from it; only the busNotPublic refusal was captured.
     async def create_spire_enrollment(
         self,
         label: str,
@@ -595,9 +587,8 @@ class SpireModule(Base):
         Endpoint: ``POST /api/spires/enrollments``
 
         .. warning::
-            Not yet seen live: AMP refuses it with ``"spire.enroll.error.busNotPublic"`` until the message bus is
-            opened to other machines (:meth:`PlatformModule.expand_message_bus`). The web panel reads `enrollment` and a
-            secret `joinBlob` from the reply.
+            AMP refuses it with ``"spire.enroll.error.busNotPublic"`` until the message bus is opened to other machines
+            (:meth:`PlatformModule.expand_message_bus`).
 
         Parameters
         ----------
@@ -621,15 +612,14 @@ class SpireModule(Base):
 
         return await self._request(method="POST", path="/api/spires/enrollments", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def delete_spire(self, spire_id: str, *, force: bool = False) -> Any:
         """Remove a spire from the panel.
 
         |coro|
 
         Endpoint: ``DELETE /api/spires/{spire_id}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -669,15 +659,14 @@ class SpireModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/spires/{spire_id}/datastores/{datastore_id}")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # Only an unknown enrolment's 404 was captured, as none could be made.
     async def delete_spire_enrollment(self, enrollment_id: str, *, reason: Optional[str] = None) -> Any:
         """Revoke a join file.
 
         |coro|
 
         Endpoint: ``DELETE /api/spires/enrollments/{enrollment_id}``
-
-        .. warning::
-            Not yet seen live on a real enrolment, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -695,15 +684,14 @@ class SpireModule(Base):
         data: Optional[dict[str, Any]] = {"reason": reason} if reason is not None else None
         return await self._request(method="DELETE", path=f"/api/spires/enrollments/{enrollment_id}", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The path comes from the web panel's code; it needs a second machine to capture.
     async def deny_spire_enrollment(self, enrollment_id: str) -> Any:
         """Refuse a machine that used a join file.
 
         |coro|
 
         Endpoint: ``POST /api/spires/enrollments/{enrollment_id}/deny``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -790,15 +778,14 @@ class SpireModule(Base):
         """
         return await self._request(method="GET", path="/api/spires/enrollments/hosts")
 
+    # TODO: Type the items once AMP is seen listing one live (#47.8).
+    # Only seen empty, as no enrolment could be made.
     async def get_spire_enrollments(self) -> list[dict[str, Any]]:
         """Get the join files that were made, and their state.
 
         |coro|
 
         Endpoint: ``GET /api/spires/enrollments``
-
-        .. warning::
-            Only seen empty, so the shape of an enrolment is unknown.
 
         Returns
         -------
@@ -987,6 +974,8 @@ class SpireModule(Base):
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/usage/interval")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The web panel reads a `taskId` from it; nothing to import was found on the test spire.
     async def import_spire_servers(self, spire_id: str, items: list[dict[str, Any]], *, enter_other_volumes: bool = False) -> Any:
         """Import game servers from other panels into a spire as shards.
 
@@ -994,9 +983,7 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/spires/{spire_id}/import``
 
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads a `taskId`, and follows the
-            import in :meth:`TaskModule.get_running_tasks`.
+        The web panel follows the import in :meth:`TaskModule.get_running_tasks`.
 
         Parameters
         ----------
@@ -1016,15 +1003,14 @@ class SpireModule(Base):
         data: dict[str, Any] = {"items": items, "enterOtherVolumes": enter_other_volumes}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The web panel reads a `blocked` list from it; nothing to import was found on the test spire.
     async def preflight_spire_import(self, spire_id: str, items: list[dict[str, Any]]) -> Any:
         """Check game servers can be imported into a spire, before :meth:`import_spire_servers`.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/import/preflight``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown. The web panel reads a `blocked` list from it.
 
         Parameters
         ----------
@@ -1041,15 +1027,14 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/preflight", data={"items": items})
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def purge_spire_expired_shards(self, spire_id: str) -> Any:
         """Remove for good a spire's deleted shards that are past keeping.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/purge-expired-shards``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -1064,15 +1049,14 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/purge-expired-shards")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The web panel reads the disk use from it, or a 204; no capture shows the response yet.
     async def purge_spire_orphan_directories(self, spire_id: str, datastore_id: str) -> Any:
         """Delete every folder in a datastore that no shard owns.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -1089,15 +1073,14 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans")
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The web panel reads the disk use from it, or a 204; no capture shows the response yet.
     async def purge_spire_orphan_directory(self, spire_id: str, datastore_id: str, name: str) -> Any:
         """Delete one folder in a datastore that no shard owns.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -1165,15 +1148,14 @@ class SpireModule(Base):
 
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/scan", data=data)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.8).
+    # The platform settings answer the same call with a 204, so this may too.
     async def set_spire_settings(self, spire_id: str, values: dict[str, str]) -> Any:
         """Change some of a spire's settings.
 
         |coro|
 
         Endpoint: ``POST /api/settings/spire/{spire_id}/values``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------

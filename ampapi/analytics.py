@@ -56,15 +56,14 @@ class AnalyticsModule(Base):
 
     # TODO: The player skin and avatar images, which come back as bytes (#47.7's raw replies).
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.11).
+    # The path comes from the web panel's code; no capture shows the response yet.
     async def delete_analytics_user_sessions(self, user_key: str, *, demo: bool = False) -> Any:
         """Erase everything the analytics hold about one player.
 
         |coro|
 
         Endpoint: ``DELETE /api/analytics/sessions/users/{user_key}``
-
-        .. warning::
-            Not yet seen live, so the shape of AMP's reply is unknown.
 
         Parameters
         ----------
@@ -107,6 +106,8 @@ class AnalyticsModule(Base):
             parameters["demo"] = "true"
         return await self._request(method="GET", path="/api/analytics/addresses/users", parameters=parameters)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.11).
+    # Only the 400 for part of an address was captured, as the test panel had no players.
     async def get_analytics_addresses(self, search: str, *, demo: bool = False) -> Any:
         """Search the addresses players were seen at.
 
@@ -114,14 +115,10 @@ class AnalyticsModule(Base):
 
         Endpoint: ``GET /api/analytics/addresses``
 
-        .. warning::
-            Not yet seen live working: part of an address is refused (400, ``"analytics.error.badAddress"``), so the
-            shape of AMP's reply is unknown.
-
         Parameters
         ----------
         search : :class:`str`
-            The address to look for.
+            The address to look for. AMP refuses part of one (400, ``"analytics.error.badAddress"``).
         demo : :class:`bool`, optional
             If the call is for the demo data or not, by default False.
 
@@ -136,6 +133,8 @@ class AnalyticsModule(Base):
             parameters["demo"] = "true"
         return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
 
+    # TODO: Type the reply once AMP is seen answering it live (#47.11).
+    # An unknown player gave 404 with no body, and what the `user` query value means isn't known yet.
     async def get_analytics_connected_users(self, user_key: str, *, user: Optional[str] = None) -> Any:
         """Get the players connected to one player, as far as the web panel shows.
 
@@ -143,16 +142,12 @@ class AnalyticsModule(Base):
 
         Endpoint: ``GET /api/analytics/connected/{user_key}``
 
-        .. warning::
-            Not yet seen live working (an unknown player gave 404), so the shape of AMP's reply is unknown, and so is
-            what the `user` query value means.
-
         Parameters
         ----------
         user_key : :class:`str`
             The player's key.
         user : Union[:class:`str`, None], optional
-            The web panel's `user` query value, by default None.
+            The web panel's `user` query value, by default None. What it means isn't known yet.
 
         Returns
         -------
