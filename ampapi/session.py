@@ -25,9 +25,10 @@ import base64
 import json
 import logging
 from datetime import UTC, datetime
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, Union
 
-from aiohttp import ClientError, ClientSession
+from aiohttp import ClientError, ClientSession, FormData
 
 from .errors import (
     AMPAPILoginError,
@@ -38,6 +39,7 @@ from .errors import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import TracebackType
 
     from ._types import CapabilitiesResponse, HubTokenResponse, LoginResponse, PasswordPolicyResponse, QueryParameters, TokenResponse
@@ -143,34 +145,64 @@ class Session:
         self,
         method: str,
         path: str,
-        data: Optional[Union[dict[str, Any], list[Any]]] = None,
+        data: Optional[Union[dict[str, Any], list[Any], bytes]] = None,
         *,
+        files: Optional[Mapping[str, bytes]] = None,
         parameters: Optional[QueryParameters] = None,
+        raw_bytes: bool = False,
         use_token: bool = True,
     ) -> tuple[int, str, Any]:
         """Send one request and decode the reply. Raises nothing for an error status, the caller decides.
+
+        `data` is sent as JSON, or as it is with ``Content-Type: application/octet-stream`` when it's bytes. `files` is
+        sent as the web panel's upload form instead, a `files` part and a `paths` part for each one.
 
         Returns
         -------
         tuple[:class:`int`, :class:`str`, Any]
             The HTTP status, the ``WWW-Authenticate`` header (empty when not sent) and the decoded JSON body,
-            `None` for an empty one.
+            `None` for an empty one. With `raw_bytes` a successful reply is the bytes as they came.
 
         """
         if self._session is None:
             self._session = ClientSession()
-        headers: dict[str, str] = {"Accept": "application/json"}
+        headers: dict[str, str] = {"Accept": "*/*" if raw_bytes is True else "application/json"}
         if use_token is True and self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
 
+        json_body: Optional[Union[dict[str, Any], list[Any]]] = None
+        raw_body: Optional[Union[bytes, FormData]] = None
+        if isinstance(data, bytes):
+            raw_body = data
+            headers["Content-Type"] = "application/octet-stream"
+        elif files is not None:
+            # A new form for each send, as aiohttp sends a form only once and a dead session sends it again.
+            raw_body = FormData()
+            for relative_path, content in files.items():
+                raw_body.add_field(name="files", value=content, filename=PurePosixPath(relative_path).name)
+                raw_body.add_field(name="paths", value=relative_path)
+        else:
+            json_body = data
+
         LOGGER.debug("<%s.%s> | Method: %s | Path: %s | Parameters: %s", __class__.__name__, "_send", method, path, parameters)
-        async with self._session.request(method=method, url=self.url + path, params=parameters, json=data, headers=headers) as res:
-            text: str = await res.text()
+        async with self._session.request(
+            method=method,
+            url=self.url + path,
+            params=parameters,
+            json=json_body,
+            data=raw_body,
+            headers=headers,
+        ) as res:
+            reply: bytes = await res.read()
             authenticate_header: str = res.headers.get("WWW-Authenticate", "")
             status: int = res.status
 
+        # A download comes back as bytes, but AMP's errors are JSON either way.
+        if raw_bytes is True and 200 <= status < 300:
+            return status, authenticate_header, reply
+
         # AMP answers some calls (logout, reauth) with an empty 204, and some GETs use a 204 for "nothing yet".
-        body: Any = json.loads(text) if text else None
+        body: Any = json.loads(reply) if reply else None
         return status, authenticate_header, body
 
     def _store_token(self, data: TokenResponse) -> TokenResponse:
@@ -243,20 +275,22 @@ class Session:
         self,
         method: str,
         path: str,
-        data: Optional[Union[dict[str, Any], list[Any]]] = None,
+        data: Optional[Union[dict[str, Any], list[Any], bytes]] = None,
         *,
+        files: Optional[Mapping[str, bytes]] = None,
         parameters: Optional[QueryParameters] = None,
+        raw_bytes: bool = False,
         use_token: bool = True,
     ) -> tuple[int, Any]:
         """Send a request, logging in first when it needs a session and we have to. Raises nothing for an error status.
 
         A 401 for a token AMP no longer accepts gets one new login and a second try. With `use_token` set to `False`
-        we send no token and never log in, for the calls that need no session.
+        we send no token and never log in, for the calls that need no session. The rest go to `_send` as they are.
 
         Returns
         -------
         tuple[:class:`int`, Any]
-            The HTTP status and the decoded JSON body, `None` for an empty one.
+            The HTTP status and the decoded JSON body, `None` for an empty one, or the bytes with `raw_bytes`.
 
         Raises
         ------
@@ -271,7 +305,9 @@ class Session:
             method=method,
             path=path,
             data=data,
+            files=files,
             parameters=parameters,
+            raw_bytes=raw_bytes,
             use_token=use_token,
         )
 
@@ -279,7 +315,14 @@ class Session:
         if status == 401 and "invalid_token" in authenticate_header:
             LOGGER.debug("<%s.%s> | Session ended by AMP, logging in again | Path: %s", __class__.__name__, "_send_with_login", path)
             await self._ensure_login(used_token=used_token)
-            status, authenticate_header, body = await self._send(method=method, path=path, data=data, parameters=parameters)
+            status, authenticate_header, body = await self._send(
+                method=method,
+                path=path,
+                data=data,
+                files=files,
+                parameters=parameters,
+                raw_bytes=raw_bytes,
+            )
         return status, body
 
     async def _request(

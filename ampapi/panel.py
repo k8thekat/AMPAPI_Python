@@ -27,21 +27,29 @@ from .accounts import AccountModule
 from .analytics import AnalyticsModule
 from .credentials import CredentialModule
 from .platform import PlatformModule
+from .shards import ShardModule
 from .spires import SpireModule
 from .tasks import TaskModule
+from .templates import TemplateModule
 
 if TYPE_CHECKING:
     from types import TracebackType
 
-__all__ = (
-    "Panel",
-    "Shard",
-)
+__all__ = ("Panel",)
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class Panel(AccountModule, AnalyticsModule, CredentialModule, PlatformModule, SpireModule, TaskModule):
+class Panel(
+    AccountModule,
+    AnalyticsModule,
+    CredentialModule,
+    PlatformModule,
+    ShardModule,
+    SpireModule,
+    TaskModule,
+    TemplateModule,
+):
     """An AMP 3 panel, with every call this library wraps.
 
     The calls come from the `...Module` classes it is built from, and each one logs in through the :class:`Session` when
@@ -75,15 +83,3 @@ class Panel(AccountModule, AnalyticsModule, CredentialModule, PlatformModule, Sp
 
         """
         await self.session.clean_up()
-
-
-class Shard:
-    """A shard, AMP 3's name for an Instance, with the calls that act on it.
-
-    .. versionadded:: 6.0.0
-
-    """
-
-    # TODO: Build `Shard` from the shard findings (#47.7).
-    # Each method calls the `ShardModule` one with its own ID, eg. `shard.start()` is `panel.start_shard(shard_id)`.
-    # It moves to shards.py beside `ShardModule`, as `Spire` sits beside `SpireModule`.

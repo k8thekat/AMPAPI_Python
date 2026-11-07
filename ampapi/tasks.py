@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from ._enums import TaskState
 from .base import Base
 
 if TYPE_CHECKING:
@@ -99,7 +100,10 @@ class TaskModule(Base):
         Returns
         -------
         list[:class:`RunningTaskResponse`]
-            The tasks.
+            The tasks, each `state` a :class:`TaskState`.
 
         """
-        return await self._request(method="GET", path="/api/running-tasks")
+        result: list[RunningTaskResponse] = await self._request(method="GET", path="/api/running-tasks")
+        for task in result:
+            task["state"] = self._to_enum(TaskState, task["state"])
+        return result

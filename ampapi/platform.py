@@ -58,8 +58,6 @@ class PlatformModule(Base):
 
     """
 
-    # TODO: The diagnostics bundle download, which comes back as a zip (#47.7's raw replies).
-
     # TODO: Type the reply once AMP is seen answering it live (#47.10).
     # The body comes from the web panel's code; no capture shows the response yet.
     async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
@@ -390,6 +388,23 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="GET", path="/api/support/diagnostics")
+
+    # TODO: Confirm the zip once AMP is seen sending one live (#47.10).
+    # The path comes from the web panel's code, which saves it as amp-diagnostics.zip; no capture shows it yet.
+    async def get_diagnostics_bundle(self) -> bytes:
+        """Get the diagnostics bundle a support request asks for, a zip of logs and details.
+
+        |coro|
+
+        Endpoint: ``GET /api/support/diagnostics/bundle``
+
+        Returns
+        -------
+        :class:`bytes`
+            The zip as it came.
+
+        """
+        return await self._request(method="GET", path="/api/support/diagnostics/bundle", raw_bytes=True)
 
     async def get_firewall(self) -> FirewallResponse:
         """Get the firewall rules AMP keeps on the host.

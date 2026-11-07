@@ -18,6 +18,8 @@ Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refact
   `.scripts/amp3/build_vm.py` (#47.4), with HTTPS at `https://amp3-beta2.anime`. Its login is `[VM_AMP3_B]` in the
   worktree's `local.ini`. The same beta key activated there too (the query showed `usage: 1` first), so one key covers
   several installations. Each panel throttles sign-ins on its own, which is the main reason to have two.
+- `vm5` (`amp3-spire`, 192.168.4.235) is not a panel of its own: it joined vm4 as a second spire on 2026-11-07
+  (#47.15), for moving and cloning shards between spires. Its VM login is `[VM_AMP3_SPIRE]`; its API is vm4's.
 - A panel restarts once licensed (`phase: "starting"`); a setting checked before it reads `ready` can look unapplied.
 - Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
   kept headers and body.
@@ -32,12 +34,13 @@ length, and some `agentVersion` values carry a "version lost to a scrub" marker.
 The worktree carries its own copies, all gitignored, so nothing reaches back into the Refactor checkout:
 - `.venv`: the main venv's packages (aiohttp, ruff, pyright, sphinx, pytest, ...) plus `cryptography`.
 - `local.ini`: a copy of the main one, with `[VM_AMP3]` and `[VM_AMP3_B]`. The two now differ, so AMP3 logins live here.
-- `.scripts/vms.py` and `.scripts/land_check.py`: copies. The `vms.py` copy lists only the AMP3 VMs (vm3, vm4) and
+- `.scripts/vms.py` and `.scripts/land_check.py`: copies. The `vms.py` copy lists only the AMP3 VMs (vm3, vm4, vm5) and
   keeps only the VM lifecycle (status, start, stop, create, remove, refresh-urls); its AMP2 steps are gone (Kat), so
   the AMP2 pair is still run from the Refactor checkout.
-- `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), `session_check.py` (the `Session` live check),
-  `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM) and `hook_check.py` (pyright as the
-  end-of-turn hook runs it). `AMP3_VM=vm3|vm4` picks the panel for all of them.
+- `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), the live checks `session_check.py` (`Session`),
+  `panel_check.py` (the modules) and `shard_check.py` (shards and templates, on vm3's test shard), `passkey_check.py`
+  (a software passkey), `build_vm.py` (a whole AMP3 VM), `join_spire.py` (a new VM joining a panel as a spire) and
+  `hook_check.py` (pyright as the end-of-turn hook runs it). `AMP3_VM=vm3|vm4|vm5` picks the panel for all of them.
 - `.local_data/amp3/`: their private files (per-VM tokens, setup codes and Caddy root CAs, the passkey test state,
   the vetted `getamp3.sh`) and the upstream report drafts for CubeCoders (`upstream_issues/`).
 - `.local_data/plans/todo_index.md`: the AMP3 TODO index.
@@ -58,12 +61,35 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   session.
 - No per-call `request_params` (Kat, 2026-11-06): the `ClientSession` handed to `Session` already carries SSL,
   timeouts and proxies for every call.
-- Modules so far: `AccountModule`, `AnalyticsModule` (audit and player analytics), `CredentialModule`,
-  `PlatformModule`, `SpireModule` (with `Spire`, in `spires.py` to avoid a circular import) and `TaskModule`.
-  `ShardModule` and `TemplateModule` come next (#47.7).
-- A method built from the web panel's code but never answered live carries a "Not yet seen live" warning and returns
-  `Any`; a list only ever seen empty is `list[Any]`. Each one is typed properly once a capture shows it.
-- `.scripts/amp3/panel_check.py` is the live check for the modules; `session_check.py` for `Session`.
+- The modules: `AccountModule`, `AnalyticsModule` (audit and player analytics), `CredentialModule`, `PlatformModule`,
+  `ShardModule` (with `Shard`), `SpireModule` (with `Spire`, in `spires.py` to avoid a circular import), `TaskModule`
+  and `TemplateModule`.
+- A reply never seen live gets a `# TODO:` above its method naming the index entry, and the method returns `Any`; a
+  list only ever seen empty is `list[Any]` (Kat, 2026-11-07: a TODO, not a docstring warning). A `.. warning::` is
+  kept for behaviour a user must know, eg. `kill_shard` answering 404 (U12) or a call that changes how the panel is
+  reached. Each one is typed properly once a capture shows it.
+- Numbers AMP sends for states are the web panel's own enums in `_enums.py` (`ShardState`, `SnapshotKind`,
+  `TaskState`, ...). `Base._to_enum` converts them where they're returned and keeps a number it doesn't know as a
+  plain `int`, so a new AMP state can't break a read; the fields are typed `Union[Enum, int]`.
+- Downloads come back as `bytes` (`_request(raw_bytes=True)`); they need the Bearer header, as AMP takes no other
+  credential, and are held whole in memory. Uploads send the web panel's form (`files`) or, for a big file, the
+  chunked upload in 8 MiB chunks.
+- `set_shard_infra` refuses settings with a field missing before sending, as AMP resets any field a `PATCH /infra`
+  leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
+- `.scripts/amp3/session_check.py`, `panel_check.py` and `shard_check.py` are the live checks.
+
+## A second spire joining a panel (#47.15)
+
+Seen live on 2026-11-07, vm5 joining vm4; `.scripts/amp3/join_spire.py` runs steps 2 to 4:
+1. The panel's message bus must be open to other hosts first, `POST /api/system/bus/expand`. There is no call to
+   close it again.
+2. The panel issues an enrolment, `POST /api/spires/enrollments {label, expiresInHours, hosts}`, answered with
+   `{enrollment, joinBlob}`. `GET /api/spires/enrollments/hosts` lists the addresses it can offer.
+3. The new machine is installed without its own first-run setup. Its setup database step takes the blob instead of
+   database servers, `POST /api/Auth/setup/database {"servers": [], "blob": ...}` (with `X-Setup-Token`), after which
+   its health reads `starting` with `auth.setup.joining.awaitingApproval` and a `fingerprint` to compare.
+4. The panel approves, `POST /api/spires/enrollments/{id}/approve`; the enrolment goes `awaitingapproval`, `approved`,
+   `redeemed` (with `redeemedSpireId`) within a minute, the new machine reads `ready`, and `GET /api/spires` lists both.
 
 ## AMP 3 API shape
 

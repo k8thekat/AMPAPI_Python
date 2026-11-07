@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 from .errors import (
@@ -30,6 +31,8 @@ from .errors import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from ._types import QueryParameters
     from .session import Session
 
@@ -58,13 +61,23 @@ class Base:
     def __init__(self, session: Session) -> None:  # noqa: D107
         self.session = session
 
+    @staticmethod
+    def _to_enum[E: Enum](enum: type[E], value: int) -> Union[E, int]:
+        """`value` as a member of `enum`, or the plain number when AMP sent one the library doesn't know yet."""
+        try:
+            return enum(value)
+        except ValueError:
+            return value
+
     async def _request(
         self,
         method: str,
         path: str,
         *,
-        data: Optional[Union[dict[str, Any], list[Any]]] = None,
+        data: Optional[Union[dict[str, Any], list[Any], bytes]] = None,
+        files: Optional[Mapping[str, bytes]] = None,
         parameters: Optional[QueryParameters] = None,
+        raw_bytes: bool = False,
         use_token: bool = True,
     ) -> Any:
         """Send a call through our :class:`Session`, waiting out a panel outage the way the web panel does.
@@ -78,11 +91,17 @@ class Base:
             The HTTP method, eg. ``"GET"``.
         path : :class:`str`
             The path, eg. ``"/api/licence"``.
-        data : Union[dict[:class:`str`, Any], list[Any], None], optional
+        data : Union[dict[:class:`str`, Any], list[Any], :class:`bytes`, None], optional
             The JSON body, by default None. A few calls take a list.
+            Bytes are sent as they are, with ``Content-Type: application/octet-stream``.
+        files : Union[Mapping[:class:`str`, :class:`bytes`], None], optional
+            Files to send as the web panel's upload form, each relative path to its content, by default None.
         parameters : Union[:class:`QueryParameters`, None], optional
             The query string, by default None.
             A list value repeats its key, eg. ``{"shard": ["a", "b"]}`` is sent as ``shard=a&shard=b``.
+        raw_bytes : :class:`bool`, optional
+            If a successful reply should come back as bytes rather than JSON or not, by default False.
+            Downloads need it. An error is still read as JSON.
         use_token : :class:`bool`, optional
             If the call needs a session or not, by default True.
             Without one we don't log in or send a token, eg. for ``GET /api/health/status``.
@@ -90,7 +109,7 @@ class Base:
         Returns
         -------
         Any
-            The decoded JSON body, `None` for an empty one (a 204).
+            The decoded JSON body, `None` for an empty one (a 204), or the bytes with `raw_bytes`.
 
         Raises
         ------
@@ -99,13 +118,13 @@ class Base:
             A login this call needs is not retried; a 503 there raises at once.
 
         """
-        # TODO: Raw byte and text replies, for the file and snapshot downloads (#47.7).
-        # `Session._send` only decodes JSON for now.
         status, body = await self.session._send_with_login(  # pyright: ignore[reportPrivateUsage]
             method=method,
             path=path,
             data=data,
+            files=files,
             parameters=parameters,
+            raw_bytes=raw_bytes,
             use_token=use_token,
         )
         # We check the reply before building an error, so a retried outage only logs our warning.
@@ -127,7 +146,9 @@ class Base:
                 method=method,
                 path=path,
                 data=data,
+                files=files,
                 parameters=parameters,
+                raw_bytes=raw_bytes,
                 use_token=use_token,
             )
 

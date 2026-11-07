@@ -54,8 +54,6 @@ class AnalyticsModule(Base):
 
     """
 
-    # TODO: The player skin and avatar images, which come back as bytes (#47.7's raw replies).
-
     # TODO: Type the reply once AMP is seen answering it live (#47.11).
     # The path comes from the web panel's code; no capture shows the response yet.
     async def delete_analytics_user_sessions(self, user_key: str, *, demo: bool = False) -> Any:
@@ -132,6 +130,36 @@ class AnalyticsModule(Base):
         if demo is True:
             parameters["demo"] = "true"
         return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
+
+    # TODO: Confirm the image once AMP is seen sending one live (#47.11).
+    # Only the 400 for an unknown key was captured, as the test panel had no players; the web panel reads it as a blob.
+    async def get_analytics_avatar(self, user_key: str, *, full: bool = False) -> bytes:
+        """Get a player's avatar image.
+
+        |coro|
+
+        Endpoint: ``GET /api/analytics/avatars/{user_key}``
+
+        Parameters
+        ----------
+        user_key : :class:`str`
+            The player's key.
+        full : :class:`bool`, optional
+            If AMP should send the full size image or not, by default False.
+
+        Returns
+        -------
+        :class:`bytes`
+            The image as it came.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If AMP doesn't know the key (400, ``"analytics.error.badAvatar"``).
+
+        """
+        parameters: Optional[dict[str, str]] = {"full": "true"} if full is True else None
+        return await self._request(method="GET", path=f"/api/analytics/avatars/{user_key}", parameters=parameters, raw_bytes=True)
 
     # TODO: Type the reply once AMP is seen answering it live (#47.11).
     # An unknown player gave 404 with no body, and what the `user` query value means isn't known yet.
@@ -236,6 +264,33 @@ class AnalyticsModule(Base):
         # We only send the filters that are set, as the web panel does.
         parameters: dict[str, Union[str, int, list[str]]] = {key: value for key, value in filters.items() if value is not None}
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
+
+    # TODO: Confirm the image once AMP is seen sending one live (#47.11).
+    # Only the 400 for an unknown key was captured, as the test panel had no players; the web panel reads it as a blob.
+    async def get_analytics_skin(self, user_key: str) -> bytes:
+        """Get a Minecraft player's skin image.
+
+        |coro|
+
+        Endpoint: ``GET /api/analytics/skins/{user_key}``
+
+        Parameters
+        ----------
+        user_key : :class:`str`
+            The player's key.
+
+        Returns
+        -------
+        :class:`bytes`
+            The image as it came.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If AMP doesn't know the key (400, ``"analytics.error.badAvatar"``).
+
+        """
+        return await self._request(method="GET", path=f"/api/analytics/skins/{user_key}", raw_bytes=True)
 
     async def get_analytics_user_addresses(self, user_key: str, *, demo: bool = False) -> AnalyticsUserAddressesResponse:
         """Get the addresses one player was seen at.

@@ -30,6 +30,7 @@ __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
 
+from ._enums import *
 from ._types import *
 from .accounts import *
 from .analytics import *
@@ -39,8 +40,10 @@ from .errors import *
 from .panel import *
 from .platform import *
 from .session import *
+from .shards import *
 from .spires import *
 from .tasks import *
+from .templates import *
 
 
 class VersionInfo(NamedTuple):

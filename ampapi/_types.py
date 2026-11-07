@@ -21,7 +21,10 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union
+
+if TYPE_CHECKING:
+    from ._enums import ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState, TaskState
 
 __all__ = (
     "AnalyticsAddressUsersResponse",
@@ -48,11 +51,14 @@ __all__ = (
     "BusJoinInfo",
     "CapabilitiesResponse",
     "CodedErrorResponse",
+    "ConsoleLine",
     "CredentialResponse",
     "DatastoreResponse",
     "DatastoreUsage",
     "DeletedUserResponse",
     "DiagnosticsResponse",
+    "FilePrincipal",
+    "FileVerb",
     "FirewallResponse",
     "FirewallRule",
     "FirewallStatus",
@@ -99,10 +105,60 @@ __all__ = (
     "RoleResponse",
     "RunningTaskResponse",
     "SSHKeyResponse",
+    "ScheduleCatalogResponse",
+    "ScheduleCatalogTask",
+    "ScheduleCatalogTrigger",
+    "ScheduleDefinition",
+    "ScheduleEmit",
+    "ScheduleExecutionResponse",
+    "ScheduleRetryPolicy",
+    "ScheduleRunResponse",
+    "ScheduleStatus",
+    "ScheduleStep",
+    "ScheduleStepOutcome",
+    "ScheduleTaskParameter",
+    "ScheduleTrigger",
     "SettingAction",
+    "SettingCandidate",
     "SettingSpec",
     "SettingsManifestResponse",
+    "ShardAddress",
+    "ShardAgentResponse",
+    "ShardAppConfig",
+    "ShardArchiveInfoResponse",
+    "ShardCloneResponse",
+    "ShardConfigImportResponse",
+    "ShardConsoleHistoryResponse",
+    "ShardCreatedResponse",
+    "ShardCredentialResponse",
+    "ShardEndpointResponse",
+    "ShardExtractResponse",
+    "ShardFileACLResponse",
+    "ShardFileContentResponse",
+    "ShardFileIgnoresResponse",
+    "ShardFileResponse",
+    "ShardInfraResponse",
+    "ShardInfraSettings",
+    "ShardInfraUpdateResponse",
+    "ShardMetricResponse",
+    "ShardPortAssignments",
+    "ShardPortOutcome",
+    "ShardPortResponse",
+    "ShardResponse",
+    "ShardSFTPResponse",
+    "ShardScheduleResponse",
+    "ShardSettingCandidatesResponse",
+    "ShardSettingResponse",
+    "ShardSleepStatus",
+    "ShardSnapshotsResponse",
+    "ShardStateMetrics",
+    "ShardStateResponse",
+    "ShardUpdateResponse",
+    "ShardUploadChunkResponse",
+    "ShardUploadSessionResponse",
     "ShardUsage",
+    "SnapshotResponse",
+    "SnapshotSettingsResponse",
     "SpireCPU",
     "SpireEnrollmentHostResponse",
     "SpireIPAddress",
@@ -119,6 +175,20 @@ __all__ = (
     "SpireUsageIntervalResponse",
     "SpireUsageResponse",
     "SystemBusResponse",
+    "TemplateConfigFile",
+    "TemplateConfigSection",
+    "TemplateConsole",
+    "TemplateEvent",
+    "TemplateLifecycle",
+    "TemplateManagement",
+    "TemplateMetadata",
+    "TemplatePort",
+    "TemplatePortReferences",
+    "TemplateResponse",
+    "TemplateSourceResponse",
+    "TemplateSyncResponse",
+    "TemplateUpdateStage",
+    "TemplateVersionSource",
     "TokenResponse",
     "UpdateStatusResponse",
     "UserResponse",
@@ -447,6 +517,31 @@ class CodedErrorResponse(TypedDict):
     "The English text of `code`."
 
 
+class ConsoleLine(TypedDict):
+    """One console line, from `ShardConsoleHistoryResponse.lines`."""
+
+    streamId: str
+    """Seen as ``"main"`` (the game), ``"system"`` (AMP) and ``"update"``."""
+    text: str
+    timestamp: str
+    seq: int
+    "Rises with each line, with gaps."
+    kind: str
+    """Seen as ``"line"``, ``"info"``, ``"error"`` and ``"marker"``, which marks a change of `state`."""
+    state: Optional[Union[ShardState, int]]
+    "The status a marker line announces, `None` on other lines."
+    success: Optional[bool]
+    "Set on the markers that end a stop or an update."
+    code: Optional[str]
+    """A translation key for the text, eg. ``"shards.console.marker.stageOf"``."""
+    params: Optional[dict[str, str]]
+    "Values for the `code` translation."
+    level: Optional[str]
+    """The game's log level, eg. ``"INFO"``."""
+    origin: Optional[str]
+    """The game's log source, eg. ``"Server thread"``."""
+
+
 class CredentialResponse(TypedDict):
     """One stored secret shards can use, from ``GET /api/credentials``; AMP never sends the secret back."""
 
@@ -528,6 +623,31 @@ class DiagnosticsResponse(TypedDict):
     containerRuntimeVerdict: str
     """Seen as ``"Usable"``."""
     containerRuntimeReason: Optional[str]
+    "Only seen as `None`."
+
+
+class FilePrincipal(TypedDict):
+    """A user or role and what they may do to a path, from `ShardFileACLResponse.principals`."""
+
+    id: str
+    name: str
+    isUser: bool
+    verbs: list[FileVerb]
+
+
+class FileVerb(TypedDict):
+    """One thing a principal may or may not do to a path, from `FilePrincipal.verbs`."""
+
+    verb: str
+    """``"read"``, ``"write"`` or ``"delete"``."""
+    state: str
+    """Seen as ``"allow"``."""
+    explicit: bool
+    "If it's set on this path rather than inherited."
+    source: Optional[Any]
+    "Only seen as `None`."
+    inheritedState: str
+    inheritedSource: Optional[Any]
     "Only seen as `None`."
 
 
@@ -1150,8 +1270,8 @@ class RunningTaskResponse(TypedDict):
     "Only seen as `None`."
     progressPercent: int
     isIndeterminate: bool
-    state: int
-    "Seen as 1 at the start, 0 while running and 3 when finished."
+    state: Union[TaskState, int]
+    "Seen as 1 at the start, 0 while running and 3 when finished; a number the library doesn't know stays a plain int."
     isCancellable: bool
     "Only seen as `False`."
     isPrimary: bool
@@ -1178,6 +1298,175 @@ class RunningTaskResponse(TypedDict):
     "If the task has finished; only a finished task can be dismissed."
 
 
+class ScheduleCatalogResponse(TypedDict):
+    """``GET /api/shards/{id}/schedules/catalog``, the triggers and tasks a shard's schedules can use."""
+
+    triggers: list[ScheduleCatalogTrigger]
+    tasks: list[ScheduleCatalogTask]
+    commonEmits: list[ScheduleEmit]
+    "The values every trigger hands to its steps."
+
+
+class ScheduleCatalogTask(TypedDict):
+    """A task a schedule step can run, from `ScheduleCatalogResponse.tasks`."""
+
+    id: str
+    """The step's `taskType`, eg. ``"power.restart"`` or ``"app.consoleSend"``."""
+    category: str
+    isAsync: bool
+    defaultFailure: str
+    """``"Abort"`` or ``"Continue"``."""
+    parameters: list[ScheduleTaskParameter]
+
+
+class ScheduleCatalogTrigger(TypedDict):
+    """An event a schedule can wait for, from `ScheduleCatalogResponse.triggers`."""
+
+    id: str
+    """The trigger's `eventType`, eg. ``"player.joined"``."""
+    category: str
+    emits: list[ScheduleEmit]
+    "The values it hands to the schedule's steps."
+    label: str
+    "A translation key, empty for the built in triggers."
+    description: str
+
+
+class ScheduleDefinition(TypedDict):
+    """A schedule as it was saved, from `ShardScheduleResponse.definition`."""
+
+    id: str
+    tenantId: str
+    shardId: str
+    name: str
+    description: str
+    "Empty when it was made with `None`."
+    trigger: ScheduleTrigger
+    steps: list[ScheduleStep]
+    retryPolicy: ScheduleRetryPolicy
+    misfirePolicy: str
+    """Seen as ``"Skip"``."""
+    timeout: str
+    """A time span, ``"00:30:00"`` when it was made with `None`."""
+    enabled: bool
+    createdAt: str
+    updatedAt: str
+    createdByUserId: str
+    runAsUserId: str
+
+
+class ScheduleEmit(TypedDict):
+    """A value a trigger hands to the schedule's steps, eg. the user who joined."""
+
+    name: str
+    label: str
+    "A translation key, or empty."
+    description: str
+
+
+class ScheduleExecutionResponse(TypedDict):
+    """One run of a schedule, from ``GET /api/shards/{id}/schedules/{id}/history``."""
+
+    id: str
+    scheduleId: str
+    tenantId: str
+    shardId: str
+    eventPayload: Optional[Any]
+    "Only seen as `None`."
+    canonicalFireTime: str
+    timeout: str
+    queuedAt: str
+    startedAt: str
+    completedAt: str
+    status: str
+    """Seen as ``"Succeeded"`` and ``"Skipped"`` (a disabled schedule that was run)."""
+    attemptNumber: int
+    workerNode: Optional[str]
+    "The spire that ran it."
+    errorMessage: Optional[str]
+    stepOutcomes: list[ScheduleStepOutcome]
+    duration: str
+
+
+class ScheduleRetryPolicy(TypedDict):
+    """How a schedule tries again after a failed run, from `ScheduleDefinition.retryPolicy`."""
+
+    maxAttempts: int
+    initialDelay: str
+    """A time span, eg. ``"00:00:05"``."""
+    backoffMultiplier: int
+    maxDelay: str
+
+
+class ScheduleRunResponse(TypedDict):
+    """``POST /api/shards/{id}/schedules/{id}/run`` (202)."""
+
+    executionId: str
+    "The run's `id` in `ScheduleExecutionResponse`."
+
+
+class ScheduleStatus(TypedDict):
+    """How a schedule's last run went, from `ShardScheduleResponse.status`."""
+
+    scheduleId: str
+    lastRunAt: str
+    lastRunStatus: str
+    lastError: Optional[str]
+    "Only seen as `None`."
+    lastExecutionId: str
+    consecutiveFailures: int
+    turnedOff: Optional[Any]
+    "Only seen as `None`."
+    refusal: Optional[Any]
+    "Only seen as `None`."
+    refusalAudited: bool
+
+
+class ScheduleStepOutcome(TypedDict):
+    """How one step of a run went, from `ScheduleExecutionResponse.stepOutcomes`."""
+
+    stepId: str
+    "AMP's own ID for the step, not the one it was saved with."
+    lane: str
+    """Seen as ``"main"``."""
+    status: str
+    detail: str
+    """eg. ``"Sent: say hello"``."""
+    startedAt: str
+    duration: str
+
+
+class ScheduleTaskParameter(TypedDict):
+    """A value a schedule task takes, from `ScheduleCatalogTask.parameters`."""
+
+    name: str
+    """eg. ``"command"`` for ``"app.consoleSend"``."""
+    inputType: str
+    """Seen as ``"template"`` (text that can use the trigger's values) and ``"number"``."""
+    required: bool
+
+
+class ScheduleTrigger(TypedDict):
+    """When a schedule runs, from `ScheduleDefinition.trigger`; also what `ShardModule.create_shard_schedule` takes.
+
+    Each `type` uses its own keys: ``"interval"`` takes `interval`, ``"cron"`` takes `expression` and `timeZoneId`,
+    and ``"event"`` takes `eventType`.
+    """
+
+    type: str
+    """``"interval"``, ``"cron"`` or ``"event"``."""
+    interval: NotRequired[str]
+    """A time span, eg. ``"01:00:00"``; runs line up with `anchor`."""
+    anchor: NotRequired[str]
+    """AMP adds it to an interval, eg. ``"1970-01-01T00:00:00+00:00"``."""
+    expression: NotRequired[str]
+    """A cron expression, eg. ``"0 3 * * *"``."""
+    timeZoneId: NotRequired[str]
+    """eg. ``"UTC"``."""
+    eventType: NotRequired[str]
+    """A `ScheduleCatalogTrigger.id`, eg. ``"player.joined"``."""
+
+
 class SettingAction(TypedDict):
     """A button from `SettingsManifestResponse.actions`, run by ``POST /api/settings/actions/{id}``."""
 
@@ -1185,6 +1474,17 @@ class SettingAction(TypedDict):
     """eg. ``"smtp.test"`` or ``"templates.sync"``."""
     category: str
     "The `SettingSpec.category` it sits under."
+
+
+class SettingCandidate(TypedDict):
+    """One value a shard setting can take, from `ShardSettingCandidatesResponse.candidates`."""
+
+    value: str
+    """What to set, eg. ``"[Latest]"``."""
+    display: str
+    """What the web panel shows, eg. ``"26.3"``."""
+    fields: dict[str, str]
+    "More about the value, eg. its download `url`."
 
 
 class SettingsManifestResponse(TypedDict):
@@ -1201,10 +1501,13 @@ class SettingsManifestResponse(TypedDict):
 
 
 class SettingSpec(TypedDict):
-    """One setting from `SettingsManifestResponse.specs`."""
+    """One setting from `SettingsManifestResponse.specs`; shard settings and templates use the same shape."""
 
     fieldName: str
-    """The setting's key in `SettingsManifestResponse.values`, eg. ``"smtp.host"``."""
+    """The setting's key in `SettingsManifestResponse.values`, eg. ``"smtp.host"``.
+
+    A shard field starting with ``$`` is one AMP keeps for every template, eg. ``"$MaxUsers"``.
+    """
     paramFieldName: str
     effectiveKey: str
     required: bool
@@ -1212,9 +1515,11 @@ class SettingSpec(TypedDict):
     platform: int
     deployment: int
     conditionSetting: str
+    """Another setting's `fieldName` this one depends on, eg. ``"ServerType"``."""
     conditionValue: str
-    defaultValue: Optional[Any]
-    "Only seen as `None`."
+    """The value `conditionSetting` needs for this one to apply, eg. ``"Paper"``."""
+    defaultValue: Optional[str]
+    "`None` for no default; always `None` on the platform settings."
     meta: str
     category: str
     """eg. ``"email"`` or ``"security"``."""
@@ -1227,7 +1532,7 @@ class SettingSpec(TypedDict):
     keywords: str
     inputType: str
     """Seen as ``"text"``, ``"multiline"``, ``"number"``, ``"quantity"``, ``"checkbox"``, ``"select"``, ``"list"``,
-    ``"password"``, ``"credential:Smtp"`` and, for a spire, ``"ipbinding"``."""
+    ``"password"``, ``"credential:Smtp"``, ``"ipbinding"`` (spires), and ``"enum"``, ``"combo"`` and ``"Password"`` (templates)."""
     isSecret: bool
     placeholder: str
     suffix: str
@@ -1241,19 +1546,490 @@ class SettingSpec(TypedDict):
     enumValues: dict[str, str]
     """A value to its label: a translation key for a ``"select"``, the unit itself for a ``"quantity"``. Often empty."""
     valueSourceId: str
+    """Where the candidate values come from, eg. ``"mojang.versions"``; see `ShardModule.get_shard_setting_candidates`."""
     minValue: Optional[float]
-    "Only seen as `None`."
+    "`None` for no lower limit."
     maxValue: Optional[float]
-    "Only seen as `None`."
+    "`None` for no upper limit."
     isHostCap: bool
     multiplier: Optional[Any]
     "Only seen as `None`."
     multipleOf: Optional[float]
-    "Only seen as `None`."
+    "`None` for any step."
     maxLength: int
     listValuePrefix: str
     listValueSeparator: str
     excludeFromImport: bool
+
+
+class ShardAddress(TypedDict):
+    """One address a shard's port is reached at, from `ShardEndpointResponse.addresses`."""
+
+    reach: str
+    """``"Public"`` or ``"Local"``."""
+    host: str
+    port: int
+    showPort: bool
+    display: str
+    """The address as the web panel shows it, eg. ``"192.168.4.231:25565"``."""
+    source: str
+    """Seen as ``"ExternalProbe"`` and ``"LocalAddress"``."""
+    uri: Optional[str]
+    "Only seen as `None`."
+    notes: list[str]
+    """Seen as ``"NeedsForward"`` and ``"NoHairpin"``."""
+    viaSpireId: Optional[str]
+    "Only seen as `None`."
+    viaSpireName: Optional[str]
+    "Only seen as `None`."
+    tunnelState: Optional[Any]
+    "Only seen as `None`."
+
+
+class ShardAgentResponse(TypedDict):
+    """``GET /api/shards/{id}/agent``, the AMP agent that runs the shard."""
+
+    runningVersion: Optional[str]
+    "`None` while the shard is stopped."
+    availableVersion: str
+    outOfDate: bool
+    spireId: str
+    spireName: str
+    spireVersion: str
+    installationVersion: str
+    spireBehind: bool
+
+
+class ShardAppConfig(TypedDict):
+    """A new shard's game settings, from `ShardCreatedResponse.appConfig`."""
+
+    shardId: str
+    tenantId: str
+    values: dict[str, str]
+    "Each setting's `fieldName` to its value, all strings."
+    updatedAt: str
+    updatedByUserId: str
+
+
+class ShardArchiveInfoResponse(TypedDict):
+    """``GET /api/shards/{id}/files/archive-info``, what an archive holds."""
+
+    entries: int
+    totalSize: int
+    "In bytes, unpacked."
+
+
+class ShardCloneResponse(TypedDict):
+    """``POST /api/shards/{id}/clone``; the copy appears at once, not yet installed."""
+
+    shardId: str
+    "The copy's ID."
+
+
+class ShardConfigImportResponse(TypedDict):
+    """``POST /api/shards/{id}/config/import``, the settings read back from a config file."""
+
+    applied: list[str]
+    "The settings whose values came from the file."
+    excluded: list[str]
+    "Settings AMP keeps for itself, eg. ports."
+    missing: list[str]
+    "Settings the file doesn't have."
+
+
+class ShardConsoleHistoryResponse(TypedDict):
+    """``GET /api/shards/{id}/console/history``, the console lines, oldest first."""
+
+    lines: list[ConsoleLine]
+    hasMore: bool
+    "If older lines exist, see `before_seq`."
+
+
+class ShardCreatedResponse(TypedDict):
+    """``POST /api/shards`` (201), the new shard with its first settings and ports."""
+
+    shard: ShardResponse
+    infraSettings: ShardInfraSettings
+    appConfig: ShardAppConfig
+    ports: ShardPortAssignments
+    portOutcomes: list[ShardPortOutcome]
+    overLicenceLimit: bool
+
+
+class ShardCredentialResponse(TypedDict):
+    """``GET /api/shards/{id}/credential``, the stored secret a shard uses, eg. a Steam login."""
+
+    required: bool
+    credential: Optional[Any]
+    "Only seen as `None`, so the shape of a set credential is unknown."
+    usable: list[Any]
+    "Only seen empty."
+
+
+class ShardEndpointResponse(TypedDict):
+    """One public port of a shard and where players reach it, from ``GET /api/shards/{id}/endpoints``."""
+
+    portRef: str
+    name: str
+    "A translation key, or the port's own name."
+    port: int
+    protocol: str
+    isPrimary: bool
+    isPublic: bool
+    addresses: list[ShardAddress]
+
+
+class ShardExtractResponse(TypedDict):
+    """``POST /api/shards/{id}/files/extract``, how many files came out of an archive."""
+
+    extracted: int
+    skippedOnDisk: int
+    "Files already there that weren't overwritten."
+    skippedDenied: int
+    skippedBlocked: int
+    skippedManaged: int
+    examples: list[Any]
+    "Only seen empty."
+
+
+class ShardFileACLResponse(TypedDict):
+    """``GET /api/shards/{id}/files/acl``, who may do what to a path."""
+
+    path: str
+    principals: list[FilePrincipal]
+    canEdit: bool
+
+
+class ShardFileContentResponse(TypedDict):
+    """``GET /api/shards/{id}/files/content``, a text file's content."""
+
+    content: str
+
+
+class ShardFileIgnoresResponse(TypedDict):
+    """``GET /api/shards/{id}/files/ignore``, the ignored entries among a folder's children."""
+
+    amp: list[str]
+    """The ones AMP ignores itself, eg. ``"server.jar"``."""
+    user: list[str]
+    "The ones a user set, see `ShardModule.set_shard_file_ignored`."
+
+
+class ShardFileResponse(TypedDict):
+    """One file or folder, from ``GET /api/shards/{id}/files``."""
+
+    path: str
+    "Relative to the shard's folder, not to the folder listed."
+    name: str
+    isDirectory: bool
+    isLink: bool
+    size: int
+    "In bytes."
+    modified: str
+
+
+class ShardInfraResponse(TypedDict):
+    """``GET /api/shards/{id}/infra``, how a shard runs and what its spire allows."""
+
+    settings: ShardInfraSettings
+    "What `ShardModule.set_shard_infra` takes back, whole."
+    spireName: str
+    spireIsLinux: bool
+    containerPolicy: int
+    logicalCores: int
+    templateOs: int
+    supportsSleep: bool
+    tracksUsers: bool
+    reportsAddresses: bool
+
+
+class ShardInfraSettings(TypedDict):
+    """How a shard runs: container, limits, boot and analytics. `ShardInfraResponse.settings` holds it.
+
+    `ShardModule.set_shard_infra` sends all of it, as AMP resets any field it leaves out.
+    """
+
+    shardId: str
+    tenantId: str
+    startOnBoot: bool
+    autoRestartOnCrash: bool
+    startupOrder: int
+    sleepMode: bool
+    "Takes effect when the shard next starts."
+    advertisedAddress: str
+    advertisedAddressIncludesPort: bool
+    containerMode: str
+    """Seen as ``"Podman"`` and ``"Native"``."""
+    containerImageOverride: Optional[str]
+    "Only seen as `None`."
+    memoryLimitMb: int
+    "0 for no limit. AMP stores a negative number without complaint."
+    memoryReservationMb: int
+    memorySwapMb: int
+    cpuLimit: int
+    maxUsersCap: int
+    enableAnalytics: bool
+    userSpecificData: bool
+    minimumSessionTimeForRetention: int
+    enableGeoFiltering: bool
+    blockedCountries: list[str]
+    "Only seen empty."
+    allowedCountries: list[str]
+    "Only seen empty."
+    blockUnknownCountries: bool
+    geoFilterKickMessage: str
+    geoFilterKickCommand: str
+    diskLimitMb: int
+    importConfigFilesFromSftp: bool
+    extraEnvironment: dict[str, str]
+    "Only seen empty."
+    updatedAt: str
+    updatedByUserId: str
+
+
+class ShardInfraUpdateResponse(ShardInfraSettings):
+    """``PATCH /api/shards/{id}/infra``, the settings as AMP saved them."""
+
+    clampRefused: Optional[Any]
+    "Only seen as `None`."
+
+
+class ShardMetricResponse(TypedDict):
+    """One sample of a running shard's load, from ``GET /api/shards/{id}/metrics``; about one every 3 to 5 seconds."""
+
+    shardId: str
+    tenantId: str
+    timestamp: str
+    agentVersion: str
+    cpuPercent: float
+    memoryMb: int
+    memoryLimitMb: int
+    ioReadKbps: float
+    ioWriteKbps: float
+    activeUsers: int
+    maxUsers: int
+    custom: dict[str, Any]
+    "Only seen empty."
+    listeningPorts: list[int]
+
+
+class ShardPortAssignments(TypedDict):
+    """The ports a new shard was given, from `ShardCreatedResponse.ports`."""
+
+    shardId: str
+    tenantId: str
+    assignments: dict[str, int]
+    """A port's `ref` to its number, eg. ``{"ServerPort": 25565}``."""
+    customPorts: list[Any]
+    "Only seen empty."
+    privatePortRefs: list[str]
+    assignedAt: str
+    assignedBySpireId: str
+
+
+class ShardPortOutcome(TypedDict):
+    """How one of a new shard's ports was given out, from `ShardCreatedResponse.portOutcomes`."""
+
+    ref: str
+    requested: Optional[int]
+    "Only seen as `None`."
+    assigned: int
+    reason: int
+    "Only seen as 0."
+    moved: bool
+
+
+class ShardPortResponse(TypedDict):
+    """One of a shard's ports, from ``GET /api/shards/{id}/ports``."""
+
+    ref: str
+    """eg. ``"ServerPort"``; a custom port's is ``"Custom"`` and its name without spaces."""
+    name: str
+    "A translation key for a template's port, the given name for a custom one."
+    description: str
+    protocol: str
+    """``"Both"``, ``"TCP"`` or ``"UDP"``."""
+    port: int
+    isPublic: bool
+    custom: bool
+    primary: bool
+
+
+class ShardResponse(TypedDict):
+    """One shard, AMP 3's name for an Instance, from ``GET /api/shards``."""
+
+    id: str
+    tenantId: str
+    displayName: str
+    description: str
+    name: str
+    "A short name made from the first display name; renaming doesn't change it."
+    templateSlug: str
+    displayImageSource: str
+    """eg. ``"steam:380840"`` or ``"internal:MinecraftJava"``."""
+    spireId: str
+    datastoreId: str
+    workingDirName: str
+    createdByUserId: str
+    createdAt: str
+    installedAt: Optional[str]
+    "`None` until the first update installs the game."
+    installedVersion: Optional[str]
+    "Only seen as `None`, even after an update."
+    startAfterUpdateTaskId: Optional[str]
+    "Only seen as `None`."
+    tags: list[str]
+    suspended: bool
+    diskWarningAcked: bool
+    deleted: bool
+    "A deleted shard stays until it is purged; most calls on it answer 409."
+    deletedAt: Optional[str]
+
+
+class ShardScheduleResponse(TypedDict):
+    """One of a shard's schedules, from ``GET /api/shards/{id}/schedules``; making or changing one answers with it too."""
+
+    definition: ScheduleDefinition
+    status: Optional[ScheduleStatus]
+    "`None` until it has run."
+    nextFireTime: Optional[str]
+    "`None` while it's off, or for an event trigger."
+    withheld: list[Any]
+    "Only seen empty."
+
+
+class ShardSettingCandidatesResponse(TypedDict):
+    """``GET /api/shards/{id}/settings/{field}/candidates``, the values a setting can take, eg. game versions."""
+
+    candidates: list[SettingCandidate]
+    fetchedAt: str
+    failureReason: Optional[str]
+    "Only seen as `None`."
+    fromCache: bool
+    age: str
+    "How old the list is, as a time span."
+
+
+class ShardSettingResponse(TypedDict):
+    """One of a shard's game settings and its value, from ``GET /api/shards/{id}/settings``."""
+
+    spec: SettingSpec
+    value: str
+    """Every value is a string, eg. ``"true"`` or ``"10"``."""
+
+
+class ShardSFTPResponse(TypedDict):
+    """``GET /api/shards/{id}/sftp``, how to reach a shard's files over SFTP."""
+
+    enabled: bool
+    host: str
+    port: int
+    userName: str
+    folder: str
+    hostKeyFingerprint: str
+    hasKeys: bool
+    "If the logged in user has an SSH key added, see `AccountModule.add_ssh_key`."
+
+
+class ShardSleepStatus(TypedDict):
+    """If a shard can sleep, from `ShardStateResponse.sleep`."""
+
+    available: bool
+    reason: str
+    reasonCode: str
+    """eg. ``"agent.msg.sleepUnavailable"``."""
+    reasonParams: dict[str, str]
+    reportedAt: str
+
+
+class ShardSnapshotsResponse(TypedDict):
+    """``GET /api/shards/{id}/snapshots``, a shard's snapshots as a tree, with any restore in progress."""
+
+    shardId: str
+    tenantId: str
+    nodes: list[SnapshotResponse]
+    "Each one's `parentId` links the tree."
+    headId: Optional[str]
+    "The newest snapshot."
+    settings: SnapshotSettingsResponse
+    restoringId: Optional[str]
+    restoreStage: Union[SnapshotStage, int]
+    restoreProcessed: int
+    restoreTotal: int
+    restoreOwnerSpireId: str
+    "All zeros when no restore has run."
+    restoreRunId: str
+
+
+class ShardStateMetrics(TypedDict):
+    """A running shard's load, from `ShardStateResponse.metrics`. The key names differ from `ShardMetricResponse`."""
+
+    cpuUsagePercent: float
+    memoryUsageMB: int
+    memoryLimitMB: int
+    activeConnections: int
+    networkInKBps: float
+    networkOutKBps: float
+    diskReadKBps: float
+    diskWriteKBps: float
+    taskQueueLength: int
+
+
+class ShardStateResponse(TypedDict):
+    """``GET /api/shards/{id}/state``, a shard's live state."""
+
+    shardId: str
+    tenantId: str
+    status: Union[ShardState, int]
+    "A number the library doesn't know stays a plain int."
+    revision: int
+    metrics: Optional[ShardStateMetrics]
+    "`None` while stopped."
+    lastHeartbeat: str
+    activeTaskId: Optional[str]
+    "Only seen as `None`."
+    processId: Optional[Any]
+    "Only seen as `None`."
+    runningVersion: Optional[str]
+    "Only seen as `None`."
+    agentVersion: Optional[str]
+    lastErrorMessage: Optional[str]
+    lastErrorCode: Optional[str]
+    """eg. ``"agent.msg.executableNotFound"``."""
+    lastErrorParams: Optional[dict[str, str]]
+    statusMessage: Optional[str]
+    statusCode: Optional[str]
+    """eg. ``"shards.msg.launchStage.container"``."""
+    statusParams: Optional[dict[str, str]]
+    startedAt: Optional[str]
+    sleep: Optional[ShardSleepStatus]
+    isRunning: bool
+    isStopped: bool
+    acceptsTraffic: bool
+    isBusy: bool
+
+
+class ShardUpdateResponse(TypedDict):
+    """``POST /api/shards/{id}/update`` (202); follow it with `TaskModule.get_running_tasks`."""
+
+    taskId: str
+
+
+class ShardUploadChunkResponse(TypedDict):
+    """``POST /api/shards/{id}/files/upload-chunk``."""
+
+    received: int
+    "How many bytes AMP holds so far, all chunks counted."
+
+
+class ShardUploadSessionResponse(TypedDict):
+    """``POST /api/shards/{id}/files/upload-start``, a chunked upload to send to."""
+
+    sessionId: str
+    received: int
+    "How many bytes AMP already holds, so an upload can carry on from there."
+    via: str
+    """Seen as ``"direct"``."""
 
 
 class ShardUsage(TypedDict):
@@ -1272,6 +2048,51 @@ class ShardUsage(TypedDict):
     "Only seen as 0."
     limitLevel: str
     """Seen as ``"None"``."""
+
+
+class SnapshotResponse(TypedDict):
+    """One snapshot (a backup), from `ShardSnapshotsResponse.nodes`; taking or restoring one answers with it too."""
+
+    id: str
+    parentId: Optional[str]
+    "The snapshot this one builds on, `None` for the first."
+    kind: Union[SnapshotKind, int]
+    content: Union[SnapshotContent, int]
+    trigger: int
+    "Seen as 0 (taken by a user) and 3 (the one AMP takes before a restore)."
+    status: Union[SnapshotState, int]
+    name: str
+    description: str
+    """AMP fills an empty one, eg. ``"Partial backup of app configuration."``."""
+    sticky: bool
+    "Doesn't stop a delete."
+    failureReason: str
+    skippedFiles: list[str]
+    "Only seen empty."
+    skippedCount: int
+    archiveMissing: bool
+    createdAt: str
+    createdByUserId: str
+    sizeMb: int
+    uncompressedMb: int
+    fileCount: int
+    ownerSpireId: str
+    runId: str
+    stage: Union[SnapshotStage, int]
+    processedFiles: int
+    totalFiles: int
+    datastoreId: str
+    zipFileName: str
+
+
+class SnapshotSettingsResponse(TypedDict):
+    """``GET /api/shards/{id}/snapshots/settings``, a shard's snapshot limits."""
+
+    maxBackupSizeMb: int
+    "0 for no limit."
+    maxTotalStorageMb: int
+    "0 for no limit."
+    stopWhenNoQuiesce: bool
 
 
 class SpireCPU(TypedDict):
@@ -1532,6 +2353,315 @@ class SystemBusResponse(TypedDict):
     "Only seen empty."
 
 
+class TemplateConfigFile(TypedDict):
+    """A config file AMP writes the settings into, from `TemplateResponse.configFileMappings`."""
+
+    configFile: str
+    configFileTemplate: str
+    configFormat: str
+    """eg. ``"{0}={1}"``."""
+    configFormatRegex: str
+    configHeaderFormat: str
+    configHeaderRegex: str
+    configType: str
+    """Seen as ``"ini"``, ``"json"``, ``"kvp"`` and ``"template"``."""
+    configEncoding: str
+    autoMap: bool
+    importable: bool
+    subsections: list[TemplateConfigSection]
+
+
+class TemplateConfigSection(TypedDict):
+    """One section of a config file, from `TemplateConfigFile.subsections`."""
+
+    heading: str
+    settingMappings: dict[str, str]
+    "A key in the file to a setting's `fieldName`."
+    autoMap: bool
+
+
+class TemplateConsole(TypedDict):
+    """How AMP reads a game's console, from `TemplateResponse.console`. Most are regular expressions."""
+
+    filterMatchRegex: str
+    filterMatchReplacement: str
+    throwawayMessageRegex: str
+    appReadyRegex: str
+    serverAuthURLPromptRegex: str
+    serverAuthAckRegex: str
+    userJoinRegex: str
+    userIdKind: str
+    """Seen as ``"steam64"`` and ``"minecraft-uuid"``, or empty."""
+    userLeaveRegex: str
+    userChatRegex: str
+    preConnectRegex: str
+    connectIPRegex: str
+    updateAvailableRegex: str
+    metricsRegex: str
+    downloadProgressRegex: str
+    startupProgressRegex: str
+    logRegex: str
+    suppressLogAtStart: bool
+    activateLogRegex: str
+    commandTriggers: dict[str, str]
+    "A console line pattern to the command AMP answers it with."
+
+
+class TemplateEvent(TypedDict):
+    """A game event a schedule can wait for, from `TemplateResponse.events`."""
+
+    id: str
+    name: str
+    "A translation key."
+    description: str
+    expression: str
+    "The console line pattern that raises it."
+    paramMap: dict[str, dict[str, str]]
+    "Each value the event hands on, to its `name` and `description` translation keys."
+
+
+class TemplateLifecycle(TypedDict):
+    """How AMP starts, stops and sleeps a game, from `TemplateResponse.lifecycle`."""
+
+    rootDir: str
+    baseDirectory: str
+    executableWin: str
+    executableLinux: str
+    executableContainer: str
+    workingDir: str
+    compatibility: int
+    linuxCommandLineArgs: str
+    windowsCommandLineArgs: str
+    commandLineArgs: str
+    commandLineParameterFormat: str
+    commandLineParameterDelimiter: str
+    rapidStartup: bool
+    applicationReadyMode: int
+    applicationReadyTimeoutSeconds: int
+    monitorChildProcessName: str
+    monitorDirectChildOnly: bool
+    supportsUniversalSleep: bool
+    wakeupMode: int
+    sleepOnStart: bool
+    sleepDelayMinutes: int
+    sleepDozeDelayMinutes: int
+    sleepStartThresholdSeconds: int
+    steamUpdateAnonymousLogin: int
+    exitMethod: int
+    exitMethodWindows: int
+    startupAuthenticationRequired: bool
+    exitTimeout: int
+    exitString: str
+    """The console command that stops the game, eg. ``"stop"``."""
+    exitFile: str
+    quiescenceCommand: str
+    """Commands sent before a stop or snapshot, split by ``;``, eg. ``"save-off;save-all flush"``."""
+    dequiescenceCommand: str
+    quiesceAckRegex: str
+    quiesceSettleDelayMilliseconds: int
+
+
+class TemplateManagement(TypedDict):
+    """How AMP talks to a game, from `TemplateResponse.management`."""
+
+    hasWriteableConsole: bool
+    hasReadableConsole: bool
+    udpLogger: bool
+    supportsLiveSettingsChanges: bool
+    liveSettingChangeCommandFormat: str
+    adminMethod: int
+    remoteAdminPassword: str
+    useRandomAdminPassword: bool
+    persistRandomPassword: bool
+    rconConnectDelaySeconds: int
+    rconHeartbeatMinutes: float
+    rconHeartbeatCommand: str
+    ignoreSTDOUTAfterRCON: bool
+    rconSelectIPMethod: int
+    telnetLoginFormat: str
+    telnetNewLineType: int
+    tailLogFilePath: str
+    applicationIPBinding: str
+    forceIPBinding: bool
+    supportsIPv6: bool
+    useSteamQueryForStatus: bool
+    maxUsers: int
+    environmentVariables: dict[str, str]
+
+
+class TemplateMetadata(TypedDict):
+    """A template's name, image and requirements, from `TemplateResponse.metadata`."""
+
+    displayName: str
+    "The game's name, or a translation key on the newer templates."
+    description: str
+    created: str
+    updated: str
+    os: int
+    "Seen as 3 on every template."
+    aarchSupport: int
+    arch: int
+    author: str
+    url: str
+    displayImageSource: str
+    """``"steam:<app id>"``, ``"url:<address>"`` or ``"internal:<name>"``."""
+    endpointURIFormat: str
+    configManifest: str
+    metaConfigManifest: str
+    configRoot: str
+    specificDockerImage: str
+    """eg. ``"cubecoders/ampbase:debian"``."""
+    dockerRequired: bool
+    dockerBaseReadOnly: bool
+    containerPolicy: int
+    containerPolicyReason: str
+    extraSetupStepsURI: str
+    prerequisites: list[Any]
+    "Only seen empty."
+    extraContainerPackages: list[Any]
+    "Only seen empty."
+    configReleaseState: int
+    noCommercialUsage: bool
+    eulaLocation: str
+    configVersion: str
+    releaseNotes: str
+    breakingReleaseNotes: str
+    deprecatedReason: str
+    minAMPVersion: str
+    minAgentVersion: Optional[str]
+    "Only seen as `None`."
+    appIsMultiIPAware: bool
+
+
+class TemplatePort(TypedDict):
+    """A port a game needs, from `TemplateResponse.portRequirements`."""
+
+    name: str
+    description: str
+    ref: str
+    """eg. ``"ServerPort"``; a shard's ports use the same names."""
+    port: int
+    "The default port."
+    protocol: str
+    """``"Both"``, ``"TCP"`` or ``"UDP"``."""
+    offset: int
+    range: int
+    rangeSeparator: str
+    required: bool
+    childPorts: Optional[list[TemplatePort]]
+    "Ports that follow this one, eg. a query port one above it."
+
+
+class TemplatePortReferences(TypedDict):
+    """Which of a template's ports does what, from `TemplateResponse.portReferences`; ``"0"`` means none."""
+
+    adminPortRef: str
+    primaryApplicationPortRef: str
+    universalSleepApplicationUDPPortRef: str
+    universalSleepSteamQueryPortRef: str
+
+
+class TemplateResponse(TypedDict):
+    """One game template, from ``GET /api/Templates``: the whole definition, not a summary."""
+
+    id: str
+    schemaVersion: int
+    templateSlug: str
+    """The template's name in every call, eg. ``"minecraft-java"``."""
+    lifecycle: TemplateLifecycle
+    management: TemplateManagement
+    metadata: TemplateMetadata
+    console: TemplateConsole
+    portReferences: TemplatePortReferences
+    updateStages: list[TemplateUpdateStage]
+    "The steps an update runs, in order."
+    preStartStages: list[TemplateUpdateStage]
+    "The steps run before each start."
+    portRequirements: list[TemplatePort]
+    versionSources: list[TemplateVersionSource]
+    settings: list[SettingSpec]
+    configFileMappings: list[TemplateConfigFile]
+    events: list[TemplateEvent]
+    backupExclusions: list[str]
+    """Paths a snapshot leaves out, eg. ``"logs/"``."""
+    locale: dict[str, dict[str, str]]
+    "A language to its translation keys and text; often empty."
+    containerRuntimeAvailable: bool
+
+
+class TemplateSourceResponse(TypedDict):
+    """A git repository templates come from, from ``GET /api/Templates/sources``."""
+
+    id: str
+    """eg. ``"official"`` or ``"amp3"``."""
+    url: str
+    isLocal: bool
+    localDirectoryName: str
+    isArchive: bool
+    branch: str
+    localPath: Optional[str]
+    "Only seen as `None`."
+    priority: int
+    disabled: bool
+
+
+class TemplateSyncResponse(TypedDict):
+    """One source's sync, from ``POST /api/Templates/sources/{id}/sync``."""
+
+    sourceId: str
+    headSha: str
+    "The git commit the source is now at."
+    changed: bool
+    error: Optional[str]
+    "Only seen as `None`."
+
+
+class TemplateUpdateStage(TypedDict):
+    """One step of an update or pre-start, from `TemplateResponse.updateStages`."""
+
+    updateSource: int
+    "What the step does, eg. 3 downloads a Steam app; the numbers aren't named anywhere AMP shows."
+    updateStageName: str
+    updateStageDescription: str
+    updateSourcePlatform: int
+    updateSourceArch: int
+    updateSourceData: str
+    updateSourceArgs: str
+    updateSourceVersion: str
+    updateSourceExtra: str
+    updateSourceTarget: str
+    unzipUpdateSource: bool
+    overwriteExistingFiles: bool
+    forceDownloadPlatform: NotRequired[int]
+    "Only on a few update steps."
+    updateSourceConditionSetting: str
+    updateSourceConditionValue: str
+    deleteAfterExtract: bool
+    runInBackground: bool
+    skipOnFailure: bool
+    processToolOutput: bool
+    oneShot: bool
+
+
+class TemplateVersionSource(TypedDict):
+    """Where a setting's candidate values come from, eg. Mojang's version list, from `TemplateResponse.versionSources`."""
+
+    id: str
+    """The `SettingSpec.valueSourceId` that uses it, eg. ``"mojang.versions"``."""
+    url: str
+    documents: list[dict[str, str]]
+    format: int
+    select: str
+    value: str
+    display: str
+    fields: dict[str, str]
+    where: dict[str, str]
+    urlTemplate: str
+    sort: int
+    cacheMinutes: int
+    dependsOn: list[str]
+
+
 class TokenResponse(TypedDict):
     """A new session token, from a login, `renew`, ``change-expired-password`` or the first-run admin setup.
 
@@ -1606,3 +2736,7 @@ class WrappedID(TypedDict):
 LoginResponse = Union[TokenResponse, PasswordChangeRequiredResponse, PasskeyRequiredResponse]
 # A query string; a list value repeats its key, so {"shard": ["a", "b"]} is sent as shard=a&shard=b.
 QueryParameters = Mapping[str, Union[str, int, Sequence[str]]]
+# A schedule step; a plain dict, as one of its keys is `await`, eg.
+#    {"type": "task", "id": <a new UUID>, "taskType": "app.consoleSend", "parameters": {"command": "say hi"},
+#     "await": True, "onSuccess": [], "onFailure": [], "failureOverride": None}
+ScheduleStep = dict[str, Any]
