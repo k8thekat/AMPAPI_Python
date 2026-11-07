@@ -69,12 +69,17 @@ class Base:
         except ValueError:
             return value
 
+    @staticmethod
+    def _without_none[V](mapping: Mapping[str, Optional[V]]) -> dict[str, V]:
+        """`mapping` without its `None` values, for a body or query where AMP keeps whatever is left out."""
+        return {key: value for key, value in mapping.items() if value is not None}
+
     async def _request(
         self,
         method: str,
         path: str,
         *,
-        data: Optional[Union[dict[str, Any], list[Any], bytes]] = None,
+        data: Optional[Union[Mapping[str, Any], list[Any], bytes]] = None,
         files: Optional[Mapping[str, bytes]] = None,
         parameters: Optional[QueryParameters] = None,
         raw_bytes: bool = False,
@@ -91,7 +96,7 @@ class Base:
             The HTTP method, eg. ``"GET"``.
         path : :class:`str`
             The path, eg. ``"/api/licence"``.
-        data : Union[dict[:class:`str`, Any], list[Any], :class:`bytes`, None], optional
+        data : Union[Mapping[:class:`str`, Any], list[Any], :class:`bytes`, None], optional
             The JSON body, by default None. A few calls take a list.
             Bytes are sent as they are, with ``Content-Type: application/octet-stream``.
         files : Union[Mapping[:class:`str`, :class:`bytes`], None], optional

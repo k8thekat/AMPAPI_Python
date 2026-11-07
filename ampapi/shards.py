@@ -24,7 +24,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from ._enums import CloneContent, MigrationStatus, ShardState, SnapshotContent, SnapshotKind, SnapshotStage, SnapshotState
-from ._types import ShardInfraSettings
+from ._types import ShardInfraChanges, ShardInfraSettings
 from .base import Base
 
 if TYPE_CHECKING:
@@ -32,19 +32,28 @@ if TYPE_CHECKING:
 
     from ._types import (
         FileACLChange,
+        PortProtocol,
         ScheduleCatalogResponse,
         ScheduleExecutionResponse,
         ScheduleRunResponse,
         ScheduleStep,
         ScheduleTrigger,
+        SettingValues,
         ShardAgentResponse,
         ShardArchiveInfoResponse,
+        ShardArchiveRequest,
+        ShardCloneRequest,
         ShardCloneResponse,
         ShardConfigImportResponse,
         ShardConsoleHistoryResponse,
+        ShardConsoleRequest,
         ShardCreatedResponse,
+        ShardCreateRequest,
         ShardCredentialResponse,
+        ShardCustomPortRequest,
+        ShardDetailsRequest,
         ShardEndpointResponse,
+        ShardExtractRequest,
         ShardExtractResponse,
         ShardFileACLResponse,
         ShardFileContentResponse,
@@ -54,10 +63,12 @@ if TYPE_CHECKING:
         ShardInfraUpdateResponse,
         ShardManagedFileResponse,
         ShardMetricResponse,
+        ShardMigrationRequest,
         ShardMigrationResponse,
         ShardMigrationTargetResponse,
         ShardPortResponse,
         ShardResponse,
+        ShardScheduleRequest,
         ShardScheduleResponse,
         ShardSettingCandidatesResponse,
         ShardSettingResponse,
@@ -68,7 +79,10 @@ if TYPE_CHECKING:
         ShardUploadChunkResponse,
         ShardUploadSessionResponse,
         ShardUsage,
+        SnapshotMetaRequest,
+        SnapshotRequest,
         SnapshotResponse,
+        SnapshotSettingsRequest,
         SnapshotSettingsResponse,
         SpireIPOptionResponse,
     )
@@ -199,7 +213,7 @@ class Shard:
         """
         await self._module.copy_shard_file(shard_id=self.id, source=source, destination=destination)
 
-    async def create_custom_port(self, name: str, protocol: str, port: int) -> list[ShardPortResponse]:
+    async def create_custom_port(self, name: str, protocol: PortProtocol, port: int) -> list[ShardPortResponse]:
         """Add a port to this shard, see :meth:`ShardModule.create_shard_custom_port`.
 
         |coro|
@@ -759,7 +773,7 @@ class Shard:
         """
         await self._module.set_shard_schedule_enabled(shard_id=self.id, schedule_id=schedule_id, enabled=enabled)
 
-    async def set_settings(self, values: dict[str, str]) -> None:
+    async def set_settings(self, values: SettingValues) -> None:
         """Change some of this shard's game settings, see :meth:`ShardModule.set_shard_settings`.
 
         |coro|
@@ -872,7 +886,7 @@ class Shard:
         """
         return await self._module.update_shard(shard_id=self.id)
 
-    async def update_infra(self, changes: dict[str, Any]) -> ShardInfraUpdateResponse:
+    async def update_infra(self, changes: ShardInfraChanges) -> ShardInfraUpdateResponse:
         """Change a few of this shard's infra settings, keeping the rest, see :meth:`ShardModule.update_shard_infra`.
 
         |coro|
@@ -1035,7 +1049,7 @@ class ShardModule(Base):
             The archive's path, eg. ``"backup.zip"``.
 
         """
-        data: dict[str, Any] = {"paths": paths, "destination": destination}
+        data: ShardArchiveRequest = {"paths": paths, "destination": destination}
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/archive", data=data)
 
     async def cancel_shard_migration(self, shard_id: str) -> None:
@@ -1104,7 +1118,7 @@ class ShardModule(Base):
             (400, ``"shards.error.spireNotFound"``).
 
         """
-        data: dict[str, Any] = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
+        data: ShardCloneRequest = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/clone", data=data)
 
     async def commit_shard_file_upload(self, shard_id: str, session_id: str) -> None:
@@ -1193,7 +1207,7 @@ class ShardModule(Base):
             If the template doesn't exist (400, ``"shards.error.createFailed"``, which doesn't name the cause).
 
         """
-        data: dict[str, Any] = {
+        data: ShardCreateRequest = {
             "templateSlug": template_slug,
             "displayName": display_name,
             "description": description,
@@ -1206,7 +1220,7 @@ class ShardModule(Base):
 
         return await self._request(method="POST", path="/api/shards", data=data)
 
-    async def create_shard_custom_port(self, shard_id: str, name: str, protocol: str, port: int) -> list[ShardPortResponse]:
+    async def create_shard_custom_port(self, shard_id: str, name: str, protocol: PortProtocol, port: int) -> list[ShardPortResponse]:
         """Add a port of your own to a shard.
 
         |coro|
@@ -1219,7 +1233,7 @@ class ShardModule(Base):
             The shard's ID.
         name : :class:`str`
             The port's name; its `ref` becomes ``"Custom"`` and the name without spaces.
-        protocol : :class:`str`
+        protocol : :class:`PortProtocol`
             ``"TCP"``, ``"UDP"`` or ``"Both"``. AMP stores anything else as ``"TCP"``.
         port : :class:`int`
             The port number.
@@ -1235,7 +1249,7 @@ class ShardModule(Base):
             If the port is taken (400, ``"shards.error.portConflict"``) or out of range (400, ``"shards.error.invalidPort"``).
 
         """
-        data: dict[str, Any] = {"name": name, "protocol": protocol, "port": port}
+        data: ShardCustomPortRequest = {"name": name, "protocol": protocol, "port": port}
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/ports/custom", data=data)
 
     async def create_shard_folder(self, shard_id: str, path: str) -> None:
@@ -1302,7 +1316,7 @@ class ShardModule(Base):
             If a step or the trigger has an unknown `type` (400). A step with no `type` at all gets a 500.
 
         """
-        data: dict[str, Any] = {
+        data: ShardScheduleRequest = {
             "name": name,
             "description": description,
             "trigger": trigger,
@@ -1551,7 +1565,7 @@ class ShardModule(Base):
             How many files came out, and how many were skipped.
 
         """
-        data: dict[str, Any] = {"path": path, "destination": destination, "overwrite": overwrite}
+        data: ShardExtractRequest = {"path": path, "destination": destination, "overwrite": overwrite}
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/extract", data=data)
 
     async def get_all_shard_endpoints(self) -> dict[str, list[ShardEndpointResponse]]:
@@ -1705,7 +1719,7 @@ class ShardModule(Base):
 
         """
         filters: dict[str, Optional[int]] = {"limit": limit, "beforeSeq": before_seq}
-        parameters: dict[str, int] = {key: value for key, value in filters.items() if value is not None}
+        parameters: dict[str, int] = self._without_none(mapping=filters)
         result: ShardConsoleHistoryResponse = await self._request(
             method="GET",
             path=f"/api/shards/{shard_id}/console/history",
@@ -2453,7 +2467,7 @@ class ShardModule(Base):
             though it is stopped. Run :meth:`update_shard` on it first.
 
         """
-        data: dict[str, Any] = {
+        data: ShardMigrationRequest = {
             "targetSpireId": target_spire_id,
             "targetDatastoreId": target_datastore_id,
             "bringBackups": bring_backups,
@@ -2620,7 +2634,7 @@ class ShardModule(Base):
             With no prompt waiting it's sent as a command.
 
         """
-        data: dict[str, Any] = {"command": command, "promptReply": prompt_reply}
+        data: ShardConsoleRequest = {"command": command, "promptReply": prompt_reply}
         await self._request(method="POST", path=f"/api/shards/{shard_id}/console", data=data)
 
     async def send_shard_file_chunk(self, shard_id: str, session_id: str, chunk: bytes) -> ShardUploadChunkResponse:
@@ -2706,10 +2720,9 @@ class ShardModule(Base):
             The shard. Its short `name` doesn't change with the display name.
 
         """
-        data: dict[str, Any] = {"displayName": display_name, "description": description, "tags": tags}
+        data: ShardDetailsRequest = {"displayName": display_name, "description": description, "tags": tags}
         # We only send what changes, AMP keeps a value that's left out.
-        data = {key: value for key, value in data.items() if value is not None}
-        return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=data)
+        return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=self._without_none(mapping=data))
 
     # TODO: Reword the warning and Raises once AMP lets a deny be undone and answers a bad `state` with a 400 (U24a, U24b).
     # AMP 3.0.0.6 answers both with 403 "files.acl.error.notYoursToGrant".
@@ -2904,7 +2917,7 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/schedules/{schedule_id}/enabled", data={"enabled": enabled})
 
-    async def set_shard_settings(self, shard_id: str, values: dict[str, str]) -> None:
+    async def set_shard_settings(self, shard_id: str, values: SettingValues) -> None:
         """Change some of a shard's game settings; AMP rewrites the game's config files to match.
 
         |coro|
@@ -2915,7 +2928,7 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        values : dict[:class:`str`, :class:`str`]
+        values : :class:`SettingValues`
             Each setting's `fieldName` to its new value, always a string, eg. ``{"motd": "Hello", "MaxMemory": "2048"}``.
             AMP checks an enum's value, but not a number's, and ignores a name it doesn't know.
 
@@ -2957,7 +2970,7 @@ class ShardModule(Base):
             The limits as AMP saved them.
 
         """
-        data: dict[str, Any] = {
+        data: SnapshotSettingsRequest = {
             "maxBackupSizeMb": max_backup_size_mb,
             "maxTotalStorageMb": max_total_storage_mb,
             "stopWhenNoQuiesce": stop_when_no_quiesce,
@@ -3143,7 +3156,7 @@ class ShardModule(Base):
             The snapshot, still running; follow it with :meth:`get_shard_snapshots`.
 
         """
-        data: dict[str, Any] = {"kind": kind, "content": content, "name": name, "description": description, "sticky": sticky}
+        data: SnapshotRequest = {"kind": kind, "content": content, "name": name, "description": description, "sticky": sticky}
         result: SnapshotResponse = await self._request(method="POST", path=f"/api/shards/{shard_id}/snapshots", data=data)
         return self._snapshot_enums(snapshot=result)
 
@@ -3197,7 +3210,7 @@ class ShardModule(Base):
 
     # TODO: Send only the changes once AMP's PATCH leaves the fields it isn't sent alone (U13).
     # AMP 3.0.0.6 resets every infra field a PATCH body leaves out.
-    async def update_shard_infra(self, shard_id: str, changes: dict[str, Any]) -> ShardInfraUpdateResponse:
+    async def update_shard_infra(self, shard_id: str, changes: ShardInfraChanges) -> ShardInfraUpdateResponse:
         """Change a few of how a shard runs, keeping the rest: we read the settings, change them and send them whole.
 
         |coro|
@@ -3211,8 +3224,8 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        changes : dict[:class:`str`, Any]
-            The settings to change, named as in :class:`ShardInfraSettings`, eg. ``{"startOnBoot": True}``.
+        changes : :class:`ShardInfraChanges`
+            The settings to change, eg. ``{"startOnBoot": True}``.
 
         Returns
         -------
@@ -3222,16 +3235,16 @@ class ShardModule(Base):
         Raises
         ------
         ValueError
-            If a name in `changes` isn't an infra setting, before anything is sent.
+            If a name in `changes` isn't an infra setting a user can change, before anything is sent.
 
         """
-        unknown: list[str] = sorted(changes.keys() - ShardInfraSettings.__required_keys__)
+        unknown: list[str] = sorted(changes.keys() - ShardInfraChanges.__optional_keys__)
         if unknown:
-            msg = f"{', '.join(unknown)} aren't infra settings; see ShardInfraSettings for the names."
+            msg = f"{', '.join(unknown)} aren't infra settings a user can change; see ShardInfraChanges for the names."
             raise ValueError(msg)
 
         current: ShardInfraResponse = await self.get_shard_infra(shard_id=shard_id)
-        settings: dict[str, Any] = {**current["settings"], **changes}
+        settings: ShardInfraSettings = {**current["settings"], **changes}
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=settings)
 
     async def update_shard_schedule(
@@ -3277,7 +3290,7 @@ class ShardModule(Base):
             The schedule.
 
         """
-        data: dict[str, Any] = {
+        data: ShardScheduleRequest = {
             "name": name,
             "description": description,
             "trigger": trigger,
@@ -3313,7 +3326,7 @@ class ShardModule(Base):
             If there's no such snapshot (400, ``"snapshots.error.notFound"``).
 
         """
-        data: dict[str, Any] = {"name": name, "description": description, "sticky": sticky}
+        data: SnapshotMetaRequest = {"name": name, "description": description, "sticky": sticky}
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/meta", data=data)
 
     async def upload_shard_file(self, shard_id: str, path: str, content: bytes, *, chunk_size: int = UPLOAD_CHUNK_SIZE) -> None:

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict
 
 if TYPE_CHECKING:
     from ._enums import (
+        CloneContent,
         GatewayState,
         MigrationStatus,
         PublicationState,
@@ -50,10 +51,12 @@ __all__ = (
     "AuditActionCount",
     "AuditEvent",
     "AuditFacetsResponse",
+    "AuditOrigin",
     "AuditOriginCount",
     "AuditPageResponse",
     "AuditRoot",
     "AuditRootsPageResponse",
+    "AuditSeverity",
     "AuditTreeNode",
     "AuditTreeResponse",
     "AuditUserCount",
@@ -64,11 +67,16 @@ __all__ = (
     "CapabilitiesResponse",
     "CodedErrorResponse",
     "ConsoleLine",
+    "CredentialKind",
+    "CredentialRequest",
     "CredentialResponse",
+    "CredentialVisibility",
+    "DatastoreRequest",
     "DatastoreResponse",
     "DatastoreUsage",
     "DeletedUserResponse",
     "DiagnosticsResponse",
+    "ExpiredPasswordRequest",
     "FileACLChange",
     "FilePrincipal",
     "FileVerb",
@@ -77,6 +85,7 @@ __all__ = (
     "FirewallStatus",
     "GatewayEligibilityResponse",
     "GatewayPreflightResponse",
+    "GatewayRequest",
     "GatewayResponse",
     "GatewayStatus",
     "HTTPSCheck",
@@ -85,8 +94,10 @@ __all__ = (
     "HTTPSStateResponse",
     "HealthStatusResponse",
     "HubTokenResponse",
+    "InviteAcceptRequest",
     "InviteAcceptedResponse",
     "InvitePreviewResponse",
+    "InviteRequest",
     "InviteResponse",
     "InviteTokenResponse",
     "LicenceAgreementResponse",
@@ -94,6 +105,8 @@ __all__ = (
     "LicenceResponse",
     "LicenceStatusResponse",
     "LicenceTermsAcceptance",
+    "LicenceTermsRequest",
+    "LoginRequest",
     "LoginResponse",
     "MessageBusService",
     "MessageBusStatsResponse",
@@ -103,27 +116,35 @@ __all__ = (
     "PasskeyRegisteredResponse",
     "PasskeyRequiredResponse",
     "PasskeyResponse",
+    "PasswordChangeRequest",
     "PasswordChangeRequiredResponse",
     "PasswordPolicyResponse",
     "PermissionNode",
     "PermissionsResponse",
     "PortClaimResponse",
+    "PortProtocol",
+    "PreferencesChanges",
     "PreferencesResponse",
     "PreviewStatus",
     "PreviewUpdate",
     "Principal",
     "ProblemDetailsResponse",
+    "ProfileRequest",
     "ProfileResponse",
     "ProfileSessionResponse",
+    "PublicationRequest",
     "PublicationResponse",
     "PublicationStatus",
+    "PublicationUpdateRequest",
     "QueryParameters",
     "ReasonErrorResponse",
     "RecoveryCodesResponse",
     "RecoveryCodesStatusResponse",
     "RevokedSessionsResponse",
+    "RoleRequest",
     "RoleResponse",
     "RunningTaskResponse",
+    "SSHKeyRequest",
     "SSHKeyResponse",
     "ScheduleCatalogResponse",
     "ScheduleCatalogTask",
@@ -138,31 +159,42 @@ __all__ = (
     "ScheduleStepOutcome",
     "ScheduleTaskParameter",
     "ScheduleTrigger",
+    "SecondFactorRequest",
     "SettingAction",
     "SettingActionResponse",
     "SettingCandidate",
     "SettingSpec",
+    "SettingValues",
     "SettingsManifestResponse",
     "ShardAddress",
     "ShardAgentResponse",
     "ShardAppConfig",
     "ShardArchiveInfoResponse",
+    "ShardArchiveRequest",
+    "ShardCloneRequest",
     "ShardCloneResponse",
     "ShardConfigImportResponse",
     "ShardConsoleHistoryResponse",
+    "ShardConsoleRequest",
+    "ShardCreateRequest",
     "ShardCreatedResponse",
     "ShardCredentialResponse",
+    "ShardCustomPortRequest",
+    "ShardDetailsRequest",
     "ShardEndpointResponse",
+    "ShardExtractRequest",
     "ShardExtractResponse",
     "ShardFileACLResponse",
     "ShardFileContentResponse",
     "ShardFileIgnoresResponse",
     "ShardFileResponse",
+    "ShardInfraChanges",
     "ShardInfraResponse",
     "ShardInfraSettings",
     "ShardInfraUpdateResponse",
     "ShardManagedFileResponse",
     "ShardMetricResponse",
+    "ShardMigrationRequest",
     "ShardMigrationResponse",
     "ShardMigrationTargetResponse",
     "ShardPortAssignments",
@@ -170,6 +202,7 @@ __all__ = (
     "ShardPortResponse",
     "ShardResponse",
     "ShardSFTPResponse",
+    "ShardScheduleRequest",
     "ShardScheduleResponse",
     "ShardSettingCandidatesResponse",
     "ShardSettingResponse",
@@ -181,16 +214,24 @@ __all__ = (
     "ShardUploadChunkResponse",
     "ShardUploadSessionResponse",
     "ShardUsage",
+    "SnapshotMetaRequest",
+    "SnapshotRequest",
     "SnapshotResponse",
+    "SnapshotSettingsRequest",
     "SnapshotSettingsResponse",
     "SpireCPU",
     "SpireEnrollmentAdmission",
     "SpireEnrollmentCreatedResponse",
     "SpireEnrollmentHostResponse",
+    "SpireEnrollmentRequest",
     "SpireEnrollmentResponse",
+    "SpireEnrollmentRevokeRequest",
     "SpireExpiredPurgeResponse",
     "SpireIPAddress",
     "SpireIPOptionResponse",
+    "SpireImportItem",
+    "SpireImportRequest",
+    "SpireImportScanRequest",
     "SpireImportScanResponse",
     "SpirePlatform",
     "SpirePortResponse",
@@ -217,6 +258,7 @@ __all__ = (
     "TemplateSyncResponse",
     "TemplateUpdateStage",
     "TemplateVersionSource",
+    "TokenClaims",
     "TokenResponse",
     "TunnelEnd",
     "TunnelFrontHost",
@@ -224,7 +266,9 @@ __all__ = (
     "TunnelResponse",
     "TunnelStatus",
     "UpdateStatusResponse",
+    "UserCreateRequest",
     "UserResponse",
+    "UserUpdateRequest",
     "ValidationErrorResponse",
     "WrappedID",
 )
@@ -579,6 +623,16 @@ class ConsoleLine(TypedDict):
     """The game's log source, eg. ``"Server thread"``."""
 
 
+class CredentialRequest(TypedDict):
+    """The body of ``POST /api/credentials``."""
+
+    kind: CredentialKind
+    title: str
+    username: str
+    secret: str
+    visibility: NotRequired[CredentialVisibility]
+
+
 class CredentialResponse(TypedDict):
     """One stored secret shards can use, from ``GET /api/credentials``; AMP never sends the secret back."""
 
@@ -593,6 +647,15 @@ class CredentialResponse(TypedDict):
     shardCount: int
     createdAt: str
     updatedAt: str
+
+
+class DatastoreRequest(TypedDict):
+    """The body of ``POST /api/spires/{id}/datastores``."""
+
+    name: str
+    path: str
+    isDefault: bool
+    enabled: bool
 
 
 class DatastoreResponse(TypedDict):
@@ -660,6 +723,14 @@ class DiagnosticsResponse(TypedDict):
     containerRuntimeVerdict: str
     """eg. ``"Usable"``."""
     containerRuntimeReason: Optional[str]
+
+
+class ExpiredPasswordRequest(TypedDict):
+    """The body of ``POST /api/auth/change-expired-password``."""
+
+    username: str
+    currentPassword: str
+    newPassword: str
 
 
 class FileACLChange(TypedDict):
@@ -755,6 +826,13 @@ class GatewayPreflightResponse(TypedDict):
     # AMP 3.0.0.6 sends no conflicts for gateways the create refuses.
     conflicts: list[Any]
     "Empty even for a gateway `PlatformModule.create_gateway` refuses, see `PlatformModule.preflight_gateway`."
+
+
+class GatewayRequest(TypedDict):
+    """The body of ``POST /api/networking/gateways`` and ``POST /api/networking/gateways/preflight``."""
+
+    shardId: str
+    frontSpireId: str
 
 
 class GatewayResponse(TypedDict):
@@ -903,11 +981,30 @@ class InviteAcceptedResponse(TypedDict):
     "Empty even when one of the invite's roles had been deleted."
 
 
+class InviteAcceptRequest(TypedDict):
+    """The body of ``POST /api/invites/accept``."""
+
+    token: str
+    email: str
+    password: str
+    displayName: Optional[str]
+    locale: str
+
+
 class InvitePreviewResponse(TypedDict):
     """``POST /api/invites/preview``, which needs no session."""
 
     userName: str
     displayName: Optional[str]
+
+
+class InviteRequest(TypedDict):
+    """The body of ``POST /api/invites``."""
+
+    userName: str
+    displayName: Optional[str]
+    roleIds: list[str]
+    expiresInHours: int
 
 
 class InviteResponse(TypedDict):
@@ -1038,6 +1135,20 @@ class LicenceTermsAcceptance(TypedDict):
     "When the user agreed, ISO 8601."
 
 
+class LicenceTermsRequest(LicenceTermsAcceptance):
+    """The body of ``POST /api/licence/{spire_id}/{grade_id}/terms``: the acceptance and the key."""
+
+    key: str
+
+
+class LoginRequest(TypedDict):
+    """The body of ``POST /api/auth/login``."""
+
+    username: str
+    password: str
+    rememberMe: bool
+
+
 class MessageBusService(TypedDict):
     """The message bus's own process, from `MessageBusStatsResponse.service`."""
 
@@ -1144,6 +1255,13 @@ class PasswordChangeRequiredResponse(TypedDict):
     """eg. ``"forced"``, for a user created with `requirePasswordChange`."""
 
 
+class PasswordChangeRequest(TypedDict):
+    """The body of ``POST /api/profile/password``."""
+
+    currentPassword: str
+    newPassword: str
+
+
 class PasswordPolicyResponse(TypedDict):
     """``GET /api/auth/password-policy``, which needs no session."""
 
@@ -1190,6 +1308,31 @@ class PortClaimResponse(TypedDict):
     shardId: Optional[str]
     holderName: str
     """eg. ``"the AMP panel"`` or ``"a WireGuard tunnel"``."""
+
+
+class PreferencesChanges(TypedDict, total=False):
+    """The body of ``PATCH /api/users/me/preferences``: any of `PreferencesResponse`'s fields. AMP ignores other names."""
+
+    theme: Optional[str]
+    locale: Optional[str]
+    favouriteAppSlugs: list[str]
+    pinnedShardIds: list[str]
+    notifyOnStateChange: Optional[bool]
+    notifyOnUpdateAvailable: Optional[bool]
+    compactShardHeader: Optional[bool]
+    hideUnroutedShards: Optional[bool]
+    hidePrivatePorts: Optional[bool]
+    fileDetailsWidth: Optional[int]
+    ampExperience: Optional[str]
+    showTutorials: Optional[bool]
+    tutorialPromptDismissed: Optional[bool]
+    tutorialsCompleted: list[str]
+    accessibilityHintsEnabled: Optional[bool]
+    onboardingCompleted: Optional[bool]
+    reducedMotion: Optional[bool]
+    analyticsEnabled: Optional[bool]
+    streamerMode: Optional[bool]
+    timeFormat: Optional[str]
 
 
 class PreferencesResponse(TypedDict):
@@ -1267,6 +1410,13 @@ class ProblemDetailsResponse(TypedDict):
     traceId: str
 
 
+class ProfileRequest(TypedDict):
+    """The body of ``PUT /api/profile``."""
+
+    displayName: Optional[str]
+    email: NotRequired[str]
+
+
 class ProfileResponse(TypedDict):
     """``GET /api/profile``, the session user's own account."""
 
@@ -1290,6 +1440,15 @@ class ProfileSessionResponse(TypedDict):
     userAgent: str
     isCurrent: bool
     "If it's the session this request came from."
+
+
+class PublicationRequest(TypedDict):
+    """The body of ``POST /api/networking/publications``."""
+
+    frontSpireId: str
+    publicPort: int
+    shardId: str
+    portRef: str
 
 
 class PublicationResponse(TypedDict):
@@ -1336,6 +1495,13 @@ class PublicationStatus(TypedDict):
     updatedAt: str
 
 
+class PublicationUpdateRequest(TypedDict):
+    """The body of ``PUT /api/networking/publications/{id}``; a `None` field is left out."""
+
+    enabled: Optional[bool]
+    publicPort: Optional[int]
+
+
 class ReasonErrorResponse(TypedDict):
     """The body of a refused ``POST /api/auth/login/second-factor`` (401), eg. a wrong or already used recovery code."""
 
@@ -1366,6 +1532,14 @@ class RevokedSessionsResponse(TypedDict):
 
     revoked: int
     "How many sessions it ended."
+
+
+class RoleRequest(TypedDict):
+    """The body of ``POST /api/roles`` and ``PUT /api/roles/{id}``."""
+
+    name: str
+    description: str
+    permissions: list[str]
 
 
 class RoleResponse(TypedDict):
@@ -1558,6 +1732,26 @@ class ScheduleStatus(TypedDict):
     refusalAudited: bool
 
 
+# One schedule step, for `ShardScheduleRequest.steps`; the functional form, as one of its keys is `await`, eg.
+#    {"type": "task", "id": <a new UUID>, "taskType": "app.consoleSend", "parameters": {"command": "say hi"},
+#     "await": True, "onSuccess": [], "onFailure": [], "failureOverride": None}
+# The items of `onSuccess` and `onFailure` aren't known yet.
+ScheduleStep = TypedDict(
+    "ScheduleStep",
+    {
+        "type": str,
+        "id": str,
+        "taskType": str,
+        "parameters": dict[str, Any],
+        "await": bool,
+        "onSuccess": list[Any],
+        "onFailure": list[Any],
+        "failureOverride": Optional[Any],
+    },
+    total=False,
+)
+
+
 class ScheduleStepOutcome(TypedDict):
     """How one step of a run went, from `ScheduleExecutionResponse.stepOutcomes`."""
 
@@ -1603,6 +1797,12 @@ class ScheduleTrigger(TypedDict):
     """A `ScheduleCatalogTrigger.id`, eg. ``"player.joined"``."""
 
 
+class SecondFactorRequest(LoginRequest):
+    """The body of ``POST /api/auth/login/second-factor``: a login with one of the account's recovery codes."""
+
+    code: str
+
+
 class SettingAction(TypedDict):
     """A button from `SettingsManifestResponse.actions`, run by ``POST /api/settings/actions/{id}``."""
 
@@ -1634,7 +1834,7 @@ class SettingsManifestResponse(TypedDict):
     """``GET /api/settings/manifest``, every platform setting with its current value."""
 
     specs: list[SettingSpec]
-    values: dict[str, str]
+    values: SettingValues
     """A setting's `fieldName` to its value. Every value is a string, eg. ``"587"``, ``"true"`` or ``"[]"``."""
     secretHasValue: dict[str, bool]
     "A secret setting's `fieldName` to if it holds a value."
@@ -1764,6 +1964,21 @@ class ShardArchiveInfoResponse(TypedDict):
     "In bytes, unpacked."
 
 
+class ShardArchiveRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/files/archive``."""
+
+    paths: list[str]
+    destination: str
+
+
+class ShardCloneRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/clone``."""
+
+    newName: str
+    content: CloneContent
+    targetSpireId: Optional[str]
+
+
 class ShardCloneResponse(TypedDict):
     """``POST /api/shards/{id}/clone``; the copy appears at once, with `installedAt` `None`."""
 
@@ -1790,6 +2005,13 @@ class ShardConsoleHistoryResponse(TypedDict):
     "If older lines exist, see `before_seq`."
 
 
+class ShardConsoleRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/console``."""
+
+    command: str
+    promptReply: bool
+
+
 class ShardCreatedResponse(TypedDict):
     """``POST /api/shards`` (201), the new shard with its first settings and ports."""
 
@@ -1801,6 +2023,18 @@ class ShardCreatedResponse(TypedDict):
     overLicenceLimit: bool
 
 
+class ShardCreateRequest(TypedDict):
+    """The body of ``POST /api/shards``."""
+
+    templateSlug: str
+    displayName: str
+    description: str
+    spireId: str
+    startNow: bool
+    startOnBoot: bool
+    credentialId: NotRequired[str]
+
+
 class ShardCredentialResponse(TypedDict):
     """``GET /api/shards/{id}/credential``, the stored secret a shard uses, eg. a Steam login."""
 
@@ -1808,6 +2042,22 @@ class ShardCredentialResponse(TypedDict):
     credential: Optional[Any]
     "The shape of a set credential isn't known yet."
     usable: list[Any]
+
+
+class ShardCustomPortRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/ports/custom``."""
+
+    name: str
+    protocol: PortProtocol
+    port: int
+
+
+class ShardDetailsRequest(TypedDict):
+    """The body of ``PATCH /api/shards/{id}``; a `None` field is left out."""
+
+    displayName: Optional[str]
+    description: Optional[str]
+    tags: Optional[list[str]]
 
 
 class ShardEndpointResponse(TypedDict):
@@ -1821,6 +2071,14 @@ class ShardEndpointResponse(TypedDict):
     isPrimary: bool
     isPublic: bool
     addresses: list[ShardAddress]
+
+
+class ShardExtractRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/files/extract``."""
+
+    path: str
+    destination: str
+    overwrite: bool
 
 
 class ShardExtractResponse(TypedDict):
@@ -1869,6 +2127,36 @@ class ShardFileResponse(TypedDict):
     size: int
     "In bytes."
     modified: str
+
+
+class ShardInfraChanges(TypedDict, total=False):
+    """The `ShardInfraSettings` fields a user can set, for ``PATCH /api/shards/{id}/infra`` through `ShardModule.update_shard_infra`."""
+
+    startOnBoot: bool
+    autoRestartOnCrash: bool
+    startupOrder: int
+    sleepMode: bool
+    advertisedAddress: str
+    advertisedAddressIncludesPort: bool
+    containerMode: str
+    containerImageOverride: Optional[str]
+    memoryLimitMb: int
+    memoryReservationMb: int
+    memorySwapMb: int
+    cpuLimit: int
+    maxUsersCap: int
+    enableAnalytics: bool
+    userSpecificData: bool
+    minimumSessionTimeForRetention: int
+    enableGeoFiltering: bool
+    blockedCountries: list[str]
+    allowedCountries: list[str]
+    blockUnknownCountries: bool
+    geoFilterKickMessage: str
+    geoFilterKickCommand: str
+    diskLimitMb: int
+    importConfigFilesFromSftp: bool
+    extraEnvironment: dict[str, str]
 
 
 class ShardInfraResponse(TypedDict):
@@ -1963,6 +2251,15 @@ class ShardMetricResponse(TypedDict):
     maxUsers: int
     custom: dict[str, Any]
     listeningPorts: list[int]
+
+
+class ShardMigrationRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/migration/spire``."""
+
+    targetSpireId: str
+    targetDatastoreId: str
+    bringBackups: bool
+    stopIfRunning: bool
 
 
 class ShardMigrationResponse(TypedDict):
@@ -2089,6 +2386,17 @@ class ShardResponse(TypedDict):
     deleted: bool
     "A deleted shard stays until it is purged; most calls on it answer 409."
     deletedAt: Optional[str]
+
+
+class ShardScheduleRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/schedules`` and ``PUT /api/shards/{id}/schedules/{schedule_id}``."""
+
+    name: str
+    description: Optional[str]
+    trigger: ScheduleTrigger
+    steps: list[ScheduleStep]
+    timeout: Optional[str]
+    enabled: bool
 
 
 class ShardScheduleResponse(TypedDict):
@@ -2251,6 +2559,24 @@ class ShardUsage(TypedDict):
     """eg. ``"None"`` or ``"Exceeded"``, against `limitMb` once the disk use is measured."""
 
 
+class SnapshotMetaRequest(TypedDict):
+    """The body of ``PUT /api/shards/{id}/snapshots/{snapshot_id}/meta``."""
+
+    name: str
+    description: str
+    sticky: bool
+
+
+class SnapshotRequest(TypedDict):
+    """The body of ``POST /api/shards/{id}/snapshots``."""
+
+    kind: SnapshotKind
+    content: SnapshotContent
+    name: str
+    description: str
+    sticky: bool
+
+
 class SnapshotResponse(TypedDict):
     """One snapshot (a backup), from `ShardSnapshotsResponse.nodes`; taking or restoring one answers with it too."""
 
@@ -2283,6 +2609,14 @@ class SnapshotResponse(TypedDict):
     totalFiles: int
     datastoreId: str
     zipFileName: str
+
+
+class SnapshotSettingsRequest(TypedDict):
+    """The body of ``PUT /api/shards/{id}/snapshots/settings``."""
+
+    maxBackupSizeMb: int
+    maxTotalStorageMb: int
+    stopWhenNoQuiesce: bool
 
 
 class SnapshotSettingsResponse(TypedDict):
@@ -2351,6 +2685,14 @@ class SpireEnrollmentHostResponse(TypedDict):
     """eg. ``"needsForward"`` on the public address."""
 
 
+class SpireEnrollmentRequest(TypedDict):
+    """The body of ``POST /api/spires/enrollments``."""
+
+    label: str
+    hosts: list[str]
+    expiresInHours: NotRequired[int]
+
+
 class SpireEnrollmentResponse(TypedDict):
     """One join file from ``GET /api/spires/enrollments``, newest first. Approving one answers with it too."""
 
@@ -2384,11 +2726,46 @@ class SpireEnrollmentResponse(TypedDict):
     "The machine that used the join file; `None` until one does."
 
 
+class SpireEnrollmentRevokeRequest(TypedDict):
+    """The body of ``DELETE /api/spires/enrollments/{id}``."""
+
+    reason: str
+
+
 class SpireExpiredPurgeResponse(TypedDict):
     """``POST /api/spires/{id}/purge-expired-shards``, how many deleted shards AMP is purging."""
 
     purging: int
     "A shard deleted but not past its keeping time stays, and isn't purged."
+
+
+class SpireImportItem(TypedDict):
+    """One server in the body of ``POST /api/spires/{id}/import`` and ``POST /api/spires/{id}/import/preflight``.
+
+    Its keys come from the web panel's code.
+    """
+
+    path: str
+    "The server's folder, from `SpireModule.scan_spire_imports`."
+    templateSlug: str
+    "The template to import it as."
+    content: int
+    """What to bring across, bit flags as the web panel's code has them: 1 the game's state, 2 its settings, 4 its
+    network setup, so 7 is all of it."""
+
+
+class SpireImportRequest(TypedDict):
+    """The body of ``POST /api/spires/{id}/import``."""
+
+    items: list[SpireImportItem]
+    enterOtherVolumes: bool
+
+
+class SpireImportScanRequest(TypedDict):
+    """The body of ``POST /api/spires/{id}/import/scan``."""
+
+    roots: list[str]
+    automatic: NotRequired[bool]
 
 
 class SpireImportScanResponse(TypedDict):
@@ -2592,6 +2969,14 @@ class SpireUsageResponse(TypedDict):
     spireId: str
     scannedAt: str
     datastores: list[DatastoreUsage]
+
+
+class SSHKeyRequest(TypedDict):
+    """The body of ``POST /api/profile/sshkeys``."""
+
+    key: str
+    label: str
+    expiresAt: Optional[str]
 
 
 class SSHKeyResponse(TypedDict):
@@ -2924,6 +3309,18 @@ class TemplateVersionSource(TypedDict):
     dependsOn: list[str]
 
 
+# The claims `Session` reads from a token; the functional form, as the keys aren't names.
+TokenClaims = TypedDict(
+    "TokenClaims",
+    {
+        "amp:scope": str,
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": str,
+        "sid": str,
+    },
+    total=False,
+)
+
+
 class TokenResponse(TypedDict):
     """A new session token, from a login, `renew`, ``change-expired-password`` or the first-run admin setup.
 
@@ -3041,6 +3438,18 @@ class UpdateStatusResponse(TypedDict):
     rolledBack: Optional[bool]
 
 
+class UserCreateRequest(TypedDict):
+    """The body of ``POST /api/users``."""
+
+    userName: str
+    password: str
+    displayName: Optional[str]
+    email: str
+    roleIds: list[str]
+    passwordExpires: bool
+    requirePasswordChange: bool
+
+
 class UserResponse(TypedDict):
     """One user from ``GET /api/users``; getting, creating or updating one answers with it too."""
 
@@ -3059,6 +3468,17 @@ class UserResponse(TypedDict):
     lastLoginAt: Optional[str]
 
 
+class UserUpdateRequest(TypedDict):
+    """The body of ``PUT /api/users/{id}``; a `None` field is left out."""
+
+    displayName: Optional[str]
+    email: Optional[str]
+    roleIds: Optional[list[str]]
+    suspended: Optional[bool]
+    passwordExpires: Optional[bool]
+    requirePasswordChange: Optional[bool]
+
+
 class ValidationErrorResponse(TypedDict):
     """A list of refusals, eg. a password the policy rejects (400)."""
 
@@ -3071,10 +3491,18 @@ class WrappedID(TypedDict):
     value: str
 
 
+# The `origin` the audit calls filter on.
+AuditOrigin = Literal["System", "User", "UserFlow", "Scheduled", "Impersonation"]
+# The `min_severity` the audit calls filter on.
+AuditSeverity = Literal["Info", "Warning", "Security"]
+# A credential's `kind`.
+CredentialKind = Literal["SteamCmd", "Smtp", "DiscordWebhook", "ApiKey"]
+# Who may use a credential.
+CredentialVisibility = Literal["Private", "Public"]
 LoginResponse = Union[TokenResponse, PasswordChangeRequiredResponse, PasskeyRequiredResponse]
+# A custom port's protocol; "Both" is TCP and UDP.
+PortProtocol = Literal["TCP", "UDP", "Both"]
 # A query string; a list value repeats its key, so {"shard": ["a", "b"]} is sent as shard=a&shard=b.
 QueryParameters = Mapping[str, Union[str, int, Sequence[str]]]
-# A schedule step; a plain dict, as one of its keys is `await`, eg.
-#    {"type": "task", "id": <a new UUID>, "taskType": "app.consoleSend", "parameters": {"command": "say hi"},
-#     "await": True, "onSuccess": [], "onFailure": [], "failureOverride": None}
-ScheduleStep = dict[str, Any]
+# A settings change: each setting's `fieldName`, from its settings manifest, to the new value as a string.
+SettingValues = dict[str, str]

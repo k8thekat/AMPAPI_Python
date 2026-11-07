@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         FirewallResponse,
         GatewayEligibilityResponse,
         GatewayPreflightResponse,
+        GatewayRequest,
         GatewayResponse,
         HealthStatusResponse,
         HTTPSCheckResponse,
@@ -44,11 +45,15 @@ if TYPE_CHECKING:
         LicenceResponse,
         LicenceStatusResponse,
         LicenceTermsAcceptance,
+        LicenceTermsRequest,
         MessageBusStatsResponse,
         MonitoringThresholdsResponse,
+        PublicationRequest,
         PublicationResponse,
+        PublicationUpdateRequest,
         SettingActionResponse,
         SettingsManifestResponse,
+        SettingValues,
         SystemBusResponse,
         TunnelFrontResponse,
         TunnelResponse,
@@ -100,7 +105,7 @@ class PlatformModule(Base):
             (``"licence.error.termsUnavailable"``), as AMP asks the licensing service before it checks the key.
 
         """
-        data: dict[str, Any] = {**terms, "key": key}
+        data: LicenceTermsRequest = {**terms, "key": key}
         return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
     # TODO: Reword the docstring once AMP refuses an unknown warning ID (U20a).
@@ -246,7 +251,7 @@ class PlatformModule(Base):
             catches neither.
 
         """
-        data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
+        data: GatewayRequest = {"shardId": shard_id, "frontSpireId": front_spire_id}
         result: GatewayResponse = await self._request(method="POST", path="/api/networking/gateways", data=data)
         return self._gateway_enums(gateway=result)
 
@@ -292,7 +297,12 @@ class PlatformModule(Base):
             or the shard has no port named `port_reference` (400, ``"networking.error.portRefMissing"``).
 
         """
-        data: dict[str, Any] = {"frontSpireId": front_spire_id, "publicPort": public_port, "shardId": shard_id, "portRef": port_reference}
+        data: PublicationRequest = {
+            "frontSpireId": front_spire_id,
+            "publicPort": public_port,
+            "shardId": shard_id,
+            "portRef": port_reference,
+        }
         result: PublicationResponse = await self._request(method="POST", path="/api/networking/publications", data=data)
         return self._publication_enums(publication=result)
 
@@ -787,7 +797,7 @@ class PlatformModule(Base):
             What stands in the way of the gateway.
 
         """
-        data: dict[str, Any] = {"shardId": shard_id, "frontSpireId": front_spire_id}
+        data: GatewayRequest = {"shardId": shard_id, "frontSpireId": front_spire_id}
         return await self._request(method="POST", path="/api/networking/gateways/preflight", data=data)
 
     async def query_licence(self, key: str) -> LicenceQueryResponse:
@@ -909,7 +919,7 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/own-proxy", data={"address": address, "apiOnly": api_only})
 
-    async def set_settings(self, values: dict[str, str]) -> None:
+    async def set_settings(self, values: SettingValues) -> None:
         """Change one or more platform settings.
 
         |coro|
@@ -918,7 +928,7 @@ class PlatformModule(Base):
 
         Parameters
         ----------
-        values : dict[:class:`str`, :class:`str`]
+        values : :class:`SettingValues`
             Each setting's `SettingSpec.fieldName` to its new value, a string like the manifest's values,
             eg. ``{"public-address.publicUrl": "https://amp.example.com"}``. A secret setting takes its value here
             too; the manifest then shows it in `secretHasValue`, never the value.
@@ -1027,8 +1037,11 @@ class PlatformModule(Base):
             If there's no such publication (404).
 
         """
-        data: dict[str, Any] = {"enabled": enabled, "publicPort": public_port}
+        data: PublicationUpdateRequest = {"enabled": enabled, "publicPort": public_port}
         # We only send what changes, as the web panel does.
-        data = {key: value for key, value in data.items() if value is not None}
-        result: PublicationResponse = await self._request(method="PUT", path=f"/api/networking/publications/{publication_id}", data=data)
+        result: PublicationResponse = await self._request(
+            method="PUT",
+            path=f"/api/networking/publications/{publication_id}",
+            data=self._without_none(mapping=data),
+        )
         return self._publication_enums(publication=result)

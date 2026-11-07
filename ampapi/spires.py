@@ -27,13 +27,20 @@ from .base import Base
 
 if TYPE_CHECKING:
     from ._types import (
+        DatastoreRequest,
         DatastoreResponse,
         PortClaimResponse,
         SettingsManifestResponse,
+        SettingValues,
         SpireEnrollmentCreatedResponse,
         SpireEnrollmentHostResponse,
+        SpireEnrollmentRequest,
         SpireEnrollmentResponse,
+        SpireEnrollmentRevokeRequest,
         SpireExpiredPurgeResponse,
+        SpireImportItem,
+        SpireImportRequest,
+        SpireImportScanRequest,
         SpireImportScanResponse,
         SpireIPOptionResponse,
         SpirePortResponse,
@@ -302,14 +309,14 @@ class Spire:
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.import_spire_servers`.
-    async def import_servers(self, items: list[dict[str, Any]], *, enter_other_volumes: bool = False) -> Any:
+    async def import_servers(self, items: list[SpireImportItem], *, enter_other_volumes: bool = False) -> Any:
         """Import game servers found by :meth:`scan_imports`, see :meth:`SpireModule.import_spire_servers`.
 
         |coro|
 
         Parameters
         ----------
-        items : list[dict[:class:`str`, Any]]
+        items : list[:class:`SpireImportItem`]
             The servers to import.
         enter_other_volumes : :class:`bool`, optional
             If AMP may go into other volumes for them or not, by default False.
@@ -324,14 +331,14 @@ class Spire:
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.preflight_spire_import`.
-    async def preflight_import(self, items: list[dict[str, Any]]) -> Any:
+    async def preflight_import(self, items: list[SpireImportItem]) -> Any:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 
         |coro|
 
         Parameters
         ----------
-        items : list[dict[:class:`str`, Any]]
+        items : list[:class:`SpireImportItem`]
             The servers to check.
 
         Returns
@@ -426,14 +433,14 @@ class Spire:
         """
         return await self._module.scan_spire_imports(spire_id=self.id, roots=roots, automatic=automatic)
 
-    async def set_settings(self, values: dict[str, str]) -> None:
+    async def set_settings(self, values: SettingValues) -> None:
         """Change some of this spire's settings, see :meth:`SpireModule.set_spire_settings`.
 
         |coro|
 
         Parameters
         ----------
-        values : dict[:class:`str`, :class:`str`]
+        values : :class:`SettingValues`
             Each setting's `fieldName` to its new value, eg. ``{"spire.sftpEnabled": "false"}``.
 
         """
@@ -568,7 +575,7 @@ class SpireModule(Base):
             Every datastore on the spire.
 
         """
-        data: dict[str, Any] = {"name": name, "path": path, "isDefault": is_default, "enabled": enabled}
+        data: DatastoreRequest = {"name": name, "path": path, "isDefault": is_default, "enabled": enabled}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores", data=data)
 
     async def create_spire_enrollment(
@@ -607,7 +614,7 @@ class SpireModule(Base):
             The enrolment (201), with `status` ``"pending"``, and the join file, which AMP sends only here.
 
         """
-        data: dict[str, Any] = {"label": label, "hosts": hosts if hosts is not None else []}
+        data: SpireEnrollmentRequest = {"label": label, "hosts": hosts if hosts is not None else []}
         if expires_in_hours is not None:
             data["expiresInHours"] = expires_in_hours
 
@@ -684,7 +691,7 @@ class SpireModule(Base):
             Why it was revoked, by default None. It's kept as the enrolment's `revokedReason`.
 
         """
-        data: Optional[dict[str, Any]] = {"reason": reason} if reason is not None else None
+        data: Optional[SpireEnrollmentRevokeRequest] = {"reason": reason} if reason is not None else None
         await self._request(method="DELETE", path=f"/api/spires/enrollments/{enrollment_id}", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
@@ -983,7 +990,7 @@ class SpireModule(Base):
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # The web panel reads a `taskId` from it; the rest of the reply isn't known yet.
-    async def import_spire_servers(self, spire_id: str, items: list[dict[str, Any]], *, enter_other_volumes: bool = False) -> Any:
+    async def import_spire_servers(self, spire_id: str, items: list[SpireImportItem], *, enter_other_volumes: bool = False) -> Any:
         """Import game servers from other panels into a spire as shards.
 
         |coro|
@@ -996,7 +1003,7 @@ class SpireModule(Base):
         ----------
         spire_id : :class:`str`
             The spire's ID.
-        items : list[dict[:class:`str`, Any]]
+        items : list[:class:`SpireImportItem`]
             The servers to import, from :meth:`scan_spire_imports`.
         enter_other_volumes : :class:`bool`, optional
             If AMP may go into other volumes for them or not, by default False.
@@ -1007,12 +1014,12 @@ class SpireModule(Base):
             AMP's reply as it came, `None` for an empty one.
 
         """
-        data: dict[str, Any] = {"items": items, "enterOtherVolumes": enter_other_volumes}
+        data: SpireImportRequest = {"items": items, "enterOtherVolumes": enter_other_volumes}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # The web panel reads a `blocked` list from it; the rest of the reply isn't known yet.
-    async def preflight_spire_import(self, spire_id: str, items: list[dict[str, Any]]) -> Any:
+    async def preflight_spire_import(self, spire_id: str, items: list[SpireImportItem]) -> Any:
         """Check game servers can be imported into a spire, before :meth:`import_spire_servers`.
 
         |coro|
@@ -1023,7 +1030,7 @@ class SpireModule(Base):
         ----------
         spire_id : :class:`str`
             The spire's ID.
-        items : list[dict[:class:`str`, Any]]
+        items : list[:class:`SpireImportItem`]
             The servers to check, from :meth:`scan_spire_imports`.
 
         Returns
@@ -1163,13 +1170,13 @@ class SpireModule(Base):
             What AMP found.
 
         """
-        data: dict[str, Any] = {"roots": roots}
+        data: SpireImportScanRequest = {"roots": roots}
         if automatic is True:
             data["automatic"] = True
 
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/scan", data=data)
 
-    async def set_spire_settings(self, spire_id: str, values: dict[str, str]) -> None:
+    async def set_spire_settings(self, spire_id: str, values: SettingValues) -> None:
         """Change some of a spire's settings.
 
         |coro|
@@ -1183,7 +1190,7 @@ class SpireModule(Base):
         ----------
         spire_id : :class:`str`
             The spire's ID.
-        values : dict[:class:`str`, :class:`str`]
+        values : :class:`SettingValues`
             Each setting's `fieldName` from :meth:`get_spire_settings_manifest` to its new value, a string like the
             manifest's values. eg. ``{"spire.publicHost": "amp.example.com"}`` lets the spire front a publication or a
             gateway through it: it reads `isPubliclyRoutable` `True` at once.

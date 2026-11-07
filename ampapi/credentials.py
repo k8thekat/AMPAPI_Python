@@ -21,12 +21,12 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from .base import Base
 
 if TYPE_CHECKING:
-    from ._types import CredentialResponse
+    from ._types import CredentialKind, CredentialRequest, CredentialResponse, CredentialVisibility
 
 __all__ = ("CredentialModule",)
 
@@ -44,12 +44,12 @@ class CredentialModule(Base):
 
     async def create_credential(
         self,
-        kind: str,
+        kind: CredentialKind,
         title: str,
         username: str,
         secret: str,
         *,
-        visibility: Optional[str] = None,
+        visibility: Optional[CredentialVisibility] = None,
     ) -> CredentialResponse:
         """Store a secret for shards to use.
 
@@ -59,7 +59,7 @@ class CredentialModule(Base):
 
         Parameters
         ----------
-        kind : :class:`str`
+        kind : :class:`CredentialKind`
             What it's for: ``"SteamCmd"``, ``"Smtp"``, ``"DiscordWebhook"`` or ``"ApiKey"``.
         title : :class:`str`
             A name for it.
@@ -67,7 +67,7 @@ class CredentialModule(Base):
             The account name that goes with the secret.
         secret : :class:`str`
             The secret itself, eg. a password.
-        visibility : Union[:class:`str`, None], optional
+        visibility : Union[:class:`CredentialVisibility`, None], optional
             ``"Private"`` or ``"Public"``, by default None. Without one AMP makes it ``"Private"``.
 
         Returns
@@ -76,7 +76,7 @@ class CredentialModule(Base):
             The credential, without its secret.
 
         """
-        data: dict[str, Any] = {"kind": kind, "title": title, "username": username, "secret": secret}
+        data: CredentialRequest = {"kind": kind, "title": title, "username": username, "secret": secret}
         if visibility is not None:
             data["visibility"] = visibility
 
@@ -134,7 +134,7 @@ class CredentialModule(Base):
         """
         await self._request(method="PUT", path=f"/api/credentials/{credential_id}/secret", data={"secret": secret})
 
-    async def set_credential_visibility(self, credential_id: str, visibility: str) -> None:
+    async def set_credential_visibility(self, credential_id: str, visibility: CredentialVisibility) -> None:
         """Set who can see and use a credential.
 
         |coro|
@@ -145,7 +145,7 @@ class CredentialModule(Base):
         ----------
         credential_id : :class:`str`
             The credential's ID.
-        visibility : :class:`str`
+        visibility : :class:`CredentialVisibility`
             ``"Private"`` or ``"Public"``.
 
         """

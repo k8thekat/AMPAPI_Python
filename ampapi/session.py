@@ -42,7 +42,18 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from types import TracebackType
 
-    from ._types import CapabilitiesResponse, HubTokenResponse, LoginResponse, PasswordPolicyResponse, QueryParameters, TokenResponse
+    from ._types import (
+        CapabilitiesResponse,
+        ExpiredPasswordRequest,
+        HubTokenResponse,
+        LoginRequest,
+        LoginResponse,
+        PasswordPolicyResponse,
+        QueryParameters,
+        SecondFactorRequest,
+        TokenClaims,
+        TokenResponse,
+    )
 
 __all__ = ("Session",)
 
@@ -99,7 +110,7 @@ class Session:
         self._token: Optional[str] = None
         self._expiration: Optional[datetime] = None
         self._renew_after: Optional[datetime] = None
-        self._claims: dict[str, Any] = {}
+        self._claims: TokenClaims = {}
         self._login_lock: asyncio.Lock = asyncio.Lock()
 
     async def __aenter__(self) -> Self:  # noqa: D105
@@ -145,7 +156,7 @@ class Session:
         self,
         method: str,
         path: str,
-        data: Optional[Union[dict[str, Any], list[Any], bytes]] = None,
+        data: Optional[Union[Mapping[str, Any], list[Any], bytes]] = None,
         *,
         files: Optional[Mapping[str, bytes]] = None,
         parameters: Optional[QueryParameters] = None,
@@ -171,7 +182,7 @@ class Session:
         if use_token is True and self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
 
-        json_body: Optional[Union[dict[str, Any], list[Any]]] = None
+        json_body: Optional[Union[Mapping[str, Any], list[Any]]] = None
         raw_body: Optional[Union[bytes, FormData]] = None
 
         if isinstance(data, bytes):
@@ -279,7 +290,7 @@ class Session:
         self,
         method: str,
         path: str,
-        data: Optional[Union[dict[str, Any], list[Any], bytes]] = None,
+        data: Optional[Union[Mapping[str, Any], list[Any], bytes]] = None,
         *,
         files: Optional[Mapping[str, bytes]] = None,
         parameters: Optional[QueryParameters] = None,
@@ -334,7 +345,7 @@ class Session:
         self,
         method: str,
         path: str,
-        data: Optional[Union[dict[str, Any], list[Any]]] = None,
+        data: Optional[Union[Mapping[str, Any], list[Any]]] = None,
         *,
         parameters: Optional[QueryParameters] = None,
         use_token: bool = True,
@@ -387,7 +398,7 @@ class Session:
 
         """
         path: str = "/api/auth/change-expired-password"
-        data: dict[str, Any] = {"username": self.username, "currentPassword": self._password, "newPassword": new_password}
+        data: ExpiredPasswordRequest = {"username": self.username, "currentPassword": self._password, "newPassword": new_password}
         status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path=path, data=body)
@@ -486,7 +497,7 @@ class Session:
             If AMP answers with any other error status.
 
         """
-        data: dict[str, Any] = {"username": self.username, "password": self._password, "rememberMe": self.remember_me}
+        data: LoginRequest = {"username": self.username, "password": self._password, "rememberMe": self.remember_me}
         status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/login", data=data, use_token=False)
         if status == 401:
             reason: str = body.get("message", "") if _is_json_object(value=body) else ""
@@ -596,7 +607,7 @@ class Session:
 
         """
         path: str = "/api/auth/login/second-factor"
-        data: dict[str, Any] = {"username": self.username, "password": self._password, "code": code, "rememberMe": self.remember_me}
+        data: SecondFactorRequest = {"username": self.username, "password": self._password, "code": code, "rememberMe": self.remember_me}
         status, _authenticate_header, body = await self._send(method="POST", path=path, data=data, use_token=False)
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path=path, data=body)

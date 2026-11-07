@@ -29,20 +29,29 @@ if TYPE_CHECKING:
     from ._types import (
         DeletedUserResponse,
         InviteAcceptedResponse,
+        InviteAcceptRequest,
         InvitePreviewResponse,
+        InviteRequest,
         InviteResponse,
         InviteTokenResponse,
         PasskeyResponse,
+        PasswordChangeRequest,
         PermissionsResponse,
+        PreferencesChanges,
         PreferencesResponse,
+        ProfileRequest,
         ProfileResponse,
         ProfileSessionResponse,
         RecoveryCodesResponse,
         RecoveryCodesStatusResponse,
         RevokedSessionsResponse,
+        RoleRequest,
         RoleResponse,
+        SSHKeyRequest,
         SSHKeyResponse,
+        UserCreateRequest,
         UserResponse,
+        UserUpdateRequest,
     )
 
 __all__ = ("AccountModule",)
@@ -104,7 +113,7 @@ class AccountModule(Base):
             weak (400).
 
         """
-        data: dict[str, Any] = {"token": token, "email": email, "password": password, "displayName": display_name, "locale": locale}
+        data: InviteAcceptRequest = {"token": token, "email": email, "password": password, "displayName": display_name, "locale": locale}
         return await self._request(method="POST", path="/api/invites/accept", data=data, use_token=False)
 
     async def add_favourite(self, template_slug: str) -> PreferencesResponse:
@@ -158,7 +167,7 @@ class AccountModule(Base):
             (400, ``"sshKeys.error.unsupported"``).
 
         """
-        data: dict[str, Any] = {"key": key, "label": label, "expiresAt": expires_at}
+        data: SSHKeyRequest = {"key": key, "label": label, "expiresAt": expires_at}
         return await self._request(method="POST", path="/api/profile/sshkeys", data=data)
 
     async def change_password(self, current_password: str, new_password: str) -> None:
@@ -184,7 +193,7 @@ class AccountModule(Base):
             (400, ``"profile.error.weakPassword"``, naming only the first rule it fails).
 
         """
-        data: dict[str, Any] = {"currentPassword": current_password, "newPassword": new_password}
+        data: PasswordChangeRequest = {"currentPassword": current_password, "newPassword": new_password}
         await self._request(method="POST", path="/api/profile/password", data=data)
         self.session._password = new_password  # pyright: ignore[reportPrivateUsage]
 
@@ -225,7 +234,7 @@ class AccountModule(Base):
             `user_name` (409).
 
         """
-        data: dict[str, Any] = {"userName": user_name, "displayName": display_name, "roleIds": role_ids, "expiresInHours": expires_in_hours}
+        data: InviteRequest = {"userName": user_name, "displayName": display_name, "roleIds": role_ids, "expiresInHours": expires_in_hours}
         return await self._request(method="POST", path="/api/invites", data=data)
 
     async def create_role(self, name: str, permissions: list[str], *, description: str = "") -> RoleResponse:
@@ -251,7 +260,7 @@ class AccountModule(Base):
             The new role.
 
         """
-        data: dict[str, Any] = {"name": name, "description": description, "permissions": permissions}
+        data: RoleRequest = {"name": name, "description": description, "permissions": permissions}
         return await self._request(method="POST", path="/api/roles", data=data)
 
     async def create_user(
@@ -300,7 +309,7 @@ class AccountModule(Base):
             If the username is taken, or the password is too weak (400, with every rule it fails in `errors`).
 
         """
-        data: dict[str, Any] = {
+        data: UserCreateRequest = {
             "userName": user_name,
             "password": password,
             "displayName": display_name,
@@ -756,7 +765,7 @@ class AccountModule(Base):
         """
         return await self._request(method="PATCH", path=f"/api/profile/passkeys/{passkey_id}", data={"name": name})
 
-    async def update_preferences(self, values: dict[str, Any]) -> PreferencesResponse:
+    async def update_preferences(self, values: PreferencesChanges) -> PreferencesResponse:
         """Change some of the logged in user's web panel preferences.
 
         |coro|
@@ -765,7 +774,7 @@ class AccountModule(Base):
 
         Parameters
         ----------
-        values : dict[:class:`str`, Any]
+        values : :class:`PreferencesChanges`
             The preferences to change, named as in :class:`PreferencesResponse`, eg. ``{"theme": "dark"}``.
             AMP ignores a name it doesn't know.
 
@@ -801,7 +810,7 @@ class AccountModule(Base):
             The user's account.
 
         """
-        data: dict[str, Any] = {"displayName": display_name}
+        data: ProfileRequest = {"displayName": display_name}
         if email is not None:
             data["email"] = email
 
@@ -831,7 +840,7 @@ class AccountModule(Base):
             The role.
 
         """
-        data: dict[str, Any] = {"name": name, "description": description, "permissions": permissions}
+        data: RoleRequest = {"name": name, "description": description, "permissions": permissions}
         return await self._request(method="PUT", path=f"/api/roles/{role_id}", data=data)
 
     async def update_user(
@@ -875,7 +884,7 @@ class AccountModule(Base):
             The user.
 
         """
-        data: dict[str, Any] = {
+        data: UserUpdateRequest = {
             "displayName": display_name,
             "email": email,
             "roleIds": role_ids,
@@ -884,5 +893,4 @@ class AccountModule(Base):
             "requirePasswordChange": require_password_change,
         }
         # We only send what changes, AMP keeps a value that's left out.
-        data = {key: value for key, value in data.items() if value is not None}
-        return await self._request(method="PUT", path=f"/api/users/{user_id}", data=data)
+        return await self._request(method="PUT", path=f"/api/users/{user_id}", data=self._without_none(mapping=data))

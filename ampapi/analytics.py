@@ -34,8 +34,10 @@ if TYPE_CHECKING:
         AnalyticsUserSessionsResponse,
         AnalyticsUsersResponse,
         AuditFacetsResponse,
+        AuditOrigin,
         AuditPageResponse,
         AuditRootsPageResponse,
+        AuditSeverity,
         AuditTreeResponse,
     )
 
@@ -262,7 +264,7 @@ class AnalyticsModule(Base):
             "demo": "true" if demo is True else None,
         }
         # We only send the filters that are set, as the web panel does.
-        parameters: dict[str, Union[str, int, list[str]]] = {key: value for key, value in filters.items() if value is not None}
+        parameters: dict[str, Union[str, int, list[str]]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
 
     # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
@@ -347,7 +349,7 @@ class AnalyticsModule(Base):
 
         """
         filters: dict[str, Optional[str]] = {"from": from_time, "to": to_time, "demo": "true" if demo is True else None}
-        parameters: dict[str, str] = {key: value for key, value in filters.items() if value is not None}
+        parameters: dict[str, str] = self._without_none(mapping=filters)
         return await self._request(method="GET", path=f"/api/analytics/sessions/users/{user_key}", parameters=parameters)
 
     async def get_analytics_users(
@@ -379,7 +381,7 @@ class AnalyticsModule(Base):
 
         """
         filters: dict[str, Optional[Union[str, int]]] = {"q": search, "limit": limit, "demo": "true" if demo is True else None}
-        parameters: dict[str, Union[str, int]] = {key: value for key, value in filters.items() if value is not None}
+        parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path="/api/analytics/users", parameters=parameters)
 
     async def get_audit_events(
@@ -387,8 +389,8 @@ class AnalyticsModule(Base):
         *,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        origin: Optional[str] = None,
-        min_severity: Optional[str] = None,
+        origin: Optional[AuditOrigin] = None,
+        min_severity: Optional[AuditSeverity] = None,
         target_type: Optional[str] = None,
         target_id: Optional[str] = None,
         search: Optional[str] = None,
@@ -414,9 +416,9 @@ class AnalyticsModule(Base):
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
             See :meth:`get_audit_facets` for the actions logged so far.
-        origin : Union[:class:`str`, None], optional
+        origin : Union[:class:`AuditOrigin`, None], optional
             ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-        min_severity : Union[:class:`str`, None], optional
+        min_severity : Union[:class:`AuditSeverity`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of thing, eg. ``"Shard"``, by default None.
@@ -456,7 +458,7 @@ class AnalyticsModule(Base):
             "sort": sort,
         }
         # We only send the filters that are set, as the web panel does.
-        parameters: dict[str, Union[str, int]] = {key: value for key, value in filters.items() if value is not None}
+        parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path="/api/audit", parameters=parameters)
 
     async def get_audit_facets(self) -> AuditFacetsResponse:
@@ -479,8 +481,8 @@ class AnalyticsModule(Base):
         *,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        origin: Optional[str] = None,
-        min_severity: Optional[str] = None,
+        origin: Optional[AuditOrigin] = None,
+        min_severity: Optional[AuditSeverity] = None,
         target_type: Optional[str] = None,
         target_id: Optional[str] = None,
         search: Optional[str] = None,
@@ -504,9 +506,9 @@ class AnalyticsModule(Base):
             Only events by this user's ID, by default None.
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
-        origin : Union[:class:`str`, None], optional
+        origin : Union[:class:`AuditOrigin`, None], optional
             ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-        min_severity : Union[:class:`str`, None], optional
+        min_severity : Union[:class:`AuditSeverity`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of thing, eg. ``"Shard"``, by default None.
@@ -545,7 +547,7 @@ class AnalyticsModule(Base):
             "pageSize": page_size,
             "sort": sort,
         }
-        parameters: dict[str, Union[str, int]] = {key: value for key, value in filters.items() if value is not None}
+        parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path="/api/audit/roots", parameters=parameters)
 
     async def get_audit_tree(self, correlation_id: str) -> AuditTreeResponse:
