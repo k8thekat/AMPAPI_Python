@@ -456,14 +456,24 @@ class ShardMigration(AMPObject):
 # TODO: Check against the hub captures and `ShardModule.get_shard_users` once a player joins (#3-47.2.1).
 # The fields are the web panel's: it reads `id`, `name` and `sessionId`.
 class ShardPlayer(AMPObject):
-    """A player on a shard: each of the shard hub's `UserRoster` list, and its `UserJoined` and `UserLeft` events.
+    """A player on a shard: each of ``GET /api/shards/{id}/users``, the shard hub's `UserRoster` list, and its
+    `UserJoined` and `UserLeft` events.
 
     .. versionadded:: 6.0.0
     """
 
     id: str
+    "The player's ID in the game, eg. a Minecraft UUID; `id_kind` says which."
     name: str
     session_id: str
+    "Empty on `minecraft-java`."
+    endpoint: str
+    """The address and port the player connected from, as the shard sees it. Under rootless Podman that is the
+    container network's address, eg. ``"10.0.2.100:58590"``, not the player's own."""
+    joined_at: str
+    "When the player joined, an ISO 8601 time."
+    id_kind: str
+    """What `id` is, eg. ``"minecraft-uuid"``."""
 
 
 class ShardSnapshots(AMPObject):

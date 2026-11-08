@@ -27,7 +27,7 @@ from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
 from .base import Base
 from .hubs import PanelHub, ShardHub
-from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardSnapshots, ShardStatus, Snapshot
+from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardPlayer, ShardSnapshots, ShardStatus, Snapshot
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -581,9 +581,7 @@ class Shard(ShardHub):
         """
         return await self._module.get_shard_state(shard_id=self.id)
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # It comes from `ShardModule.get_shard_users`.
-    async def get_users(self) -> list[dict[str, Any]]:
+    async def get_users(self) -> list[ShardPlayer]:
         """Get the players on this shard, see :meth:`ShardModule.get_shard_users`.
 
         |coro|
@@ -2344,9 +2342,7 @@ class ShardModule(Base):
         result: dict[str, Any] = await self._request(method="GET", path=f"/api/shards/{shard_id}/state")
         return ShardStatus(data=result)
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # The item shape isn't known yet; the web panel reads `id`, `name` and `sessionId` from each.
-    async def get_shard_users(self, shard_id: str) -> list[dict[str, Any]]:
+    async def get_shard_users(self, shard_id: str) -> list[ShardPlayer]:
         """Get the players on a shard.
 
         |coro|
@@ -2360,11 +2356,12 @@ class ShardModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The players.
+        list[:class:`ShardPlayer`]
+            The players online, the same objects the shard hub's `players` event carries.
 
         """
-        return await self._request(method="GET", path=f"/api/shards/{shard_id}/users")
+        result: list[dict[str, Any]] = await self._request(method="GET", path=f"/api/shards/{shard_id}/users")
+        return [ShardPlayer(data=entry) for entry in result]
 
     async def import_shard_config(self, shard_id: str, path: str, *, content: Optional[str] = None) -> ShardConfigImportResponse:
         """Read a shard's settings back from one of its config files.
