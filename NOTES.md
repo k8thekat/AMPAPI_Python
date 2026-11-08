@@ -40,7 +40,8 @@ The worktree carries its own copies, all gitignored, so nothing reaches back int
   keeps only the VM lifecycle (status, start, stop, create, remove, refresh-urls); its AMP2 steps are gone (Kat), so
   the AMP2 pair is still run from the Refactor checkout.
 - `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), the live checks `session_check.py` (`Session`),
-  `panel_check.py` (the modules), `shard_check.py` (shards and templates, on vm3's test shard), `move_check.py`
+  `panel_check.py` (the modules), `shard_check.py` (shards and templates, on vm3's test shard), `hub_check.py` (live
+  events, on vm3, with a throwaway second shard), `move_check.py`
   (clones and moves between vm4's and vm5's spires) and `datastore_check.py` (a move between datastores on vm4),
   `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM), `join_spire.py` (a new VM joining a panel
   as a spire) and `hook_check.py` (pyright as the end-of-turn hook runs it). `AMP3_VM=vm3|vm4|vm5` picks the panel for all of them.
@@ -58,7 +59,9 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   and the rest), composed into `Panel`, the way 5.x composes `Controller`.
 - A module method carries the resource noun and takes IDs (`panel.start_shard(shard_id)`); a `Shard` or `Spire`
   object's method drops both (`shard.start()`) and calls the module method, so no name means two things.
-- Calls return TypedDicts. Only `Shard` and `Spire` (and later a task) are classes. There is no `format_data`.
+- Calls return TypedDicts, except where a reply has the same shape as a hub event: then it's the event's object
+  (`objects.py`, an `AMPObject` with snake_case attributes and the raw dict on `.data`), eg. `get_shard_state` gives
+  a `ShardStatus` (Kat, 2026-11-07). `Shard` and `Spire` are classes too. There is no `format_data`.
 - `Base._request` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
   4, 8, 8 seconds, as the web panel does), and every module call goes through `Session`'s single relogin on a dead
   session.
@@ -79,8 +82,34 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   chunked upload in 8 MiB chunks.
 - `set_shard_infra` refuses settings with a field missing before sending, as AMP resets any field a `PATCH /infra`
   leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
-- `.scripts/amp3/session_check.py`, `panel_check.py`, `shard_check.py`, `move_check.py` and `datastore_check.py` are
-  the live checks; each removes what it makes.
+- `.scripts/amp3/session_check.py`, `panel_check.py`, `shard_check.py`, `move_check.py`, `datastore_check.py` and
+  `hub_check.py` are the live checks; each removes what it makes.
+
+## Live events (#3-47.2)
+
+The design is Kat's (`.local_data/plans/prompt.md`, reviewed in `.local_data/plans/amp3_exploration/hub_design_review.md`).
+What the endpoints do, checked live on vm3 and vm4:
+- `POST /api/auth/hub-token` gives a 60 second token per socket, checked only when a socket opens.
+- Three WebSocket hubs: `/hubs/shard` (one subscribe message per shard; one socket carries any number of shards),
+  `/hubs/spire` (the network, plus one per spire) and `/hubs/tasks` (no subscribe). There are 14 event types.
+- **State reaches every shard socket for every shard**, even one subscribed to nothing, and unsubscribing doesn't stop
+  it. **A console line names no shard**, so a socket with several shards mixes their consoles.
+
+How the library uses that (`hubs.py`):
+- `Hub` holds the `Session` and does the socket work; `Panel`, `Spire` and `Shard` build on `PanelHub`, `SpireHub` and
+  `ShardHub`. Listeners are class-level methods (`@ShardHub.listener(name="console")`, called `(self, data)`) or
+  instance-level functions (`obj.listen(name)`, `add_listener`, `remove_listener`, called `(obj, data)`).
+- The `Panel` holds three shared sockets, one per hub. A `ShardHub` with a `console` listener also opens its own shard
+  socket, so its console lines are its own; above the shard level console lines arrive unattributed.
+- `add_subscribers` / `remove_subscribers` take shards, spires and IDs mixed. `None` means every one, following new
+  ones; an empty list raises `ValueError`; removing a few while "every one" is on leaves a plain list of the rest.
+- Every state frame goes through one `_apply_state`, which updates an object only if its `revision` is newer, so copies
+  from other sockets never apply twice. Listener delivery keeps its own seen-set.
+- `auto_state` (an init parameter and a read-only property) keeps an object's `state` current. Every `get_*` call and
+  every `Shard` / `Spire` made by hand takes the panel's value, and the panel's defaults to `False`. A setter waits for
+  Kat.
+- A `shard_class` with class-level listeners turns every shard `get_shards()` returns into a listener, with its own
+  console socket if it listens to `console`. `hub_check.py` polls through a plain `Panel` for that reason.
 
 ## A second spire joining a panel (#3-47.15)
 
