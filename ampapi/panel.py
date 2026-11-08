@@ -72,8 +72,8 @@ class Panel(
     spire_class : type[:class:`Spire`], optional
         The class `get_spire` and `get_spires` make, by default :class:`Spire`.
     auto_state : :class:`bool`, optional
-        The `auto_state` a shard or spire object gets when no call names one, by default True. `get_shard`,
-        `get_shards`, `get_spire` and `get_spires` each name their own, by default False.
+        The `auto_state` a shard or spire object gets when it's made with `None`, by default False. That's the default
+        of `get_shard`, `get_shards`, `get_spire`, `get_spires`, and of a :class:`Shard` or :class:`Spire` made by hand.
 
     """
 
@@ -83,22 +83,14 @@ class Panel(
         *,
         shard_class: type[Shard] = Shard,
         spire_class: type[Spire] = Spire,
-        auto_state: bool = True,
+        auto_state: bool = False,
     ) -> None:
-        super().__init__(session=session)
+        super().__init__(session=session, auto_state=auto_state)
         self.shard_class = shard_class
         self.spire_class = spire_class
-        self._auto_state: bool = auto_state
 
     async def __aenter__(self) -> Self:  # noqa: D105
         return self
-
-    # TODO: Keep or drop the panel's `auto_state`, and a setter for it, waits for Kat (#3-47.2.10).
-    # Every `get_shard(s)` / `get_spire(s)` call now names its own, so this default reaches no public call.
-    @property
-    def auto_state(self) -> bool:
-        """The `auto_state` a shard or spire object gets when no call names one."""
-        return self._auto_state
 
     async def __aexit__(  # noqa: D105
         self,
@@ -129,7 +121,7 @@ class Panel(
                 existing.data = data
                 existing.display_name = data["displayName"]
                 return existing
-        return self.shard_class(module=self, data=data, auto_state=self.auto_state if auto_state is None else auto_state)
+        return super()._make_shard(data=data, auto_state=auto_state)
 
     def _make_spire(self, data: SpireResponse, auto_state: Optional[bool] = None) -> Spire:
         """The spire object we already keep for `data`, brought up to date, so a spire listens through one object only.
@@ -141,7 +133,7 @@ class Panel(
                 existing.data = data
                 existing.display_name = data["displayName"]
                 return existing
-        return self.spire_class(module=self, data=data, auto_state=self.auto_state if auto_state is None else auto_state)
+        return super()._make_spire(data=data, auto_state=auto_state)
 
     async def _list_records(self) -> tuple[list[ShardResponse], list[SpireResponse]]:
         """The shard and spire lists the hub routing works from, as dicts, so no listener objects are made for them."""

@@ -80,9 +80,9 @@ class Spire(SpireHub):
         The module (usually the :class:`Panel`) the calls go through.
     data : :class:`SpireResponse`
         The spire as AMP sent it.
-    auto_state : :class:`bool`, optional
-        If `state` follows the spire's state events from the hub or not, by default True; read back with the property.
-        One from `get_spire` or `get_spires` gets that call's `auto_state`, by default False.
+    auto_state : Union[:class:`bool`, None], optional
+        If `state` follows the spire's state events from the hub or not; read back with the property. By default None
+        for the panel's `auto_state` (False unless the panel was made with True), or False with no panel.
 
     Attributes
     ----------
@@ -100,7 +100,7 @@ class Spire(SpireHub):
     id: str
     _module: SpireModule
 
-    def __init__(self, module: SpireModule, data: SpireResponse, *, auto_state: bool = True) -> None:  # noqa: D107
+    def __init__(self, module: SpireModule, data: SpireResponse, *, auto_state: Optional[bool] = None) -> None:  # noqa: D107
         super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
         self._module = module
         self.data = data
@@ -734,7 +734,7 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
 
-    async def get_spire(self, spire_id: str, *, auto_state: bool = False) -> Spire:
+    async def get_spire(self, spire_id: str, *, auto_state: Optional[bool] = None) -> Spire:
         """Get one spire.
 
         |coro|
@@ -745,9 +745,9 @@ class SpireModule(Base):
         ----------
         spire_id : :class:`str`
             The spire's ID.
-        auto_state : :class:`bool`, optional
-            The `auto_state` a new spire object is made with, by default False, so the call opens no hub socket.
-            A spire the panel already holds an object for keeps that object's own `auto_state`.
+        auto_state : Union[:class:`bool`, None], optional
+            The `auto_state` a new spire object is made with, by default None for the panel's (False unless the panel
+            was made with True). A spire the panel already holds an object for keeps that object's own `auto_state`.
 
         Returns
         -------
@@ -758,7 +758,7 @@ class SpireModule(Base):
         result: SpireResponse = await self._request(method="GET", path=f"/api/spires/{spire_id}")
         return self._make_spire(data=result, auto_state=auto_state)
 
-    async def get_spires(self, *, auto_state: bool = False) -> list[Spire]:
+    async def get_spires(self, *, auto_state: Optional[bool] = None) -> list[Spire]:
         """Get every spire the logged in user can see.
 
         |coro|
@@ -767,9 +767,9 @@ class SpireModule(Base):
 
         Parameters
         ----------
-        auto_state : :class:`bool`, optional
-            The `auto_state` each new spire object is made with, by default False, so a listing opens no hub socket.
-            A spire the panel already holds an object for keeps that object's own `auto_state`.
+        auto_state : Union[:class:`bool`, None], optional
+            The `auto_state` each new spire object is made with, by default None for the panel's (False unless the
+            panel was made with True). A spire the panel already holds an object for keeps that object's own.
 
         Returns
         -------
@@ -783,9 +783,9 @@ class SpireModule(Base):
     def _make_spire(self, data: SpireResponse, auto_state: Optional[bool] = None) -> Spire:
         """A `spire_class` object for `data`; `Panel` hands back the one it already keeps for that spire instead.
 
-        `auto_state` is `None` for the panel's own default, which is True without a panel.
+        `auto_state` is `None` for the panel's, or False with no panel.
         """
-        return self.spire_class(module=self, data=data, auto_state=True if auto_state is None else auto_state)
+        return self.spire_class(module=self, data=data, auto_state=auto_state)
 
     async def get_spire_datastores(self, spire_id: str) -> list[DatastoreResponse]:
         """Get a spire's datastores, the folders shards are kept in.

@@ -130,6 +130,13 @@ SHARD_TARGETS: dict[str, tuple[str, int, type[AMPObject], Optional[int]]] = {
 _MARKED: dict[Callable[..., Any], str] = {}
 
 
+def _auto_state_for(panel: Optional[PanelHub], auto_state: Optional[bool]) -> bool:
+    """`auto_state` as given; for `None`, the panel's, or False with no panel."""
+    if auto_state is not None:
+        return auto_state
+    return panel.auto_state if panel is not None else False
+
+
 def _subscriber_items(
     entries: Union[Sequence[Union[ShardHub, SpireHub, str]], ShardHub, SpireHub, str],
 ) -> Sequence[Union[ShardHub, SpireHub, str]]:
@@ -683,15 +690,20 @@ class Hub:
         Parameters
         ----------
         handler : Callable[[Any, Any], Awaitable[None]]
-            The coroutine function that was added.
+            The coroutine function that was added, or one equal to it, eg. a fresh `self.on_x` for a bound method.
         name : :class:`HubEvent`
             The event it was added for.
 
         """
-        self._handlers[name] = [entry for entry in self._handlers.get(name, []) if entry is not handler]
-        worker: Optional[_Worker] = self._workers.pop(f"{name}:{id(handler)}", None)
-        if worker is not None:
-            worker.task.cancel()
+        # `==`, not `is`: each `self.on_x` makes a new bound method, equal to the one added but never the same object.
+        # A worker is keyed by the stored handler, so it's found through that one.
+        removed: list[Callable[[Any, Any], Awaitable[None]]] = [entry for entry in self._handlers.get(name, []) if entry == handler]
+        self._handlers[name] = [entry for entry in self._handlers.get(name, []) if entry != handler]
+        for entry in removed:
+            worker: Optional[_Worker] = self._workers.pop(f"{name}:{id(entry)}", None)
+            if worker is not None:
+                worker.task.cancel()
+
         self._listeners_changed()
 
     def _add_handler(self, handler: Callable[[Any, Any], Awaitable[None]], name: HubEvent) -> None:
@@ -714,7 +726,8 @@ class Hub:
             self._queue(key=name, handler=getattr(self, name), event=event, data=data)
 
         for handler in self._handlers.get(event, ()):
-            # A plain function gets this object first, as a method gets `self`.
+            # A plain function gets this object first, as a method gets `self`. The stored handler is held in
+            # `_handlers`, so its `id` stays the same until `remove_listener` drops it.
             self._queue(key=f"{event}:{id(handler)}", handler=functools.partial(handler, self), event=event, data=data)
 
     def _queue(self, key: str, handler: Callable[[Any], Awaitable[None]], event: str, data: Any) -> None:
@@ -769,8 +782,9 @@ class ShardHub(Hub):
         The session the hub sockets log in through.
     panel : Union[:class:`PanelHub`, None]
         The panel that routes this shard's events, `None` for an object made without one.
-    auto_state : :class:`bool`, optional
-        If `state` follows the shard's state events or not, by default True.
+    auto_state : Union[:class:`bool`, None], optional
+        If `state` follows the shard's state events or not, by default None for the panel's `auto_state`, or False
+        with no panel.
 
     Attributes
     ----------
@@ -783,11 +797,11 @@ class ShardHub(Hub):
     id: str
     data: ShardResponse
 
-    def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: bool = True) -> None:  # noqa: D107
+    def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: Optional[bool] = None) -> None:  # noqa: D107
         super().__init__(session=session)
         self._panel: Optional[PanelHub] = panel
         self._console: Optional[HubConnection] = None
-        self._auto_state: bool = auto_state
+        self._auto_state: bool = _auto_state_for(panel=panel, auto_state=auto_state)
         self.state: Optional[ShardStatus] = None
 
     # TODO: A setter, so `auto_state` can be switched after the object is made, waits for Kat (#3-47.2.8).
@@ -842,8 +856,9 @@ class SpireHub(Hub):
         The session the hub sockets log in through.
     panel : Union[:class:`PanelHub`, None]
         The panel that routes this spire's events, `None` for an object made without one.
-    auto_state : :class:`bool`, optional
-        If `state` follows the spire's state events or not, by default True.
+    auto_state : Union[:class:`bool`, None], optional
+        If `state` follows the spire's state events or not, by default None for the panel's `auto_state`, or False
+        with no panel.
 
     Attributes
     ----------
@@ -856,14 +871,13 @@ class SpireHub(Hub):
     id: str
     data: SpireResponse
 
-    def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: bool = True) -> None:  # noqa: D107
+    def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: Optional[bool] = None) -> None:  # noqa: D107
         super().__init__(session=session)
         self._panel: Optional[PanelHub] = panel
-        # `add_subscribers()` with no list: every shard on this spire, less the ones removed by name since.
+        # `add_subscribers()` with no list: every shard on this spire, following new ones.
         self._subscribe_all: bool = False
         self._subscribed: set[str] = set()
-        self._excluded: set[str] = set()
-        self._auto_state: bool = auto_state
+        self._auto_state: bool = _auto_state_for(panel=panel, auto_state=auto_state)
         self.state: Optional[SpireStatus] = None
 
     # TODO: A setter, so `auto_state` can be switched after the object is made, waits for Kat (#3-47.2.8).
@@ -892,11 +906,8 @@ class SpireHub(Hub):
         """
         if subscribers is None:
             self._subscribe_all = True
-            self._excluded.clear()
         else:
-            shard_ids: set[str] = await self._shard_ids(subscribers=subscribers)
-            self._subscribed.update(shard_ids)
-            self._excluded.difference_update(shard_ids)
+            self._subscribed.update(await self._shard_ids(subscribers=subscribers))
         if self._panel is not None:
             await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
 
@@ -909,7 +920,8 @@ class SpireHub(Hub):
         ----------
         subscribers : Union[Sequence[Union[:class:`Shard`, :class:`str`]], None], optional
             The shards, as objects or IDs, mixed; a lone one is taken as a list of one. While every shard is subscribed,
-            these are left out of it. By default None, for every subscriber, which also ends "every shard".
+            this turns that into the shards on this spire now, less these, and new ones aren't followed from then on.
+            By default None, for every subscriber, which also ends "every shard".
 
         Raises
         ------
@@ -920,12 +932,13 @@ class SpireHub(Hub):
         if subscribers is None:
             self._subscribe_all = False
             self._subscribed.clear()
-            self._excluded.clear()
         else:
             shard_ids: set[str] = await self._shard_ids(subscribers=subscribers)
+            if self._subscribe_all is True and self._panel is not None:
+                self._subscribe_all = False
+                current_shards, _current_spires = await self._panel._current_ids(spire_id=self.id)  # pyright: ignore[reportPrivateUsage]
+                self._subscribed.update(current_shards)
             self._subscribed.difference_update(shard_ids)
-            if self._subscribe_all is True:
-                self._excluded.update(shard_ids)
         if self._panel is not None:
             await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
 
@@ -956,7 +969,7 @@ class SpireHub(Hub):
 
     def _covers(self, shard_id: str, spire_id: Optional[str]) -> bool:
         """If this spire subscribes `shard_id`, which lives on `spire_id`."""
-        return shard_id not in self._excluded and (shard_id in self._subscribed or (self._subscribe_all is True and spire_id == self.id))
+        return shard_id in self._subscribed or (self._subscribe_all is True and spire_id == self.id)
 
 
 class PanelHub(Hub):
@@ -982,6 +995,8 @@ class PanelHub(Hub):
     ----------
     session : :class:`Session`
         The session the hub sockets log in through.
+    auto_state : :class:`bool`, optional
+        The `auto_state` a shard or spire object gets when it's made with `None`, by default False.
 
     """
 
@@ -991,16 +1006,15 @@ class PanelHub(Hub):
     # How many `(shard_id, revision)` pairs the state seen-set keeps.
     _seen_kept: ClassVar[int] = 2048
 
-    def __init__(self, session: Session) -> None:  # noqa: D107
+    def __init__(self, session: Session, *, auto_state: bool = False) -> None:  # noqa: D107
         super().__init__(session=session)
+        self._auto_state: bool = auto_state
         self._listening: bool = False
         self._sync_pending: bool = False
-        # `add_subscribers()` with no list: every shard and spire, less the ones removed by name since.
+        # `add_subscribers()` with no list: every shard and spire, following new ones.
         self._subscribe_all: bool = False
         self._subscribed_shards: set[str] = set()
         self._subscribed_spires: set[str] = set()
-        self._excluded_shards: set[str] = set()
-        self._excluded_spires: set[str] = set()
         self._shard_records: dict[str, ShardResponse] = {}
         self._spire_records: dict[str, SpireResponse] = {}
         self._shard_objects: dict[str, weakref.WeakSet[ShardHub]] = {}
@@ -1011,6 +1025,13 @@ class PanelHub(Hub):
         self._refresh_wanted: asyncio.Event = asyncio.Event()
         self._sync_lock: asyncio.Lock = asyncio.Lock()
         self._background: set[asyncio.Task[None]] = set()
+
+    # TODO: A setter, so the panel's `auto_state` can be switched after it's made, waits for Kat (#3-47.2.8).
+    # It would change only the objects made after it.
+    @property
+    def auto_state(self) -> bool:
+        """The `auto_state` a shard or spire object gets when it's made with `None`."""
+        return self._auto_state
 
     @property
     def listening(self) -> bool:
@@ -1043,14 +1064,10 @@ class PanelHub(Hub):
         """
         if subscribers is None:
             self._subscribe_all = True
-            self._excluded_shards.clear()
-            self._excluded_spires.clear()
         else:
             shard_ids, spire_ids = await self._sort_subscribers(items=_subscriber_items(entries=subscribers))
             self._subscribed_shards.update(shard_ids)
             self._subscribed_spires.update(spire_ids)
-            self._excluded_shards.difference_update(shard_ids)
-            self._excluded_spires.difference_update(spire_ids)
 
         await self._sync_sockets()
 
@@ -1063,7 +1080,8 @@ class PanelHub(Hub):
         ----------
         subscribers : Union[Sequence[Union[:class:`Shard`, :class:`Spire`, :class:`str`]], None], optional
             The shards and spires, as objects or IDs, mixed; a lone one is taken as a list of one. While every one is
-            subscribed, these are left out of it. By default None, for every subscriber, which also ends "every one".
+            subscribed, this turns that into the shards and spires there are now, less these, and new ones aren't
+            followed from then on. By default None, for every subscriber, which also ends "every one".
 
         Raises
         ------
@@ -1075,15 +1093,16 @@ class PanelHub(Hub):
             self._subscribe_all = False
             self._subscribed_shards.clear()
             self._subscribed_spires.clear()
-            self._excluded_shards.clear()
-            self._excluded_spires.clear()
         else:
             shard_ids, spire_ids = await self._sort_subscribers(items=_subscriber_items(entries=subscribers))
+            if self._subscribe_all is True:
+                self._subscribe_all = False
+                current_shards, current_spires = await self._current_ids()
+                self._subscribed_shards.update(current_shards)
+                self._subscribed_spires.update(current_spires)
+
             self._subscribed_shards.difference_update(shard_ids)
             self._subscribed_spires.difference_update(spire_ids)
-            if self._subscribe_all is True:
-                self._excluded_shards.update(shard_ids)
-                self._excluded_spires.update(spire_ids)
 
         await self._sync_sockets()
 
@@ -1113,6 +1132,18 @@ class PanelHub(Hub):
 
         return shard_ids, spire_ids
 
+    async def _current_ids(self, spire_id: Optional[str] = None) -> tuple[set[str], set[str]]:
+        """The shards and spires there are now, from a fresh fetch of the lists; with `spire_id`, the shards on it.
+
+        "Every one" turns into these when one is removed by name, so they're fetched fresh rather than taken from a list
+        that may be minutes old, or not fetched at all before :meth:`start_listening`.
+        """
+        await self._refresh_records()
+        shard_ids: set[str] = {
+            shard_id for shard_id, record in self._shard_records.items() if spire_id is None or record["spireId"] == spire_id
+        }
+        return shard_ids, set(self._spire_records)
+
     def _kind_of(self, item_id: str) -> Optional[Literal["shard", "spire"]]:
         """If `item_id` is a shard's or a spire's, from the lists and the subscribers we hold, or `None` for neither."""
         if item_id in self._shard_records or item_id in self._subscribed_shards:
@@ -1122,10 +1153,10 @@ class PanelHub(Hub):
         return None
 
     def _covers_shard(self, shard_id: str) -> bool:
-        return shard_id not in self._excluded_shards and (self._subscribe_all is True or shard_id in self._subscribed_shards)
+        return self._subscribe_all is True or shard_id in self._subscribed_shards
 
     def _covers_spire(self, spire_id: str) -> bool:
-        return spire_id not in self._excluded_spires and (self._subscribe_all is True or spire_id in self._subscribed_spires)
+        return self._subscribe_all is True or spire_id in self._subscribed_spires
 
     def _spire_of(self, shard_id: str) -> Optional[str]:
         """The spire `shard_id` lives on, from the last shard list, or `None` for a shard not in it."""
