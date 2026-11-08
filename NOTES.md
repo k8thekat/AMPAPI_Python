@@ -70,6 +70,15 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - The modules: `AccountModule`, `AnalyticsModule` (audit and player analytics), `CredentialModule`, `PlatformModule`,
   `ShardModule` (with `Shard`), `SpireModule` (with `Spire`, in `spires.py` to avoid a circular import), `TaskModule`
   and `TemplateModule`.
+- **A call goes where its target is, not where its route prefix is** (#3-50, 2026-11-08; plan
+  `.local_data/plans/module_layout/plan.md`). `ShardModule` / `SpireModule` hold only calls that take that shard's or
+  spire's ID. The calls over all of the panel's shards or spires (`get_shards`, `get_shard`, `create_shard`,
+  `get_shards_awaiting_action`, `get_all_shard_endpoints`, `get_spires`, `get_spire`, `get_spire_roster`) are
+  `Panel`'s own. The #3-47.13 layout had sorted by prefix, which is how they ended up in the per-item modules.
+- The `Panel` keeps one `Shard` / `Spire` per ID (`_shards`, `_spires`, Kat's #3-50a): a lookup or listing hands back
+  the kept object with `data` and `display_name` brought up to date. A shard belongs to a spire, so `Spire` has
+  `get_shards` (the panel's list filtered by `spireId`, as AMP has no per-spire route) and `create_shard`.
+  `create_shard` and `clone_shard` return a `Shard`; `create_shard` drops the rest of AMP's reply for now (#3-50b).
 - A reply never seen live gets a `# TODO:` above its method naming the index entry, and the method returns `Any`; a
   list only ever seen empty is `list[Any]` (Kat, 2026-11-07: a TODO, not a docstring warning). A `.. warning::` is
   kept for behaviour a user must know, eg. `kill_shard` answering 404 (U12) or a call that changes how the panel is
@@ -94,6 +103,10 @@ What the endpoints do, checked live on vm3 and vm4:
   `/hubs/spire` (the network, plus one per spire) and `/hubs/tasks` (no subscribe). There are 14 event types.
 - **State reaches every shard socket for every shard**, even one subscribed to nothing, and unsubscribing doesn't stop
   it. **A console line names no shard**, so a socket with several shards mixes their consoles.
+
+**Set aside since #3-50.1 (Kat, 2026-11-08).** `Panel`, `Shard` and `Spire` no longer build on the hub classes,
+`auto_state` is commented out, nothing imports `hubs.py` (pyright excludes it) and `hub_check.py` can't run. What
+follows is how the hub layer worked before that, kept for when it comes back.
 
 How the library uses that (`hubs.py`):
 - `Hub` holds the `Session` and does the socket work; `Panel`, `Spire` and `Shard` build on `PanelHub`, `SpireHub` and

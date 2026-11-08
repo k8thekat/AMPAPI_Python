@@ -34,7 +34,9 @@ CubeCoders AMP 3 API wrapper in Python.
 - `Shard` and `Spire` objects carry the calls that act on them, eg. `await shard.start()`.
 - Typed replies: `TypedDict`s for most calls, and small objects for live data such as `ShardStatus`, `ConsoleLine` and `RunningTask`. The package ships `py.typed`.
 - File downloads and uploads, including AMP's chunked upload for big files.
+<!-- The hubs are set aside for now (#3-50.1).
 - Live events from AMP's hubs, through decorators on your own `Shard`, `Spire` and `Panel` subclasses, or plain functions.
+-->
 
 ### Docs
 
@@ -108,9 +110,12 @@ See [samples](./samples) for scripts you can run against your own panel. Each on
 - `basic.py`: log in, list the spires and shards, and read a shard's state.
 - `shard_control.py`: start a shard, send a console command, read the console back and stop it.
 - `files.py`: list, upload, read, download and delete a shard's files.
+<!-- The hubs are set aside for now (#3-50.1), so these two samples are commented out.
 - `live_events.py`: class-level and instance-level listeners, until Ctrl+C.
 - `discord_cog.py`: a discord.py cog that posts shard state changes to a channel.
+-->
 
+<!-- The hubs are set aside for now (#3-50.1).
 ### Live events
 
 ---
@@ -171,6 +176,7 @@ The events, and where you can listen for them:
 - On a shard, a spire or the panel: `console`, `state`, `lifecycle`, `metrics`, `players`, `player_joined`, `player_left`, `migration`, `snapshot`, `schedule_run` and `task`. A shard gets its own tasks, a spire its own and its subscribed shards' tasks, and the panel every task.
 - On a spire or the panel: `spire_state`.
 - On the panel only: `spire_presence` and `network_status`.
+-->
 
 ### Errors
 

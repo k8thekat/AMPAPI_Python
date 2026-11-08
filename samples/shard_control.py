@@ -19,12 +19,14 @@ from ampapi import ConsoleHistory, Panel, Session, Shard, ShardState, ShardStatu
 COMMAND: str = "say Hello from AMPAPI_Python"
 
 
+# TODO: Put the `auto_state` sentence back at the end of the docstring's second paragraph when the hubs come back (#3-50.1).
+# A shard got with `auto_state=True` keeps `shard.state` current from AMP's live
+# events instead, at the cost of a hub socket.
 async def wait_for_status(shard: Shard, statuses: tuple[ShardState, ...]) -> ShardStatus:
     """Check the shard's state every 2 seconds until it reads one of `statuses`.
 
     AMP answers a start or a stop before the game has done it, so we follow it with the shard's state. We ask AMP each
-    time, which works on any shard object. A shard got with `auto_state=True` keeps `shard.state` current from AMP's live
-    events instead, at the cost of a hub socket.
+    time, which works on any shard object.
 
     Raises
     ------

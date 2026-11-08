@@ -104,7 +104,9 @@ venvPath = "."
 venv = ".venv"
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
-exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*", "**/node_modules", "**/__pycache__", "**/.*"]
+# TODO: Take `ampapi/hubs.py` back out of the exclude list when the hubs come back (#3-50.1).
+# Nothing imports it while they're set aside, and it's mid rework.
+exclude = ["logs/**", "**/.venv/**", "**/.vscode-server/", "/usr/*", "**/node_modules", "**/__pycache__", "**/.*", "ampapi/hubs.py"]
 include = ["ampapi"]
 useLibraryCodeForTypes = true
 reportIncompatibleMethodOverride = false

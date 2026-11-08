@@ -26,7 +26,8 @@ from typing import TYPE_CHECKING, Any, Optional
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
 from .base import Base
-from .hubs import PanelHub, ShardHub
+
+# from .hubs import PanelHub, ShardHub
 from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardPlayer, ShardSnapshots, ShardStatus, Snapshot
 
 if TYPE_CHECKING:
@@ -47,8 +48,6 @@ if TYPE_CHECKING:
         ShardCloneResponse,
         ShardConfigImportResponse,
         ShardConsoleRequest,
-        ShardCreatedResponse,
-        ShardCreateRequest,
         ShardCredentialResponse,
         ShardCustomPortRequest,
         ShardDetailsRequest,
@@ -81,6 +80,8 @@ if TYPE_CHECKING:
         SnapshotSettingsResponse,
         SpireIPOptionResponse,
     )
+    from .panel import Panel
+    from .session import Session
 
 __all__ = (
     "Shard",
@@ -93,27 +94,22 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 UPLOAD_CHUNK_SIZE: int = 8 * 1024 * 1024
 
 
-class Shard(ShardHub):
+# class Shard(ShardHub):
+class Shard:
     """A shard, AMP 3's name for an Instance, with the calls that act on it.
 
-    :meth:`ShardModule.get_shards` and :meth:`ShardModule.get_shard` make these, of the panel's `shard_class`. Each
-    method calls the :class:`ShardModule` one with this shard's ID, eg. :meth:`start` is
+    :meth:`Panel.get_shards` and :meth:`Panel.get_shard` make these, of the panel's `shard_class`, and the panel keeps
+    one for each shard. Each method calls the :class:`ShardModule` one with this shard's ID, eg. :meth:`start` is
     :meth:`ShardModule.start_shard`; its parameters, reply and errors are documented there.
-
-    A subclass can declare listeners, eg. ``@ShardHub.listener(name="console")``; see :class:`ShardHub`. Made by hand,
-    eg. ``MyShard(module=panel, data=record)``, it listens once the panel does, as long as you keep a reference to it.
 
     .. versionadded:: 6.0.0
 
     Parameters
     ----------
-    module : :class:`ShardModule`
-        The module (usually the :class:`Panel`) the calls go through.
+    module : :class:`Panel`
+        The panel the calls go through.
     data : :class:`ShardResponse`
         The shard as AMP sent it.
-    auto_state : Union[:class:`bool`, None], optional
-        If `state` follows the shard's state events from the hub or not; read back with the property. By default None
-        for the panel's `auto_state` (False unless the panel was made with True), or False with no panel.
 
     Attributes
     ----------
@@ -122,24 +118,37 @@ class Shard(ShardHub):
     display_name : :class:`str`
         The shard's name.
     data : :class:`ShardResponse`
-        The shard as AMP sent it, when this object was made.
+        The data response as AMP sent it, when this object was made.
+        The panel brings it up to date each time it hands this object out again.
+    session : :class:`Session`
+        The panel's session.
 
     """
+
+    # A subclass can declare listeners, eg. ``@ShardHub.listener(name="console")``; see :class:`ShardHub`. Made by hand,
+    # eg. ``MyShard(module=panel, data=record)``, it listens once the panel does, as long as you keep a reference to it.
+    # auto_state : Union[:class:`bool`, None], optional
+    #     If `state` follows the shard's state events from the hub or not; read back with the property. By default None
+    #     for the panel's `auto_state` (False unless the panel was made with True), or False with no panel.
 
     data: ShardResponse
     display_name: str
     id: str
-    _module: ShardModule
+    session: Session
+    # _module: ShardModule
+    _module: Panel
 
-    def __init__(self, module: ShardModule, data: ShardResponse, *, auto_state: Optional[bool] = None) -> None:  # noqa: D107
-        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
+    # def __init__(self, module: ShardModule, data: ShardResponse, *, auto_state: Optional[bool] = None) -> None:
+    def __init__(self, module: Panel, data: ShardResponse) -> None:  # noqa: D107
+        # super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
+        self.session = module.session
         self._module = module
         self.data = data
         self.id = data["id"]
         self.display_name = data["displayName"]
 
-        if self._panel is not None:
-            self._panel._register_shard(shard=self)  # pyright: ignore[reportPrivateUsage]
+        # if self._panel is not None:
+        #     self._panel._register_shard(shard=self)
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.
@@ -194,7 +203,7 @@ class Shard(ShardHub):
         *,
         content: CloneContent = CloneContent.both,
         target_spire_id: Optional[str] = None,
-    ) -> ShardCloneResponse:
+    ) -> Shard:
         """Copy this shard into a new one, see :meth:`ShardModule.clone_shard`.
 
         |coro|
@@ -966,15 +975,19 @@ class Shard(ShardHub):
 
 
 class ShardModule(Base):
-    """The calls for shards, AMP 3's name for an Instance: lifecycle, power, console, settings, ports, files, schedules,
-    snapshots and moves.
+    """The calls for one shard, AMP 3's name for an Instance, each taking its ID: lifecycle, power, console, settings,
+    ports, files, schedules, snapshots and moves.
+
+    The calls over all of the panel's shards, eg. :meth:`Panel.get_shards` and :meth:`Panel.create_shard`, are on the
+    :class:`Panel`.
 
     .. versionadded:: 6.0.0
 
     """
 
-    # The class `get_shard` and `get_shards` make; `Panel(shard_class=...)` sets a subclass.
-    shard_class: type[Shard] = Shard
+    if TYPE_CHECKING:
+        # The `Panel` gives this, so `clone_shard` hands back the copy the panel keeps.
+        async def get_shard(self, shard_id: str) -> Shard: ...  # noqa: D102
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.
@@ -1090,12 +1103,12 @@ class ShardModule(Base):
         *,
         content: CloneContent = CloneContent.both,
         target_spire_id: Optional[str] = None,
-    ) -> ShardCloneResponse:
+    ) -> Shard:
         """Copy a shard into a new one.
 
         |coro|
 
-        Endpoint: ``POST /api/shards/{shard_id}/clone``
+        Endpoints: ``POST /api/shards/{shard_id}/clone``, then ``GET /api/shards/{shard_id}`` for the copy
 
         A ``"ShardClone"`` task copies the files, see :meth:`TaskModule.get_running_tasks`. The copy's ports are free
         ones on its spire, so they can differ from the original's.
@@ -1113,9 +1126,9 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`ShardCloneResponse`
-            The copy's ID. The copy is there at once, but its `installedAt` is `None` even when the original was
-            installed, so run :meth:`update_shard` on it before starting it.
+        :class:`Shard`
+            The copy, of the panel's `shard_class`. It is there at once, but its `installedAt` is `None` even when the
+            original was installed, so run :meth:`update_shard` on it before starting it.
 
         Raises
         ------
@@ -1125,7 +1138,9 @@ class ShardModule(Base):
 
         """
         data: ShardCloneRequest = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/clone", data=data)
+        # AMP only sends back the copy's ID, so we get the copy itself after.
+        result: ShardCloneResponse = await self._request(method="POST", path=f"/api/shards/{shard_id}/clone", data=data)
+        return await self.get_shard(shard_id=result["shardId"])
 
     async def commit_shard_file_upload(self, shard_id: str, session_id: str) -> None:
         """Finish a chunked upload, which writes the file.
@@ -1162,70 +1177,6 @@ class ShardModule(Base):
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/copy", data={"from": source, "to": destination})
-
-    # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
-    # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.
-    async def create_shard(
-        self,
-        template_slug: str,
-        display_name: str,
-        spire_id: str,
-        *,
-        description: str = "",
-        start_now: bool = False,
-        start_on_boot: bool = False,
-        credential_id: Optional[str] = None,
-    ) -> ShardCreatedResponse:
-        """Make a shard from a template. It installs nothing until :meth:`update_shard`.
-
-        |coro|
-
-        Endpoint: ``POST /api/shards``
-
-        .. note::
-            A shard that was never updated still starts, then fails after pulling its container.
-
-        Parameters
-        ----------
-        template_slug : :class:`str`
-            The template, eg. ``"minecraft-java"``; see :meth:`TemplateModule.get_templates`.
-        display_name : :class:`str`
-            The shard's name. An empty one gets the template's name.
-        spire_id : :class:`str`
-            The spire to put it on.
-        description : :class:`str`, optional
-            A description, by default "".
-        start_now : :class:`bool`, optional
-            If the shard should start once made or not, by default False.
-        start_on_boot : :class:`bool`, optional
-            If the shard starts when its spire boots or not, by default False.
-        credential_id : Union[:class:`str`, None], optional
-            A stored secret for the game's download, eg. a Steam login, by default None.
-
-        Returns
-        -------
-        :class:`ShardCreatedResponse`
-            The shard with its first settings and ports. ``Shard(module=panel, data=result["shard"])`` makes it an object.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the template doesn't exist (400, ``"shards.error.createFailed"``, which doesn't name the cause).
-
-        """
-        data: ShardCreateRequest = {
-            "templateSlug": template_slug,
-            "displayName": display_name,
-            "description": description,
-            "spireId": spire_id,
-            "startNow": start_now,
-            "startOnBoot": start_on_boot,
-        }
-
-        if credential_id is not None:
-            data["credentialId"] = credential_id
-
-        return await self._request(method="POST", path="/api/shards", data=data)
 
     async def create_shard_custom_port(self, shard_id: str, name: str, protocol: PortProtocol, port: int) -> list[ShardPortResponse]:
         """Add a port of your own to a shard.
@@ -1576,99 +1527,6 @@ class ShardModule(Base):
         data: ShardExtractRequest = {"path": path, "destination": destination, "overwrite": overwrite}
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/extract", data=data)
 
-    async def get_all_shard_endpoints(self) -> dict[str, list[ShardEndpointResponse]]:
-        """Get where players reach every shard.
-
-        |coro|
-
-        Endpoint: ``GET /api/shards/endpoints``
-
-        Returns
-        -------
-        dict[:class:`str`, list[:class:`ShardEndpointResponse`]]
-            Each shard's ID to its public ports and addresses.
-
-        """
-        return await self._request(method="GET", path="/api/shards/endpoints")
-
-    async def get_shard(self, shard_id: str, *, auto_state: Optional[bool] = None) -> Shard:
-        """Get one shard.
-
-        |coro|
-
-        Endpoint: ``GET /api/shards/{shard_id}``
-
-        Parameters
-        ----------
-        shard_id : :class:`str`
-            The shard's ID.
-        auto_state : Union[:class:`bool`, None], optional
-            The `auto_state` a new shard object is made with, by default None for the panel's (False unless the panel
-            was made with True). A shard the panel already holds an object for keeps that object's own `auto_state`.
-
-        Returns
-        -------
-        :class:`Shard`
-            The shard, with the calls that act on it.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the shard is deleted (409, ``"shards.error.deleted"``) or purged (404).
-
-        """
-        result: ShardResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}")
-        return self._make_shard(data=result, auto_state=auto_state)
-
-    async def get_shards(self, *, include_deleted: bool = False, auto_state: Optional[bool] = None) -> list[Shard]:
-        """Get every shard the logged in user can see.
-
-        |coro|
-
-        Endpoint: ``GET /api/shards``
-
-        Parameters
-        ----------
-        include_deleted : :class:`bool`, optional
-            If deleted shards that aren't purged yet are listed too or not, by default False.
-        auto_state : Union[:class:`bool`, None], optional
-            The `auto_state` each new shard object is made with, by default None for the panel's (False unless the
-            panel was made with True). A shard the panel already holds an object for keeps that object's own.
-
-        Returns
-        -------
-        list[:class:`Shard`]
-            The shards, each with the calls that act on it.
-
-        """
-        parameters: dict[str, str] = {"includeDeleted": "true" if include_deleted is True else "false"}
-        result: list[ShardResponse] = await self._request(method="GET", path="/api/shards", parameters=parameters)
-        return [self._make_shard(data=entry, auto_state=auto_state) for entry in result]
-
-    def _make_shard(self, data: ShardResponse, auto_state: Optional[bool] = None) -> Shard:
-        """A `shard_class` object for `data`; `Panel` hands back the one it already keeps for that shard instead.
-
-        `auto_state` is `None` for the panel's, or False with no panel.
-        """
-        return self.shard_class(module=self, data=data, auto_state=auto_state)
-
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # The item shape isn't known yet; the web panel reads `shardId`, `name` and `message` from each.
-    async def get_shards_awaiting_action(self) -> list[dict[str, Any]]:
-        """Get the shards waiting on a user, eg. for a sign-in prompt.
-
-        |coro|
-
-        Endpoint: ``GET /api/shards/attention``
-
-        Returns
-        -------
-        list[dict[:class:`str`, Any]]
-            The shards and what they wait for.
-
-        """
-        return await self._request(method="GET", path="/api/shards/attention")
-
     async def get_shard_agent(self, shard_id: str) -> ShardAgentResponse:
         """Get the AMP agent that runs a shard, and if it's out of date.
 
@@ -1777,7 +1635,7 @@ class ShardModule(Base):
 
         AMP only answers it for a shard with a disk limit, its `diskLimitMb` in :meth:`get_shard_infra`; for any other
         it is a 204, running or stopped and even after :meth:`SpireModule.rescan_spire_usage`. An exceeded limit
-        doesn't list the shard in :meth:`get_shards_awaiting_action`.
+        doesn't list the shard in :meth:`Panel.get_shards_awaiting_action`.
 
         Parameters
         ----------
@@ -2073,7 +1931,7 @@ class ShardModule(Base):
 
         Endpoint: ``GET /api/shards/{shard_id}/migration/targets``
 
-        It doesn't list other spires. To move a shard to another spire, pick one from :meth:`SpireModule.get_spires`
+        It doesn't list other spires. To move a shard to another spire, pick one from :meth:`Panel.get_spires`
         and a datastore from :meth:`SpireModule.get_spire_datastores`, for :meth:`migrate_shard_to_spire`.
 
         Parameters

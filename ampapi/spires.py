@@ -24,8 +24,9 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from .base import Base
-from .hubs import PanelHub, SpireHub
-from .objects import SpirePresence, SpireStatus
+
+# from .hubs import PanelHub, SpireHub
+from .objects import SpireStatus
 
 if TYPE_CHECKING:
     from ._types import (
@@ -53,6 +54,9 @@ if TYPE_CHECKING:
         SpireUsageIntervalResponse,
         SpireUsageResponse,
     )
+    from .panel import Panel
+    from .session import Session
+    from .shards import Shard
 
 __all__ = (
     "Spire",
@@ -62,12 +66,13 @@ __all__ = (
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class Spire(SpireHub):
+# class Spire(SpireHub):
+class Spire:
     """A spire, AMP 3's name for an ADS or Target, with the calls that act on it.
 
-    :meth:`SpireModule.get_spires` and :meth:`SpireModule.get_spire` make these, of the panel's `spire_class`. Each
-    method calls the :class:`SpireModule` one with this spire's ID, eg. :meth:`get_state` is
-    :meth:`SpireModule.get_spire_state`. A subclass can declare listeners and subscribe shards; see :class:`SpireHub`.
+    :meth:`Panel.get_spires` and :meth:`Panel.get_spire` make these, of the panel's `spire_class`, and the panel keeps
+    one for each spire. Each method calls the :class:`SpireModule` one with this spire's ID, eg. :meth:`get_state` is
+    :meth:`SpireModule.get_spire_state`. The shards on it come from :meth:`get_shards`.
 
     A spire that joined serves the whole panel API too, so a :class:`Panel` can talk to any of them. The data's
     `isLocal` is relative to the machine that answered, not a property of the spire.
@@ -76,13 +81,10 @@ class Spire(SpireHub):
 
     Parameters
     ----------
-    module : :class:`SpireModule`
-        The module (usually the :class:`Panel`) the calls go through.
+    module : :class:`Panel`
+        The panel the calls go through.
     data : :class:`SpireResponse`
         The spire as AMP sent it.
-    auto_state : Union[:class:`bool`, None], optional
-        If `state` follows the spire's state events from the hub or not; read back with the property. By default None
-        for the panel's `auto_state` (False unless the panel was made with True), or False with no panel.
 
     Attributes
     ----------
@@ -92,23 +94,35 @@ class Spire(SpireHub):
         The spire's name.
     data : :class:`SpireResponse`
         The spire as AMP sent it, when this object was made.
+        The panel brings it up to date each time it hands this object out again.
+    session : :class:`Session`
+        The panel's session.
 
     """
+
+    # A subclass can declare listeners and subscribe shards; see :class:`SpireHub`.
+    # auto_state : Union[:class:`bool`, None], optional
+    #     If `state` follows the spire's state events from the hub or not; read back with the property. By default None
+    #     for the panel's `auto_state` (False unless the panel was made with True), or False with no panel.
 
     data: SpireResponse
     display_name: str
     id: str
-    _module: SpireModule
+    session: Session
+    # _module: SpireModule
+    _module: Panel
 
-    def __init__(self, module: SpireModule, data: SpireResponse, *, auto_state: Optional[bool] = None) -> None:  # noqa: D107
-        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
+    # def __init__(self, module: SpireModule, data: SpireResponse, *, auto_state: Optional[bool] = None) -> None:
+    def __init__(self, module: Panel, data: SpireResponse) -> None:  # noqa: D107
+        # super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
+        self.session = module.session
         self._module = module
         self.data = data
         self.id = data["id"]
         self.display_name = data["displayName"]
 
-        if self._panel is not None:
-            self._panel._register_spire(spire=self)  # pyright: ignore[reportPrivateUsage]
+        # if self._panel is not None:
+        #     self._panel._register_spire(spire=self)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.apply_spire_update`.
@@ -153,6 +167,51 @@ class Spire(SpireHub):
             path=path,
             is_default=is_default,
             enabled=enabled,
+        )
+
+    async def create_shard(
+        self,
+        template_slug: str,
+        display_name: str,
+        *,
+        description: str = "",
+        start_now: bool = False,
+        start_on_boot: bool = False,
+        credential_id: Optional[str] = None,
+    ) -> Shard:
+        """Make a shard on this spire from a template, see :meth:`Panel.create_shard`.
+
+        |coro|
+
+        Parameters
+        ----------
+        template_slug : :class:`str`
+            The template, eg. ``"minecraft-java"``; see :meth:`TemplateModule.get_templates`.
+        display_name : :class:`str`
+            The shard's name. An empty one gets the template's name.
+        description : :class:`str`, optional
+            A description, by default "".
+        start_now : :class:`bool`, optional
+            If the shard should start once made or not, by default False.
+        start_on_boot : :class:`bool`, optional
+            If the shard starts when this spire boots or not, by default False.
+        credential_id : Union[:class:`str`, None], optional
+            A stored secret for the game's download, eg. a Steam login, by default None.
+
+        Returns
+        -------
+        :class:`Shard`
+            The new shard, with the calls that act on it.
+
+        """
+        return await self._module.create_shard(
+            template_slug=template_slug,
+            display_name=display_name,
+            spire_id=self.id,
+            description=description,
+            start_now=start_now,
+            start_on_boot=start_on_boot,
+            credential_id=credential_id,
         )
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
@@ -262,6 +321,31 @@ class Spire(SpireHub):
 
         """
         return await self._module.get_spire_settings_manifest(spire_id=self.id)
+
+    async def get_shards(self, *, include_deleted: bool = False) -> list[Shard]:
+        """Get the shards on this spire, from :meth:`Panel.get_shards`.
+
+        |coro|
+
+        Endpoint: ``GET /api/shards``
+
+        AMP has no route for one spire's shards, so we list every shard the logged in user can see and keep this
+        spire's.
+
+        Parameters
+        ----------
+        include_deleted : :class:`bool`, optional
+            If deleted shards that aren't purged yet are listed too or not, by default False.
+            A deleted one answers only :meth:`Shard.restore` and :meth:`Shard.purge`.
+
+        Returns
+        -------
+        list[:class:`Shard`]
+            The shards on this spire, each with the calls that act on it.
+
+        """
+        shards: list[Shard] = await self._module.get_shards(include_deleted=include_deleted)
+        return [shard for shard in shards if shard.data["spireId"] == self.id]
 
     async def get_startup(self) -> list[SpireStartupResponse]:
         """Get this spire's shard start order, see :meth:`SpireModule.get_spire_startup`.
@@ -492,14 +576,15 @@ class Spire(SpireHub):
 
 
 class SpireModule(Base):
-    """The calls for spires, AMP 3's name for an ADS or Target: datastores, ports, start order, disk use and joining.
+    """The calls for one spire, AMP 3's name for an ADS or Target, each taking its ID: datastores, ports, start order
+    and disk use.
+
+    The enrolments, for machines that aren't spires yet, are here too. The calls over all of the panel's spires, eg.
+    :meth:`Panel.get_spires` and :meth:`Panel.get_spire_roster`, are on the :class:`Panel`.
 
     .. versionadded:: 6.0.0
 
     """
-
-    # The class `get_spire` and `get_spires` make; `Panel(spire_class=...)` sets a subclass.
-    spire_class: type[Spire] = Spire
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # The body comes from the web panel's code; no capture shows the response yet.
@@ -734,59 +819,6 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
 
-    async def get_spire(self, spire_id: str, *, auto_state: Optional[bool] = None) -> Spire:
-        """Get one spire.
-
-        |coro|
-
-        Endpoint: ``GET /api/spires/{spire_id}``
-
-        Parameters
-        ----------
-        spire_id : :class:`str`
-            The spire's ID.
-        auto_state : Union[:class:`bool`, None], optional
-            The `auto_state` a new spire object is made with, by default None for the panel's (False unless the panel
-            was made with True). A spire the panel already holds an object for keeps that object's own `auto_state`.
-
-        Returns
-        -------
-        :class:`Spire`
-            The spire, with the calls that act on it.
-
-        """
-        result: SpireResponse = await self._request(method="GET", path=f"/api/spires/{spire_id}")
-        return self._make_spire(data=result, auto_state=auto_state)
-
-    async def get_spires(self, *, auto_state: Optional[bool] = None) -> list[Spire]:
-        """Get every spire the logged in user can see.
-
-        |coro|
-
-        Endpoint: ``GET /api/spires``
-
-        Parameters
-        ----------
-        auto_state : Union[:class:`bool`, None], optional
-            The `auto_state` each new spire object is made with, by default None for the panel's (False unless the
-            panel was made with True). A spire the panel already holds an object for keeps that object's own.
-
-        Returns
-        -------
-        list[:class:`Spire`]
-            The spires, each with the calls that act on it.
-
-        """
-        result: list[SpireResponse] = await self._request(method="GET", path="/api/spires")
-        return [self._make_spire(data=entry, auto_state=auto_state) for entry in result]
-
-    def _make_spire(self, data: SpireResponse, auto_state: Optional[bool] = None) -> Spire:
-        """A `spire_class` object for `data`; `Panel` hands back the one it already keeps for that spire instead.
-
-        `auto_state` is `None` for the panel's, or False with no panel.
-        """
-        return self.spire_class(module=self, data=data, auto_state=auto_state)
-
     async def get_spire_datastores(self, spire_id: str) -> list[DatastoreResponse]:
         """Get a spire's datastores, the folders shards are kept in.
 
@@ -899,22 +931,6 @@ class SpireModule(Base):
 
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/ports")
-
-    async def get_spire_roster(self) -> list[SpirePresence]:
-        """Get every spire with if it's online and its AMP version.
-
-        |coro|
-
-        Endpoint: ``GET /api/spires/roster``
-
-        Returns
-        -------
-        list[:class:`SpirePresence`]
-            The spires.
-
-        """
-        result: list[dict[str, Any]] = await self._request(method="GET", path="/api/spires/roster")
-        return [SpirePresence(data=entry) for entry in result]
 
     async def get_spire_settings_manifest(self, spire_id: str) -> SettingsManifestResponse:
         """Get a spire's settings with their current values.

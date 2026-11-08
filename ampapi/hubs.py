@@ -177,6 +177,7 @@ class HubConnection:
 
     """
 
+    joins: list[tuple[str, list[Any]]]
     # The delays before each try to connect again; past the end, the last one repeats.
     _reconnect_delays: ClassVar[tuple[int, ...]] = (1, 2, 4, 8, 8)
     _silence_limit: ClassVar[float] = 45.0
@@ -335,13 +336,17 @@ class HubConnection:
         if client is None:
             msg = "The session has no aiohttp session to open a hub on."
             raise ConnectionError(msg)
+
         LOGGER.debug("<%s.%s> | Connecting | Hub: %s | Joins: %s", __class__.__name__, "_connect", self.hub, len(self.joins))
+
         self._socket = await client.ws_connect(self.url, params={"access_token": token}, heartbeat=None)
         await self._socket.send_str(json.dumps({"protocol": "json", "version": 1}) + RECORD_SEPARATOR)
+
         handshake = await self._socket.receive(timeout=self._silence_limit)
         if handshake.type is not WSMsgType.TEXT:
             msg = f"The {self.hub} hub closed before its handshake reply."
             raise ConnectionError(msg)
+
         # The reply is `{}`, or `{error}` when AMP refuses the protocol; other frames can follow it in the message.
         frames: list[str] = [part for part in str(handshake.data).split(RECORD_SEPARATOR) if part]
         first: Any = json.loads(frames[0]) if frames else {}
@@ -360,6 +365,9 @@ class HubConnection:
 
         LOGGER.info("<%s.%s> | Connected | Hub: %s | Joins: %s", __class__.__name__, "_connect", self.hub, len(self.joins))
 
+
+    # TODO: The docstring reads odd.
+    # TODO: What is the point of this function? It seems pointless?
     async def _run(self) -> None:
         """Wait for the socket to drop, then connect again, until :meth:`stop`, a logout or a refused join."""
         attempt: int = 0
@@ -385,7 +393,7 @@ class HubConnection:
                     "<%s.%s> | Failed to connect again, trying in %s seconds | Hub: %s | Error: %s",
                     __class__.__name__,
                     "_run",
-                    self._reconnect_delays[min(attempt, len(self._reconnect_delays) - 1)],
+                    self._reconnect_delays[min(attempt, len(self._reconnect_delays) - 1)], # TODO: Why not use the above "delay" value that is set?
                     self.hub,
                     error,
                 )
@@ -1005,6 +1013,7 @@ class PanelHub(Hub):
     _refresh_every: ClassVar[float] = 300.0
     # How many `(shard_id, revision)` pairs the state seen-set keeps.
     _seen_kept: ClassVar[int] = 2048
+    _subscribers: ClassVar[set[Shard | Spire]]
 
     def __init__(self, session: Session, *, auto_state: bool = False) -> None:  # noqa: D107
         super().__init__(session=session)
@@ -1065,11 +1074,11 @@ class PanelHub(Hub):
         if subscribers is None:
             self._subscribe_all = True
         else:
-            shard_ids, spire_ids = await self._sort_subscribers(items=_subscriber_items(entries=subscribers))
+            # shard_ids, spire_ids = await self._sort_subscribers(items=_subscriber_items(entries=subscribers))
             self._subscribed_shards.update(shard_ids)
             self._subscribed_spires.update(spire_ids)
 
-        await self._sync_sockets()
+        # await self._sync_sockets()
 
     async def remove_subscribers(self, subscribers: Optional[Sequence[Union[Shard, Spire, str]]] = None) -> None:
         """Stop taking these shards' and spires' events.
@@ -1106,43 +1115,43 @@ class PanelHub(Hub):
 
         await self._sync_sockets()
 
-    async def _sort_subscribers(self, items: Sequence[Union[ShardHub, SpireHub, str]]) -> tuple[set[str], set[str]]:
-        """Split `items` into shard IDs and spire IDs; an ID is looked up in the shard list, then the spire list.
+    # async def _sort_subscribers(self, items: Sequence[Union[ShardHub, SpireHub, str]]) -> tuple[set[str], set[str]]:
+    #     """Split `items` into shard IDs and spire IDs; an ID is looked up in the shard list, then the spire list.
 
-        An ID in neither fetches the lists again, once, for a shard made or a spire joined since the last fetch.
+    #     An ID in neither fetches the lists again, once, for a shard made or a spire joined since the last fetch.
 
-        Raises
-        ------
-        ValueError
-            If an ID is in neither list.
+    #     Raises
+    #     ------
+    #     ValueError
+    #         If an ID is in neither list.
 
-        """
-        item_ids: list[str] = [item for item in items if isinstance(item, str)]
-        if any(self._kind_of(item_id=item_id) is None for item_id in item_ids):
-            await self._refresh_records()
+    #     """
+    #     item_ids: list[str] = [item for item in items if isinstance(item, str)]
+    #     if any(self._kind_of(item_id=item_id) is None for item_id in item_ids):
+    #         await self._refresh_records()
 
-        shard_ids: set[str] = {item.id for item in items if isinstance(item, ShardHub)}
-        spire_ids: set[str] = {item.id for item in items if isinstance(item, SpireHub)}
-        for item_id in item_ids:
-            kind: Optional[Literal["shard", "spire"]] = self._kind_of(item_id=item_id)
-            if kind is None:
-                msg = f"No shard or spire we can see has the ID {item_id!r}."
-                raise ValueError(msg)
-            (shard_ids if kind == "shard" else spire_ids).add(item_id)
+    #     shard_ids: set[str] = {item.id for item in items if isinstance(item, ShardHub)}
+    #     spire_ids: set[str] = {item.id for item in items if isinstance(item, SpireHub)}
+    #     for item_id in item_ids:
+    #         kind: Optional[Literal["shard", "spire"]] = self._kind_of(item_id=item_id)
+    #         if kind is None:
+    #             msg = f"No shard or spire we can see has the ID {item_id!r}."
+    #             raise ValueError(msg)
+    #         (shard_ids if kind == "shard" else spire_ids).add(item_id)
 
-        return shard_ids, spire_ids
+    #     return shard_ids, spire_ids
 
-    async def _current_ids(self, spire_id: Optional[str] = None) -> tuple[set[str], set[str]]:
-        """The shards and spires there are now, from a fresh fetch of the lists; with `spire_id`, the shards on it.
+    # async def _current_ids(self, spire_id: Optional[str] = None) -> tuple[set[str], set[str]]:
+    #     """The shards and spires there are now, from a fresh fetch of the lists; with `spire_id`, the shards on it.
 
-        "Every one" turns into these when one is removed by name, so they're fetched fresh rather than taken from a list
-        that may be minutes old, or not fetched at all before :meth:`start_listening`.
-        """
-        await self._refresh_records()
-        shard_ids: set[str] = {
-            shard_id for shard_id, record in self._shard_records.items() if spire_id is None or record["spireId"] == spire_id
-        }
-        return shard_ids, set(self._spire_records)
+    #     "Every one" turns into these when one is removed by name, so they're fetched fresh rather than taken from a list
+    #     that may be minutes old, or not fetched at all before :meth:`start_listening`.
+    #     """
+    #     await self._refresh_records()
+    #     shard_ids: set[str] = {
+    #         shard_id for shard_id, record in self._shard_records.items() if spire_id is None or record["spireId"] == spire_id
+    #     }
+    #     return shard_ids, set(self._spire_records)
 
     def _kind_of(self, item_id: str) -> Optional[Literal["shard", "spire"]]:
         """If `item_id` is a shard's or a spire's, from the lists and the subscribers we hold, or `None` for neither."""
@@ -1163,74 +1172,74 @@ class PanelHub(Hub):
         record: Optional[ShardResponse] = self._shard_records.get(shard_id)
         return record["spireId"] if record is not None else None
 
-    async def start_listening(self) -> None:
-        """List the shards and spires, then open the hub sockets the listeners need.
+    # async def start_listening(self) -> None:
+    #     """List the shards and spires, then open the hub sockets the listeners need.
 
-        |coro|
+    #     |coro|
 
-        Endpoints: ``GET /api/shards``, ``GET /api/spires``, ``POST /api/auth/hub-token`` for each socket
+    #     Endpoints: ``GET /api/shards``, ``GET /api/spires``, ``POST /api/auth/hub-token`` for each socket
 
-        It returns once the sockets are up; they stay up in the background until :meth:`stop_listening` or a logout.
+    #     It returns once the sockets are up; they stay up in the background until :meth:`stop_listening` or a logout.
 
-        """
-        if self._listening is True:
-            return
+    #     """
+    #     if self._listening is True:
+    #         return
 
-        self._listening = True
-        await self._refresh_records()
-        await self._sync_sockets()
-        self._refresher = asyncio.create_task(self._refresh_loop(), name="ampapi hub refresh")
+    #     self._listening = True
+    #     await self._refresh_records()
+    #     await self._sync_sockets()
+    #     self._refresher = asyncio.create_task(self._refresh_loop(), name="ampapi hub refresh")
 
-    async def stop_listening(self) -> None:
-        """Close every hub socket and stop every listener; anything still queued is dropped.
+    # async def stop_listening(self) -> None:
+    #     """Close every hub socket and stop every listener; anything still queued is dropped.
 
-        This closes the sockets `auto_state` keeps open too, until the next sync, eg. a new shard object, opens them.
+    #     This closes the sockets `auto_state` keeps open too, until the next sync, eg. a new shard object, opens them.
 
-        |coro|
+    #     |coro|
 
-        """
-        self._listening = False
-        if self._refresher is not None:
-            self._refresher.cancel()
+    #     """
+    #     self._listening = False
+    #     if self._refresher is not None:
+    #         self._refresher.cancel()
 
-        for task in self._background:
-            task.cancel()
-        # A sync cancelled before it ran would otherwise leave the next `_sync_soon` thinking one is still coming.
-        self._sync_pending = False
+    #     for task in self._background:
+    #         task.cancel()
+    #     # A sync cancelled before it ran would otherwise leave the next `_sync_soon` thinking one is still coming.
+    #     self._sync_pending = False
 
-        await asyncio.gather(*(socket.stop() for socket in self._sockets.values()), return_exceptions=True)
-        self._sockets.clear()
-        hubs: list[Hub] = [self, *self._all_shards(), *self._all_spires()]
-        for shard in self._all_shards():
-            await shard._sync_console(listening=False)  # pyright: ignore[reportPrivateUsage]
+    #     await asyncio.gather(*(socket.stop() for socket in self._sockets.values()), return_exceptions=True)
+    #     self._sockets.clear()
+    #     hubs: list[Hub] = [self, *self._all_shards(), *self._all_spires()]
+    #     for shard in self._all_shards():
+    #         await shard._sync_console(listening=False)  # pyright: ignore[reportPrivateUsage]
 
-        await asyncio.gather(*(hub._stop_workers() for hub in hubs), return_exceptions=True)
-        await asyncio.gather(*(task for task in (self._refresher, *self._background) if task is not None), return_exceptions=True)
+    #     await asyncio.gather(*(hub._stop_workers() for hub in hubs), return_exceptions=True)
+    #     await asyncio.gather(*(task for task in (self._refresher, *self._background) if task is not None), return_exceptions=True)
 
     async def _list_records(self) -> tuple[list[ShardResponse], list[SpireResponse]]:
         """The shard and spire lists, as AMP sends them; `Panel` fills this in from its REST calls."""
         raise NotImplementedError
 
-    def _register_shard(self, shard: ShardHub) -> None:
-        """Keep a shard object so its events reach it; the panel holds it weakly, so keep your own reference."""
-        # A deleted shard, eg. from `get_shards(include_deleted=True)`, can't be joined until it's restored.
-        if shard.data.get("deleted") is True:
-            return
-        if shard.id not in self._shard_objects:
-            self._shard_objects[shard.id] = weakref.WeakSet()
+    # def _register_shard(self, shard: ShardHub) -> None:
+    #     """Keep a shard object so its events reach it; the panel holds it weakly, so keep your own reference."""
+    #     # A deleted shard, eg. from `get_shards(include_deleted=True)`, can't be joined until it's restored.
+    #     if shard.data.get("deleted") is True:
+    #         return
+    #     if shard.id not in self._shard_objects:
+    #         self._shard_objects[shard.id] = weakref.WeakSet()
 
-        self._shard_objects[shard.id].add(shard)
-        if shard.auto_state is True or (self._listening is True and shard._has_listener(events=frozenset(EVENTS))):
-            self._sync_soon()
+    #     self._shard_objects[shard.id].add(shard)
+    #     if shard.auto_state is True or (self._listening is True and shard._has_listener(events=frozenset(EVENTS))):
+    #         self._sync_soon()
 
-    def _register_spire(self, spire: SpireHub) -> None:
-        """Keep a spire object so its events reach it; the panel holds it weakly, so keep your own reference."""
-        if spire.id not in self._spire_objects:
-            self._spire_objects[spire.id] = weakref.WeakSet()
+    # def _register_spire(self, spire: SpireHub) -> None:
+    #     """Keep a spire object so its events reach it; the panel holds it weakly, so keep your own reference."""
+    #     if spire.id not in self._spire_objects:
+    #         self._spire_objects[spire.id] = weakref.WeakSet()
 
-        self._spire_objects[spire.id].add(spire)
-        if spire.auto_state is True or (self._listening is True and spire._has_listener(events=frozenset(EVENTS))):
-            self._sync_soon()
+    #     self._spire_objects[spire.id].add(spire)
+    #     if spire.auto_state is True or (self._listening is True and spire._has_listener(events=frozenset(EVENTS))):
+    #         self._sync_soon()
 
     def _all_shards(self) -> list[ShardHub]:
         return [shard for shards in self._shard_objects.values() for shard in shards]
@@ -1238,28 +1247,28 @@ class PanelHub(Hub):
     def _all_spires(self) -> list[SpireHub]:
         return [spire for spires in self._spire_objects.values() for spire in spires]
 
-    def _in_background(self, coroutine: Awaitable[None]) -> None:
-        """Run `coroutine` as a task we keep hold of, so it isn't collected before it ends."""
-        task: asyncio.Task[None] = asyncio.ensure_future(coroutine)
-        self._background.add(task)
-        task.add_done_callback(self._background.discard)
+    # def _in_background(self, coroutine: Awaitable[None]) -> None:
+    #     """Run `coroutine` as a task we keep hold of, so it isn't collected before it ends."""
+    #     task: asyncio.Task[None] = asyncio.ensure_future(coroutine)
+    #     self._background.add(task)
+    #     task.add_done_callback(self._background.discard)
 
-    def _listeners_changed(self) -> None:
-        self._sync_soon()
+    # def _listeners_changed(self) -> None:
+    #     self._sync_soon()
 
-    def _sync_soon(self) -> None:
-        """Schedule one socket sync on the running loop, for code that can't wait for it, eg. `add_listener`.
+    # def _sync_soon(self) -> None:
+    #     """Schedule one socket sync on the running loop, for code that can't wait for it, eg. `add_listener`.
 
-        Calls made before it runs share it. With no loop running there's no socket to change, and the next sync picks
-        the change up.
-        """
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            return
-        if self._sync_pending is False:
-            self._sync_pending = True
-            self._in_background(coroutine=self._sync_sockets())
+    #     Calls made before it runs share it. With no loop running there's no socket to change, and the next sync picks
+    #     the change up.
+    #     """
+    #     try:
+    #         asyncio.get_running_loop()
+    #     except RuntimeError:
+    #         return
+    #     if self._sync_pending is False:
+    #         self._sync_pending = True
+    #         self._in_background(coroutine=self._sync_sockets())
 
     def _apply_state(self, state: Union[ShardStatus, SpireStatus]) -> None:
         """Set `state` on each object of its shard or spire that keeps its state, unless the object holds a newer one.
@@ -1276,152 +1285,152 @@ class PanelHub(Hub):
             if spire.auto_state is True and (spire.state is None or state.last_heartbeat > spire.state.last_heartbeat):
                 spire.state = state
 
-    async def _refresh_records(self) -> None:
-        """Fetch the shard and spire lists that joins, subscriber IDs and "every one" are worked out from."""
-        shards, spires = await self._list_records()
-        self._shard_records = {shard["id"]: shard for shard in shards}
-        self._spire_records = {spire["id"]: spire for spire in spires}
+    # async def _refresh_records(self) -> None:
+    #     """Fetch the shard and spire lists that joins, subscriber IDs and "every one" are worked out from."""
+    #     shards, spires = await self._list_records()
+    #     self._shard_records = {shard["id"]: shard for shard in shards}
+    #     self._spire_records = {spire["id"]: spire for spire in spires}
 
-    async def _refresh_loop(self) -> None:
-        """Fetch the lists again every 5 minutes, or sooner when an event names a shard we don't know."""
-        while self._listening is True:
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(self._refresh_wanted.wait(), timeout=self._refresh_every)
+    # async def _refresh_loop(self) -> None:
+    #     """Fetch the lists again every 5 minutes, or sooner when an event names a shard we don't know."""
+    #     while self._listening is True:
+    #         with contextlib.suppress(TimeoutError):
+    #             await asyncio.wait_for(self._refresh_wanted.wait(), timeout=self._refresh_every)
 
-            self._refresh_wanted.clear()
-            # After a logout, fetching would log in again, so we stop instead.
-            if self.session.logged_in is False:
-                return
+    #         self._refresh_wanted.clear()
+    #         # After a logout, fetching would log in again, so we stop instead.
+    #         if self.session.logged_in is False:
+    #             return
 
-            try:
-                await self._refresh_records()
-                await self._sync_sockets()
-            except (AMPAPIRequestError, ClientError) as error:
-                LOGGER.warning("<%s.%s> | Failed to refresh the hub lists | Error: %s", __class__.__name__, "_refresh_loop", error)
+    #         try:
+    #             await self._refresh_records()
+    #             await self._sync_sockets()
+    #         except (AMPAPIRequestError, ClientError) as error:
+    #             LOGGER.warning("<%s.%s> | Failed to refresh the hub lists | Error: %s", __class__.__name__, "_refresh_loop", error)
 
-    def _needed_shards(self) -> set[str]:
-        """The shards the shared `/hubs/shard` socket must join for listeners: this panel's, the spires' and each shard's."""
-        if self._listening is False:
-            return set()
+    # def _needed_shards(self) -> set[str]:
+    #     """The shards the shared `/hubs/shard` socket must join for listeners: this panel's, the spires' and each shard's."""
+    #     if self._listening is False:
+    #         return set()
 
-        # Only a listed shard can be joined, so "every one" covers the shards in the last list.
-        needed: set[str] = set()
-        if self._has_listener(events=SHARD_EVENTS):
-            needed.update(shard_id for shard_id in self._shard_records if self._covers_shard(shard_id=shard_id))
-        for spire in self._all_spires():
-            if spire._has_listener(events=SHARD_EVENTS):
-                needed.update(
-                    shard_id
-                    for shard_id, record in self._shard_records.items()
-                    if spire._covers(shard_id=shard_id, spire_id=record["spireId"])  # pyright: ignore[reportPrivateUsage]
-                )
-        for shard in self._all_shards():
-            if shard._has_listener(events=shard._shared_events):  # pyright: ignore[reportPrivateUsage]
-                needed.add(shard.id)
-        return {shard_id for shard_id in needed if shard_id in self._shard_records}
+    #     # Only a listed shard can be joined, so "every one" covers the shards in the last list.
+    #     needed: set[str] = set()
+    #     if self._has_listener(events=SHARD_EVENTS):
+    #         needed.update(shard_id for shard_id in self._shard_records if self._covers_shard(shard_id=shard_id))
+    #     for spire in self._all_spires():
+    #         if spire._has_listener(events=SHARD_EVENTS):
+    #             needed.update(
+    #                 shard_id
+    #                 for shard_id, record in self._shard_records.items()
+    #                 if spire._covers(shard_id=shard_id, spire_id=record["spireId"])  # pyright: ignore[reportPrivateUsage]
+    #             )
+    #     for shard in self._all_shards():
+    #         if shard._has_listener(events=shard._shared_events):  # pyright: ignore[reportPrivateUsage]
+    #             needed.add(shard.id)
+    #     return {shard_id for shard_id in needed if shard_id in self._shard_records}
 
-    def _needed_spires(self) -> Optional[set[str]]:
-        """The spires the `/hubs/spire` socket must join, or `None` when nothing needs that socket at all."""
-        panel_wide: bool = self._listening is True and self._has_listener(events=frozenset(("spire_presence", "network_status")))
-        needed: set[str] = {spire.id for spire in self._all_spires() if spire.auto_state is True}
-        if self._listening is True and self._has_listener(events=frozenset(("spire_state",))):
-            candidates: set[str] = self._spire_records.keys() | self._subscribed_spires
-            needed.update(spire_id for spire_id in candidates if self._covers_spire(spire_id=spire_id))
-        if self._listening is True:
-            needed.update(spire.id for spire in self._all_spires() if spire._has_listener(events=frozenset(("spire_state",))))
-        return needed if needed or panel_wide else None
+    # def _needed_spires(self) -> Optional[set[str]]:
+    #     """The spires the `/hubs/spire` socket must join, or `None` when nothing needs that socket at all."""
+    #     panel_wide: bool = self._listening is True and self._has_listener(events=frozenset(("spire_presence", "network_status")))
+    #     needed: set[str] = {spire.id for spire in self._all_spires() if spire.auto_state is True}
+    #     if self._listening is True and self._has_listener(events=frozenset(("spire_state",))):
+    #         candidates: set[str] = self._spire_records.keys() | self._subscribed_spires
+    #         needed.update(spire_id for spire_id in candidates if self._covers_spire(spire_id=spire_id))
+    #     if self._listening is True:
+    #         needed.update(spire.id for spire in self._all_spires() if spire._has_listener(events=frozenset(("spire_state",))))
+    #     return needed if needed or panel_wide else None
 
-    def _needs_tasks(self) -> bool:
-        """If any level listens for tasks, which only counts while we listen."""
-        hubs: list[Hub] = [self, *self._all_shards(), *self._all_spires()]
-        return self._listening is True and any(hub._has_listener(events=frozenset(("task",))) for hub in hubs)
+    # def _needs_tasks(self) -> bool:
+    #     """If any level listens for tasks, which only counts while we listen."""
+    #     hubs: list[Hub] = [self, *self._all_shards(), *self._all_spires()]
+    #     return self._listening is True and any(hub._has_listener(events=frozenset(("task",))) for hub in hubs)
 
-    async def _sync_sockets(self) -> None:
-        """Open, join, leave and close the sockets to match what the listeners, subscribers and `auto_state` need now.
+    # async def _sync_sockets(self) -> None:
+    #     """Open, join, leave and close the sockets to match what the listeners, subscribers and `auto_state` need now.
 
-        Listeners count once :meth:`start_listening` has run; an object's `auto_state` counts at any time.
-        """
-        self._sync_pending = False
-        # After a logout, opening a socket would log in again.
-        if self.session.logged_in is False:
-            return
+    #     Listeners count once :meth:`start_listening` has run; an object's `auto_state` counts at any time.
+    #     """
+    #     self._sync_pending = False
+    #     # After a logout, opening a socket would log in again.
+    #     if self.session.logged_in is False:
+    #         return
 
-        async with self._sync_lock:
-            needed_shards: set[str] = self._needed_shards()
-            # A shard's state reaches every shard socket, so `auto_state` needs the socket open but nothing joined.
-            auto_shards: bool = any(shard.auto_state is True for shard in self._all_shards())
-            await self._sync_shard_socket(needed=needed_shards, wanted=bool(needed_shards) or auto_shards)
-            await self._sync_spire_socket(needed=self._needed_spires())
-            await self._sync_socket(key="tasks", wanted=self._needs_tasks(), on_event=self._on_tasks_socket)
-            for shard in self._all_shards():
-                # A shard that's deleted, or gone from the list, can't be joined.
-                await shard._sync_console(listening=self._listening is True and shard.id in self._shard_records)  # pyright: ignore[reportPrivateUsage]
+    #     async with self._sync_lock:
+    #         needed_shards: set[str] = self._needed_shards()
+    #         # A shard's state reaches every shard socket, so `auto_state` needs the socket open but nothing joined.
+    #         auto_shards: bool = any(shard.auto_state is True for shard in self._all_shards())
+    #         await self._sync_shard_socket(needed=needed_shards, wanted=bool(needed_shards) or auto_shards)
+    #         await self._sync_spire_socket(needed=self._needed_spires())
+    #         await self._sync_socket(key="tasks", wanted=self._needs_tasks(), on_event=self._on_tasks_socket)
+    #         for shard in self._all_shards():
+    #             # A shard that's deleted, or gone from the list, can't be joined.
+    #             await shard._sync_console(listening=self._listening is True and shard.id in self._shard_records)  # pyright: ignore[reportPrivateUsage]
 
-    async def _sync_socket(
-        self,
-        key: str,
-        wanted: bool,
-        on_event: Callable[[HubConnection, str, list[Any]], None],
-    ) -> Optional[HubConnection]:
-        """Open the `key` socket with no joins when `wanted`, and close it when not; hand back the open one."""
-        socket: Optional[HubConnection] = self._sockets.get(key)
-        if wanted is False:
-            if socket is not None:
-                await self._sockets.pop(key).stop()
-            return None
+    # async def _sync_socket(
+    #     self,
+    #     key: str,
+    #     wanted: bool,
+    #     on_event: Callable[[HubConnection, str, list[Any]], None],
+    # ) -> Optional[HubConnection]:
+    #     """Open the `key` socket with no joins when `wanted`, and close it when not; hand back the open one."""
+    #     socket: Optional[HubConnection] = self._sockets.get(key)
+    #     if wanted is False:
+    #         if socket is not None:
+    #             await self._sockets.pop(key).stop()
+    #         return None
 
-        if socket is None or not socket.running:
-            socket = await self._open_socket(hub=key, joins=[], on_event=on_event)
-            if socket is None:
-                return None
-            self._sockets[key] = socket
-        return socket
+    #     if socket is None or not socket.running:
+    #         socket = await self._open_socket(hub=key, joins=[], on_event=on_event)
+    #         if socket is None:
+    #             return None
+    #         self._sockets[key] = socket
+    #     return socket
 
-    async def _sync_shard_socket(self, needed: set[str], wanted: bool) -> None:
-        socket: Optional[HubConnection] = await self._sync_socket(key="shard", wanted=wanted, on_event=self._on_shard_socket)
-        if socket is None:
-            return
-        # Each join's arguments are `[tenant_id, shard_id]`, so a leave sends them back as they were.
-        joined: dict[str, list[Any]] = {arguments[1]: arguments for _target, arguments in socket.joins}
-        for shard_id in sorted(joined.keys() - needed):
-            await socket.leave(join_target="JoinShard", leave_target="LeaveShard", arguments=joined[shard_id])
+    # async def _sync_shard_socket(self, needed: set[str], wanted: bool) -> None:
+    #     socket: Optional[HubConnection] = await self._sync_socket(key="shard", wanted=wanted, on_event=self._on_shard_socket)
+    #     if socket is None:
+    #         return
+    #     # Each join's arguments are `[tenant_id, shard_id]`, so a leave sends them back as they were.
+    #     joined: dict[str, list[Any]] = {arguments[1]: arguments for _target, arguments in socket.joins}
+    #     for shard_id in sorted(joined.keys() - needed):
+    #         await socket.leave(join_target="JoinShard", leave_target="LeaveShard", arguments=joined[shard_id])
 
-        for shard_id in sorted(needed - joined.keys()):
-            try:
-                await socket.join(target="JoinShard", arguments=[self._shard_records[shard_id]["tenantId"], shard_id])
-            except (AMPAPIHubError, ConnectionError, TimeoutError) as error:
-                LOGGER.warning(
-                    "<%s.%s> | Failed to join a shard | Shard ID: %s | Error: %s",
-                    __class__.__name__,
-                    "_sync_shard_socket",
-                    shard_id,
-                    error,
-                )
-                # Usually a shard deleted since the last list; it's left out until a refresh lists it again.
-                self._shard_records.pop(shard_id, None)
+    #     for shard_id in sorted(needed - joined.keys()):
+    #         try:
+    #             await socket.join(target="JoinShard", arguments=[self._shard_records[shard_id]["tenantId"], shard_id])
+    #         except (AMPAPIHubError, ConnectionError, TimeoutError) as error:
+    #             LOGGER.warning(
+    #                 "<%s.%s> | Failed to join a shard | Shard ID: %s | Error: %s",
+    #                 __class__.__name__,
+    #                 "_sync_shard_socket",
+    #                 shard_id,
+    #                 error,
+    #             )
+    #             # Usually a shard deleted since the last list; it's left out until a refresh lists it again.
+    #             self._shard_records.pop(shard_id, None)
 
-    async def _sync_spire_socket(self, needed: Optional[set[str]]) -> None:
-        socket: Optional[HubConnection] = await self._sync_socket(key="spire", wanted=needed is not None, on_event=self._on_spire_socket)
-        if socket is None or needed is None:
-            return
-        if ("JoinNetwork", []) not in socket.joins:
-            await socket.join(target="JoinNetwork", arguments=[])
+    # async def _sync_spire_socket(self, needed: Optional[set[str]]) -> None:
+    #     socket: Optional[HubConnection] = await self._sync_socket(key="spire", wanted=needed is not None, on_event=self._on_spire_socket)
+    #     if socket is None or needed is None:
+    #         return
+    #     if ("JoinNetwork", []) not in socket.joins:
+    #         await socket.join(target="JoinNetwork", arguments=[])
 
-        joined: set[str] = {arguments[0] for target, arguments in socket.joins if target == "JoinSpire"}
-        for spire_id in sorted(joined - needed):
-            await socket.leave(join_target="JoinSpire", leave_target="LeaveSpire", arguments=[spire_id])
+    #     joined: set[str] = {arguments[0] for target, arguments in socket.joins if target == "JoinSpire"}
+    #     for spire_id in sorted(joined - needed):
+    #         await socket.leave(join_target="JoinSpire", leave_target="LeaveSpire", arguments=[spire_id])
 
-        for spire_id in sorted(needed - joined):
-            try:
-                await socket.join(target="JoinSpire", arguments=[spire_id])
-            except (AMPAPIHubError, ConnectionError, TimeoutError) as error:
-                LOGGER.warning(
-                    "<%s.%s> | Failed to join a spire | Spire ID: %s | Error: %s",
-                    __class__.__name__,
-                    "_sync_spire_socket",
-                    spire_id,
-                    error,
-                )
+    #     for spire_id in sorted(needed - joined):
+    #         try:
+    #             await socket.join(target="JoinSpire", arguments=[spire_id])
+    #         except (AMPAPIHubError, ConnectionError, TimeoutError) as error:
+    #             LOGGER.warning(
+    #                 "<%s.%s> | Failed to join a spire | Spire ID: %s | Error: %s",
+    #                 __class__.__name__,
+    #                 "_sync_spire_socket",
+    #                 spire_id,
+    #                 error,
+    #             )
 
     def _on_shard_socket(self, connection: HubConnection, target: str, arguments: list[Any]) -> None:  # noqa: ARG002
         """Route one shared `/hubs/shard` event by the shard it names; a console line goes out unattributed."""
