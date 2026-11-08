@@ -88,7 +88,7 @@ class Base:
         """Send a call through our :class:`Session`, waiting out a panel outage the way the web panel does.
 
         A 503 whose `code` says AMP's database (``"session.storeUnavailable"``) or message bus
-        (``"common.error.busUnavailable"``) is down is sent again after 1, 2, 4, 8 and 8 seconds.
+        (``"common.error.busUnavailable"``) is down is sent again after 1, 2 and 4 seconds, then 8 seconds twice.
 
         Parameters
         ----------
