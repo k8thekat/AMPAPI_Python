@@ -35,7 +35,10 @@ if TYPE_CHECKING:
 
     from ._types import (
         FileACLChange,
+        GatewayPreflightResponse,
+        GatewayResponse,
         PortProtocol,
+        PublicationResponse,
         ScheduleCatalogResponse,
         ScheduleRunResponse,
         ScheduleStep,
@@ -242,6 +245,27 @@ class Shard:
 
         """
         await self._module.create_shard_folder(shard_id=self.id, path=path)
+
+    async def create_gateway(self, front_spire_id: str) -> GatewayResponse:
+        """Route this shard through a front spire, see :meth:`NetworkModule.create_gateway`.
+
+        |coro|
+
+        """
+        return await self._module.create_gateway(shard_id=self.id, front_spire_id=front_spire_id)
+
+    async def create_publication(self, front_spire_id: str, public_port: int, port_reference: str) -> PublicationResponse:
+        """Forward a public port on a front spire to one of this shard's ports, see :meth:`NetworkModule.create_publication`.
+
+        |coro|
+
+        """
+        return await self._module.create_publication(
+            front_spire_id=front_spire_id,
+            public_port=public_port,
+            shard_id=self.id,
+            port_reference=port_reference,
+        )
 
     async def create_schedule(
         self,
@@ -642,6 +666,14 @@ class Shard:
 
         """
         await self._module.move_shard_file(shard_id=self.id, source=source, destination=destination)
+
+    async def preflight_gateway(self, front_spire_id: str) -> GatewayPreflightResponse:
+        """Check a gateway for this shard can be made, see :meth:`NetworkModule.preflight_gateway`.
+
+        |coro|
+
+        """
+        return await self._module.preflight_gateway(shard_id=self.id, front_spire_id=front_spire_id)
 
     async def preview_schedule_firings(self, trigger: ScheduleTrigger) -> list[str]:
         """Get when a trigger would next fire for this shard, see :meth:`ShardModule.preview_shard_schedule_firings`.

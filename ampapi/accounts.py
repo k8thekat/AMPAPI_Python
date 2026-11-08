@@ -28,9 +28,6 @@ from .base import Base
 if TYPE_CHECKING:
     from ._types import (
         DeletedUserResponse,
-        InviteAcceptedResponse,
-        InviteAcceptRequest,
-        InvitePreviewResponse,
         InviteRequest,
         InviteResponse,
         InviteTokenResponse,
@@ -62,59 +59,11 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 class AccountModule(Base):
     """The calls for user accounts: users, roles, invites and the logged in user's own profile.
 
+    Taking an invite needs no account yet, so it's :meth:`Session.accept_invite`.
+
     .. versionadded:: 6.0.0
 
     """
-
-    async def accept_invite(
-        self,
-        token: str,
-        email: str,
-        password: str,
-        *,
-        display_name: Optional[str] = None,
-        locale: str = "en",
-    ) -> InviteAcceptedResponse:
-        """Make the account an invite was for, which logs it in.
-
-        |coro|
-
-        Endpoint: ``POST /api/invites/accept``
-
-        This one needs no session. The account's username is the one the invite was made with, see
-        :meth:`preview_invite`.
-
-        .. note::
-            The reply's token is a live session for the new account, and we don't keep it.
-            To use the account, make a new :class:`Session` with its username and `password`.
-
-        Parameters
-        ----------
-        token : :class:`str`
-            The invite code from :meth:`create_invite` or :meth:`rearm_invite`.
-        email : :class:`str`
-            The new account's email address.
-        password : :class:`str`
-            The new account's password; it has to pass :meth:`Session.get_password_policy`.
-        display_name : Union[:class:`str`, None], optional
-            The new account's display name, by default None.
-        locale : :class:`str`, optional
-            The new account's language, by default "en".
-
-        Returns
-        -------
-        :class:`InviteAcceptedResponse`
-            The new account's session token.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the code is wrong, used, revoked or out of date (410, ``"invalid_or_expired"``), or the password is too
-            weak (400).
-
-        """
-        data: InviteAcceptRequest = {"token": token, "email": email, "password": password, "displayName": display_name, "locale": locale}
-        return await self._request(method="POST", path="/api/invites/accept", data=data, use_token=False)
 
     async def add_favourite(self, template_slug: str) -> PreferencesResponse:
         """Add a template to the logged in user's favourites.
@@ -205,7 +154,7 @@ class AccountModule(Base):
         *,
         display_name: Optional[str] = None,
     ) -> InviteTokenResponse:
-        """Invite someone to make an account, see :meth:`accept_invite`.
+        """Invite someone to make an account, see :meth:`Session.accept_invite`.
 
         |coro|
 
@@ -666,33 +615,6 @@ class AccountModule(Base):
 
         """
         await self._request(method="POST", path=f"/api/users/{user_id}/logout", data={})
-
-    async def preview_invite(self, token: str) -> InvitePreviewResponse:
-        """Get who an invite code is for, without using it.
-
-        |coro|
-
-        Endpoint: ``POST /api/invites/preview``
-
-        This one needs no session.
-
-        Parameters
-        ----------
-        token : :class:`str`
-            The invite code.
-
-        Returns
-        -------
-        :class:`InvitePreviewResponse`
-            The username and display name the account will get.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the code is wrong, used, revoked or out of date (404, ``"invalid_or_expired"``).
-
-        """
-        return await self._request(method="POST", path="/api/invites/preview", data={"token": token}, use_token=False)
 
     async def rearm_invite(self, invite_id: str, expires_in_hours: int) -> InviteTokenResponse:
         """Give an invite a new code, which stops the old one from working.

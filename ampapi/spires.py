@@ -35,11 +35,6 @@ if TYPE_CHECKING:
         PortClaimResponse,
         SettingsManifestResponse,
         SettingValues,
-        SpireEnrollmentCreatedResponse,
-        SpireEnrollmentHostResponse,
-        SpireEnrollmentRequest,
-        SpireEnrollmentResponse,
-        SpireEnrollmentRevokeRequest,
         SpireExpiredPurgeResponse,
         SpireImportItem,
         SpireImportRequest,
@@ -579,8 +574,8 @@ class SpireModule(Base):
     """The calls for one spire, AMP 3's name for an ADS or Target, each taking its ID: datastores, ports, start order
     and disk use.
 
-    The enrolments, for machines that aren't spires yet, are here too. The calls over all of the panel's spires, eg.
-    :meth:`Panel.get_spires` and :meth:`Panel.get_spire_roster`, are on the :class:`Panel`.
+    The calls over all of the panel's spires, eg. :meth:`Panel.get_spires` and :meth:`Panel.get_spire_roster`, are on
+    the :class:`Panel`. Joining a new spire to the panel is :class:`EnrollmentModule`.
 
     .. versionadded:: 6.0.0
 
@@ -607,35 +602,6 @@ class SpireModule(Base):
 
         """
         return await self._request(method="POST", path=f"/api/updates/spires/{spire_id}", data={})
-
-    async def approve_spire_enrollment(self, enrollment_id: str) -> SpireEnrollmentResponse:
-        """Let a machine that used a join file become a spire.
-
-        |coro|
-
-        Endpoint: ``POST /api/spires/enrollments/{enrollment_id}/approve``
-
-        Check the enrolment's `admission` first: its `fingerprint` should match the one the joining machine shows in
-        its `HealthStatusResponse.messageParams`. The machine then joins within seconds, and the enrolment's `status`
-        goes from ``"approved"`` to ``"redeemed"``.
-
-        Parameters
-        ----------
-        enrollment_id : :class:`str`
-            The enrolment's ID, once its `status` is ``"awaitingapproval"``.
-
-        Returns
-        -------
-        :class:`SpireEnrollmentResponse`
-            The enrolment, with `status` ``"approved"``.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If no machine is waiting on the enrolment (409, ``"spire.enroll.error.nothingToApprove"``).
-
-        """
-        return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/approve")
 
     async def create_spire_datastore(
         self,
@@ -673,49 +639,6 @@ class SpireModule(Base):
         """
         data: DatastoreRequest = {"name": name, "path": path, "isDefault": is_default, "enabled": enabled}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores", data=data)
-
-    async def create_spire_enrollment(
-        self,
-        label: str,
-        *,
-        expires_in_hours: Optional[int] = None,
-        hosts: Optional[list[str]] = None,
-    ) -> SpireEnrollmentCreatedResponse:
-        """Make a join file, so another machine can join the panel as a spire.
-
-        |coro|
-
-        Endpoint: ``POST /api/spires/enrollments``
-
-        .. warning::
-            AMP refuses it with ``"spire.enroll.error.busNotPublic"`` until the message bus is opened to other machines
-            (:meth:`PlatformModule.expand_message_bus`).
-
-        The new machine's first-run setup takes the `joinBlob`, then waits in :meth:`PlatformModule.get_health_status`
-        until :meth:`approve_spire_enrollment`.
-
-        Parameters
-        ----------
-        label : :class:`str`
-            A name for the enrolment; the spire it becomes takes it as its `displayName`.
-        expires_in_hours : Union[:class:`int`, None], optional
-            How long the join file works for, by default None.
-        hosts : Union[list[:class:`str`], None], optional
-            The addresses the new machine should reach the panel on, by default None.
-            See :meth:`get_spire_enrollment_hosts`.
-
-        Returns
-        -------
-        :class:`SpireEnrollmentCreatedResponse`
-            The enrolment (201), with `status` ``"pending"``, and the join file, which AMP sends only here.
-
-        """
-        data: SpireEnrollmentRequest = {"label": label, "hosts": hosts if hosts is not None else []}
-
-        if expires_in_hours is not None:
-            data["expiresInHours"] = expires_in_hours
-
-        return await self._request(method="POST", path="/api/spires/enrollments", data=data)
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # The path comes from the web panel's code; no capture shows the response yet.
@@ -771,54 +694,6 @@ class SpireModule(Base):
         """
         return await self._request(method="DELETE", path=f"/api/spires/{spire_id}/datastores/{datastore_id}")
 
-    async def delete_spire_enrollment(self, enrollment_id: str, *, reason: Optional[str] = None) -> None:
-        """Revoke a join file.
-
-        |coro|
-
-        Endpoint: ``DELETE /api/spires/enrollments/{enrollment_id}``
-
-        The enrolment stays in :meth:`get_spire_enrollments` with `status` ``"revoked"``. Revoking it again is fine too.
-
-        Parameters
-        ----------
-        enrollment_id : :class:`str`
-            The enrolment's ID.
-        reason : Union[:class:`str`, None], optional
-            Why it was revoked, by default None. It's kept as the enrolment's `revokedReason`.
-
-        """
-        data: Optional[SpireEnrollmentRevokeRequest] = {"reason": reason} if reason is not None else None
-        await self._request(method="DELETE", path=f"/api/spires/enrollments/{enrollment_id}", data=data)
-
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # Only refusals are known; the reply for a machine waiting on a join file isn't.
-    async def deny_spire_enrollment(self, enrollment_id: str) -> Any:
-        """Refuse a machine that used a join file.
-
-        |coro|
-
-        Endpoint: ``POST /api/spires/enrollments/{enrollment_id}/deny``
-
-        Parameters
-        ----------
-        enrollment_id : :class:`str`
-            The enrolment's ID.
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If no machine is waiting on the enrolment, eg. it is pending or revoked
-            (409, ``"spire.enroll.error.nothingToApprove"``), or there's no such enrolment (404).
-
-        """
-        return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
-
     async def get_spire_datastores(self, spire_id: str) -> list[DatastoreResponse]:
         """Get a spire's datastores, the folders shards are kept in.
 
@@ -838,36 +713,6 @@ class SpireModule(Base):
 
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/datastores")
-
-    async def get_spire_enrollment_hosts(self) -> list[SpireEnrollmentHostResponse]:
-        """Get the addresses a new spire could reach the panel on.
-
-        |coro|
-
-        Endpoint: ``GET /api/spires/enrollments/hosts``
-
-        Returns
-        -------
-        list[:class:`SpireEnrollmentHostResponse`]
-            The addresses, the public one included.
-
-        """
-        return await self._request(method="GET", path="/api/spires/enrollments/hosts")
-
-    async def get_spire_enrollments(self) -> list[SpireEnrollmentResponse]:
-        """Get the join files that were made, and their state.
-
-        |coro|
-
-        Endpoint: ``GET /api/spires/enrollments``
-
-        Returns
-        -------
-        list[:class:`SpireEnrollmentResponse`]
-            The enrolments, newest first. Revoked and redeemed ones stay in the list.
-
-        """
-        return await self._request(method="GET", path="/api/spires/enrollments")
 
     async def get_spire_ip_options(self, spire_id: str, *, include_auto: bool = False) -> list[SpireIPOptionResponse]:
         """Get the addresses a shard on a spire can bind to.

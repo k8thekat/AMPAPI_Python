@@ -67,9 +67,13 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   session.
 - No per-call `request_params` (Kat, 2026-11-06): the `ClientSession` handed to `Session` already carries SSL,
   timeouts and proxies for every call.
-- The modules: `AccountModule`, `AnalyticsModule` (audit and player analytics), `CredentialModule`, `PlatformModule`,
-  `ShardModule` (with `Shard`), `SpireModule` (with `Spire`, in `spires.py` to avoid a circular import), `TaskModule`
-  and `TemplateModule`.
+- The modules: `AccountModule`, `AnalyticsModule` (player analytics), `AuditModule`, `CredentialModule`,
+  `EnrollmentModule` (spire enrolments and the message bus, everything for joining a new spire), `NetworkModule`
+  (gateways, publications, tunnels, firewall), `PlatformModule`, `ShardModule` (with `Shard`), `SpireModule` (with
+  `Spire`, in `spires.py` to avoid a circular import), `TaskModule` and `TemplateModule` (#3-50).
+- `Session` holds `accept_invite` and `preview_invite`, as the invitee has no account yet (#3-50.7). `accept_invite`
+  previews the invite for its username, sends the session's own password, and keeps the token, so the session is
+  logged in as the new account (live on vm4, 2026-11-08). It doesn't log out a session that was already logged in.
 - **A call goes where its target is, not where its route prefix is** (#3-50, 2026-11-08; plan
   `.local_data/plans/module_layout/plan.md`). `ShardModule` / `SpireModule` hold only calls that take that shard's or
   spire's ID. The calls over all of the panel's shards or spires (`get_shards`, `get_shard`, `create_shard`,

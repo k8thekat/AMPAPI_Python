@@ -46,6 +46,9 @@ if TYPE_CHECKING:
         CapabilitiesResponse,
         ExpiredPasswordRequest,
         HubTokenResponse,
+        InviteAcceptedResponse,
+        InviteAcceptRequest,
+        InvitePreviewResponse,
         LoginRequest,
         LoginResponse,
         PasswordPolicyResponse,
@@ -79,6 +82,7 @@ class Session:
         The panel's URL, eg. ``"http://192.168.1.10:8443"``.
     username : :class:`str`
         The AMP username to log in as.
+        Before :meth:`accept_invite` it can be anything, eg. ``""``, as the invite's username replaces it.
     password : :class:`str`
         The password for `username`.
     remember_me : :class:`bool`, optional
@@ -372,6 +376,63 @@ class Session:
 
         return body
 
+    async def accept_invite(
+        self,
+        token: str,
+        email: str,
+        *,
+        display_name: Optional[str] = None,
+        locale: str = "en",
+    ) -> InviteAcceptedResponse:
+        """Make the account an invite was for, which logs this session in as it.
+
+        |coro|
+
+        Endpoints: ``POST /api/invites/preview`` for the invite's username, then ``POST /api/invites/accept``
+
+        This one needs no session, and no :class:`Panel`. Make a :class:`Session` with the password the new account
+        should have, and any `username`, eg. ``""``, then call this. The account's username is the one the invite was
+        made with (see :meth:`preview_invite`), so we read it from the invite first and keep it as `username`.
+        From then on the session renews and logs in again as the new account, like any other login.
+
+        Parameters
+        ----------
+        token : :class:`str`
+            The invite code from :meth:`AccountModule.create_invite` or :meth:`AccountModule.rearm_invite`.
+        email : :class:`str`
+            The new account's email address.
+        display_name : Union[:class:`str`, None], optional
+            The new account's display name, by default None.
+        locale : :class:`str`, optional
+            The new account's language, by default "en".
+
+        Returns
+        -------
+        :class:`InviteAcceptedResponse`
+            The new account's session token, which this session keeps.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the code is wrong, used, revoked or out of date (404 from the preview, ``"invalid_or_expired"``), or the
+            session's password is too weak for :meth:`get_password_policy` (400).
+
+        """
+        preview: InvitePreviewResponse = await self.preview_invite(token=token)
+        data: InviteAcceptRequest = {
+            "token": token,
+            "email": email,
+            "password": self._password,
+            "displayName": display_name,
+            "locale": locale,
+        }
+
+        result: InviteAcceptedResponse = await self._request(method="POST", path="/api/invites/accept", data=data, use_token=False)
+        # We only take the invite's username once the account exists, so a refused accept leaves the session as it was.
+        self.username = preview["userName"]
+        self._store_token(data=result)
+        return result
+
     async def change_expired_password(self, new_password: str) -> TokenResponse:
         """Change the password AMP asked for at login, which logs in.
 
@@ -559,6 +620,33 @@ class Session:
             return
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path="/api/auth/logout", data=body)
+
+    async def preview_invite(self, token: str) -> InvitePreviewResponse:
+        """Get who an invite code is for, without using it.
+
+        |coro|
+
+        Endpoint: ``POST /api/invites/preview``
+
+        This one needs no session.
+
+        Parameters
+        ----------
+        token : :class:`str`
+            The invite code.
+
+        Returns
+        -------
+        :class:`InvitePreviewResponse`
+            The username and display name the account will get.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the code is wrong, used, revoked or out of date (404, ``"invalid_or_expired"``).
+
+        """
+        return await self._request(method="POST", path="/api/invites/preview", data={"token": token}, use_token=False)
 
     async def reauth(self, password: Optional[str] = None) -> None:
         """Confirm the password again, which AMP asks for before sensitive changes.

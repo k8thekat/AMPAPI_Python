@@ -34,11 +34,14 @@ from ._enums import *
 from ._types import *
 from .accounts import *
 from .analytics import *
+from .audit import *
 from .base import *
 from .credentials import *
+from .enrollments import *
 from .errors import *
 
 # from .hubs import *
+from .networking import *
 from .objects import *
 from .panel import *
 from .platform import *

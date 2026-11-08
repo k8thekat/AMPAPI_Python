@@ -415,7 +415,7 @@ class AuditEvent(TypedDict):
     targetId: str
     taskId: Optional[str]
     correlationId: WrappedID
-    "Shared by every event in one flow, see `AnalyticsModule.get_audit_tree`."
+    "Shared by every event in one flow, see `AuditModule.get_audit_tree`."
     actionId: WrappedID
     causationActionId: Optional[WrappedID]
     origin: int
@@ -461,7 +461,7 @@ class AuditRoot(TypedDict):
     """One flow of events, from `AuditRootsPageResponse.items`."""
 
     correlationId: str
-    "The ID `AnalyticsModule.get_audit_tree` takes."
+    "The ID `AuditModule.get_audit_tree` takes."
     root: AuditEvent
     "The event that started the flow."
     eventCount: int
@@ -546,7 +546,7 @@ class BusJoinInfo(TypedDict):
     hostCandidates: list[str]
     caCert: str
     joinBlob: str
-    "Empty, even with the bus open; the join file comes from `SpireModule.create_spire_enrollment`."
+    "Empty, even with the bus open; the join file comes from `EnrollmentModule.create_spire_enrollment`."
 
 
 class CapabilitiesResponse(TypedDict):
@@ -778,7 +778,7 @@ class GatewayPreflightResponse(TypedDict):
     # TODO: Drop the field doc once AMP's preflight checks what the create checks (U20b, U20c).
     # AMP 3.0.0.6 sends no conflicts for gateways the create refuses.
     conflicts: list[Any]
-    "Empty even for a gateway `PlatformModule.create_gateway` refuses, see `PlatformModule.preflight_gateway`."
+    "Empty even for a gateway `NetworkModule.create_gateway` refuses, see `NetworkModule.preflight_gateway`."
 
 
 class GatewayRequest(TypedDict):
@@ -835,7 +835,7 @@ class HealthStatusResponse(TypedDict):
     phase: str
     message: Optional[str]
     """A translation key, eg. ``"auth.setup.joining.awaitingApproval"`` while a joining machine waits for
-    `SpireModule.approve_spire_enrollment`."""
+    `EnrollmentModule.approve_spire_enrollment`."""
     preview: Optional[PreviewStatus]
     "Set on a preview build."
     messageParams: Optional[dict[str, Any]]

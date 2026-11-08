@@ -30,7 +30,8 @@ CubeCoders AMP 3 API wrapper in Python.
 
 - Pythonic API wrapper using `async` and `await`, built on `aiohttp`.
 - `Session` handles the login: it renews the token before it runs out, logs in again when AMP ends the session, and takes a recovery code when the account needs a second factor.
-- `Panel` groups every API area (accounts, analytics, credentials, platform, shards, spires, tasks and templates) in one object.
+- `Panel` groups every API area (accounts, analytics, audit, credentials, enrolments, networking, platform, shards, spires, tasks and templates) in one object.
+- Taking an invite needs no account yet: make a `Session` with the password you want and call `session.accept_invite(...)`, which logs it in as the new account.
 - `Shard` and `Spire` objects carry the calls that act on them, eg. `await shard.start()`.
 - Typed replies: `TypedDict`s for most calls, and small objects for live data such as `ShardStatus`, `ConsoleLine` and `RunningTask`. The package ships `py.typed`.
 - File downloads and uploads, including AMP's chunked upload for big files.

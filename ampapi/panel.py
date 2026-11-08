@@ -27,9 +27,12 @@ from typing import TYPE_CHECKING, Any, Optional, Self
 
 from .accounts import AccountModule
 from .analytics import AnalyticsModule
+from .audit import AuditModule
 from .credentials import CredentialModule
+from .enrollments import EnrollmentModule
 
 # from .hubs import PanelHub
+from .networking import NetworkModule
 from .objects import SpirePresence
 from .platform import PlatformModule
 from .shards import Shard, ShardModule
@@ -52,7 +55,10 @@ class Panel(
     # PanelHub,
     AccountModule,
     AnalyticsModule,
+    AuditModule,
     CredentialModule,
+    EnrollmentModule,
+    NetworkModule,
     PlatformModule,
     ShardModule,
     SpireModule,
