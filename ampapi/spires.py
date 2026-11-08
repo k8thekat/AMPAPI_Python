@@ -80,6 +80,9 @@ class Spire(SpireHub):
         The module (usually the :class:`Panel`) the calls go through.
     data : :class:`SpireResponse`
         The spire as AMP sent it.
+    auto_state : :class:`bool`, optional
+        If `state` follows the spire's state events from the hub or not, by default True; read back with the property.
+        A spire the panel hands out gets the panel's `auto_state`.
 
     Attributes
     ----------
@@ -97,8 +100,8 @@ class Spire(SpireHub):
     id: str
     _module: SpireModule
 
-    def __init__(self, module: SpireModule, data: SpireResponse) -> None:  # noqa: D107
-        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None)
+    def __init__(self, module: SpireModule, data: SpireResponse, *, auto_state: bool = True) -> None:  # noqa: D107
+        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
         self._module = module
         self.data = data
         self.id = data["id"]

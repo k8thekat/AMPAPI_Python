@@ -22,11 +22,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import json
 import logging
 import weakref
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, overload
 
 from aiohttp import ClientError, WSMsgType
 
@@ -48,12 +49,14 @@ from .objects import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Sequence
 
     from aiohttp import ClientWebSocketResponse
 
     from ._types import ShardResponse, SpireResponse
     from .session import Session
+    from .shards import Shard
+    from .spires import Spire
 
 __all__ = (
     "Hub",
@@ -87,9 +90,8 @@ type HubEvent = Literal[
 ]
 type Level = Literal["shard", "spire", "panel"]
 
-# TODO: Settle the event names, and which level takes which event, with Kat (#3-47.2.7).
-# This table is the one place both live; the `listener` overloads below repeat the names for pyright.
 # Each event: the hub socket it comes on, and the hub levels a listener for it can sit on.
+# The names are one set at every level (Kat); the `listener` and `listen` overloads repeat them for pyright.
 EVENTS: dict[str, tuple[str, frozenset[Level]]] = {
     "console": ("shard", frozenset(("shard", "spire", "panel"))),
     "state": ("shard", frozenset(("shard", "spire", "panel"))),
@@ -104,8 +106,8 @@ EVENTS: dict[str, tuple[str, frozenset[Level]]] = {
     "spire_state": ("spire", frozenset(("spire", "panel"))),
     "spire_presence": ("spire", frozenset(("panel",))),
     "network_status": ("spire", frozenset(("panel",))),
-    # Tasks are panel-wide: AMP's tasks hub has no rooms to join.
-    "task": ("tasks", frozenset(("panel",))),
+    # A shard or a spire gets the tasks that target it or a shard it subscribes; the panel gets every task.
+    "task": ("tasks", frozenset(("shard", "spire", "panel"))),
 }
 SHARD_EVENTS: frozenset[str] = frozenset(event for event, (socket, _levels) in EVENTS.items() if socket == "shard")
 
@@ -126,6 +128,12 @@ SHARD_TARGETS: dict[str, tuple[str, int, type[AMPObject], Optional[int]]] = {
 
 # The functions `Hub.listener` has marked, until the class they sit in is made and takes them.
 _MARKED: dict[Callable[..., Any], str] = {}
+
+
+def _hub_ids(entries: Union[Sequence[Union[ShardHub, SpireHub, str]], ShardHub, SpireHub, str]) -> set[str]:
+    """The IDs in `entries`, objects or IDs mixed. A lone object or ID counts as a list of one, so an ID isn't split."""
+    items: Sequence[Union[ShardHub, SpireHub, str]] = (entries,) if isinstance(entries, (str, ShardHub, SpireHub)) else entries
+    return {entry if isinstance(entry, str) else entry.id for entry in items}
 
 
 class HubConnection:
@@ -448,8 +456,9 @@ class _Worker:
 class Hub:
     """The base of the three hub levels: it holds the :class:`Session` and runs the listeners a subclass declares.
 
-    A listener is a method marked with :meth:`listener`, called as ``(self, data)`` with the event's object. Each one
-    has its own queue, so it keeps its order and a slow one blocks nobody; one that raises is logged and skipped.
+    A listener is a method marked with :meth:`listener`, called as ``(self, data)`` with the event's object, or a plain
+    function given to :meth:`listen` or :meth:`add_listener` on one object, called as ``(obj, data)``. Each one has its
+    own queue, so it keeps its order and a slow one blocks nobody; one that raises is logged and skipped.
 
     .. versionadded:: 6.0.0
 
@@ -469,6 +478,8 @@ class Hub:
     def __init__(self, session: Session) -> None:  # noqa: D107
         self.session = session
         self._workers: dict[str, _Worker] = {}
+        # The plain-function listeners added to this object, by event.
+        self._handlers: dict[str, list[Callable[[Any, Any], Awaitable[None]]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:  # noqa: D105
         super().__init_subclass__(**kwargs)
@@ -484,6 +495,108 @@ class Hub:
 
             gathered[event] = [*gathered.get(event, []), name]
         cls._listeners = {event: tuple(names) for event, names in gathered.items()}
+
+    @overload
+    def add_listener(self, handler: Callable[[Any, ConsoleLine], Awaitable[None]], name: Literal["console"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, ShardStatus], Awaitable[None]], name: Literal["state"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, LifecycleEvent], Awaitable[None]], name: Literal["lifecycle"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, ShardMetrics], Awaitable[None]], name: Literal["metrics"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, list[ShardPlayer]], Awaitable[None]], name: Literal["players"]) -> None: ...
+    @overload
+    def add_listener(
+        self,
+        handler: Callable[[Any, ShardPlayer], Awaitable[None]],
+        name: Literal["player_joined", "player_left"],
+    ) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, ShardMigration], Awaitable[None]], name: Literal["migration"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, ShardSnapshots], Awaitable[None]], name: Literal["snapshot"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, ScheduleExecution], Awaitable[None]], name: Literal["schedule_run"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, SpireStatus], Awaitable[None]], name: Literal["spire_state"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, SpirePresence], Awaitable[None]], name: Literal["spire_presence"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, NetworkStatus], Awaitable[None]], name: Literal["network_status"]) -> None: ...
+    @overload
+    def add_listener(self, handler: Callable[[Any, RunningTask], Awaitable[None]], name: Literal["task"]) -> None: ...
+    def add_listener(self, handler: Callable[[Any, Any], Awaitable[None]], name: HubEvent) -> None:
+        """Add a plain coroutine function as this object's listener for an event, called as ``(obj, data)``.
+
+        The same as a method marked with :meth:`listener`, without a subclass, eg. for a script or a discord.py cog.
+
+        Parameters
+        ----------
+        handler : Callable[[Any, Any], Awaitable[None]]
+            The coroutine function; it gets this object first, then the event's object.
+        name : :class:`HubEvent`
+            The event, eg. ``"console"``.
+
+        Raises
+        ------
+        TypeError
+            If this level doesn't get the event, see `EVENTS`.
+
+        """
+        self._add_handler(handler=handler, name=name)
+
+    @overload
+    def listen[F: Callable[[Any, ConsoleLine], Awaitable[None]]](self, name: Literal["console"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, ShardStatus], Awaitable[None]]](self, name: Literal["state"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, LifecycleEvent], Awaitable[None]]](self, name: Literal["lifecycle"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, ShardMetrics], Awaitable[None]]](self, name: Literal["metrics"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, list[ShardPlayer]], Awaitable[None]]](self, name: Literal["players"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, ShardPlayer], Awaitable[None]]](
+        self,
+        name: Literal["player_joined", "player_left"],
+    ) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, ShardMigration], Awaitable[None]]](self, name: Literal["migration"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, ShardSnapshots], Awaitable[None]]](self, name: Literal["snapshot"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, ScheduleExecution], Awaitable[None]]](self, name: Literal["schedule_run"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, SpireStatus], Awaitable[None]]](self, name: Literal["spire_state"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, SpirePresence], Awaitable[None]]](self, name: Literal["spire_presence"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, NetworkStatus], Awaitable[None]]](self, name: Literal["network_status"]) -> Callable[[F], F]: ...
+    @overload
+    def listen[F: Callable[[Any, RunningTask], Awaitable[None]]](self, name: Literal["task"]) -> Callable[[F], F]: ...
+    def listen[F: Callable[[Any, Any], Awaitable[None]]](self, name: HubEvent) -> Callable[[F], F]:
+        """Add the decorated coroutine function as this object's listener, the decorator form of :meth:`add_listener`.
+
+        eg. ``@panel.listen("state")`` above ``async def on_state(panel: Panel, data: ShardStatus)``.
+
+        Parameters
+        ----------
+        name : :class:`HubEvent`
+            The event, eg. ``"state"``.
+
+        Returns
+        -------
+        Callable
+            The decorator, which hands back the function as it was.
+
+        """
+
+        def register(handler: F) -> F:
+            self._add_handler(handler=handler, name=name)
+            return handler
+
+        return register
 
     @overload
     @classmethod
@@ -552,19 +665,52 @@ class Hub:
 
         return mark
 
+    def remove_listener(self, handler: Callable[[Any, Any], Awaitable[None]], name: HubEvent) -> None:
+        """Remove a listener :meth:`add_listener` or :meth:`listen` added; anything still queued for it is dropped.
+
+        Parameters
+        ----------
+        handler : Callable[[Any, Any], Awaitable[None]]
+            The coroutine function that was added.
+        name : :class:`HubEvent`
+            The event it was added for.
+
+        """
+        self._handlers[name] = [entry for entry in self._handlers.get(name, []) if entry is not handler]
+        worker: Optional[_Worker] = self._workers.pop(f"{name}:{id(handler)}", None)
+        if worker is not None:
+            worker.task.cancel()
+        self._listeners_changed()
+
+    def _add_handler(self, handler: Callable[[Any, Any], Awaitable[None]], name: HubEvent) -> None:
+        if self._level not in EVENTS[name][1]:
+            msg = f"A {self._level} hub doesn't get {name!r}."
+            raise TypeError(msg)
+        self._handlers[name] = [*self._handlers.get(name, []), handler]
+        self._listeners_changed()
+
+    def _listeners_changed(self) -> None:
+        """A listener was added or removed, so the sockets may need to change; each level says how."""
+
     def _has_listener(self, events: frozenset[str]) -> bool:
-        """If the class declares a listener for any of `events`."""
-        return any(self._listeners.get(event) for event in events)
+        """If this object has a listener, a marked method or an added function, for any of `events`."""
+        return any(self._listeners.get(event) or self._handlers.get(event) for event in events)
 
     def _emit(self, event: str, data: Any) -> None:
         """Queue `data` for each of this object's listeners for `event`."""
         for name in self._listeners.get(event, ()):
-            worker: Optional[_Worker] = self._workers.get(name)
-            if worker is None or worker.task.done():
-                worker = _Worker(handler=getattr(self, name), event=event)
-                self._workers[name] = worker
+            self._queue(key=name, handler=getattr(self, name), event=event, data=data)
 
-            worker.put(data=data)
+        for handler in self._handlers.get(event, ()):
+            # A plain function gets this object first, as a method gets `self`.
+            self._queue(key=f"{event}:{id(handler)}", handler=functools.partial(handler, self), event=event, data=data)
+
+    def _queue(self, key: str, handler: Callable[[Any], Awaitable[None]], event: str, data: Any) -> None:
+        worker: Optional[_Worker] = self._workers.get(key)
+        if worker is None or worker.task.done():
+            worker = _Worker(handler=handler, event=event)
+            self._workers[key] = worker
+        worker.put(data=data)
 
     async def _stop_workers(self) -> None:
         """Stop this object's listener workers; anything still queued is dropped."""
@@ -602,12 +748,22 @@ class ShardHub(Hub):
 
     .. versionadded:: 6.0.0
 
+    With `auto_state`, `state` follows the shard's state events, through the panel's shared shard socket, which is
+    opened for it if it isn't open already. A shard's state needs no join, as AMP sends it to every shard socket.
+
     Parameters
     ----------
     session : :class:`Session`
         The session the hub sockets log in through.
     panel : Union[:class:`PanelHub`, None]
         The panel that routes this shard's events, `None` for an object made without one.
+    auto_state : :class:`bool`, optional
+        If `state` follows the shard's state events or not, by default True.
+
+    Attributes
+    ----------
+    state : Union[:class:`ShardStatus`, None]
+        The shard's latest state from the hub, `None` until one comes.
 
     """
 
@@ -615,14 +771,27 @@ class ShardHub(Hub):
     id: str
     data: ShardResponse
 
-    def __init__(self, session: Session, panel: Optional[PanelHub]) -> None:  # noqa: D107
+    def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: bool = True) -> None:  # noqa: D107
         super().__init__(session=session)
         self._panel: Optional[PanelHub] = panel
         self._console: Optional[HubConnection] = None
+        self._auto_state: bool = auto_state
+        self.state: Optional[ShardStatus] = None
+
+    # TODO: A setter, so `auto_state` can be switched after the object is made, waits for Kat (#3-47.2.8).
+    # It would schedule a socket sync with `PanelHub._sync_soon`, as a setter can't wait for one.
+    @property
+    def auto_state(self) -> bool:
+        """If `state` follows the shard's state events, as the object was made with."""
+        return self._auto_state
+
+    def _listeners_changed(self) -> None:
+        if self._panel is not None:
+            self._panel._sync_soon()  # pyright: ignore[reportPrivateUsage]
 
     @property
     def _shared_events(self) -> frozenset[str]:
-        """The events this shard takes from the shared socket: all but `console`."""
+        """The shard events this shard takes from the shared socket: all but `console`."""
         return SHARD_EVENTS - {"console"}
 
     async def _sync_console(self, listening: bool) -> None:
@@ -637,9 +806,12 @@ class ShardHub(Hub):
             self._console = None
 
     def _on_console_socket(self, connection: HubConnection, target: str, arguments: list[Any]) -> None:  # noqa: ARG002
-        # The shared socket brings everything else, so only console lines are taken from here.
+        # The shared socket brings everything else, so only console lines are taken from here, and state is applied.
         if target == "ConsoleLine" and arguments:
             self._emit(event="console", data=ConsoleLine(data=arguments[0]))
+        # `ShardStateChanged` is sent as `(tenant_id, shard_id, state)`.
+        elif target == "ShardStateChanged" and len(arguments) > 2 and self._panel is not None:
+            self._panel._apply_state(state=ShardStatus(data=arguments[2]))  # pyright: ignore[reportPrivateUsage]
 
 
 class SpireHub(Hub):
@@ -649,70 +821,80 @@ class SpireHub(Hub):
 
     .. versionadded:: 6.0.0
 
+    With `auto_state`, `state` follows the spire's state events, through the panel's shared spire socket, which joins
+    this spire for it.
+
     Parameters
     ----------
     session : :class:`Session`
         The session the hub sockets log in through.
     panel : Union[:class:`PanelHub`, None]
         The panel that routes this spire's events, `None` for an object made without one.
+    auto_state : :class:`bool`, optional
+        If `state` follows the spire's state events or not, by default True.
+
+    Attributes
+    ----------
+    state : Union[:class:`SpireStatus`, None]
+        The spire's latest state from the hub, `None` until one comes.
 
     """
 
     _level = "spire"
-    # TODO: Confirm with Kat that `add_subscriber()` with no shard means every shard on the spire (#3-47.2.7).
-    # Set to `False` and it subscribes nothing instead.
-    none_means_every_shard: ClassVar[bool] = True
     id: str
     data: SpireResponse
 
-    def __init__(self, session: Session, panel: Optional[PanelHub]) -> None:  # noqa: D107
+    def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: bool = True) -> None:  # noqa: D107
         super().__init__(session=session)
         self._panel: Optional[PanelHub] = panel
-        self._every_shard: bool = False
         self._subscribed: set[str] = set()
+        self._auto_state: bool = auto_state
+        self.state: Optional[SpireStatus] = None
 
-    async def add_subscriber(self, shard_id: Optional[str] = None) -> None:
-        """Take a shard's events into this spire's listeners.
+    # TODO: A setter, so `auto_state` can be switched after the object is made, waits for Kat (#3-47.2.8).
+    # It would schedule a socket sync with `PanelHub._sync_soon`, as a setter can't wait for one.
+    @property
+    def auto_state(self) -> bool:
+        """If `state` follows the spire's state events, as the object was made with."""
+        return self._auto_state
 
-        |coro|
-
-        Parameters
-        ----------
-        shard_id : Union[:class:`str`, None], optional
-            The shard, by default None for every shard on this spire, now and later.
-
-        """
-        if shard_id is None:
-            self._every_shard = self.none_means_every_shard
-        else:
-            self._subscribed.add(shard_id)
-
-        if self._panel is not None:
-            await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
-
-    async def remove_subscriber(self, shard_id: Optional[str] = None) -> None:
-        """Stop taking a shard's events, or every shard's.
+    async def add_subscribers(self, shards: Sequence[Union[Shard, str]]) -> None:
+        """Take these shards' events into this spire's listeners.
 
         |coro|
 
         Parameters
         ----------
-        shard_id : Union[:class:`str`, None], optional
-            The shard, by default None for all of them.
+        shards : Sequence[Union[:class:`Shard`, :class:`str`]]
+            The shards, as objects or IDs, mixed. A lone one is taken as a list of one.
 
         """
-        if shard_id is None:
-            self._every_shard = False
-            self._subscribed.clear()
-        else:
-            self._subscribed.discard(shard_id)
-
+        self._subscribed.update(_hub_ids(entries=shards))
         if self._panel is not None:
             await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
 
-    def _covers(self, shard_id: str, spire_id: Optional[str]) -> bool:
-        """If this spire subscribes `shard_id`, which lives on `spire_id`."""
-        return shard_id in self._subscribed or (self._every_shard is True and spire_id == self.id)
+    async def remove_subscribers(self, shards: Sequence[Union[Shard, str]]) -> None:
+        """Stop taking these shards' events.
+
+        |coro|
+
+        Parameters
+        ----------
+        shards : Sequence[Union[:class:`Shard`, :class:`str`]]
+            The shards, as objects or IDs, mixed. A lone one is taken as a list of one.
+
+        """
+        self._subscribed.difference_update(_hub_ids(entries=shards))
+        if self._panel is not None:
+            await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
+
+    def _listeners_changed(self) -> None:
+        if self._panel is not None:
+            self._panel._sync_soon()  # pyright: ignore[reportPrivateUsage]
+
+    def _covers(self, shard_id: str) -> bool:
+        """If this spire subscribes `shard_id`."""
+        return shard_id in self._subscribed
 
 
 class PanelHub(Hub):
@@ -721,11 +903,16 @@ class PanelHub(Hub):
     :meth:`start_listening` opens, as listeners need them, one `/hubs/shard` socket joined to every shard any level
     needs, one `/hubs/spire` (the network, and each spire needed) and one `/hubs/tasks`. A shard level `console`
     listener adds that shard's own socket. Shard events are routed by the shard ID they carry to the shard's own
-    object, to each spire that subscribes it, and to this panel if it does.
+    object, to each spire that subscribes it, and to this panel if it does. A task goes to the shard or spire it
+    targets, to each spire that subscribes its shard, and to this panel.
 
     AMP sends every shard's state to every shard socket, subscribed or not, so `state` is filtered by subscriber, and
     the copies are dropped by `(shard_id, revision)`. `console` lines on the shared socket name no shard, so they reach
     this panel's and the spires' `console` listeners unattributed.
+
+    A shard or spire object made with `auto_state` keeps its `state` current with no listener and no
+    :meth:`start_listening`: the shared shard socket opens for it, and the spire socket joins its spire. Each state
+    from any socket is applied once, through `_apply_state`, and only if it is newer than the one held.
 
     .. versionadded:: 6.0.0
 
@@ -745,12 +932,10 @@ class PanelHub(Hub):
     def __init__(self, session: Session) -> None:  # noqa: D107
         super().__init__(session=session)
         self._listening: bool = False
-        self._every_shard: bool = False
-        self._every_spire: bool = False
+        self._sync_pending: bool = False
         self._subscribed_shards: set[str] = set()
         self._subscribed_spires: set[str] = set()
         self._shard_records: dict[str, ShardResponse] = {}
-        self._spire_ids: set[str] = set()
         self._shard_objects: dict[str, weakref.WeakSet[ShardHub]] = {}
         self._spire_objects: dict[str, weakref.WeakSet[SpireHub]] = {}
         self._sockets: dict[str, HubConnection] = {}
@@ -771,51 +956,54 @@ class PanelHub(Hub):
         consoles: list[Optional[HubConnection]] = [shard._console for shard in self._all_shards()]  # pyright: ignore[reportPrivateUsage]
         return [socket for socket in consoles if socket is not None]
 
-    async def add_subscriber(self, shard_id: Optional[str] = None, spire_id: Optional[str] = None) -> None:
-        """Take a shard's or a spire's events into this panel's listeners; with neither, every shard and spire.
+    async def add_subscribers(self, *, shards: Sequence[Union[Shard, str]] = (), spires: Sequence[Union[Spire, str]] = ()) -> None:
+        """Take these shards' and spires' events into this panel's listeners.
 
         |coro|
 
         Parameters
         ----------
-        shard_id : Union[:class:`str`, None], optional
-            The shard, by default None.
-        spire_id : Union[:class:`str`, None], optional
-            The spire, for its `spire_state`, by default None.
+        shards : Sequence[Union[:class:`Shard`, :class:`str`]], optional
+            The shards, as objects or IDs, mixed, by default none. A lone one is taken as a list of one.
+        spires : Sequence[Union[:class:`Spire`, :class:`str`]], optional
+            The spires, for their `spire_state`, as objects or IDs, by default none.
+
+        Raises
+        ------
+        ValueError
+            If both are empty.
 
         """
-        if shard_id is None and spire_id is None:
-            self._every_shard = True
-            self._every_spire = True
-        if shard_id is not None:
-            self._subscribed_shards.add(shard_id)
-        if spire_id is not None:
-            self._subscribed_spires.add(spire_id)
-
+        if not shards and not spires:
+            msg = "add_subscribers needs at least one shard or spire."
+            raise ValueError(msg)
+        self._subscribed_shards.update(_hub_ids(entries=shards))
+        self._subscribed_spires.update(_hub_ids(entries=spires))
         await self._sync_sockets()
 
-    async def remove_subscriber(self, shard_id: Optional[str] = None, spire_id: Optional[str] = None) -> None:
-        """Stop taking a shard's or a spire's events; with neither, every one's.
+    async def remove_subscribers(self, *, shards: Sequence[Union[Shard, str]] = (), spires: Sequence[Union[Spire, str]] = ()) -> None:
+        """Stop taking these shards' and spires' events.
 
         |coro|
 
         Parameters
         ----------
-        shard_id : Union[:class:`str`, None], optional
-            The shard, by default None.
-        spire_id : Union[:class:`str`, None], optional
-            The spire, by default None.
+        shards : Sequence[Union[:class:`Shard`, :class:`str`]], optional
+            The shards, as objects or IDs, mixed, by default none. A lone one is taken as a list of one.
+        spires : Sequence[Union[:class:`Spire`, :class:`str`]], optional
+            The spires, as objects or IDs, by default none.
+
+        Raises
+        ------
+        ValueError
+            If both are empty.
 
         """
-        if shard_id is None and spire_id is None:
-            self._every_shard = False
-            self._every_spire = False
-            self._subscribed_shards.clear()
-            self._subscribed_spires.clear()
-        if shard_id is not None:
-            self._subscribed_shards.discard(shard_id)
-        if spire_id is not None:
-            self._subscribed_spires.discard(spire_id)
+        if not shards and not spires:
+            msg = "remove_subscribers needs at least one shard or spire."
+            raise ValueError(msg)
+        self._subscribed_shards.difference_update(_hub_ids(entries=shards))
+        self._subscribed_spires.difference_update(_hub_ids(entries=spires))
 
         await self._sync_sockets()
 
@@ -840,6 +1028,8 @@ class PanelHub(Hub):
     async def stop_listening(self) -> None:
         """Close every hub socket and stop every listener; anything still queued is dropped.
 
+        This closes the sockets `auto_state` keeps open too, until the next sync, eg. a new shard object, opens them.
+
         |coro|
 
         """
@@ -849,6 +1039,8 @@ class PanelHub(Hub):
 
         for task in self._background:
             task.cancel()
+        # A sync cancelled before it ran would otherwise leave the next `_sync_soon` thinking one is still coming.
+        self._sync_pending = False
 
         await asyncio.gather(*(socket.stop() for socket in self._sockets.values()), return_exceptions=True)
         self._sockets.clear()
@@ -872,8 +1064,8 @@ class PanelHub(Hub):
             self._shard_objects[shard.id] = weakref.WeakSet()
 
         self._shard_objects[shard.id].add(shard)
-        if self._listening is True and shard._listeners:
-            self._in_background(coroutine=self._sync_sockets())
+        if shard.auto_state is True or (self._listening is True and shard._has_listener(events=frozenset(EVENTS))):
+            self._sync_soon()
 
     def _register_spire(self, spire: SpireHub) -> None:
         """Keep a spire object so its events reach it; the panel holds it weakly, so keep your own reference."""
@@ -881,8 +1073,8 @@ class PanelHub(Hub):
             self._spire_objects[spire.id] = weakref.WeakSet()
 
         self._spire_objects[spire.id].add(spire)
-        if self._listening is True and spire._listeners:
-            self._in_background(coroutine=self._sync_sockets())
+        if spire.auto_state is True or (self._listening is True and spire._has_listener(events=frozenset(EVENTS))):
+            self._sync_soon()
 
     def _all_shards(self) -> list[ShardHub]:
         return [shard for shards in self._shard_objects.values() for shard in shards]
@@ -896,11 +1088,42 @@ class PanelHub(Hub):
         self._background.add(task)
         task.add_done_callback(self._background.discard)
 
+    def _listeners_changed(self) -> None:
+        self._sync_soon()
+
+    def _sync_soon(self) -> None:
+        """Schedule one socket sync on the running loop, for code that can't wait for it, eg. `add_listener`.
+
+        Calls made before it runs share it. With no loop running there's no socket to change, and the next sync picks
+        the change up.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        if self._sync_pending is False:
+            self._sync_pending = True
+            self._in_background(coroutine=self._sync_sockets())
+
+    def _apply_state(self, state: Union[ShardStatus, SpireStatus]) -> None:
+        """Set `state` on each object of its shard or spire that keeps its state, unless the object holds a newer one.
+
+        Every state from every socket comes through here. A shard's state goes by its `revision`, a spire's (which has
+        none) by its `last_heartbeat`, so a copy from a second socket isn't applied twice and a late one can't win.
+        """
+        if isinstance(state, ShardStatus):
+            for shard in self._shard_objects.get(state.shard_id, ()):
+                if shard.auto_state is True and (shard.state is None or state.revision > shard.state.revision):
+                    shard.state = state
+            return
+        for spire in self._spire_objects.get(state.spire_id, ()):
+            if spire.auto_state is True and (spire.state is None or state.last_heartbeat > spire.state.last_heartbeat):
+                spire.state = state
+
     async def _refresh_records(self) -> None:
-        """Fetch the shard and spire lists that routing and `None` subscribers are worked out from."""
-        shards, spires = await self._list_records()
+        """Fetch the shard list that joins are made from; a shard's join needs its tenant."""
+        shards, _spires = await self._list_records()
         self._shard_records = {shard["id"]: shard for shard in shards}
-        self._spire_ids = {spire["id"] for spire in spires}
 
     async def _refresh_loop(self) -> None:
         """Fetch the lists again every 5 minutes, or sooner when an event names a shard we don't know."""
@@ -919,55 +1142,57 @@ class PanelHub(Hub):
             except (AMPAPIRequestError, ClientError) as error:
                 LOGGER.warning("<%s.%s> | Failed to refresh the hub lists | Error: %s", __class__.__name__, "_refresh_loop", error)
 
-    def _covers_shard(self, shard_id: str) -> bool:
-        return self._every_shard is True or shard_id in self._subscribed_shards
-
-    def _covers_spire(self, spire_id: str) -> bool:
-        return self._every_spire is True or spire_id in self._subscribed_spires
-
     def _needed_shards(self) -> set[str]:
-        """The shards the shared `/hubs/shard` socket must join: this panel's, the spires' and each shard object's own."""
+        """The shards the shared `/hubs/shard` socket must join for listeners: this panel's, the spires' and each shard's."""
+        if self._listening is False:
+            return set()
+
         needed: set[str] = set()
         if self._has_listener(events=SHARD_EVENTS):
-            needed.update(shard_id for shard_id in self._shard_records if self._covers_shard(shard_id=shard_id))
-
+            needed.update(self._subscribed_shards)
         for spire in self._all_spires():
-            if not spire._has_listener(events=SHARD_EVENTS):
-                continue
-            for shard_id, record in self._shard_records.items():
-                if spire._covers(shard_id, record["spireId"]):  # pyright: ignore[reportPrivateUsage]
-                    needed.add(shard_id)
-
+            if spire._has_listener(events=SHARD_EVENTS):
+                needed.update(spire._subscribed)  # pyright: ignore[reportPrivateUsage]
         for shard in self._all_shards():
             if shard._has_listener(events=shard._shared_events):  # pyright: ignore[reportPrivateUsage]
                 needed.add(shard.id)
         return {shard_id for shard_id in needed if shard_id in self._shard_records}
 
     def _needed_spires(self) -> Optional[set[str]]:
-        """The spires the `/hubs/spire` socket must join, or `None` when no listener needs that socket at all."""
-        panel_wide: bool = self._has_listener(events=frozenset(("spire_presence", "network_status")))
-        needed: set[str] = set()
-        if self._has_listener(events=frozenset(("spire_state",))):
-            needed.update(spire_id for spire_id in self._spire_ids if self._covers_spire(spire_id=spire_id))
-
-        for spire in self._all_spires():
-            if spire._has_listener(events=frozenset(("spire_state",))):
-                needed.add(spire.id)
+        """The spires the `/hubs/spire` socket must join, or `None` when nothing needs that socket at all."""
+        panel_wide: bool = self._listening is True and self._has_listener(events=frozenset(("spire_presence", "network_status")))
+        needed: set[str] = {spire.id for spire in self._all_spires() if spire.auto_state is True}
+        if self._listening is True and self._has_listener(events=frozenset(("spire_state",))):
+            needed.update(self._subscribed_spires)
+        if self._listening is True:
+            needed.update(spire.id for spire in self._all_spires() if spire._has_listener(events=frozenset(("spire_state",))))
         return needed if needed or panel_wide else None
 
+    def _needs_tasks(self) -> bool:
+        """If any level listens for tasks, which only counts while we listen."""
+        hubs: list[Hub] = [self, *self._all_shards(), *self._all_spires()]
+        return self._listening is True and any(hub._has_listener(events=frozenset(("task",))) for hub in hubs)
+
     async def _sync_sockets(self) -> None:
-        """Open, join, leave and close the sockets so they match what the listeners and subscribers need now."""
+        """Open, join, leave and close the sockets to match what the listeners, subscribers and `auto_state` need now.
+
+        Listeners count once :meth:`start_listening` has run; an object's `auto_state` counts at any time.
+        """
+        self._sync_pending = False
         # After a logout, opening a socket would log in again.
-        if self._listening is False or self.session.logged_in is False:
+        if self.session.logged_in is False:
             return
 
         async with self._sync_lock:
-            await self._sync_shard_socket(needed=self._needed_shards())
+            needed_shards: set[str] = self._needed_shards()
+            # A shard's state reaches every shard socket, so `auto_state` needs the socket open but nothing joined.
+            auto_shards: bool = any(shard.auto_state is True for shard in self._all_shards())
+            await self._sync_shard_socket(needed=needed_shards, wanted=bool(needed_shards) or auto_shards)
             await self._sync_spire_socket(needed=self._needed_spires())
-            await self._sync_socket(key="tasks", wanted=self._has_listener(events=frozenset(("task",))), on_event=self._on_tasks_socket)
+            await self._sync_socket(key="tasks", wanted=self._needs_tasks(), on_event=self._on_tasks_socket)
             for shard in self._all_shards():
                 # A shard that's deleted, or gone from the list, can't be joined.
-                await shard._sync_console(listening=shard.id in self._shard_records)  # pyright: ignore[reportPrivateUsage]
+                await shard._sync_console(listening=self._listening is True and shard.id in self._shard_records)  # pyright: ignore[reportPrivateUsage]
 
     async def _sync_socket(
         self,
@@ -989,8 +1214,8 @@ class PanelHub(Hub):
             self._sockets[key] = socket
         return socket
 
-    async def _sync_shard_socket(self, needed: set[str]) -> None:
-        socket: Optional[HubConnection] = await self._sync_socket(key="shard", wanted=bool(needed), on_event=self._on_shard_socket)
+    async def _sync_shard_socket(self, needed: set[str], wanted: bool) -> None:
+        socket: Optional[HubConnection] = await self._sync_socket(key="shard", wanted=wanted, on_event=self._on_shard_socket)
         if socket is None:
             return
         # Each join's arguments are `[tenant_id, shard_id]`, so a leave sends them back as they were.
@@ -1046,10 +1271,10 @@ class PanelHub(Hub):
         entries: list[Any] = value if isinstance(value, list) else []  # pyright: ignore[reportUnknownVariableType]
         payload: Any = [kind(data=entry) for entry in entries] if isinstance(value, list) else kind(data=value)
         if event == "console":
-            if self._every_shard is True or self._subscribed_shards:
+            if self._subscribed_shards:
                 self._emit(event=event, data=payload)
             for spire in self._all_spires():
-                if spire._every_shard is True or spire._subscribed:  # pyright: ignore[reportPrivateUsage]
+                if spire._subscribed:  # pyright: ignore[reportPrivateUsage]
                     spire._emit(event=event, data=payload)
             return
 
@@ -1063,6 +1288,7 @@ class PanelHub(Hub):
 
         # Every shard socket gets every shard's state, so a reconnect or a second socket can bring the same revision twice.
         if isinstance(payload, ShardStatus):
+            self._apply_state(state=payload)
             if (shard_id, payload.revision) in self._seen_states:
                 return
             self._seen_states[(shard_id, payload.revision)] = None
@@ -1073,20 +1299,21 @@ class PanelHub(Hub):
             shard._emit(event=event, data=payload)
 
         for spire in self._all_spires():
-            if spire._covers(shard_id, record["spireId"] if record is not None else None):  # pyright: ignore[reportPrivateUsage]
+            if spire._covers(shard_id=shard_id):  # pyright: ignore[reportPrivateUsage]
                 spire._emit(event=event, data=payload)
 
-        if self._covers_shard(shard_id=shard_id):
+        if shard_id in self._subscribed_shards:
             self._emit(event=event, data=payload)
 
     def _on_spire_socket(self, connection: HubConnection, target: str, arguments: list[Any]) -> None:  # noqa: ARG002
         """Route a spire's state by its spire ID; presence and network status are panel-wide."""
         if target == "SpireState" and arguments:
             state: SpireStatus = SpireStatus(data=arguments[0])
+            self._apply_state(state=state)
             for spire in self._spire_objects.get(state.spire_id, ()):
                 spire._emit(event="spire_state", data=state)
 
-            if self._covers_spire(spire_id=state.spire_id):
+            if state.spire_id in self._subscribed_spires:
                 self._emit(event="spire_state", data=state)
 
         elif target == "SpirePresence" and arguments:
@@ -1104,4 +1331,15 @@ class PanelHub(Hub):
         task: RunningTask = RunningTask(data=arguments[0])
         if task.target_type == "Shard" and task.target_id not in self._shard_records:
             self._refresh_wanted.set()
+
+        # A shard gets its own tasks, a spire its own and those of the shards it subscribes, the panel every one.
+        if task.target_type == "Shard":
+            for shard in self._shard_objects.get(task.target_id, ()):
+                shard._emit(event="task", data=task)
+            for spire in self._all_spires():
+                if spire._covers(shard_id=task.target_id):  # pyright: ignore[reportPrivateUsage]
+                    spire._emit(event="task", data=task)
+        elif task.target_type == "Spire":
+            for spire in self._spire_objects.get(task.target_id, ()):
+                spire._emit(event="task", data=task)
         self._emit(event="task", data=task)

@@ -71,16 +71,33 @@ class Panel(
         The class `get_shard` and `get_shards` make, eg. a subclass with listeners, by default :class:`Shard`.
     spire_class : type[:class:`Spire`], optional
         The class `get_spire` and `get_spires` make, by default :class:`Spire`.
+    auto_state : :class:`bool`, optional
+        The `auto_state` of each shard and spire this panel hands out, by default True. One made by hand takes its own.
 
     """
 
-    def __init__(self, session: Session, *, shard_class: type[Shard] = Shard, spire_class: type[Spire] = Spire) -> None:  # noqa: D107
+    def __init__(  # noqa: D107
+        self,
+        session: Session,
+        *,
+        shard_class: type[Shard] = Shard,
+        spire_class: type[Spire] = Spire,
+        auto_state: bool = True,
+    ) -> None:
         super().__init__(session=session)
         self.shard_class = shard_class
         self.spire_class = spire_class
+        self._auto_state: bool = auto_state
 
     async def __aenter__(self) -> Self:  # noqa: D105
         return self
+
+    # TODO: A setter, so the panel's `auto_state` can be switched after it's made, waits for Kat (#3-47.2.8).
+    # It would change only the objects made after it.
+    @property
+    def auto_state(self) -> bool:
+        """The `auto_state` each shard and spire this panel hands out is made with."""
+        return self._auto_state
 
     async def __aexit__(  # noqa: D105
         self,
@@ -108,7 +125,7 @@ class Panel(
                 existing.data = data
                 existing.display_name = data["displayName"]
                 return existing
-        return super()._make_shard(data=data)
+        return self.shard_class(module=self, data=data, auto_state=self.auto_state)
 
     def _make_spire(self, data: SpireResponse) -> Spire:
         """The spire object we already keep for `data`, brought up to date, so a spire listens through one object only."""
@@ -117,7 +134,7 @@ class Panel(
                 existing.data = data
                 existing.display_name = data["displayName"]
                 return existing
-        return super()._make_spire(data=data)
+        return self.spire_class(module=self, data=data, auto_state=self.auto_state)
 
     async def _list_records(self) -> tuple[list[ShardResponse], list[SpireResponse]]:
         """The shard and spire lists the hub routing works from, as dicts, so no listener objects are made for them."""

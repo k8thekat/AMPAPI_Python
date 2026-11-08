@@ -111,6 +111,9 @@ class Shard(ShardHub):
         The module (usually the :class:`Panel`) the calls go through.
     data : :class:`ShardResponse`
         The shard as AMP sent it.
+    auto_state : :class:`bool`, optional
+        If `state` follows the shard's state events from the hub or not, by default True; read back with the property.
+        A shard the panel hands out gets the panel's `auto_state`.
 
     Attributes
     ----------
@@ -128,8 +131,8 @@ class Shard(ShardHub):
     id: str
     _module: ShardModule
 
-    def __init__(self, module: ShardModule, data: ShardResponse) -> None:  # noqa: D107
-        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None)
+    def __init__(self, module: ShardModule, data: ShardResponse, *, auto_state: bool = True) -> None:  # noqa: D107
+        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
         self._module = module
         self.data = data
         self.id = data["id"]
