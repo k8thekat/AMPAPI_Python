@@ -23,12 +23,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
-from .base import Base, ListenerRegistry
+from .base import Base
+from .hubs import PanelHub, SpireHub
 from .objects import SpirePresence, SpireStatus
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
     from ._types import (
         DatastoreRequest,
         DatastoreResponse,
@@ -54,7 +53,6 @@ if TYPE_CHECKING:
         SpireUsageIntervalResponse,
         SpireUsageResponse,
     )
-    from .hubs import SpireEvent
 
 __all__ = (
     "Spire",
@@ -64,11 +62,12 @@ __all__ = (
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class Spire:
+class Spire(SpireHub):
     """A spire, AMP 3's name for an ADS or Target, with the calls that act on it.
 
-    :meth:`SpireModule.get_spires` and :meth:`SpireModule.get_spire` make these. Each method calls the
-    :class:`SpireModule` one with this spire's ID, eg. :meth:`get_state` is :meth:`SpireModule.get_spire_state`.
+    :meth:`SpireModule.get_spires` and :meth:`SpireModule.get_spire` make these, of the panel's `spire_class`. Each
+    method calls the :class:`SpireModule` one with this spire's ID, eg. :meth:`get_state` is
+    :meth:`SpireModule.get_spire_state`. A subclass can declare listeners and subscribe shards; see :class:`SpireHub`.
 
     A spire that joined serves the whole panel API too, so a :class:`Panel` can talk to any of them. The data's
     `isLocal` is relative to the machine that answered, not a property of the spire.
@@ -99,10 +98,14 @@ class Spire:
     _module: SpireModule
 
     def __init__(self, module: SpireModule, data: SpireResponse) -> None:  # noqa: D107
+        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None)
         self._module = module
         self.data = data
         self.id = data["id"]
         self.display_name = data["displayName"]
+
+        if self._panel is not None:
+            self._panel._register_spire(spire=self)  # pyright: ignore[reportPrivateUsage]
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.apply_spire_update`.
@@ -333,38 +336,6 @@ class Spire:
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.preflight_spire_import`.
-    def listen(self, event: SpireEvent) -> Callable[[Callable[[Spire, Any], Awaitable[None]]], Callable[[Spire, Any], Awaitable[None]]]:
-        """Register the decorated coroutine function for one of this spire's hub events, eg. ``@spire.listen("spire_state")``.
-
-        The same as `HubModule.listen` with `spire` set; it needs the spire to come from a :class:`Panel`.
-
-        Parameters
-        ----------
-        event : :class:`SpireEvent`
-            The event, eg. ``"spire_state"``.
-
-        Returns
-        -------
-        Callable
-            The decorator, which hands back the function as it was.
-
-        Raises
-        ------
-        TypeError
-            If the spire's module has no hub, ie. it isn't a :class:`Panel`.
-
-        """
-        module: SpireModule = self._module
-        if not isinstance(module, ListenerRegistry):
-            msg = "Listening needs a Panel; this spire's module has no hub."
-            raise TypeError(msg)
-
-        def register(handler: Callable[[Spire, Any], Awaitable[None]]) -> Callable[[Spire, Any], Awaitable[None]]:
-            module.add_listener(handler, event, spire=self.id)
-            return handler
-
-        return register
-
     async def preflight_import(self, items: list[SpireImportItem]) -> Any:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 
@@ -523,6 +494,9 @@ class SpireModule(Base):
     .. versionadded:: 6.0.0
 
     """
+
+    # The class `get_spire` and `get_spires` make; `Panel(spire_class=...)` sets a subclass.
+    spire_class: type[Spire] = Spire
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # The body comes from the web panel's code; no capture shows the response yet.
@@ -776,7 +750,7 @@ class SpireModule(Base):
 
         """
         result: SpireResponse = await self._request(method="GET", path=f"/api/spires/{spire_id}")
-        return Spire(module=self, data=result)
+        return self._make_spire(data=result)
 
     async def get_spires(self) -> list[Spire]:
         """Get every spire the logged in user can see.
@@ -792,7 +766,11 @@ class SpireModule(Base):
 
         """
         result: list[SpireResponse] = await self._request(method="GET", path="/api/spires")
-        return [Spire(module=self, data=entry) for entry in result]
+        return [self._make_spire(data=entry) for entry in result]
+
+    def _make_spire(self, data: SpireResponse) -> Spire:
+        """A `spire_class` object for `data`; `Panel` hands back the one it already keeps for that spire instead."""
+        return self.spire_class(module=self, data=data)
 
     async def get_spire_datastores(self, spire_id: str) -> list[DatastoreResponse]:
         """Get a spire's datastores, the folders shards are kept in.

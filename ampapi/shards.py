@@ -25,11 +25,12 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
-from .base import Base, ListenerRegistry
+from .base import Base
+from .hubs import PanelHub, ShardHub
 from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardSnapshots, ShardStatus, Snapshot
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Mapping
+    from collections.abc import Mapping
 
     from ._types import (
         FileACLChange,
@@ -80,7 +81,6 @@ if TYPE_CHECKING:
         SnapshotSettingsResponse,
         SpireIPOptionResponse,
     )
-    from .hubs import ShardEvent
 
 __all__ = (
     "Shard",
@@ -93,12 +93,15 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 UPLOAD_CHUNK_SIZE: int = 8 * 1024 * 1024
 
 
-class Shard:
+class Shard(ShardHub):
     """A shard, AMP 3's name for an Instance, with the calls that act on it.
 
-    :meth:`ShardModule.get_shards` and :meth:`ShardModule.get_shard` make these. Each method calls the
-    :class:`ShardModule` one with this shard's ID, eg. :meth:`start` is :meth:`ShardModule.start_shard`; its
-    parameters, reply and errors are documented there.
+    :meth:`ShardModule.get_shards` and :meth:`ShardModule.get_shard` make these, of the panel's `shard_class`. Each
+    method calls the :class:`ShardModule` one with this shard's ID, eg. :meth:`start` is
+    :meth:`ShardModule.start_shard`; its parameters, reply and errors are documented there.
+
+    A subclass can declare listeners, eg. ``@ShardHub.listener(name="console")``; see :class:`ShardHub`. Made by hand,
+    eg. ``MyShard(module=panel, data=record)``, it listens once the panel does, as long as you keep a reference to it.
 
     .. versionadded:: 6.0.0
 
@@ -126,10 +129,14 @@ class Shard:
     _module: ShardModule
 
     def __init__(self, module: ShardModule, data: ShardResponse) -> None:  # noqa: D107
+        super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None)
         self._module = module
         self.data = data
         self.id = data["id"]
         self.display_name = data["displayName"]
+
+        if self._panel is not None:
+            self._panel._register_shard(shard=self)  # pyright: ignore[reportPrivateUsage]
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.
@@ -604,38 +611,6 @@ class Shard:
         """
         return await self._module.kill_shard(shard_id=self.id)
 
-    def listen(self, event: ShardEvent) -> Callable[[Callable[[Shard, Any], Awaitable[None]]], Callable[[Shard, Any], Awaitable[None]]]:
-        """Register the decorated coroutine function for one of this shard's hub events, eg. ``@shard.listen("console")``.
-
-        The same as `HubModule.listen` with `shard` set; it needs the shard to come from a :class:`Panel`.
-
-        Parameters
-        ----------
-        event : :class:`ShardEvent`
-            The event, eg. ``"console"``.
-
-        Returns
-        -------
-        Callable
-            The decorator, which hands back the function as it was.
-
-        Raises
-        ------
-        TypeError
-            If the shard's module has no hub, ie. it isn't a :class:`Panel`.
-
-        """
-        module: ShardModule = self._module
-        if not isinstance(module, ListenerRegistry):
-            msg = "Listening needs a Panel; this shard's module has no hub."
-            raise TypeError(msg)
-
-        def register(handler: Callable[[Shard, Any], Awaitable[None]]) -> Callable[[Shard, Any], Awaitable[None]]:
-            module.add_listener(handler, event, shard=self.id)
-            return handler
-
-        return register
-
     async def migrate_to_spire(self, target_spire_id: str, target_datastore_id: str, *, bring_backups: bool, stop_if_running: bool) -> None:
         """Move this shard to another spire, see :meth:`ShardModule.migrate_shard_to_spire`.
 
@@ -996,6 +971,9 @@ class ShardModule(Base):
     .. versionadded:: 6.0.0
 
     """
+
+    # The class `get_shard` and `get_shards` make; `Panel(shard_class=...)` sets a subclass.
+    shard_class: type[Shard] = Shard
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.
@@ -1636,7 +1614,7 @@ class ShardModule(Base):
 
         """
         result: ShardResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}")
-        return Shard(module=self, data=result)
+        return self._make_shard(data=result)
 
     async def get_shards(self, *, include_deleted: bool = False) -> list[Shard]:
         """Get every shard the logged in user can see.
@@ -1658,7 +1636,11 @@ class ShardModule(Base):
         """
         parameters: dict[str, str] = {"includeDeleted": "true" if include_deleted is True else "false"}
         result: list[ShardResponse] = await self._request(method="GET", path="/api/shards", parameters=parameters)
-        return [Shard(module=self, data=entry) for entry in result]
+        return [self._make_shard(data=entry) for entry in result]
+
+    def _make_shard(self, data: ShardResponse) -> Shard:
+        """A `shard_class` object for `data`; `Panel` hands back the one it already keeps for that shard instead."""
+        return self.shard_class(module=self, data=data)
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # The item shape isn't known yet; the web panel reads `shardId`, `name` and `message` from each.

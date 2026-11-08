@@ -23,7 +23,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol, Union, runtime_checkable
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 from .errors import (
     AMPAPIRequestError,
@@ -31,7 +31,7 @@ from .errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Mapping
+    from collections.abc import Mapping
 
     from ._types import QueryParameters
     from .session import Session
@@ -39,22 +39,6 @@ if TYPE_CHECKING:
 __all__ = ("Base",)
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
-
-
-@runtime_checkable
-class ListenerRegistry(Protocol):
-    """What `Shard.listen` and `Spire.listen` need from their module: a `HubModule`, so in practice a :class:`Panel`."""
-
-    def add_listener(
-        self,
-        handler: Callable[..., Awaitable[None]],
-        event: Any,
-        *,
-        shard: Optional[str] = None,
-        spire: Optional[str] = None,
-    ) -> None:
-        """Register `handler` for `event`, see `HubModule.add_listener`."""
-        ...
 
 
 class Base:
