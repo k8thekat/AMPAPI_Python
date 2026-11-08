@@ -72,7 +72,8 @@ class Panel(
     spire_class : type[:class:`Spire`], optional
         The class `get_spire` and `get_spires` make, by default :class:`Spire`.
     auto_state : :class:`bool`, optional
-        The `auto_state` of each shard and spire this panel hands out, by default True. One made by hand takes its own.
+        The `auto_state` of each shard and spire from `get_shard` and `get_spire`, by default True. One made by hand,
+        or from `get_shards` / `get_spires`, takes its own.
 
     """
 
@@ -96,7 +97,7 @@ class Panel(
     # It would change only the objects made after it.
     @property
     def auto_state(self) -> bool:
-        """The `auto_state` each shard and spire this panel hands out is made with."""
+        """The `auto_state` each shard and spire from `get_shard` and `get_spire` is made with."""
         return self._auto_state
 
     async def __aexit__(  # noqa: D105
@@ -118,23 +119,29 @@ class Panel(
         await self.stop_listening()
         await self.session.clean_up()
 
-    def _make_shard(self, data: ShardResponse) -> Shard:
-        """The shard object we already keep for `data`, brought up to date, so a shard listens through one object only."""
+    def _make_shard(self, data: ShardResponse, auto_state: Optional[bool] = None) -> Shard:
+        """The shard object we already keep for `data`, brought up to date, so a shard listens through one object only.
+
+        A new one is made with `auto_state`, or this panel's when that's `None`; one we keep keeps its own.
+        """
         for existing in self._shard_objects.get(data["id"], ()):
             if isinstance(existing, self.shard_class):
                 existing.data = data
                 existing.display_name = data["displayName"]
                 return existing
-        return self.shard_class(module=self, data=data, auto_state=self.auto_state)
+        return self.shard_class(module=self, data=data, auto_state=self.auto_state if auto_state is None else auto_state)
 
-    def _make_spire(self, data: SpireResponse) -> Spire:
-        """The spire object we already keep for `data`, brought up to date, so a spire listens through one object only."""
+    def _make_spire(self, data: SpireResponse, auto_state: Optional[bool] = None) -> Spire:
+        """The spire object we already keep for `data`, brought up to date, so a spire listens through one object only.
+
+        A new one is made with `auto_state`, or this panel's when that's `None`; one we keep keeps its own.
+        """
         for existing in self._spire_objects.get(data["id"], ()):
             if isinstance(existing, self.spire_class):
                 existing.data = data
                 existing.display_name = data["displayName"]
                 return existing
-        return self.spire_class(module=self, data=data, auto_state=self.auto_state)
+        return self.spire_class(module=self, data=data, auto_state=self.auto_state if auto_state is None else auto_state)
 
     async def _list_records(self) -> tuple[list[ShardResponse], list[SpireResponse]]:
         """The shard and spire lists the hub routing works from, as dicts, so no listener objects are made for them."""

@@ -982,7 +982,7 @@ class PanelHub(Hub):
         await self._sync_sockets()
 
     async def remove_subscribers(self, *, shards: Sequence[Union[Shard, str]] = (), spires: Sequence[Union[Spire, str]] = ()) -> None:
-        """Stop taking these shards' and spires' events.
+        """Stop taking these shards' and spires' events; with neither, nothing changes.
 
         |coro|
 
@@ -993,18 +993,9 @@ class PanelHub(Hub):
         spires : Sequence[Union[:class:`Spire`, :class:`str`]], optional
             The spires, as objects or IDs, by default none.
 
-        Raises
-        ------
-        ValueError
-            If both are empty.
-
         """
-        if not shards and not spires:
-            msg = "remove_subscribers needs at least one shard or spire."
-            raise ValueError(msg)
         self._subscribed_shards.difference_update(_hub_ids(entries=shards))
         self._subscribed_spires.difference_update(_hub_ids(entries=spires))
-
         await self._sync_sockets()
 
     async def start_listening(self) -> None:

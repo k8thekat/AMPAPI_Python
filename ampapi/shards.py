@@ -113,7 +113,7 @@ class Shard(ShardHub):
         The shard as AMP sent it.
     auto_state : :class:`bool`, optional
         If `state` follows the shard's state events from the hub or not, by default True; read back with the property.
-        A shard the panel hands out gets the panel's `auto_state`.
+        One from `get_shard` gets the panel's `auto_state`, and one from `get_shards` that call's, by default False.
 
     Attributes
     ----------
@@ -1619,7 +1619,7 @@ class ShardModule(Base):
         result: ShardResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}")
         return self._make_shard(data=result)
 
-    async def get_shards(self, *, include_deleted: bool = False) -> list[Shard]:
+    async def get_shards(self, *, include_deleted: bool = False, auto_state: bool = False) -> list[Shard]:
         """Get every shard the logged in user can see.
 
         |coro|
@@ -1630,6 +1630,9 @@ class ShardModule(Base):
         ----------
         include_deleted : :class:`bool`, optional
             If deleted shards that aren't purged yet are listed too or not, by default False.
+        auto_state : :class:`bool`, optional
+            The `auto_state` each new shard object is made with, by default False, so a listing opens no hub socket.
+            A shard the panel already holds an object for keeps that object's own `auto_state`.
 
         Returns
         -------
@@ -1639,11 +1642,14 @@ class ShardModule(Base):
         """
         parameters: dict[str, str] = {"includeDeleted": "true" if include_deleted is True else "false"}
         result: list[ShardResponse] = await self._request(method="GET", path="/api/shards", parameters=parameters)
-        return [self._make_shard(data=entry) for entry in result]
+        return [self._make_shard(data=entry, auto_state=auto_state) for entry in result]
 
-    def _make_shard(self, data: ShardResponse) -> Shard:
-        """A `shard_class` object for `data`; `Panel` hands back the one it already keeps for that shard instead."""
-        return self.shard_class(module=self, data=data)
+    def _make_shard(self, data: ShardResponse, auto_state: Optional[bool] = None) -> Shard:
+        """A `shard_class` object for `data`; `Panel` hands back the one it already keeps for that shard instead.
+
+        `auto_state` is `None` for the panel's own default, which is True without a panel.
+        """
+        return self.shard_class(module=self, data=data, auto_state=True if auto_state is None else auto_state)
 
     # TODO: Type the items once AMP is seen listing one live (#3-47.7).
     # The item shape isn't known yet; the web panel reads `shardId`, `name` and `message` from each.
