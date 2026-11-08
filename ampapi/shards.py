@@ -113,7 +113,7 @@ class Shard(ShardHub):
         The shard as AMP sent it.
     auto_state : :class:`bool`, optional
         If `state` follows the shard's state events from the hub or not, by default True; read back with the property.
-        One from `get_shard` gets the panel's `auto_state`, and one from `get_shards` that call's, by default False.
+        One from `get_shard` or `get_shards` gets that call's `auto_state`, by default False.
 
     Attributes
     ----------
@@ -1593,7 +1593,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path="/api/shards/endpoints")
 
-    async def get_shard(self, shard_id: str) -> Shard:
+    async def get_shard(self, shard_id: str, *, auto_state: bool = False) -> Shard:
         """Get one shard.
 
         |coro|
@@ -1604,6 +1604,9 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
+        auto_state : :class:`bool`, optional
+            The `auto_state` a new shard object is made with, by default False, so the call opens no hub socket.
+            A shard the panel already holds an object for keeps that object's own `auto_state`.
 
         Returns
         -------
@@ -1617,7 +1620,7 @@ class ShardModule(Base):
 
         """
         result: ShardResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}")
-        return self._make_shard(data=result)
+        return self._make_shard(data=result, auto_state=auto_state)
 
     async def get_shards(self, *, include_deleted: bool = False, auto_state: bool = False) -> list[Shard]:
         """Get every shard the logged in user can see.

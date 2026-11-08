@@ -72,8 +72,8 @@ class Panel(
     spire_class : type[:class:`Spire`], optional
         The class `get_spire` and `get_spires` make, by default :class:`Spire`.
     auto_state : :class:`bool`, optional
-        The `auto_state` of each shard and spire from `get_shard` and `get_spire`, by default True. One made by hand,
-        or from `get_shards` / `get_spires`, takes its own.
+        The `auto_state` a shard or spire object gets when no call names one, by default True. `get_shard`,
+        `get_shards`, `get_spire` and `get_spires` each name their own, by default False.
 
     """
 
@@ -93,11 +93,11 @@ class Panel(
     async def __aenter__(self) -> Self:  # noqa: D105
         return self
 
-    # TODO: A setter, so the panel's `auto_state` can be switched after it's made, waits for Kat (#3-47.2.8).
-    # It would change only the objects made after it.
+    # TODO: Keep or drop the panel's `auto_state`, and a setter for it, waits for Kat (#3-47.2.10).
+    # Every `get_shard(s)` / `get_spire(s)` call now names its own, so this default reaches no public call.
     @property
     def auto_state(self) -> bool:
-        """The `auto_state` each shard and spire from `get_shard` and `get_spire` is made with."""
+        """The `auto_state` a shard or spire object gets when no call names one."""
         return self._auto_state
 
     async def __aexit__(  # noqa: D105

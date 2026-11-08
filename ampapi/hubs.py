@@ -130,10 +130,22 @@ SHARD_TARGETS: dict[str, tuple[str, int, type[AMPObject], Optional[int]]] = {
 _MARKED: dict[Callable[..., Any], str] = {}
 
 
-def _hub_ids(entries: Union[Sequence[Union[ShardHub, SpireHub, str]], ShardHub, SpireHub, str]) -> set[str]:
-    """The IDs in `entries`, objects or IDs mixed. A lone object or ID counts as a list of one, so an ID isn't split."""
+def _subscriber_items(
+    entries: Union[Sequence[Union[ShardHub, SpireHub, str]], ShardHub, SpireHub, str],
+) -> Sequence[Union[ShardHub, SpireHub, str]]:
+    """`entries` as a list. A lone object or ID counts as a list of one, so an ID isn't split into its letters.
+
+    Raises
+    ------
+    ValueError
+        If `entries` is empty; `None`, not an empty list, means every one.
+
+    """
     items: Sequence[Union[ShardHub, SpireHub, str]] = (entries,) if isinstance(entries, (str, ShardHub, SpireHub)) else entries
-    return {entry if isinstance(entry, str) else entry.id for entry in items}
+    if not items:
+        msg = "The subscribers list is empty; leave it out, or pass None, for every one."
+        raise ValueError(msg)
+    return items
 
 
 class HubConnection:
@@ -847,7 +859,10 @@ class SpireHub(Hub):
     def __init__(self, session: Session, panel: Optional[PanelHub], *, auto_state: bool = True) -> None:  # noqa: D107
         super().__init__(session=session)
         self._panel: Optional[PanelHub] = panel
+        # `add_subscribers()` with no list: every shard on this spire, less the ones removed by name since.
+        self._subscribe_all: bool = False
         self._subscribed: set[str] = set()
+        self._excluded: set[str] = set()
         self._auto_state: bool = auto_state
         self.state: Optional[SpireStatus] = None
 
@@ -858,43 +873,90 @@ class SpireHub(Hub):
         """If `state` follows the spire's state events, as the object was made with."""
         return self._auto_state
 
-    async def add_subscribers(self, shards: Sequence[Union[Shard, str]]) -> None:
+    async def add_subscribers(self, subscribers: Optional[Sequence[Union[Shard, str]]] = None) -> None:
         """Take these shards' events into this spire's listeners.
 
         |coro|
 
         Parameters
         ----------
-        shards : Sequence[Union[:class:`Shard`, :class:`str`]]
-            The shards, as objects or IDs, mixed. A lone one is taken as a list of one.
+        subscribers : Union[Sequence[Union[:class:`Shard`, :class:`str`]], None], optional
+            The shards, as objects or IDs, mixed; a lone one is taken as a list of one. By default None, for every shard
+            on this spire, following the ones made or moved onto it later, from the panel's next list refresh.
+
+        Raises
+        ------
+        ValueError
+            If the list is empty, holds a spire, or holds an ID that isn't a shard's.
 
         """
-        self._subscribed.update(_hub_ids(entries=shards))
+        if subscribers is None:
+            self._subscribe_all = True
+            self._excluded.clear()
+        else:
+            shard_ids: set[str] = await self._shard_ids(subscribers=subscribers)
+            self._subscribed.update(shard_ids)
+            self._excluded.difference_update(shard_ids)
         if self._panel is not None:
             await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
 
-    async def remove_subscribers(self, shards: Sequence[Union[Shard, str]]) -> None:
+    async def remove_subscribers(self, subscribers: Optional[Sequence[Union[Shard, str]]] = None) -> None:
         """Stop taking these shards' events.
 
         |coro|
 
         Parameters
         ----------
-        shards : Sequence[Union[:class:`Shard`, :class:`str`]]
-            The shards, as objects or IDs, mixed. A lone one is taken as a list of one.
+        subscribers : Union[Sequence[Union[:class:`Shard`, :class:`str`]], None], optional
+            The shards, as objects or IDs, mixed; a lone one is taken as a list of one. While every shard is subscribed,
+            these are left out of it. By default None, for every subscriber, which also ends "every shard".
+
+        Raises
+        ------
+        ValueError
+            If the list is empty, holds a spire, or holds an ID that isn't a shard's.
 
         """
-        self._subscribed.difference_update(_hub_ids(entries=shards))
+        if subscribers is None:
+            self._subscribe_all = False
+            self._subscribed.clear()
+            self._excluded.clear()
+        else:
+            shard_ids: set[str] = await self._shard_ids(subscribers=subscribers)
+            self._subscribed.difference_update(shard_ids)
+            if self._subscribe_all is True:
+                self._excluded.update(shard_ids)
         if self._panel is not None:
             await self._panel._sync_sockets()  # pyright: ignore[reportPrivateUsage]
+
+    async def _shard_ids(self, subscribers: Sequence[Union[Shard, str]]) -> set[str]:
+        """The shard IDs in `subscribers`; the panel tells a shard's ID from a spire's.
+
+        Raises
+        ------
+        ValueError
+            If the list is empty, or holds a spire or a spire's ID.
+
+        """
+        items: Sequence[Union[ShardHub, SpireHub, str]] = _subscriber_items(entries=subscribers)
+        if self._panel is not None:
+            shard_ids, spire_ids = await self._panel._sort_subscribers(items=items)  # pyright: ignore[reportPrivateUsage]
+        else:
+            # With no panel there's no list to check an ID against, and no events to route either.
+            shard_ids = {item if isinstance(item, str) else item.id for item in items if not isinstance(item, SpireHub)}
+            spire_ids = {item.id for item in items if isinstance(item, SpireHub)}
+        if spire_ids:
+            msg = f"A spire subscribes shards only, not the spire {', '.join(sorted(spire_ids))}."
+            raise ValueError(msg)
+        return shard_ids
 
     def _listeners_changed(self) -> None:
         if self._panel is not None:
             self._panel._sync_soon()  # pyright: ignore[reportPrivateUsage]
 
-    def _covers(self, shard_id: str) -> bool:
-        """If this spire subscribes `shard_id`."""
-        return shard_id in self._subscribed
+    def _covers(self, shard_id: str, spire_id: Optional[str]) -> bool:
+        """If this spire subscribes `shard_id`, which lives on `spire_id`."""
+        return shard_id not in self._excluded and (shard_id in self._subscribed or (self._subscribe_all is True and spire_id == self.id))
 
 
 class PanelHub(Hub):
@@ -933,9 +995,14 @@ class PanelHub(Hub):
         super().__init__(session=session)
         self._listening: bool = False
         self._sync_pending: bool = False
+        # `add_subscribers()` with no list: every shard and spire, less the ones removed by name since.
+        self._subscribe_all: bool = False
         self._subscribed_shards: set[str] = set()
         self._subscribed_spires: set[str] = set()
+        self._excluded_shards: set[str] = set()
+        self._excluded_spires: set[str] = set()
         self._shard_records: dict[str, ShardResponse] = {}
+        self._spire_records: dict[str, SpireResponse] = {}
         self._shard_objects: dict[str, weakref.WeakSet[ShardHub]] = {}
         self._spire_objects: dict[str, weakref.WeakSet[SpireHub]] = {}
         self._sockets: dict[str, HubConnection] = {}
@@ -956,47 +1023,114 @@ class PanelHub(Hub):
         consoles: list[Optional[HubConnection]] = [shard._console for shard in self._all_shards()]  # pyright: ignore[reportPrivateUsage]
         return [socket for socket in consoles if socket is not None]
 
-    async def add_subscribers(self, *, shards: Sequence[Union[Shard, str]] = (), spires: Sequence[Union[Spire, str]] = ()) -> None:
-        """Take these shards' and spires' events into this panel's listeners.
+    async def add_subscribers(self, subscribers: Optional[Sequence[Union[Shard, Spire, str]]] = None) -> None:
+        """Take these shards' and spires' events into this panel's listeners; a spire's are its `spire_state`.
 
         |coro|
 
         Parameters
         ----------
-        shards : Sequence[Union[:class:`Shard`, :class:`str`]], optional
-            The shards, as objects or IDs, mixed, by default none. A lone one is taken as a list of one.
-        spires : Sequence[Union[:class:`Spire`, :class:`str`]], optional
-            The spires, for their `spire_state`, as objects or IDs, by default none.
+        subscribers : Union[Sequence[Union[:class:`Shard`, :class:`Spire`, :class:`str`]], None], optional
+            The shards and spires, as objects or IDs, mixed; a lone one is taken as a list of one. An ID is looked up
+            in the shard list, then the spire list. By default None, for every shard and spire we can see, following
+            the ones made or joined later, from the next list refresh.
 
         Raises
         ------
         ValueError
-            If both are empty.
+            If the list is empty, or holds an ID that is no shard's or spire's, even once the lists are fetched again.
 
         """
-        if not shards and not spires:
-            msg = "add_subscribers needs at least one shard or spire."
-            raise ValueError(msg)
-        self._subscribed_shards.update(_hub_ids(entries=shards))
-        self._subscribed_spires.update(_hub_ids(entries=spires))
+        if subscribers is None:
+            self._subscribe_all = True
+            self._excluded_shards.clear()
+            self._excluded_spires.clear()
+        else:
+            shard_ids, spire_ids = await self._sort_subscribers(items=_subscriber_items(entries=subscribers))
+            self._subscribed_shards.update(shard_ids)
+            self._subscribed_spires.update(spire_ids)
+            self._excluded_shards.difference_update(shard_ids)
+            self._excluded_spires.difference_update(spire_ids)
+
         await self._sync_sockets()
 
-    async def remove_subscribers(self, *, shards: Sequence[Union[Shard, str]] = (), spires: Sequence[Union[Spire, str]] = ()) -> None:
-        """Stop taking these shards' and spires' events; with neither, nothing changes.
+    async def remove_subscribers(self, subscribers: Optional[Sequence[Union[Shard, Spire, str]]] = None) -> None:
+        """Stop taking these shards' and spires' events.
 
         |coro|
 
         Parameters
         ----------
-        shards : Sequence[Union[:class:`Shard`, :class:`str`]], optional
-            The shards, as objects or IDs, mixed, by default none. A lone one is taken as a list of one.
-        spires : Sequence[Union[:class:`Spire`, :class:`str`]], optional
-            The spires, as objects or IDs, by default none.
+        subscribers : Union[Sequence[Union[:class:`Shard`, :class:`Spire`, :class:`str`]], None], optional
+            The shards and spires, as objects or IDs, mixed; a lone one is taken as a list of one. While every one is
+            subscribed, these are left out of it. By default None, for every subscriber, which also ends "every one".
+
+        Raises
+        ------
+        ValueError
+            If the list is empty, or holds an ID that is no shard's or spire's, even once the lists are fetched again.
 
         """
-        self._subscribed_shards.difference_update(_hub_ids(entries=shards))
-        self._subscribed_spires.difference_update(_hub_ids(entries=spires))
+        if subscribers is None:
+            self._subscribe_all = False
+            self._subscribed_shards.clear()
+            self._subscribed_spires.clear()
+            self._excluded_shards.clear()
+            self._excluded_spires.clear()
+        else:
+            shard_ids, spire_ids = await self._sort_subscribers(items=_subscriber_items(entries=subscribers))
+            self._subscribed_shards.difference_update(shard_ids)
+            self._subscribed_spires.difference_update(spire_ids)
+            if self._subscribe_all is True:
+                self._excluded_shards.update(shard_ids)
+                self._excluded_spires.update(spire_ids)
+
         await self._sync_sockets()
+
+    async def _sort_subscribers(self, items: Sequence[Union[ShardHub, SpireHub, str]]) -> tuple[set[str], set[str]]:
+        """Split `items` into shard IDs and spire IDs; an ID is looked up in the shard list, then the spire list.
+
+        An ID in neither fetches the lists again, once, for a shard made or a spire joined since the last fetch.
+
+        Raises
+        ------
+        ValueError
+            If an ID is in neither list.
+
+        """
+        item_ids: list[str] = [item for item in items if isinstance(item, str)]
+        if any(self._kind_of(item_id=item_id) is None for item_id in item_ids):
+            await self._refresh_records()
+
+        shard_ids: set[str] = {item.id for item in items if isinstance(item, ShardHub)}
+        spire_ids: set[str] = {item.id for item in items if isinstance(item, SpireHub)}
+        for item_id in item_ids:
+            kind: Optional[Literal["shard", "spire"]] = self._kind_of(item_id=item_id)
+            if kind is None:
+                msg = f"No shard or spire we can see has the ID {item_id!r}."
+                raise ValueError(msg)
+            (shard_ids if kind == "shard" else spire_ids).add(item_id)
+
+        return shard_ids, spire_ids
+
+    def _kind_of(self, item_id: str) -> Optional[Literal["shard", "spire"]]:
+        """If `item_id` is a shard's or a spire's, from the lists and the subscribers we hold, or `None` for neither."""
+        if item_id in self._shard_records or item_id in self._subscribed_shards:
+            return "shard"
+        if item_id in self._spire_records or item_id in self._subscribed_spires:
+            return "spire"
+        return None
+
+    def _covers_shard(self, shard_id: str) -> bool:
+        return shard_id not in self._excluded_shards and (self._subscribe_all is True or shard_id in self._subscribed_shards)
+
+    def _covers_spire(self, spire_id: str) -> bool:
+        return spire_id not in self._excluded_spires and (self._subscribe_all is True or spire_id in self._subscribed_spires)
+
+    def _spire_of(self, shard_id: str) -> Optional[str]:
+        """The spire `shard_id` lives on, from the last shard list, or `None` for a shard not in it."""
+        record: Optional[ShardResponse] = self._shard_records.get(shard_id)
+        return record["spireId"] if record is not None else None
 
     async def start_listening(self) -> None:
         """List the shards and spires, then open the hub sockets the listeners need.
@@ -1112,9 +1246,10 @@ class PanelHub(Hub):
                 spire.state = state
 
     async def _refresh_records(self) -> None:
-        """Fetch the shard list that joins are made from; a shard's join needs its tenant."""
-        shards, _spires = await self._list_records()
+        """Fetch the shard and spire lists that joins, subscriber IDs and "every one" are worked out from."""
+        shards, spires = await self._list_records()
         self._shard_records = {shard["id"]: shard for shard in shards}
+        self._spire_records = {spire["id"]: spire for spire in spires}
 
     async def _refresh_loop(self) -> None:
         """Fetch the lists again every 5 minutes, or sooner when an event names a shard we don't know."""
@@ -1138,12 +1273,17 @@ class PanelHub(Hub):
         if self._listening is False:
             return set()
 
+        # Only a listed shard can be joined, so "every one" covers the shards in the last list.
         needed: set[str] = set()
         if self._has_listener(events=SHARD_EVENTS):
-            needed.update(self._subscribed_shards)
+            needed.update(shard_id for shard_id in self._shard_records if self._covers_shard(shard_id=shard_id))
         for spire in self._all_spires():
             if spire._has_listener(events=SHARD_EVENTS):
-                needed.update(spire._subscribed)  # pyright: ignore[reportPrivateUsage]
+                needed.update(
+                    shard_id
+                    for shard_id, record in self._shard_records.items()
+                    if spire._covers(shard_id=shard_id, spire_id=record["spireId"])  # pyright: ignore[reportPrivateUsage]
+                )
         for shard in self._all_shards():
             if shard._has_listener(events=shard._shared_events):  # pyright: ignore[reportPrivateUsage]
                 needed.add(shard.id)
@@ -1154,7 +1294,8 @@ class PanelHub(Hub):
         panel_wide: bool = self._listening is True and self._has_listener(events=frozenset(("spire_presence", "network_status")))
         needed: set[str] = {spire.id for spire in self._all_spires() if spire.auto_state is True}
         if self._listening is True and self._has_listener(events=frozenset(("spire_state",))):
-            needed.update(self._subscribed_spires)
+            candidates: set[str] = self._spire_records.keys() | self._subscribed_spires
+            needed.update(spire_id for spire_id in candidates if self._covers_spire(spire_id=spire_id))
         if self._listening is True:
             needed.update(spire.id for spire in self._all_spires() if spire._has_listener(events=frozenset(("spire_state",))))
         return needed if needed or panel_wide else None
@@ -1262,10 +1403,10 @@ class PanelHub(Hub):
         entries: list[Any] = value if isinstance(value, list) else []  # pyright: ignore[reportUnknownVariableType]
         payload: Any = [kind(data=entry) for entry in entries] if isinstance(value, list) else kind(data=value)
         if event == "console":
-            if self._subscribed_shards:
+            if self._subscribe_all is True or self._subscribed_shards:
                 self._emit(event=event, data=payload)
             for spire in self._all_spires():
-                if spire._subscribed:  # pyright: ignore[reportPrivateUsage]
+                if spire._subscribe_all is True or spire._subscribed:  # pyright: ignore[reportPrivateUsage]
                     spire._emit(event=event, data=payload)
             return
 
@@ -1290,10 +1431,10 @@ class PanelHub(Hub):
             shard._emit(event=event, data=payload)
 
         for spire in self._all_spires():
-            if spire._covers(shard_id=shard_id):  # pyright: ignore[reportPrivateUsage]
+            if spire._covers(shard_id=shard_id, spire_id=self._spire_of(shard_id=shard_id)):  # pyright: ignore[reportPrivateUsage]
                 spire._emit(event=event, data=payload)
 
-        if shard_id in self._subscribed_shards:
+        if self._covers_shard(shard_id=shard_id):
             self._emit(event=event, data=payload)
 
     def _on_spire_socket(self, connection: HubConnection, target: str, arguments: list[Any]) -> None:  # noqa: ARG002
@@ -1304,7 +1445,7 @@ class PanelHub(Hub):
             for spire in self._spire_objects.get(state.spire_id, ()):
                 spire._emit(event="spire_state", data=state)
 
-            if state.spire_id in self._subscribed_spires:
+            if self._covers_spire(spire_id=state.spire_id):
                 self._emit(event="spire_state", data=state)
 
         elif target == "SpirePresence" and arguments:
@@ -1328,7 +1469,7 @@ class PanelHub(Hub):
             for shard in self._shard_objects.get(task.target_id, ()):
                 shard._emit(event="task", data=task)
             for spire in self._all_spires():
-                if spire._covers(shard_id=task.target_id):  # pyright: ignore[reportPrivateUsage]
+                if spire._covers(shard_id=task.target_id, spire_id=self._spire_of(shard_id=task.target_id)):  # pyright: ignore[reportPrivateUsage]
                     spire._emit(event="task", data=task)
         elif task.target_type == "Spire":
             for spire in self._spire_objects.get(task.target_id, ()):

@@ -82,7 +82,7 @@ class Spire(SpireHub):
         The spire as AMP sent it.
     auto_state : :class:`bool`, optional
         If `state` follows the spire's state events from the hub or not, by default True; read back with the property.
-        One from `get_spire` gets the panel's `auto_state`, and one from `get_spires` that call's, by default False.
+        One from `get_spire` or `get_spires` gets that call's `auto_state`, by default False.
 
     Attributes
     ----------
@@ -734,7 +734,7 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
 
-    async def get_spire(self, spire_id: str) -> Spire:
+    async def get_spire(self, spire_id: str, *, auto_state: bool = False) -> Spire:
         """Get one spire.
 
         |coro|
@@ -745,6 +745,9 @@ class SpireModule(Base):
         ----------
         spire_id : :class:`str`
             The spire's ID.
+        auto_state : :class:`bool`, optional
+            The `auto_state` a new spire object is made with, by default False, so the call opens no hub socket.
+            A spire the panel already holds an object for keeps that object's own `auto_state`.
 
         Returns
         -------
@@ -753,7 +756,7 @@ class SpireModule(Base):
 
         """
         result: SpireResponse = await self._request(method="GET", path=f"/api/spires/{spire_id}")
-        return self._make_spire(data=result)
+        return self._make_spire(data=result, auto_state=auto_state)
 
     async def get_spires(self, *, auto_state: bool = False) -> list[Spire]:
         """Get every spire the logged in user can see.
