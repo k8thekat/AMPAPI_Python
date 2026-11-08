@@ -695,7 +695,7 @@ class AccountModule(Base):
         return await self._request(method="POST", path="/api/invites/preview", data={"token": token}, use_token=False)
 
     async def rearm_invite(self, invite_id: str, expires_in_hours: int) -> InviteTokenResponse:
-        """Give an invite a new code, which stops the old one working.
+        """Give an invite a new code, which stops the old one from working.
 
         |coro|
 
@@ -774,11 +774,14 @@ class AccountModule(Base):
 
         Endpoint: ``PATCH /api/users/me/preferences``
 
+        .. note::
+            AMP ignores a name it doesn't know.
+
         Parameters
         ----------
         values : :class:`PreferencesChanges`
             The preferences to change, named as in :class:`PreferencesResponse`, eg. ``{"theme": "dark"}``.
-            AMP ignores a name it doesn't know.
+
 
         Returns
         -------

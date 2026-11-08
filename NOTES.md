@@ -1,6 +1,6 @@
 # AMP API Notes
 
-Developer context for the AMP 3 (6.0.0b0) branch. AMP 2 support stays on `Refactor`/`developer` (5.x).
+Developer context for the AMP 3 (6.0.0 beta) branch. AMP 2 support stays on `Refactor`/`developer` (5.x).
 
 ## Test panel (vm3)
 
