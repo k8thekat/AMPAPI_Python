@@ -83,6 +83,10 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   the kept object with `data` and `display_name` brought up to date. A shard belongs to a spire, so `Spire` has
   `get_shards` (the panel's list filtered by `spireId`, as AMP has no per-spire route) and `create_shard`.
   `create_shard` and `clone_shard` return a `Shard`; `create_shard` drops the rest of AMP's reply for now (#3-50b).
+- `Shard` and `Spire` are equal and hash the same by ID, and sort by `display_name` (#3-50.10, Kat 2026-11-08). The
+  registry stays a dict, as a set can't hand back the object it holds without a scan; discord.py pairs the two the
+  same way. The check is `isinstance(other, Shard)`, not `self.__class__`, so the panel's `shard_class` subclass and a
+  plain `Shard` agree both ways.
 - A reply never seen live gets a `# TODO:` above its method naming the index entry, and the method returns `Any`; a
   list only ever seen empty is `list[Any]` (Kat, 2026-11-07: a TODO, not a docstring warning). A `.. warning::` is
   kept for behaviour a user must know, eg. `kill_shard` answering 404 (U12) or a call that changes how the panel is

@@ -105,6 +105,9 @@ class Shard:
     one for each shard. Each method calls the :class:`ShardModule` one with this shard's ID, eg. :meth:`start` is
     :meth:`ShardModule.start_shard`; its parameters, reply and errors are documented there.
 
+    Two shard objects are equal, and hash the same, when they have the same ID, so they work in sets and as dict keys.
+    They sort by `display_name`.
+
     .. versionadded:: 6.0.0
 
     Parameters
@@ -152,6 +155,18 @@ class Shard:
 
         # if self._panel is not None:
         #     self._panel._register_shard(shard=self)
+
+    def __hash__(self) -> int:  # noqa: D105
+        return hash(self.id)
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
+        return isinstance(other, Shard) and self.id == other.id
+
+    def __lt__(self, other: object) -> bool:  # noqa: D105
+        return isinstance(other, Shard) and self.display_name < other.display_name
+
+    def __repr__(self) -> str:  # noqa: D105
+        return f"<{type(self).__name__} id={self.id!r} display_name={self.display_name!r}>"
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.

@@ -72,6 +72,9 @@ class Spire:
     A spire that joined serves the whole panel API too, so a :class:`Panel` can talk to any of them. The data's
     `isLocal` is relative to the machine that answered, not a property of the spire.
 
+    Two spire objects are equal, and hash the same, when they have the same ID, so they work in sets and as dict keys.
+    They sort by `display_name`.
+
     .. versionadded:: 6.0.0
 
     Parameters
@@ -118,6 +121,18 @@ class Spire:
 
         # if self._panel is not None:
         #     self._panel._register_spire(spire=self)
+
+    def __hash__(self) -> int:  # noqa: D105
+        return hash(self.id)
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
+        return isinstance(other, Spire) and self.id == other.id
+
+    def __lt__(self, other: object) -> bool:  # noqa: D105
+        return isinstance(other, Spire) and self.display_name < other.display_name
+
+    def __repr__(self) -> str:  # noqa: D105
+        return f"<{type(self).__name__} id={self.id!r} display_name={self.display_name!r}>"
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
     # It comes from `SpireModule.apply_spire_update`.
