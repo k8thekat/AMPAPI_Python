@@ -91,7 +91,33 @@ class Session:
         An aiohttp session to send requests through, by default None.
         Without one we make our own, and :meth:`clean_up` closes it. :meth:`clean_up` logs out either way.
 
+    Attributes
+    ----------
+    url : :class:`str`
+        The panel's URL, without a trailing ``/``.
+    username : :class:`str`
+        The AMP username we log in as. :meth:`accept_invite` sets it to the invite's.
+    remember_me : :class:`bool`
+        If a login asks for the long (28 day) token or not.
+
     """
+
+    url: str
+    username: str
+    remember_me: bool
+    # The password for `username`, kept for the logins we make again; `change_expired_password` replaces it.
+    _password: str
+    # The aiohttp session requests go through, made on the first request when none was handed to us.
+    _session: Optional[ClientSession]
+    # If we made `_session` ourselves, so `clean_up` closes it.
+    _own_session: bool
+    # The current token, when it runs out, the point we renew it after, and its decoded claims, all cleared at logout.
+    _token: Optional[str]
+    _expiration: Optional[datetime]
+    _renew_after: Optional[datetime]
+    _claims: TokenClaims
+    # Held while logging in, so calls made at the same time share one login.
+    _login_lock: asyncio.Lock
 
     # How far through a token's lifetime we renew it, the same point AMP's web panel uses.
     _renew_point: ClassVar[float] = 0.75
@@ -105,17 +131,17 @@ class Session:
         remember_me: bool = False,
         session: Optional[ClientSession] = None,
     ) -> None:
-        self.url: str = url.rstrip("/")
-        self.username: str = username
-        self.remember_me: bool = remember_me
-        self._password: str = password
-        self._session: Optional[ClientSession] = session
-        self._own_session: bool = session is None
-        self._token: Optional[str] = None
-        self._expiration: Optional[datetime] = None
-        self._renew_after: Optional[datetime] = None
-        self._claims: TokenClaims = {}
-        self._login_lock: asyncio.Lock = asyncio.Lock()
+        self.url = url.rstrip("/")
+        self.username = username
+        self.remember_me = remember_me
+        self._password = password
+        self._session = session
+        self._own_session = session is None
+        self._token = None
+        self._expiration = None
+        self._renew_after = None
+        self._claims = {}
+        self._login_lock = asyncio.Lock()
 
     async def __aenter__(self) -> Self:  # noqa: D105
         return self

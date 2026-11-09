@@ -67,10 +67,14 @@ class AMPAPIHubError(AMPAPIError):
 
     """
 
+    hub: str
+    target: str
+    error: Any
+
     def __init__(self, hub: str, target: str, error: Any) -> None:  # noqa: D107
-        self.hub: str = hub
-        self.target: str = target
-        self.error: Any = error
+        self.hub = hub
+        self.target = target
+        self.error = error
         message = "An AMP hub refused a call. | Hub: %s | Target: %s | Error: %s"
         super().__init__(message % (hub, target, error))
         LOGGER.error(message, hub, target, error)
@@ -88,9 +92,12 @@ class AMPAPILoginError(AMPAPIError):
 
     """
 
+    username: str
+    reason: str
+
     def __init__(self, username: str, reason: str) -> None:  # noqa: D107
-        self.username: str = username
-        self.reason: str = reason
+        self.username = username
+        self.reason = reason
         message = "AMP refused the login. Reason: %s | Username: %s"
         super().__init__(message % (reason, username))
         LOGGER.error(message, reason, username)
@@ -111,8 +118,10 @@ class AMPAPIPasskeyRequiredError(AMPAPIError):
 
     """
 
+    username: str
+
     def __init__(self, username: str) -> None:  # noqa: D107
-        self.username: str = username
+        self.username = username
         message = "AMP needs a second factor for this login. | Username: %s"
         super().__init__(message % username)
         LOGGER.warning(message, username)
@@ -132,9 +141,12 @@ class AMPAPIPasswordChangeRequiredError(AMPAPIError):
 
     """
 
+    username: str
+    reason: str
+
     def __init__(self, username: str, reason: str) -> None:  # noqa: D107
-        self.username: str = username
-        self.reason: str = reason
+        self.username = username
+        self.reason = reason
         message = "AMP needs a password change before this login. Reason: %s | Username: %s"
         super().__init__(message % (reason, username))
         LOGGER.warning(message, reason, username)
@@ -168,15 +180,24 @@ class AMPAPIRequestError(AMPAPIError):
 
     """
 
+    status: int
+    method: str
+    path: str
+    code: Optional[str]
+    message: Optional[str]
+    params: Optional[dict[str, Any]]
+    errors: Optional[list[str] | dict[str, list[str]]]
+    data: Any
+
     def __init__(self, status: int, method: str, path: str, data: Any) -> None:  # noqa: D107
-        self.status: int = status
-        self.method: str = method
-        self.path: str = path
-        self.data: Any = data
-        self.code: Optional[str] = None
-        self.message: Optional[str] = None
-        self.params: Optional[dict[str, Any]] = None
-        self.errors: Optional[list[str] | dict[str, list[str]]] = None
+        self.status = status
+        self.method = method
+        self.path = path
+        self.data = data
+        self.code = None
+        self.message = None
+        self.params = None
+        self.errors = None
 
         # Each error shape AMP sends has a different set of these keys, so we take whichever are there.
         if _is_json_object(value=data):

@@ -95,8 +95,6 @@ class Panel(
 
     shard_class: type[Shard]
     spire_class: type[Spire]
-    # _shards: ClassVar[set[Shard]]
-    # _spire: ClassVar[set[Spire]]
     _shards: dict[str, Shard]
     _spires: dict[str, Spire]
 
@@ -136,45 +134,6 @@ class Panel(
         """
         # await self.stop_listening()
         await self.session.clean_up()
-
-    # def _make_shard(self, data: ShardResponse, auto_state: Optional[bool] = None) -> Shard:
-    #     """The shard object we already keep for `data`, brought up to date, so a shard listens through one object only.
-
-    #     A new one is made with `auto_state`, or this panel's when that's `None`; one we keep keeps its own.
-    #     """
-    #     for existing in self._shard_objects.get(data["id"], ()):
-    #         if isinstance(existing, self.shard_class):
-    #             existing.data = data
-    #             existing.display_name = data["displayName"]
-    #             return existing
-    #     return super()._make_shard(data=data, auto_state=auto_state)
-
-    # def _make_spire(self, data: SpireResponse, auto_state: Optional[bool] = None) -> Spire:
-    #     """The spire object we already keep for `data`, brought up to date, so a spire listens through one object only.
-
-    #     A new one is made with `auto_state`, or this panel's when that's `None`; one we keep keeps its own.
-    #     """
-    #     for existing in self._spire_objects.get(data["id"], ()):
-    #         if isinstance(existing, self.spire_class):
-    #             existing.data = data
-    #             existing.display_name = data["displayName"]
-    #             return existing
-    #     return super()._make_spire(data=data, auto_state=auto_state)
-
-    # async def _list_records(self) -> tuple[list[ShardResponse], list[SpireResponse]]:
-    #     """The shard and spire lists the hub routing works from, as dicts, so no listener objects are made for them."""
-    #     shards: list[ShardResponse] = await self._request(method="GET", path="/api/shards")
-    #     spires: list[SpireResponse] = await self._request(method="GET", path="/api/spires")
-    #     return shards, spires
-
-    # async def get_shards(self) -> list[Shard] | list[ShardResponse]:
-    #     res: list[ShardResponse] = await self._request(method="GET", path="/api/shards")
-
-    #     for shard in res:
-    #         self._shards = Shard()
-
-    # async def get_spires(self) -> list[Spire] | list[SpireResponse]:
-    #     ...
 
     def _make_shard(self, data: ShardResponse, created: Optional[ShardCreatedResponse] = None) -> Shard:
         """The shard object we keep for `data`'s ID, brought up to date, or a new `shard_class` one we keep from now on.
