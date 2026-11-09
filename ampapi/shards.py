@@ -45,12 +45,14 @@ if TYPE_CHECKING:
         ScheduleTrigger,
         SettingValues,
         ShardAgentResponse,
+        ShardAppConfig,
         ShardArchiveInfoResponse,
         ShardArchiveRequest,
         ShardCloneRequest,
         ShardCloneResponse,
         ShardConfigImportResponse,
         ShardConsoleRequest,
+        ShardCreatedResponse,
         ShardCredentialResponse,
         ShardCustomPortRequest,
         ShardDetailsRequest,
@@ -66,6 +68,8 @@ if TYPE_CHECKING:
         ShardManagedFileResponse,
         ShardMigrationRequest,
         ShardMigrationTargetResponse,
+        ShardPortAssignments,
+        ShardPortOutcome,
         ShardPortResponse,
         ShardResponse,
         ShardScheduleRequest,
@@ -108,6 +112,10 @@ class Shard:
     Two shard objects are equal, and hash the same, when they have the same ID, so they work in sets and as dict keys.
     They sort by `display_name`.
 
+    A shard :meth:`Panel.create_shard` made also keeps the rest of that reply, read through :attr:`infra_settings`,
+    :attr:`app_config`, :attr:`port_assignments`, :attr:`port_outcomes` and :attr:`over_licence_limit`. They are
+    `None` on any other shard, and nothing can set them after the object is made.
+
     .. versionadded:: 6.0.0
 
     Parameters
@@ -116,6 +124,8 @@ class Shard:
         The panel the calls go through.
     data : :class:`ShardResponse`
         The shard as AMP sent it.
+    created : Union[:class:`ShardCreatedResponse`, None], optional
+        The whole reply of :meth:`Panel.create_shard` when that made this shard, by default None.
 
     Attributes
     ----------
@@ -143,18 +153,61 @@ class Shard:
     session: Session
     # _module: ShardModule
     _module: Panel
+    # The whole `create_shard` reply, or None for a shard that didn't come from it; only the properties read it.
+    _created: Optional[ShardCreatedResponse]
 
     # def __init__(self, module: ShardModule, data: ShardResponse, *, auto_state: Optional[bool] = None) -> None:
-    def __init__(self, module: Panel, data: ShardResponse) -> None:  # noqa: D107
+    def __init__(self, module: Panel, data: ShardResponse, *, created: Optional[ShardCreatedResponse] = None) -> None:  # noqa: D107
         # super().__init__(session=module.session, panel=module if isinstance(module, PanelHub) else None, auto_state=auto_state)
         self.session = module.session
         self._module = module
         self.data = data
         self.id = data["id"]
         self.display_name = data["displayName"]
+        self._created = created
 
         # if self._panel is not None:
         #     self._panel._register_shard(shard=self)
+
+    @property
+    def app_config(self) -> Optional[ShardAppConfig]:
+        """The game settings AMP gave the shard when :meth:`Panel.create_shard` made it, or `None` for any other shard.
+
+        :meth:`get_settings` gives the current values.
+        """
+        return self._created["appConfig"] if self._created is not None else None
+
+    @property
+    def infra_settings(self) -> Optional[ShardInfraSettings]:
+        """How the shard ran when :meth:`Panel.create_shard` made it, or `None` for any other shard.
+
+        :meth:`get_infra` gives the current settings, under ``"settings"``.
+        """
+        return self._created["infraSettings"] if self._created is not None else None
+
+    @property
+    def over_licence_limit(self) -> Optional[bool]:
+        """If making the shard took the panel over its licence's shard limit or not.
+
+        `None` for a shard :meth:`Panel.create_shard` didn't make, as AMP only says so in that reply.
+        """
+        return self._created["overLicenceLimit"] if self._created is not None else None
+
+    @property
+    def port_assignments(self) -> Optional[ShardPortAssignments]:
+        """The ports AMP gave the shard when :meth:`Panel.create_shard` made it, or `None` for any other shard.
+
+        :meth:`get_ports` gives the current ports.
+        """
+        return self._created["ports"] if self._created is not None else None
+
+    @property
+    def port_outcomes(self) -> Optional[list[ShardPortOutcome]]:
+        """How each port was given out when :meth:`Panel.create_shard` made the shard, eg. one moved off a port in use.
+
+        `None` for any other shard, as AMP only says so in that reply.
+        """
+        return self._created["portOutcomes"] if self._created is not None else None
 
     def __hash__(self) -> int:  # noqa: D105
         return hash(self.id)

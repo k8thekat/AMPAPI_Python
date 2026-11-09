@@ -112,8 +112,9 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the key is already added (409, ``"sshKeys.error.alreadyRegistered"``) or isn't one AMP supports
-            (400, ``"sshKeys.error.unsupported"``).
+            **409** - If the key is already added `sshKeys.error.alreadyRegistered`.\n
+            **400** - If AMP doesn't support `sshKeys.error.unsupported`
+
 
         """
         data: SSHKeyRequest = {"key": key, "label": label, "expiresAt": expires_at}

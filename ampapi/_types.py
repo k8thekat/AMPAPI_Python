@@ -2142,6 +2142,8 @@ class ShardPortOutcome(TypedDict):
     ref: str
     requested: Optional[int]
     assigned: int
+    # TODO: Type `reason` once we know what its numbers mean (#3-50.11d).
+    # Only 0 has been seen, on ports that got what the template asked for; the web panel never reads it.
     reason: int
     moved: bool
 

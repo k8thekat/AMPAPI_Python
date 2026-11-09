@@ -176,19 +176,21 @@ class Panel(
     # async def get_spires(self) -> list[Spire] | list[SpireResponse]:
     #     ...
 
-    def _make_shard(self, data: ShardResponse) -> Shard:
-        """The shard object we keep for `data`'s ID, brought up to date, or a new `shard_class` one we keep from now on."""
+    def _make_shard(self, data: ShardResponse, created: Optional[ShardCreatedResponse] = None) -> Shard:
+        """The shard object we keep for `data`'s ID, brought up to date, or a new `shard_class` one we keep from now on.
+
+        `created` only reaches a new object. A listing that raced `create_shard` could have kept the shard first, and
+        that object keeps `None` for the creation reply.
+        """
         shard: Optional[Shard] = self._shards.get(data["id"])
         if shard is None:
-            shard = self.shard_class(module=self, data=data)
+            shard = self.shard_class(module=self, data=data, created=created)
             self._shards[shard.id] = shard
         else:
             shard.data = data
             shard.display_name = data["displayName"]
         return shard
 
-    # TODO: Hand back the rest of the reply once Kat has looked at what dropping it loses (#3-50b).
-    # We keep only `shard`, so `infraSettings`, `appConfig`, `ports`, `portOutcomes` and `overLicenceLimit` are dropped.
     # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
     # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.
     async def create_shard(
@@ -231,7 +233,9 @@ class Panel(
         Returns
         -------
         :class:`Shard`
-            The new shard, with the calls that act on it.
+            The new shard, with the calls that act on it. The rest of AMP's reply is on its :attr:`Shard.infra_settings`,
+            :attr:`Shard.app_config`, :attr:`Shard.port_assignments`, :attr:`Shard.port_outcomes` and
+            :attr:`Shard.over_licence_limit`.
 
         Raises
         ------
@@ -252,7 +256,7 @@ class Panel(
             data["credentialId"] = credential_id
 
         result: ShardCreatedResponse = await self._request(method="POST", path="/api/shards", data=data)
-        return self._make_shard(data=result["shard"])
+        return self._make_shard(data=result["shard"], created=result)
 
     async def get_all_shard_endpoints(self) -> dict[str, list[ShardEndpointResponse]]:
         """Get where players reach every shard.

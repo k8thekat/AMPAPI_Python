@@ -82,7 +82,12 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - The `Panel` keeps one `Shard` / `Spire` per ID (`_shards`, `_spires`, Kat's #3-50a): a lookup or listing hands back
   the kept object with `data` and `display_name` brought up to date. A shard belongs to a spire, so `Spire` has
   `get_shards` (the panel's list filtered by `spireId`, as AMP has no per-spire route) and `create_shard`.
-  `create_shard` and `clone_shard` return a `Shard`; `create_shard` drops the rest of AMP's reply for now (#3-50b).
+  `create_shard` and `clone_shard` return a `Shard`.
+- The rest of `create_shard`'s reply rides on the `Shard` it returns (#3-50.11, Kat 2026-11-08): read-only
+  `infra_settings`, `app_config`, `port_assignments`, `port_outcomes` and `over_licence_limit`, all `None` on a shard
+  `create_shard` didn't make. `port_outcomes` and `over_licence_limit` exist only in that reply; the other three are a
+  snapshot from creation, kept when the panel hands the object out again (`get_infra` / `get_settings` / `get_ports`
+  give current values). Live on vm4, `infra_settings` equals `get_infra()["settings"]` straight after creation.
 - `Shard` and `Spire` are equal and hash the same by ID, and sort by `display_name` (#3-50.10, Kat 2026-11-08). The
   registry stays a dict, as a set can't hand back the object it holds without a scan; discord.py pairs the two the
   same way. The check is `isinstance(other, Shard)`, not `self.__class__`, so the panel's `shard_class` subclass and a
