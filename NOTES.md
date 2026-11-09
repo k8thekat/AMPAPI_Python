@@ -41,7 +41,7 @@ The worktree carries its own copies, all gitignored, so nothing reaches back int
   the AMP2 pair is still run from the Refactor checkout.
 - `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), the live checks `session_check.py` (`Session`),
   `panel_check.py` (the modules), `shard_check.py` (shards and templates, on vm3's test shard), `hub_check.py` (live
-  events, on vm3, with a throwaway second shard), `move_check.py`
+  events, on vm3, with a throwaway second shard; can't run while the hubs are set aside, #3-50.1), `move_check.py`
   (clones and moves between vm4's and vm5's spires) and `datastore_check.py` (a move between datastores on vm4),
   `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM), `join_spire.py` (a new VM joining a panel
   as a spire) and `hook_check.py` (pyright as the end-of-turn hook runs it). `AMP3_VM=vm3|vm4|vm5` picks the panel for all of them.
@@ -96,7 +96,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - `set_shard_infra` refuses settings with a field missing before sending, as AMP resets any field a `PATCH /infra`
   leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
 - `.scripts/amp3/session_check.py`, `panel_check.py`, `shard_check.py`, `move_check.py`, `datastore_check.py` and
-  `hub_check.py` are the live checks; each removes what it makes.
+  `hub_check.py` are the live checks; each removes what it makes. `hub_check.py` waits for the hubs (#3-50.1), and
+  no check covers the invite calls yet: #3-50.7 was checked live with a one-off script.
 
 ## Live events (#3-47.2)
 

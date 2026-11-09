@@ -10,7 +10,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 ---
 
 - (#3-47.1) Confirm `PasskeyRequiredResponse` and `Session.second_factor` live; needs the panel on HTTPS, a passkey and recovery codes. *DONE*
-- (#3-47.2) A SignalR hub client for live events, logging in with `Session.get_hub_token`. *DONE* to Kat's design (`hubs.py`, `objects.py`); left: an `auto_state` setter (waits for Kat), the player events (Kat joins a Minecraft world on vm4), `Lifecycle` kinds 4 and 6.
+- (#3-47.2) A SignalR hub client for live events, logging in with `Session.get_hub_token`. *DONE* to Kat's design (`hubs.py`, `objects.py`), now set aside while Kat reworks it (#3-50.1); left: an `auto_state` setter (waits for Kat), `UserLeft` (never arrived when Kat left her world, U18f), `Lifecycle` kinds 4 and 6.
 - (#3-47.3) Confirm upstream report 01 (passkey registration needs `transports`) in a browser; trust vm3's Caddy root CA first.
 
 ## README.md and samples/
