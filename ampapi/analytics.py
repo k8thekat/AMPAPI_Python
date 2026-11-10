@@ -21,13 +21,16 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from .base import Base
 
 if TYPE_CHECKING:
     from ._types import (
+        AnalyticsAddressSearchResponse,
         AnalyticsAddressUsersResponse,
+        AnalyticsConnectedResponse,
+        AnalyticsForgetResponse,
         AnalyticsProfilesResponse,
         AnalyticsSessionsResponse,
         AnalyticsUserAddressesResponse,
@@ -43,21 +46,23 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 class AnalyticsModule(Base):
     """The calls for player analytics: the players a panel's shards have seen, their sessions and addresses.
 
-    Most of the analytics lists have no known item shape yet. Each call takes `demo`, which the web panel uses for a
-    demo mode. The audit log is :class:`AuditModule`.
+    Players are keyed by a `userKey` (see :meth:`get_analytics_users`). A shard only keeps names, countries, addresses
+    and profiles for its players with its `userSpecificData` setting on; without it a player has a key and sessions
+    only. Most calls take `demo`, which the web panel uses for a demo mode. The audit log is :class:`AuditModule`.
 
     .. versionadded:: 6.0.0
 
     """
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def delete_analytics_user_sessions(self, user_key: str, *, demo: bool = False) -> Any:
+    async def delete_analytics_user_sessions(self, user_key: str, *, demo: bool = False) -> AnalyticsForgetResponse:
         """Erase everything the analytics hold about one player.
 
         |coro|
 
         Endpoint: ``DELETE /api/analytics/sessions/users/{user_key}``
+
+        The player's own record reads empty straight after, but :meth:`get_analytics_sessions`' summary still listed
+        them about 11 minutes later on AMP 3.0.0.6.
 
         Parameters
         ----------
@@ -68,8 +73,13 @@ class AnalyticsModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`AnalyticsForgetResponse`
+            How many records, over how many days, were erased; 0 and 0 when there was nothing.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If `user_key` isn't a player key AMP would make (400, ``"analytics.error.badUserKey"``).
 
         """
         parameters: Optional[dict[str, str]] = {"demo": "true"} if demo is True else None
@@ -102,26 +112,31 @@ class AnalyticsModule(Base):
 
         return await self._request(method="GET", path="/api/analytics/addresses/users", parameters=parameters)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
-    # Only the 400 for part of an address is known; the shape of a match isn't.
-    async def get_analytics_addresses(self, search: str, *, demo: bool = False) -> Any:
+    # TODO: Reword the warning once AMP answers a range search (#3-54).
+    # AMP 3.0.0.6 answers 500 for every range, from an error in its address service.
+    async def get_analytics_addresses(self, search: str, *, demo: bool = False) -> AnalyticsAddressSearchResponse:
         """Search the addresses players were seen at.
 
         |coro|
 
         Endpoint: ``GET /api/analytics/addresses``
 
+        .. warning::
+            AMP 3.0.0.6 answers a range (eg. ``"203.0.113.0/24"``, ``"203.0.113."`` or ``"198.51.*"``) with a 500, so
+            only a whole address works for now.
+
         Parameters
         ----------
         search : :class:`str`
-            The address to look for. AMP refuses part of one (400, ``"analytics.error.badAddress"``).
+            The address to look for, IPv4 or IPv6. AMP refuses a bare fragment such as ``"192"``
+            (400, ``"analytics.error.badAddress"``).
         demo : :class:`bool`, optional
             If the call is for the demo data or not, by default False.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`AnalyticsAddressSearchResponse`
+            The address, if it's private or public, and the matching addresses and their players.
 
         """
         parameters: dict[str, str] = {"q": search}
@@ -131,60 +146,62 @@ class AnalyticsModule(Base):
 
         return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
 
-    # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
-    # Only the 400 for an unknown key is known; the web panel reads the image as a blob.
-    async def get_analytics_avatar(self, user_key: str, *, full: bool = False) -> bytes:
-        """Get a player's avatar image.
+    async def get_analytics_avatar(self, avatar_hash: str, *, full: bool = False) -> bytes:
+        """Get a Steam player's avatar image.
 
         |coro|
 
-        Endpoint: ``GET /api/analytics/avatars/{user_key}``
+        Endpoint: ``GET /api/analytics/avatars/{avatar_hash}``
 
         Parameters
         ----------
-        user_key : :class:`str`
-            The player's key.
+        avatar_hash : :class:`str`
+            The avatar's hash, 40 lower-case hex digits, which AMP's docs place in the player's Steam profile from
+            :meth:`get_analytics_profiles`. It isn't the player's key.
         full : :class:`bool`, optional
             If AMP should send the full size image or not, by default False.
 
         Returns
         -------
         :class:`bytes`
-            The image as it came.
+            The image, a JPEG.
 
         Raises
         ------
         AMPAPIRequestError
-            If AMP doesn't know the key (400, ``"analytics.error.badAvatar"``).
+            If `avatar_hash` isn't 40 hex digits (400, ``"analytics.error.badAvatar"``), or Steam has no such avatar
+            (404).
 
         """
         parameters: Optional[dict[str, str]] = {"full": "true"} if full is True else None
-        return await self._request(method="GET", path=f"/api/analytics/avatars/{user_key}", parameters=parameters, raw_bytes=True)
+        return await self._request(method="GET", path=f"/api/analytics/avatars/{avatar_hash}", parameters=parameters, raw_bytes=True)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.11).
-    # An unknown player answers 404 with no body, and what the `user` query value means isn't known yet.
-    async def get_analytics_connected_users(self, user_key: str, *, user: Optional[str] = None) -> Any:
-        """Get the players connected to one player, as far as the web panel shows.
+    async def get_analytics_connected_users(self, shard_id: str, user: str) -> AnalyticsConnectedResponse:
+        """Get what a shard knows about one player connected to it now.
 
         |coro|
 
-        Endpoint: ``GET /api/analytics/connected/{user_key}``
+        Endpoint: ``GET /api/analytics/connected/{shard_id}``
 
         Parameters
         ----------
-        user_key : :class:`str`
-            The player's key.
-        user : Union[:class:`str`, None], optional
-            The web panel's `user` query value, by default None. What it means isn't known yet.
+        shard_id : :class:`str`
+            The shard the player is on.
+        user : :class:`str`
+            The player's `id` as :meth:`ShardModule.get_shard_users` gives it. Their name isn't taken.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`AnalyticsConnectedResponse`
+            The player as the shard lists them, their profile and their analytics key.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the player isn't connected to the shard, or `user` is their name (404, ``"analytics.error.notConnected"``).
 
         """
-        parameters: Optional[dict[str, str]] = {"user": user} if user is not None else None
-        return await self._request(method="GET", path=f"/api/analytics/connected/{user_key}", parameters=parameters)
+        return await self._request(method="GET", path=f"/api/analytics/connected/{shard_id}", parameters={"user": user})
 
     async def get_analytics_profiles(self, user_keys: list[str], *, demo: bool = False) -> AnalyticsProfilesResponse:
         """Get players' Steam and Minecraft profiles.
@@ -269,32 +286,31 @@ class AnalyticsModule(Base):
 
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
 
-    # TODO: Confirm the image once AMP is seen sending one live (#3-47.11).
-    # Only the 400 for an unknown key is known; the web panel reads the image as a blob.
-    async def get_analytics_skin(self, user_key: str) -> bytes:
+    async def get_analytics_skin(self, texture_hash: str) -> bytes:
         """Get a Minecraft player's skin image.
 
         |coro|
 
-        Endpoint: ``GET /api/analytics/skins/{user_key}``
+        Endpoint: ``GET /api/analytics/skins/{texture_hash}``
 
         Parameters
         ----------
-        user_key : :class:`str`
-            The player's key.
+        texture_hash : :class:`str`
+            The `skinHash` from the player's Minecraft profile in :meth:`get_analytics_profiles`, 64 hex digits. It
+            isn't the player's key.
 
         Returns
         -------
         :class:`bytes`
-            The image as it came.
+            The image, a PNG.
 
         Raises
         ------
         AMPAPIRequestError
-            If AMP doesn't know the key (400, ``"analytics.error.badAvatar"``).
+            If AMP has no skin for the hash (404).
 
         """
-        return await self._request(method="GET", path=f"/api/analytics/skins/{user_key}", raw_bytes=True)
+        return await self._request(method="GET", path=f"/api/analytics/skins/{texture_hash}", raw_bytes=True)
 
     async def get_analytics_user_addresses(self, user_key: str, *, demo: bool = False) -> AnalyticsUserAddressesResponse:
         """Get the addresses one player was seen at.

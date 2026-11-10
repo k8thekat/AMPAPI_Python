@@ -43,7 +43,14 @@ from .templates import TemplateModule
 if TYPE_CHECKING:
     from types import TracebackType
 
-    from ._types import ShardCreatedResponse, ShardCreateRequest, ShardEndpointResponse, ShardResponse, SpireResponse
+    from ._types import (
+        ShardAttentionResponse,
+        ShardCreatedResponse,
+        ShardCreateRequest,
+        ShardEndpointResponse,
+        ShardResponse,
+        SpireResponse,
+    )
     from .session import Session
 
 __all__ = ("Panel",)
@@ -299,19 +306,21 @@ class Panel(
         # return [self._make_shard(data=entry, auto_state=auto_state) for entry in result]
         return [self._make_shard(data=entry) for entry in result]
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.7).
-    # The item shape isn't known yet; the web panel reads `shardId`, `name` and `message` from each.
-    async def get_shards_awaiting_action(self) -> list[dict[str, Any]]:
+    async def get_shards_awaiting_action(self) -> list[ShardAttentionResponse]:
         """Get the shards waiting on a user, eg. for a sign-in prompt.
 
         |coro|
 
         Endpoint: ``GET /api/shards/attention``
 
+        Seen live with a ``"hytale"`` shard whose update waited for a device sign-in: its state read
+        `ShardState.awaiting_user_action` and the sign-in URL was in `message`. :meth:`ShardModule.stop_shard` ends the
+        wait by aborting the update.
+
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The shards and what they wait for.
+        list[:class:`ShardAttentionResponse`]
+            The shards and what they wait for, empty when none are waiting.
 
         """
         return await self._request(method="GET", path="/api/shards/attention")

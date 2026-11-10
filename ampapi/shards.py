@@ -1102,7 +1102,7 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/update/abort``
 
         .. warning::
-            AMP 3.0.0.6 doesn't answer this route yet (404).
+            AMP 3.0.0.6 doesn't answer this route yet (404). :meth:`stop_shard` aborts an update in the meantime.
 
         Parameters
         ----------
@@ -3055,7 +3055,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/stop``
 
-        Follow it with :meth:`get_shard_state`; AMP answers before the game has stopped.
+        Follow it with :meth:`get_shard_state`; AMP answers before the game has stopped. On a shard that is updating,
+        it aborts the update (``"Update aborted"``), which is the only way while :meth:`abort_shard_update` answers 404.
 
         Parameters
         ----------
@@ -3361,7 +3362,8 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload", files=files, parameters={"path": folder})
 
     # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Only the 400 for a shard that isn't asleep is known; the reply to waking a sleeping shard isn't.
+    # Only the 400 for a shard that isn't asleep is known. Only `minecraft-java` claims sleep, and AMP refused to put
+    # it to sleep on the test VMs: it took longer to start than AMP's 25 second limit (#3-54), then U18b.
     async def wake_shard(self, shard_id: str) -> Any:
         """Wake a sleeping shard.
 

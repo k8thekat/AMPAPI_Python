@@ -33,22 +33,30 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 - (#3-47.14) Build the rest of the AMP3 library in the agreed layout: `ShardModule` with `Shard`, `SpireModule` with `Spire`, `TemplateModule`, the rest of `AccountModule`, `AnalyticsModule`, `TaskModule`, `CredentialModule`. *DONE*
 - (#3-50) Module layout by what a call acts on: collections and lookups on `Panel`, shards under their spire, the hubs set aside, then `NetworkModule` (#3-50.5), `AuditModule` (#3-50.6), invites onto `Session` (#3-50.7) and `EnrollmentModule` with the message bus calls (#3-50.8). *DONE*
 - (#3-50b) Look at what `create_shard` drops from AMP's reply (`infraSettings`, `appConfig`, `ports`, `portOutcomes`, `overLicenceLimit`) and decide what to hand back. *DONE* in #3-50.11: read-only properties on the `Shard`.
-- (#3-50.11d) Type `ShardPortOutcome.reason` once we know what its numbers mean; only 0 has been seen.
+- (#3-50.11d) Type `ShardPortOutcome.reason` once we know what its numbers mean; only 0 has been seen. *DONE* from AMP's own docs (#3-54).
 - (#3-50.1) Bring the hubs back: `hubs.py` out of pyright's exclude list, `Panel`/`Shard`/`Spire` on the hub classes again, `auto_state`, the samples and the README's live events section, and the `# TODO:` markers on `AMPAPIHubError`, `LifecycleEvent` and `NetworkStatus`.
 - (#3-52.1q) When the hubs come back, the README's live events section and `samples/live_events.py` say the panel holds its shards weakly; it keeps them in a plain dict now.
-- (#3-47.7) Type `Panel.get_shards_awaiting_action`'s items; needs a game waiting for input.
+- (#3-47.7) Type `Panel.get_shards_awaiting_action`'s items; needs a game waiting for input. *DONE* with a `hytale` shard waiting for sign-in (#3-54).
 
 ## ampapi/platform.py
 
 ---
 
-- (#3-47.10) Type the platform writes from the vm4 run (settings, https, licence, monitoring, updates; the bus, enrolment and networking ones are now in `enrollments.py` and `networking.py`). *DONE* except the replies only ever seen refused, still `# TODO:`: HTTPS setup and removal, applying an update, licence terms, platform warnings.
+- (#3-47.10) Type the platform writes from the vm4 run (settings, https, licence, monitoring, updates; the bus, enrolment and networking ones are now in `enrollments.py` and `networking.py`). *DONE* except the replies only ever seen refused, still `# TODO:`: HTTPS setup and removal (needs a public domain), applying an update (no newer release), licence terms (needs a key with terms). Platform warnings *DONE* (#3-54).
+
+## ampapi/analytics.py
+
+---
+
+- (#3-47.11) Type `get_analytics_connected_users`' reply and confirm `get_analytics_skin`'s image; both need a player online on a shard with `userSpecificData` on. *DONE* with Kat online in "Kat MC World" (#3-54).
+- (#3-54) Type a Steam profile (`AnalyticsProfilesResponse.steam`), and the `steam`, `othersAtAddress`, `recoveredAddress` and `otherUsers` fields only ever seen `None`; they need a Steam player, or two players at one address.
+- (#3-54) Type `AnalyticsAddressSearchResponse.addresses` once a search finds an address.
 
 ## ampapi/shards.py
 
 ---
 
-- (#3-47.7) Type the shard replies still marked `# TODO:`: users (need players), wake (needs a template that can sleep, U18b), kill and abort (U12). The shards awaiting action are `Panel.get_shards_awaiting_action`, under `ampapi/panel.py`.
+- (#3-47.7) Type the shard replies still marked `# TODO:`: users (need players), wake (needs a template that can sleep: `minecraft-java` is the only one that claims it and was refused for its slow start, then U18b), kill and abort (U12, still 404). The shards awaiting action are `Panel.get_shards_awaiting_action`, under `ampapi/panel.py`.
 
 ## ampapi/enrollments.py
 

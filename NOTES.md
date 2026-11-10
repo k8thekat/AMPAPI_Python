@@ -185,6 +185,28 @@ Seen live on 2026-11-09, vm5 against vm4 (`.local_data/plans/spire_lifecycle/fin
   with EEXIST when the template pre-makes a folder (and leaving an orphan); a successful import's task never finishing
   (100%, not terminal, dismiss refused with 409 for minutes); the same folder importing twice unmarked.
 
+## The last untyped replies, live (#3-54)
+
+Seen on 2026-11-09 on vm3, vm4 and vm5 (`.local_data/plans/live_todos/findings/live_todos.md`). AMP's webapi binary
+(`/opt/cubecoders/amp3/seed/3.0.0/webapi/webapi` on a panel) carries its own XML doc comments for every controller,
+body, enum and reply, which settled several of these before any call.
+- A shard keeps names, countries, addresses and profiles only with `userSpecificData` on. "Kat MC World" had it off,
+  so Kat's player had a key and sessions only, and no public IP was stored. With it turned on and Kat online, the
+  connected-player reply, her Minecraft profile (`skinHash`, 64 hex digits) and her skin (a PNG) were all seen; the
+  `connected` route takes the player's `id`, not their name (404).
+- The analytics avatar and skin routes take a Steam avatar hash and a Mojang texture hash, and `connected` is
+  `connected/{shard_id}?user=<id>`; the library had all three keyed by the player's key until #3-54.
+- Every analytics range search (CIDR, prefix, wildcard) answers 500 on AMP 3.0.0.6 (a NATS consumer error in its
+  address service); a whole address works. Erasing a player left them in the sessions summary for at least 11 minutes.
+- A platform warning is raised by things such as a spire whose IPv6 goes nowhere (`ipv6BlackHoled`), not by an
+  offline spire. One that needs action can't be acknowledged (400 `platform.error.warningNotDismissable`).
+- A shard waiting on a user (status 110): a `hytale` shard's update waits for a device sign-in, and the sign-in code
+  shows in the running task's `message`. `stop` aborts the update; `update/abort` and `kill` still answer 404 (U12).
+- `ShardPortOutcome.reason` is always 0 from `POST /api/shards`, which silently drops unknown keys such as
+  `preferredPorts`; AMP's docs name 0 to 4.
+- Only `minecraft-java` claims sleep among 248 templates, and AMP refused it on the VMs for starting slower than its
+  25 second limit, so `wake`'s success is unseen.
+
 ## AMP 3 API shape
 
 - REST under `/api/`, JSON bodies, camelCase keys. AMP 2's `POST /API/Module/Method` is gone.

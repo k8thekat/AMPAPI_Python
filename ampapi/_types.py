@@ -27,14 +27,22 @@ if TYPE_CHECKING:
     from ._enums import CloneContent, GatewayState, PublicationState, SnapshotContent, SnapshotKind
 
 __all__ = (
+    "AnalyticsAddressSearchResponse",
+    "AnalyticsAddressSummary",
     "AnalyticsAddressUsersResponse",
+    "AnalyticsConnectedResponse",
+    "AnalyticsConnectedUser",
+    "AnalyticsForgetResponse",
+    "AnalyticsMinecraftProfile",
     "AnalyticsPeriod",
     "AnalyticsProfilesResponse",
     "AnalyticsRule",
     "AnalyticsServerInfo",
     "AnalyticsSessionsResponse",
     "AnalyticsTotals",
+    "AnalyticsUserAddress",
     "AnalyticsUserAddressesResponse",
+    "AnalyticsUserMatch",
     "AnalyticsUserSessionsResponse",
     "AnalyticsUsersResponse",
     "AuditActionCount",
@@ -109,6 +117,7 @@ __all__ = (
     "PasswordPolicyResponse",
     "PermissionNode",
     "PermissionsResponse",
+    "PlatformWarningResponse",
     "PortClaimResponse",
     "PortProtocol",
     "PreferencesChanges",
@@ -157,6 +166,7 @@ __all__ = (
     "ShardAppConfig",
     "ShardArchiveInfoResponse",
     "ShardArchiveRequest",
+    "ShardAttentionResponse",
     "ShardCloneRequest",
     "ShardCloneResponse",
     "ShardConfigImportResponse",
@@ -263,6 +273,32 @@ __all__ = (
 )
 
 
+class AnalyticsAddressSearchResponse(TypedDict):
+    """``GET /api/analytics/addresses``, the addresses matching one address searched for, and their players."""
+
+    range: str
+    "What AMP searched, eg. the address as given."
+    kind: str
+    """eg. ``"Private"`` or ``"Public"``."""
+    users: int
+    serverInfo: dict[str, AnalyticsServerInfo]
+    "A shard ID to the shard's name and game."
+    isDemo: bool
+    # TODO: Type the items once a capture shows one (#3-54).
+    # Every search so far found no address; AMP's docs call each an address and the players seen at it.
+    addresses: list[Any]
+
+
+class AnalyticsAddressSummary(TypedDict):
+    """An address searched for, from `AnalyticsUsersResponse.address`."""
+
+    range: str
+    kind: str
+    """eg. ``"Private"`` or ``"Public"``."""
+    addresses: int
+    users: int
+
+
 class AnalyticsAddressUsersResponse(TypedDict):
     """``GET /api/analytics/addresses/users``, the players seen at one address.
 
@@ -279,6 +315,57 @@ class AnalyticsAddressUsersResponse(TypedDict):
     isDemo: bool
 
 
+class AnalyticsConnectedResponse(TypedDict):
+    """``GET /api/analytics/connected/{shard_id}``, what a shard knows about one player connected to it now."""
+
+    user: AnalyticsConnectedUser
+    minecraft: Optional[AnalyticsMinecraftProfile]
+    "`None` for a player who isn't on Minecraft."
+    profileState: str
+    analyticsKey: str
+    userKey: str
+    "The key the other analytics calls take."
+    addressKind: str
+    """eg. ``"Private"`` or ``"Public"``."""
+    # TODO: Type these once a capture shows them filled in (#3-54).
+    # A Minecraft player alone at a LAN address left them `None`.
+    steam: Optional[Any]
+    othersAtAddress: Optional[Any]
+    recoveredAddress: Optional[Any]
+
+
+class AnalyticsConnectedUser(TypedDict):
+    """The player in `AnalyticsConnectedResponse.user`, as the shard lists them (see `ShardPlayer`)."""
+
+    name: str
+    id: str
+    sessionId: str
+    endpoint: str
+    "The address and port the player connected from."
+    joinedAt: str
+    idKind: str
+    """eg. ``"minecraft-uuid"``."""
+
+
+class AnalyticsForgetResponse(TypedDict):
+    """``DELETE /api/analytics/sessions/users/{key}``, what was erased about one player."""
+
+    records: int
+    days: int
+
+
+class AnalyticsMinecraftProfile(TypedDict):
+    """A player's Minecraft profile, from `AnalyticsProfilesResponse.minecraft` and `AnalyticsConnectedResponse`."""
+
+    uuid: str
+    name: str
+    skinHash: str
+    "What `AnalyticsModule.get_analytics_skin` takes."
+    slim: bool
+    "If the skin uses the slim arms model or not."
+    hasCape: bool
+
+
 class AnalyticsPeriod(TypedDict):
     """A stretch of time and the players in it, from `AnalyticsSessionsResponse`."""
 
@@ -288,13 +375,15 @@ class AnalyticsPeriod(TypedDict):
 
 
 class AnalyticsProfilesResponse(TypedDict):
-    """``GET /api/analytics/profiles``, players' Steam and Minecraft profiles.
+    """``GET /api/analytics/profiles``, players' Steam and Minecraft profiles, keyed by the player's key.
 
-    The shape of a profile isn't known yet.
+    A shard only keeps profiles with its `userSpecificData` setting on.
     """
 
+    # TODO: Type a Steam profile once a capture shows one (#3-54).
+    # Only a Minecraft player has been seen. By AMP's docs it holds the hash `AnalyticsModule.get_analytics_avatar` takes.
     steam: dict[str, Any]
-    minecraft: dict[str, Any]
+    minecraft: dict[str, AnalyticsMinecraftProfile]
     state: str
     """eg. ``"complete"``."""
     isDemo: bool
@@ -359,13 +448,33 @@ class AnalyticsTotals(TypedDict):
     activeRatePercent: float
 
 
+class AnalyticsUserAddress(TypedDict):
+    """One address a player was seen at, from `AnalyticsUserAddressesResponse.addresses`."""
+
+    address: str
+    network: str
+    token: str
+    kind: str
+    """eg. ``"Private"`` or ``"Public"``."""
+    country: str
+    firstSeen: str
+    lastSeen: str
+    sessions: int
+    shards: list[str]
+    "The shard IDs the player was seen on from it."
+    recovered: bool
+    # TODO: Type this once a capture shows it filled in (#3-54).
+    # A player alone at an address left it `None`.
+    otherUsers: Optional[Any]
+
+
 class AnalyticsUserAddressesResponse(TypedDict):
     """``GET /api/analytics/users/{key}/addresses``, the addresses one player was seen at.
 
-    The shape of an address isn't known yet.
+    A shard only keeps addresses with its `userSpecificData` setting on.
     """
 
-    addresses: list[Any]
+    addresses: list[AnalyticsUserAddress]
     serverInfo: dict[str, AnalyticsServerInfo]
     isDemo: bool
 
@@ -390,16 +499,29 @@ class AnalyticsUserSessionsResponse(TypedDict):
     isDemo: bool
 
 
+class AnalyticsUserMatch(TypedDict):
+    """A player a search found, from `AnalyticsUsersResponse.users`."""
+
+    userKey: str
+    "The key the other analytics calls take."
+    displayName: Optional[str]
+    "`None` when the shard stores no user-specific data."
+    userId: Optional[str]
+    idKind: str
+    """What the player's ID is, eg. ``"minecraft-uuid"``."""
+    shards: list[str]
+    "The shard IDs the player was seen on."
+    lastSeen: str
+
+
 class AnalyticsUsersResponse(TypedDict):
-    """``GET /api/analytics/users``, a player search.
+    """``GET /api/analytics/users``, a player search."""
 
-    The shape of a user isn't known yet.
-    """
-
-    users: list[Any]
+    users: list[AnalyticsUserMatch]
     serverInfo: dict[str, AnalyticsServerInfo]
     isDemo: bool
-    address: Optional[Any]
+    address: Optional[AnalyticsAddressSummary]
+    "A summary of the address when the search text is one, else `None`."
 
 
 class AuditActionCount(TypedDict):
@@ -1258,6 +1380,21 @@ class PermissionsResponse(TypedDict):
     roleIds: list[str]
 
 
+class PlatformWarningResponse(TypedDict):
+    """One of the panel's warnings, from ``GET /api/monitoring/platform-warnings``."""
+
+    id: str
+    """The warning's code and its params joined, eg. ``"platform.warning.ipv6BlackHoled|vm5"``; what
+    `PlatformModule.acknowledge_platform_warning` takes."""
+    code: str
+    """A dotted key, eg. ``"platform.warning.ipv6BlackHoled"``."""
+    params: dict[str, str]
+    """Values for `code`'s text, eg. ``{"machine": "vm5"}``."""
+    message: str
+    dismissable: bool
+    "If it can be acknowledged or not; one that needs action can't."
+
+
 class PortClaimResponse(TypedDict):
     """One port something holds on a spire, from ``GET /api/networking/spires/{id}/port-claims``.
 
@@ -1857,6 +1994,15 @@ class ShardArchiveRequest(TypedDict):
     destination: str
 
 
+class ShardAttentionResponse(TypedDict):
+    """A shard waiting on a user, from ``GET /api/shards/attention``, eg. a game's update waiting for a sign-in."""
+
+    shardId: str
+    name: str
+    message: str
+    "What it waits for, as AMP shows it, eg. a sign-in URL."
+
+
 class ShardCloneRequest(TypedDict):
     """The body of ``POST /api/shards/{id}/clone``."""
 
@@ -2174,9 +2320,10 @@ class ShardPortOutcome(TypedDict):
     ref: str
     requested: Optional[int]
     assigned: int
-    # TODO: Type `reason` once we know what its numbers mean (#3-50.11d).
-    # Only 0 has been seen, on ports that got what the template asked for; the web panel never reads it.
     reason: int
+    """Why the port is what it is, AMP's own numbers: 0 nothing found to keep, 1 kept as it was, 2 taken by another
+    server, 3 outside the range AMP hands out, 4 unavailable. A shard made by `Panel.create_shard` always reads 0, as
+    only an import finds ports to keep; 1 to 4 come from AMP's docs and haven't been seen live."""
     moved: bool
 
 

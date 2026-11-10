@@ -41,6 +41,7 @@ if TYPE_CHECKING:
         LicenceTermsRequest,
         MessageBusStatsResponse,
         MonitoringThresholdsResponse,
+        PlatformWarningResponse,
         SettingActionResponse,
         SettingsManifestResponse,
         SettingValues,
@@ -99,9 +100,7 @@ class PlatformModule(Base):
 
     # TODO: Reword the docstring once AMP refuses an unknown warning ID (U20a).
     # AMP 3.0.0.6 answers 200 with the warnings as they are.
-    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # The item shape isn't known yet; the items are those of `get_platform_warnings`.
-    async def acknowledge_platform_warning(self, warning_id: str) -> list[dict[str, Any]]:
+    async def acknowledge_platform_warning(self, warning_id: str) -> list[PlatformWarningResponse]:
         """Dismiss one of the panel's warnings.
 
         |coro|
@@ -117,8 +116,14 @@ class PlatformModule(Base):
 
         Returns
         -------
-        list[dict[:class:`str`, Any]]
+        list[:class:`PlatformWarningResponse`]
             The warnings left, as :meth:`get_platform_warnings` lists them.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the warning needs action and can't be dismissed, its `dismissable` False
+            (400, ``"platform.error.warningNotDismissable"``, its `params` holding the warning's `code`).
 
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
@@ -436,19 +441,19 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/monitoring/thresholds")
 
-    # TODO: Type the items once AMP is seen listing one live (#3-47.10).
-    # The item shape isn't known yet; the web panel reads each one's `id`.
-    async def get_platform_warnings(self) -> list[dict[str, Any]]:
-        """Get the panel's warnings for whoever runs it.
+    async def get_platform_warnings(self) -> list[PlatformWarningResponse]:
+        """Get the panel's warnings for whoever runs it, eg. a spire whose IPv6 goes nowhere.
 
         |coro|
 
         Endpoint: ``GET /api/monitoring/platform-warnings``
 
+        A spire that's offline isn't one of these; see :meth:`Panel.get_spire_roster` for that.
+
         Returns
         -------
-        list[dict[:class:`str`, Any]]
-            The warnings.
+        list[:class:`PlatformWarningResponse`]
+            The warnings, empty when there are none.
 
         """
         return await self._request(method="GET", path="/api/monitoring/platform-warnings")

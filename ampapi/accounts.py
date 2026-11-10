@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from .base import Base
 
@@ -666,9 +666,7 @@ class AccountModule(Base):
         if user_id == self.session.user_id:
             self.session._password = new_password  # pyright: ignore[reportPrivateUsage]
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.9).
-    # The body comes from the web panel's code; no capture shows the response yet.
-    async def set_passkey_name(self, passkey_id: str, name: str) -> Any:
+    async def set_passkey_name(self, passkey_id: str, name: str) -> None:
         """Rename one of the logged in user's passkeys.
 
         |coro|
@@ -680,15 +678,15 @@ class AccountModule(Base):
         passkey_id : :class:`str`
             The passkey's `id` from :meth:`get_passkeys`.
         name : :class:`str`
-            The new name.
+            The new name. AMP trims it and keeps the first 64 characters, and takes an empty one as ``""``.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If the passkey isn't one of the logged in user's (404).
 
         """
-        return await self._request(method="PATCH", path=f"/api/profile/passkeys/{passkey_id}", data={"name": name})
+        await self._request(method="PATCH", path=f"/api/profile/passkeys/{passkey_id}", data={"name": name})
 
     async def update_preferences(self, values: PreferencesChanges) -> PreferencesResponse:
         """Change some of the logged in user's web panel preferences.
