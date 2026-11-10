@@ -63,6 +63,7 @@ if TYPE_CHECKING:
         ShardFileContentResponse,
         ShardFileIgnoresResponse,
         ShardFileResponse,
+        ShardImportResponse,
         ShardInfraResponse,
         ShardInfraUpdateResponse,
         ShardManagedFileResponse,
@@ -105,9 +106,11 @@ UPLOAD_CHUNK_SIZE: int = 8 * 1024 * 1024
 class Shard:
     """A shard, AMP 3's name for an Instance, with the calls that act on it.
 
-    :meth:`Panel.get_shards` and :meth:`Panel.get_shard` make these, of the panel's `shard_class`, and the panel keeps
-    one for each shard. Each method calls the :class:`ShardModule` one with this shard's ID, eg. :meth:`start` is
-    :meth:`ShardModule.start_shard`; its parameters, reply and errors are documented there.
+    The panel makes these, of its `shard_class`, from :meth:`Panel.get_shards`, :meth:`Panel.get_shard`,
+    :meth:`Panel.create_shard`, :meth:`clone` and a spire's :meth:`Spire.get_shards`, and keeps one for each shard. Each
+    method calls the panel's one with this shard's ID, eg. :meth:`start` is :meth:`ShardModule.start_shard` and
+    :meth:`create_gateway` is :meth:`NetworkModule.create_gateway`; its parameters, reply and errors are documented
+    there.
 
     Two shard objects are equal, and hash the same, when they have the same ID, so they work in sets and as dict keys.
     They sort by `display_name`.
@@ -536,9 +539,7 @@ class Shard:
         """
         return await self._module.get_shard_files(shard_id=self.id, path=path)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.get_shard_import`.
-    async def get_import(self) -> Optional[dict[str, Any]]:
+    async def get_import(self) -> Optional[ShardImportResponse]:
         """Get how this shard's import went, see :meth:`ShardModule.get_shard_import`.
 
         |coro|
@@ -1891,10 +1892,8 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # Only the 204 for no record is known; the web panel reads a `left` list from an import record.
-    async def get_shard_import(self, shard_id: str) -> Optional[dict[str, Any]]:
-        """Get how the import that made a shard went.
+    async def get_shard_import(self, shard_id: str) -> Optional[ShardImportResponse]:
+        """Get how the import that made a shard went, see :meth:`SpireModule.import_spire_servers`.
 
         |coro|
 
@@ -1907,7 +1906,7 @@ class ShardModule(Base):
 
         Returns
         -------
-        Union[dict[:class:`str`, Any], None]
+        Union[:class:`ShardImportResponse`, None]
             The import record, `None` for a shard that wasn't imported (a 204).
 
         """

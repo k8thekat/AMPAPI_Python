@@ -62,9 +62,10 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - Calls return TypedDicts, except where a reply has the same shape as a hub event: then it's the event's object
   (`objects.py`, an `AMPObject` with snake_case attributes and the raw dict on `.data`), eg. `get_shard_state` gives
   a `ShardStatus` (Kat, 2026-11-07). `Shard` and `Spire` are classes too. There is no `format_data`.
-- `Base._request` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
-  4, 8, 8 seconds, as the web panel does), and every module call goes through `Session`'s single relogin on a dead
-  session.
+- `Session._send` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
+  4, 8, 8 seconds, as the web panel does), so logins, renewals and the session's own calls get it too, and every
+  module call goes through `Session`'s single relogin on a dead session; `Base._request` only hands the call over
+  (#3-51.1k).
 - No per-call `request_params` (Kat, 2026-11-06): the `ClientSession` handed to `Session` already carries SSL,
   timeouts and proxies for every call.
 - The modules: `AccountModule`, `AnalyticsModule` (player analytics), `AuditModule`, `CredentialModule`,
@@ -73,7 +74,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   `Spire`, in `spires.py` to avoid a circular import), `TaskModule` and `TemplateModule` (#3-50).
 - `Session` holds `accept_invite` and `preview_invite`, as the invitee has no account yet (#3-50.7). `accept_invite`
   previews the invite for its username, sends the session's own password, and keeps the token, so the session is
-  logged in as the new account (live on vm4, 2026-11-08). It doesn't log out a session that was already logged in.
+  logged in as the new account (live on vm4, 2026-11-08). A session it already held is logged out once the account
+  exists, best effort (#3-51.5).
 - **A call goes where its target is, not where its route prefix is** (#3-50, 2026-11-08; plan
   `.local_data/plans/module_layout/plan.md`). `ShardModule` / `SpireModule` hold only calls that take that shard's or
   spire's ID. The calls over all of the panel's shards or spires (`get_shards`, `get_shard`, `create_shard`,
@@ -164,6 +166,25 @@ What the two spires showed (2026-11-07, `findings/vm4_vm5_multi_spire.md`):
 - A publication through the shard's own spire needs no public host; a gateway or a publication through another spire
   needs that spire's `spire.publicHost` set, which hasn't been tried yet.
 
+## Removing a spire, denying a join, importing servers (#3-53)
+
+Seen live on 2026-11-09, vm5 against vm4 (`.local_data/plans/spire_lifecycle/findings/vm4_vm5_spire_lifecycle.md`):
+- `DELETE /api/spires/{id}` answers 204. A spire that still holds shards is refused without `force` (409
+  `spire.error.hasShards`, `params.count` a string). The removed machine's health reads `waiting`. vm5 was then wiped and
+  reinstalled before it joined again, and it came back as a **new spire with a new ID** (`9464ff1f-...`, was
+  `17d1d1e7-...`), taking its enrolment's label as its name.
+- `POST /api/spires/enrollments/{id}/deny` answers 204. The enrolment reads `denied`, and the machine's health reads
+  `auth.setup.joining.refused` within seconds; it takes a new join file without a reinstall.
+- `POST /api/updates/spires/{id}` answers 400 `updates.error.spireCurrent` for a spire on the panel's version. No older
+  AMP 3 release exists to install (the installer has no version option, the apt preview suite holds only 3.0.0), so
+  the success reply is unseen.
+- Import: the automatic scan looks only in other panels' fixed folders, not LinuxGSM's. Any other folder must be in
+  `AllowedImportRoots` in the spire's `/etc/amp3/sysagent.conf`, and the agent runs with `ProtectHome=yes`, so it can't
+  see `/home` at all. The import itself answers 202 `{taskId}` and works in a `ServerImport` running task.
+- Suspected AMP bugs, not drafted upstream yet: `ProtectHome=yes` hiding `/home`; a copy through the agent failing
+  with EEXIST when the template pre-makes a folder (and leaving an orphan); a successful import's task never finishing
+  (100%, not terminal, dismiss refused with 409 for minutes); the same folder importing twice unmarked.
+
 ## AMP 3 API shape
 
 - REST under `/api/`, JSON bodies, camelCase keys. AMP 2's `POST /API/Module/Method` is gone.
@@ -192,6 +213,17 @@ What the two spires showed (2026-11-07, `findings/vm4_vm5_multi_spire.md`):
   come from.
 - A wrong password and an unknown user get the same 401 `{message: "Invalid username or password."}`.
   One wrong attempt of each did not lock the admin out; lockout wasn't tested further.
+
+How `Session` handles them (#3-51.5, 2026-11-08):
+- Calls queued on a login that fails raise that login's error rather than each sending it again, as a busy program
+  with a wrong password would otherwise trip AMP's per-IP sign-in throttle. A later, separate call tries again.
+- A renew refused with anything but 401 (eg. a 503) is a warning: the token works until it runs out, so we keep it and
+  try the renew again a minute later. A 401 renew means the session ended, and we log in again without an ERROR line.
+- A new login logs out the token it replaces (a `login()` on a logged-in session, `accept_invite` on one), best effort.
+- A reply body that isn't JSON is kept as text: an HTML 502 from a proxy is an `AMPAPIRequestError` with the page as
+  its `data`, and a 2xx with a text body hands the text back.
+- A login finished with `second_factor` can't be made again on its own; once AMP ends it, the next call raises
+  `AMPAPIPasskeyRequiredError` and needs a new recovery code.
 
 ## Passkeys and recovery codes (#3-47.1)
 

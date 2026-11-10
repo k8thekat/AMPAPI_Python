@@ -37,7 +37,9 @@ if TYPE_CHECKING:
         SettingValues,
         SpireExpiredPurgeResponse,
         SpireImportItem,
+        SpireImportPreflightResponse,
         SpireImportRequest,
+        SpireImportResponse,
         SpireImportScanRequest,
         SpireImportScanResponse,
         SpireIPOptionResponse,
@@ -66,8 +68,9 @@ class Spire:
     """A spire, AMP 3's name for an ADS or Target, with the calls that act on it.
 
     :meth:`Panel.get_spires` and :meth:`Panel.get_spire` make these, of the panel's `spire_class`, and the panel keeps
-    one for each spire. Each method calls the :class:`SpireModule` one with this spire's ID, eg. :meth:`get_state` is
-    :meth:`SpireModule.get_spire_state`. The shards on it come from :meth:`get_shards`.
+    one for each spire. Each method calls the panel's one with this spire's ID, eg. :meth:`get_state` is
+    :meth:`SpireModule.get_spire_state`. The shards on it come from :meth:`get_shards`, and :meth:`create_shard` makes
+    one there; both call :meth:`Panel.get_shards` and :meth:`Panel.create_shard`.
 
     A spire that joined serves the whole panel API too, so a :class:`Panel` can talk to any of them. The data's
     `isLocal` is relative to the machine that answered, not a property of the spire.
@@ -134,8 +137,8 @@ class Spire:
     def __repr__(self) -> str:  # noqa: D105
         return f"<{type(self).__name__} id={self.id!r} display_name={self.display_name!r}>"
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.apply_spire_update`.
+    # TODO: Type the reply once a spire behind the panel is updated live (#3-47.8).
+    # It comes from `SpireModule.apply_spire_update`; only its refusal has been seen.
     async def apply_update(self) -> Any:
         """Update this spire's AMP, see :meth:`SpireModule.apply_spire_update`.
 
@@ -145,6 +148,11 @@ class Spire:
         -------
         Any
             AMP's reply as it came, `None` for an empty one.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the spire already runs the panel's version (400, ``"updates.error.spireCurrent"``).
 
         """
         return await self._module.apply_spire_update(spire_id=self.id)
@@ -224,9 +232,7 @@ class Spire:
             credential_id=credential_id,
         )
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.delete_spire`.
-    async def delete(self, *, force: bool = False) -> Any:
+    async def delete(self, *, force: bool = False) -> None:
         """Remove this spire from the panel, see :meth:`SpireModule.delete_spire`.
 
         |coro|
@@ -234,15 +240,17 @@ class Spire:
         Parameters
         ----------
         force : :class:`bool`, optional
-            If AMP should remove it even when it would rather not or not, by default False.
+            If AMP should remove it even when it still holds shards or not, by default False.
+            The web panel says its shards are then deleted too.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If the spire still holds shards and `force` is False (409, ``"spire.error.hasShards"``, its `params` holding
+            the `count` as a string), or there's no such spire (404).
 
         """
-        return await self._module.delete_spire(spire_id=self.id, force=force)
+        await self._module.delete_spire(spire_id=self.id, force=force)
 
     async def delete_datastore(self, datastore_id: str) -> list[DatastoreResponse]:
         """Remove a datastore from this spire, see :meth:`SpireModule.delete_spire_datastore`.
@@ -409,9 +417,7 @@ class Spire:
         """
         return await self._module.get_spire_usage_interval(spire_id=self.id)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.import_spire_servers`.
-    async def import_servers(self, items: list[SpireImportItem], *, enter_other_volumes: bool = False) -> Any:
+    async def import_servers(self, items: list[SpireImportItem], *, enter_other_volumes: bool = False) -> SpireImportResponse:
         """Import game servers found by :meth:`scan_imports`, see :meth:`SpireModule.import_spire_servers`.
 
         |coro|
@@ -425,15 +431,13 @@ class Spire:
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireImportResponse`
+            The `taskId` of the ``"ServerImport"`` running task that does the import.
 
         """
         return await self._module.import_spire_servers(spire_id=self.id, items=items, enter_other_volumes=enter_other_volumes)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # It comes from `SpireModule.preflight_spire_import`.
-    async def preflight_import(self, items: list[SpireImportItem]) -> Any:
+    async def preflight_import(self, items: list[SpireImportItem]) -> SpireImportPreflightResponse:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 
         |coro|
@@ -445,8 +449,8 @@ class Spire:
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireImportPreflightResponse`
+            Which servers are ready and which are blocked, and if the batch can go ahead.
 
         """
         return await self._module.preflight_spire_import(spire_id=self.id, items=items)
@@ -596,8 +600,9 @@ class SpireModule(Base):
 
     """
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The body comes from the web panel's code; no capture shows the response yet.
+    # TODO: Type the reply once a spire behind the panel is updated live (#3-47.8).
+    # Only the refusal for a current spire has been seen; there was no older AMP 3 release to put one behind.
+    # The web panel keeps the reply where it keeps `get_update_status`'s, so it's likely that shape.
     async def apply_spire_update(self, spire_id: str) -> Any:
         """Update a spire's AMP to the panel's version.
 
@@ -614,6 +619,12 @@ class SpireModule(Base):
         -------
         Any
             AMP's reply as it came, `None` for an empty one.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the spire already runs the panel's version (400, ``"updates.error.spireCurrent"``, its `params` holding
+            the spire's display name as `spire`).
 
         """
         return await self._request(method="POST", path=f"/api/updates/spires/{spire_id}", data={})
@@ -655,30 +666,34 @@ class SpireModule(Base):
         data: DatastoreRequest = {"name": name, "path": path, "isDefault": is_default, "enabled": enabled}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def delete_spire(self, spire_id: str, *, force: bool = False) -> Any:
+    async def delete_spire(self, spire_id: str, *, force: bool = False) -> None:
         """Remove a spire from the panel.
 
         |coro|
 
         Endpoint: ``DELETE /api/spires/{spire_id}``
 
+        The machine keeps running AMP, and its health reads ``"waiting"``. Joining it to the panel again was only seen
+        after reinstalling AMP on it (see :meth:`EnrollmentModule.create_spire_enrollment`), and it came back as a new
+        spire with a new ID.
+
         Parameters
         ----------
         spire_id : :class:`str`
             The spire's ID.
         force : :class:`bool`, optional
-            If AMP should remove it even when it would rather not or not, by default False.
+            If AMP should remove it even when it still holds shards or not, by default False.
+            The web panel says its shards are then deleted too.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        Raises
+        ------
+        AMPAPIRequestError
+            If the spire still holds shards and `force` is False (409, ``"spire.error.hasShards"``, its `params` holding
+            the `count` as a string), or there's no such spire (404).
 
         """
         parameters: Optional[dict[str, str]] = {"force": "true"} if force is True else None
-        return await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters=parameters)
+        await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters=parameters)
 
     # TODO: Reword the warning once AMP refuses a datastore that still holds an orphan folder (U23).
     # AMP 3.0.0.6 accepts it, and the folder drops out of the API's sight.
@@ -894,16 +909,27 @@ class SpireModule(Base):
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/usage/interval")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The web panel reads a `taskId` from it; the rest of the reply isn't known yet.
-    async def import_spire_servers(self, spire_id: str, items: list[SpireImportItem], *, enter_other_volumes: bool = False) -> Any:
+    async def import_spire_servers(
+        self,
+        spire_id: str,
+        items: list[SpireImportItem],
+        *,
+        enter_other_volumes: bool = False,
+    ) -> SpireImportResponse:
         """Import game servers from other panels into a spire as shards.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/import``
 
-        The web panel follows the import in :meth:`TaskModule.get_running_tasks`.
+        AMP answers at once (202), and a ``"ServerImport"`` running task does the import, see
+        :meth:`TaskModule.get_running_tasks`. It has one sub-task per server, whose `targetId` becomes the new shard's
+        ID; a server that fails is told there, not here. :meth:`ShardModule.get_shard_import` then has what the import
+        brought across.
+
+        .. warning::
+            AMP doesn't stop the same folder being imported twice, and its scan and preflight don't mark it as done.
+            A successful import's task can also stay unfinished at 100% for minutes, and can't be dismissed until then.
 
         Parameters
         ----------
@@ -916,21 +942,22 @@ class SpireModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireImportResponse`
+            The running task's `taskId`.
 
         """
         data: SpireImportRequest = {"items": items, "enterOtherVolumes": enter_other_volumes}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # The web panel reads a `blocked` list from it; the rest of the reply isn't known yet.
-    async def preflight_spire_import(self, spire_id: str, items: list[SpireImportItem]) -> Any:
+    async def preflight_spire_import(self, spire_id: str, items: list[SpireImportItem]) -> SpireImportPreflightResponse:
         """Check game servers can be imported into a spire, before :meth:`import_spire_servers`.
 
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/import/preflight``
+
+        A path AMP can't use lands in `blocked` rather than raising, and so does an empty `items`. It doesn't check
+        the `templateSlug`.
 
         Parameters
         ----------
@@ -941,8 +968,9 @@ class SpireModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`SpireImportPreflightResponse`
+            Which servers are ready and which are blocked, the space they need, and if the batch can go ahead
+            (`canProceed`).
 
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/preflight", data={"items": items})
@@ -1060,6 +1088,12 @@ class SpireModule(Base):
         |coro|
 
         Endpoint: ``POST /api/spires/{spire_id}/import/scan``
+
+        .. note::
+            With `automatic`, AMP only looks in its own fixed list of other panels' folders (Pterodactyl, Pelican,
+            PufferPanel, Crafty, Multicraft, GameAP, Docker volumes), not LinuxGSM's. Any other folder must be listed in
+            `AllowedImportRoots` in the spire's ``/etc/amp3/sysagent.conf``, or it comes back in `unreadable`. AMP
+            3.0.0.6's agent can't see under ``/home`` at all, even when it's allowed.
 
         Parameters
         ----------

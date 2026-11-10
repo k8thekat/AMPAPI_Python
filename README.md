@@ -10,7 +10,7 @@ CubeCoders AMP 3 API wrapper in Python.
 
 ![Version](https://img.shields.io/pypi/v/cc-ampapi?label=PyPI&include_prereleases)
 
-> **This is the AMP 3 beta, `6.0.0b1`.** It is built against the AMP 3.0.0 preview builds (tested on 3.0.0.6) and only talks to AMP 3.
+> **This is the AMP 3 beta, `6.0.0b2`.** It is built against the AMP 3.0.0 preview builds (tested on 3.0.0.6) and only talks to AMP 3.
 > For AMP 2, use the 5.x releases, which keep supporting it. A plain `pip install cc-ampapi` never picks up this beta.
 
 ### AMP 3
@@ -29,9 +29,9 @@ CubeCoders AMP 3 API wrapper in Python.
 ---
 
 - Pythonic API wrapper using `async` and `await`, built on `aiohttp`.
-- `Session` handles the login: it renews the token before it runs out, logs in again when AMP ends the session, and takes a recovery code when the account needs a second factor.
+- `Session` handles the login: it renews the token before it runs out, logs in again when AMP ends the session, waits out a short AMP outage the way the web panel does, and takes a recovery code when the account needs a second factor. Calls waiting on a login that fails all raise its error, rather than each trying again.
 - `Panel` groups every API area (accounts, analytics, audit, credentials, enrolments, networking, platform, shards, spires, tasks and templates) in one object.
-- Taking an invite needs no account yet: make a `Session` with the password you want and call `session.accept_invite(...)`, which logs it in as the new account.
+- Taking an invite needs no account yet: make a `Session` with any username, eg. `""`, and the password you want, then call `session.accept_invite(...)`. It logs in as the new account.
 - `Shard` and `Spire` objects carry the calls that act on them, eg. `await shard.start()`.
 - Typed replies: `TypedDict`s for most calls, and small objects for live data such as `ShardStatus`, `ConsoleLine` and `RunningTask`. The package ships `py.typed`.
 - File downloads and uploads, including AMP's chunked upload for big files.
@@ -78,7 +78,7 @@ pip install git+https://github.com/k8thekat/AMPAPI_Python@AMP3-beta
 In your IDE Python file. -> `import ampapi`.
 
 1. Make a `Session` with the panel's URL and a login. It logs in on the first call that needs it.
-2. Hand it to a `Panel`, which has every call.
+2. Hand it to a `Panel`, which has the API calls. Logging in and taking an invite are on the `Session` itself.
    - Leaving an `async with` block, or `await panel.clean_up()`, logs out and closes the session.
 3. A call on the `Panel` takes IDs, eg. `panel.start_shard(shard_id=...)`. The same call on a `Shard` drops the ID, eg. `shard.start()`.
 
@@ -106,7 +106,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-See [samples](./samples) for scripts you can run against your own panel. Each one reads the panel's URL and login from `AMP_URL`, `AMP_USER` and `AMP_PASSWORD`.
+See [samples](./samples) for scripts you can run against your own panel. Each one reads the panel's URL and login from `AMP_URL`, `AMP_USER` and `AMP_PASSWORD`. `shard_control.py` and `files.py` also take the shard's ID from `AMP_SHARD`.
 
 - `basic.py`: log in, list the spires and shards, and read a shard's state.
 - `shard_control.py`: start a shard, send a console command, read the console back and stop it.
@@ -189,6 +189,7 @@ The errors from AMP are all `AMPAPIError`s. When AMP answers a call with an erro
 - `.code`: AMP's dotted error key, eg. `shards.error.eulaRequired`, when it sends one.
 - `.message`: AMP's message, when it sends one.
 - `.errors`: the validation errors, eg. for a password the policy refuses, when it sends any.
+- `.data`: the whole body: the decoded JSON, or the text of a reply that isn't JSON, eg. a proxy's error page.
 
 ```py
 from ampapi import AMPAPIRequestError

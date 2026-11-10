@@ -53,6 +53,7 @@ class AMPAPIError(Exception):
     """The base of every error this library raises."""
 
 
+# TODO: Nothing raises this until the hubs come back (#3-50.1).
 class AMPAPIHubError(AMPAPIError):
     """Raised when one of AMP's hubs refuses a call, eg. joining a shard that no longer exists.
 
@@ -176,7 +177,8 @@ class AMPAPIRequestError(AMPAPIError):
     errors : Union[list[:class:`str`], dict[:class:`str`, list[:class:`str`]], None]
         The validation errors: a list of messages, or field names to messages, when AMP sent any.
     data : Any
-        The decoded response body, `None` for an empty one.
+        The decoded response body, `None` for an empty one, or the text of a body that isn't JSON, eg. a proxy's error
+        page.
 
     """
 

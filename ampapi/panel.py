@@ -73,6 +73,11 @@ class Panel(
     It keeps the shard and spire objects it hands out, one for each ID, so ``panel.get_shard(shard_id=...)`` gives back
     the same object each time, with its `data` and `display_name` brought up to date.
 
+    .. note::
+        Any call that needs a session logs in first when it has to, so it can raise :exc:`AMPAPILoginError`,
+        :exc:`AMPAPIPasskeyRequiredError` or :exc:`AMPAPIPasswordChangeRequiredError` from that login.
+        See :class:`Session`.
+
     .. versionadded:: 6.0.0
 
     Parameters
@@ -81,9 +86,9 @@ class Panel(
         The session to send calls through.
         Leaving an ``async with`` block, or :meth:`clean_up`, logs it out and closes it.
     shard_class : type[:class:`Shard`], optional
-        The class `get_shard` and `get_shards` make, eg. a subclass of your own, by default :class:`Shard`.
+        The class the panel makes its shards from, eg. a subclass of your own, by default :class:`Shard`.
     spire_class : type[:class:`Spire`], optional
-        The class `get_spire` and `get_spires` make, by default :class:`Spire`.
+        The class the panel makes its spires from, by default :class:`Spire`.
 
     """
 

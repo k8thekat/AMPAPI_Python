@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from .base import Base
 
@@ -143,33 +143,30 @@ class EnrollmentModule(Base):
         data: Optional[SpireEnrollmentRevokeRequest] = {"reason": reason} if reason is not None else None
         await self._request(method="DELETE", path=f"/api/spires/enrollments/{enrollment_id}", data=data)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.8).
-    # Only refusals are known; the reply for a machine waiting on a join file isn't.
-    async def deny_spire_enrollment(self, enrollment_id: str) -> Any:
+    async def deny_spire_enrollment(self, enrollment_id: str) -> None:
         """Refuse a machine that used a join file.
 
         |coro|
 
         Endpoint: ``POST /api/spires/enrollments/{enrollment_id}/deny``
 
+        The enrolment then reads ``"denied"``, with `deniedAt` and `deniedByName` in its `admission`. Within a few
+        seconds the machine's health reads ``"auth.setup.joining.refused"``, and it can take a new join file without
+        reinstalling AMP.
+
         Parameters
         ----------
         enrollment_id : :class:`str`
             The enrolment's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
         Raises
         ------
         AMPAPIRequestError
-            If no machine is waiting on the enrolment, eg. it is pending or revoked
+            If no machine is waiting on the enrolment, eg. it is pending, revoked or already denied
             (409, ``"spire.enroll.error.nothingToApprove"``), or there's no such enrolment (404).
 
         """
-        return await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
+        await self._request(method="POST", path=f"/api/spires/enrollments/{enrollment_id}/deny")
 
     async def expand_message_bus(self) -> BusExpandResponse:
         """Open the message bus to other machines, which a new spire needs to join.

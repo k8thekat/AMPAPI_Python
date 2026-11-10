@@ -209,6 +209,7 @@ class ConsoleLine(AMPObject):
     """The game's log source, eg. ``"Server thread"``."""
 
 
+# TODO: Nothing makes this until the hubs come back (#3-50.1).
 # TODO: Check which fields kinds 4, 6 and 8 fill once a capture shows one (#3-47.2.1).
 # They need a game that asks the user something, a sleep-capable template and a notice.
 class LifecycleEvent(AMPObject):
@@ -256,6 +257,7 @@ class LifecycleEvent(AMPObject):
     timestamp: str
 
 
+# TODO: Nothing makes this until the hubs come back (#3-50.1).
 class NetworkStatus(AMPObject):
     """The spire hub's `NetworkStatus` event: a publication, tunnel or gateway changed its status.
 

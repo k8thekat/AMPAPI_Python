@@ -24,6 +24,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 ---
 
 - (#3-48) A structure pass: lower-case routes and an Endpoint line on every call, docstrings without test-run context, request TypedDicts, body spacing. *DONE*
+- (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`): group A, the `Session` paths, *DONE*; groups B (stale objects, the registry), C (writes that lose data), D (uncatchable errors), E (names), F (types), G (structure) and H (docs) open.
 
 ## ampapi/panel.py
 
@@ -33,25 +34,34 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 - (#3-50) Module layout by what a call acts on: collections and lookups on `Panel`, shards under their spire, the hubs set aside, then `NetworkModule` (#3-50.5), `AuditModule` (#3-50.6), invites onto `Session` (#3-50.7) and `EnrollmentModule` with the message bus calls (#3-50.8). *DONE*
 - (#3-50b) Look at what `create_shard` drops from AMP's reply (`infraSettings`, `appConfig`, `ports`, `portOutcomes`, `overLicenceLimit`) and decide what to hand back. *DONE* in #3-50.11: read-only properties on the `Shard`.
 - (#3-50.11d) Type `ShardPortOutcome.reason` once we know what its numbers mean; only 0 has been seen.
-- (#3-50.1) Bring the hubs back: `hubs.py` out of pyright's exclude list, `Panel`/`Shard`/`Spire` on the hub classes again, `auto_state`, the samples and the README's live events section.
+- (#3-50.1) Bring the hubs back: `hubs.py` out of pyright's exclude list, `Panel`/`Shard`/`Spire` on the hub classes again, `auto_state`, the samples and the README's live events section, and the `# TODO:` markers on `AMPAPIHubError`, `LifecycleEvent` and `NetworkStatus`.
+- (#3-52.1q) When the hubs come back, the README's live events section and `samples/live_events.py` say the panel holds its shards weakly; it keeps them in a plain dict now.
+- (#3-47.7) Type `Panel.get_shards_awaiting_action`'s items; needs a game waiting for input.
 
 ## ampapi/platform.py
 
 ---
 
-- (#3-47.10) Type the platform writes from the vm4 run (settings, https, bus, enrolments, networking, licence, monitoring, updates). *DONE* except the replies only ever seen refused, still `# TODO:`: HTTPS setup and removal, applying an update, licence terms, platform warnings.
+- (#3-47.10) Type the platform writes from the vm4 run (settings, https, licence, monitoring, updates; the bus, enrolment and networking ones are now in `enrollments.py` and `networking.py`). *DONE* except the replies only ever seen refused, still `# TODO:`: HTTPS setup and removal, applying an update, licence terms, platform warnings.
 
 ## ampapi/shards.py
 
 ---
 
-- (#3-47.7) Type the shard replies still marked `# TODO:`: imports, users and the shards awaiting action (need players or a game waiting for input), wake (needs a template that can sleep, U18b), kill and abort (U12).
+- (#3-47.7) Type the shard replies still marked `# TODO:`: users (need players), wake (needs a template that can sleep, U18b), kill and abort (U12). The shards awaiting action are `Panel.get_shards_awaiting_action`, under `ampapi/panel.py`.
+
+## ampapi/enrollments.py
+
+---
+
+- (#3-47.8) Type the enrolment deny reply (needs a machine waiting to join); approve is done. *DONE* live on vm4 + vm5 (#3-53).
 
 ## ampapi/spires.py
 
 ---
 
-- (#3-47.8) Type the enrolment deny reply (needs a machine waiting to join) and a spire's import; approve is done.
+- (#3-47.8) Type a spire's import, import preflight, update and delete replies. *DONE* live on vm4 + vm5 (#3-53), except the update's success: no older AMP 3 release exists to put a spire behind the panel.
+- (#3-53) Type the import fields only ever seen empty: `liveness`, `unavailableReason`, `alreadyImportedAs`, `truncatedRoots`, `unreadableDirectories`, and the import record's lists.
 
 ## Test VMs
 

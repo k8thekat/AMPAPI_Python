@@ -5,6 +5,8 @@
 # discord.py isn't one of this library's dependencies, so pyright can't see it, hence basic mode.
 """A sketch of a discord.py cog that posts each shard's state changes to a channel.
 
+Set aside until the hubs come back (#3-50.1): the code below is commented out, so running this does nothing yet.
+
 It needs discord.py, which this library doesn't depend on: `pip install discord.py`.
 
 The bot holds the one `Panel`, so the panel outlives the cog. The cog adds its listener in `cog_load` and removes it in

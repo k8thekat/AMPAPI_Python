@@ -20,15 +20,9 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
-
-from .errors import (
-    AMPAPIRequestError,
-    _is_json_object,  # pyright: ignore[reportPrivateUsage]
-)
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -54,9 +48,6 @@ class Base:
     """
 
     session: Session
-    # The web panel tries a 503 again after each of these delays (in seconds) when AMP names one of these outages.
-    _outage_codes: ClassVar[tuple[str, ...]] = ("session.storeUnavailable", "common.error.busUnavailable")
-    _outage_delays: ClassVar[tuple[int, ...]] = (1, 2, 4, 8, 8)
 
     def __init__(self, session: Session) -> None:  # noqa: D107
         self.session = session
@@ -85,9 +76,10 @@ class Base:
         raw_bytes: bool = False,
         use_token: bool = True,
     ) -> Any:
-        """Send a call through our :class:`Session`, waiting out a panel outage the way the web panel does.
+        """Send a call through our :class:`Session`, raising for an error status.
 
-        A 503 whose `code` says AMP's database (``"session.storeUnavailable"``) or message bus
+        The session logs in when the call needs it, and waits out a panel outage the way the web panel does: a 503
+        whose `code` says AMP's database (``"session.storeUnavailable"``) or message bus
         (``"common.error.busUnavailable"``) is down is sent again after 1, 2 and 4 seconds, then 8 seconds twice.
 
         Parameters
@@ -106,7 +98,7 @@ class Base:
             A list value repeats its key, eg. ``{"shard": ["a", "b"]}`` is sent as ``shard=a&shard=b``.
         raw_bytes : :class:`bool`, optional
             If a successful reply should come back as bytes rather than JSON or not, by default False.
-            Downloads need it. An error is still read as JSON.
+            Downloads need it. An error is still read as JSON, or kept as text when it isn't JSON.
         use_token : :class:`bool`, optional
             If the call needs a session or not, by default True.
             Without one we don't log in or send a token, eg. for ``GET /api/health/status``.
@@ -114,16 +106,22 @@ class Base:
         Returns
         -------
         Any
-            The decoded JSON body, `None` for an empty one (a 204), or the bytes with `raw_bytes`.
+            The decoded JSON body, `None` for an empty one (a 204), the text of a body that isn't JSON, or the bytes
+            with `raw_bytes`.
 
         Raises
         ------
         AMPAPIRequestError
             If AMP answers with an error status, or is still down after the last delay.
-            A login this call needs is not retried; a 503 there raises at once.
+        AMPAPILoginError
+            If a login this call needed was refused.
+        AMPAPIPasskeyRequiredError
+            If a login this call needed asks for a second factor.
+        AMPAPIPasswordChangeRequiredError
+            If a login this call needed asks for a new password first.
 
         """
-        status, body = await self.session._send_with_login(  # pyright: ignore[reportPrivateUsage]
+        return await self.session._request(  # pyright: ignore[reportPrivateUsage]
             method=method,
             path=path,
             data=data,
@@ -132,32 +130,3 @@ class Base:
             raw_bytes=raw_bytes,
             use_token=use_token,
         )
-
-        # We check the reply before building an error, so a retried outage only logs our warning.
-        for delay in self._outage_delays:
-            code: Optional[str] = body.get("code") if _is_json_object(value=body) else None
-            if status != 503 or code not in self._outage_codes:
-                break
-
-            LOGGER.warning(
-                "<%s.%s> | AMP is unavailable, trying again in %s seconds | Code: %s | Path: %s",
-                __class__.__name__,
-                "_request",
-                delay,
-                code,
-                path,
-            )
-            await asyncio.sleep(delay=delay)
-            status, body = await self.session._send_with_login(  # pyright: ignore[reportPrivateUsage]
-                method=method,
-                path=path,
-                data=data,
-                files=files,
-                parameters=parameters,
-                raw_bytes=raw_bytes,
-                use_token=use_token,
-            )
-
-        if not 200 <= status < 300:
-            raise AMPAPIRequestError(status=status, method=method, path=path, data=body)
-        return body

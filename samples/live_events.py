@@ -2,6 +2,8 @@
 # ruff: noqa: INP001 # the samples are scripts run directly, not a package
 """Print AMP's live events until Ctrl+C: one shard's console, every shard's state changes and lifecycle, and every task.
 
+Set aside until the hubs come back (#3-50.1): the code below is commented out, so running this does nothing yet.
+
 It shows both ways to add a listener:
     - class-level, a method marked with `@ShardHub.listener(...)` or `@PanelHub.listener(...)` on a subclass.
     - instance-level, a plain function given to `panel.listen(...)` (or `panel.add_listener(...)`).

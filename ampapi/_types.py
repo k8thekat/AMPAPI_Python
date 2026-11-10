@@ -173,6 +173,7 @@ __all__ = (
     "ShardFileContentResponse",
     "ShardFileIgnoresResponse",
     "ShardFileResponse",
+    "ShardImportResponse",
     "ShardInfraChanges",
     "ShardInfraResponse",
     "ShardInfraSettings",
@@ -209,10 +210,20 @@ __all__ = (
     "SpireExpiredPurgeResponse",
     "SpireIPAddress",
     "SpireIPOptionResponse",
+    "SpireImportBlockedItem",
+    "SpireImportEvidence",
     "SpireImportItem",
+    "SpireImportMatch",
+    "SpireImportPreflightResponse",
+    "SpireImportReadyItem",
+    "SpireImportRecovery",
     "SpireImportRequest",
+    "SpireImportResponse",
     "SpireImportScanRequest",
     "SpireImportScanResponse",
+    "SpireImportScanServer",
+    "SpireImportSize",
+    "SpireImportUnreadable",
     "SpirePlatform",
     "SpirePortResponse",
     "SpireResponse",
@@ -1996,6 +2007,27 @@ class ShardFileResponse(TypedDict):
     modified: str
 
 
+class ShardImportResponse(TypedDict):
+    """``GET /api/shards/{id}/import``, what the import that made a shard brought across."""
+
+    importedAt: str
+    sourcePath: str
+    "The folder it was imported from, on the spire."
+    source: int
+    """Where AMP found it, the web panel's numbers: eg. 0 a folder named by hand, 8 LinuxGSM."""
+    recovered: int
+    refused: int
+    nameOrigin: int
+    # TODO: Type these once an import that moves a port or leaves something behind is seen live (#3-53).
+    # Every capture has them empty.
+    portsMoved: list[Any]
+    settingsExcluded: list[Any]
+    settingsMissing: list[Any]
+    settingsRefused: list[Any]
+    filesSkipped: list[Any]
+    hasAnythingToSay: bool
+
+
 class ShardInfraChanges(TypedDict, total=False):
     """The `ShardInfraSettings` fields a user can set, for ``PATCH /api/shards/{id}/infra`` through `ShardModule.update_shard_infra`."""
 
@@ -2461,6 +2493,23 @@ class SpireExpiredPurgeResponse(TypedDict):
     "A shard deleted but not past its keeping time stays, and isn't purged."
 
 
+class SpireImportBlockedItem(TypedDict):
+    """A server the import can't take, from `SpireImportPreflightResponse.blocked`."""
+
+    candidatePath: str
+    reason: int
+    "Why, as a number; 1 was seen for a folder outside every import root."
+    detail: str
+
+
+class SpireImportEvidence(TypedDict):
+    """A clue a scan read a server or a template match from, in `SpireImportScanServer.evidence` and `SpireImportMatch.evidence`."""
+
+    detail: str
+    relativePath: str
+    weight: int
+
+
 class SpireImportItem(TypedDict):
     """One server in the body of ``POST /api/spires/{id}/import`` and ``POST /api/spires/{id}/import/preflight``.
 
@@ -2476,11 +2525,72 @@ class SpireImportItem(TypedDict):
     network setup, so 7 is all of it."""
 
 
+class SpireImportMatch(TypedDict):
+    """A template a found server could be imported as, from `SpireImportScanServer.matches`."""
+
+    templateSlug: str
+    displayName: str
+    confidence: int
+    "How sure AMP is, as a number; 1 (weak in the web panel's names) was seen."
+    evidence: list[SpireImportEvidence]
+
+
+class SpireImportPreflightResponse(TypedDict):
+    """``POST /api/spires/{id}/import/preflight``, if the servers can be imported, before `SpireModule.import_spire_servers`."""
+
+    ready: list[SpireImportReadyItem]
+    blocked: list[SpireImportBlockedItem]
+    requiredBytes: int
+    availableBytes: int
+    batchBlock: int
+    """What stops the whole batch, the web panel's numbers: 0 nothing, 1 the licence's shard limit, 2 not enough space,
+    3 the datastore's soft limit, 4 nothing importable."""
+    shortfallBytes: int
+    licenceHeadroom: int
+    "How many more shards the licence allows."
+    sizesAreUnderstated: bool
+    links: int
+    canProceed: bool
+
+
+class SpireImportReadyItem(TypedDict):
+    """A server the import can take, from `SpireImportPreflightResponse.ready`."""
+
+    candidatePath: str
+    size: SpireImportSize
+    exists: bool
+    # TODO: Type these once a capture shows them filled in (#3-53).
+    # A running server, and a folder imported before, both still left them empty on AMP 3.0.0.6.
+    liveness: list[Any]
+    unavailableReason: Optional[Any]
+    alreadyImportedAs: Optional[Any]
+
+
+class SpireImportRecovery(TypedDict):
+    """What an import of a found server could bring back, from `SpireImportScanServer.recovery`."""
+
+    available: int
+    settingsRecovered: int
+    portsDiscovered: list[str]
+    """Port names, eg. ``"Voice"``."""
+    portsNotDiscovered: list[str]
+    primaryPortRecovered: bool
+    settings: int
+    defaultSelection: int
+    hasCaveats: bool
+
+
 class SpireImportRequest(TypedDict):
     """The body of ``POST /api/spires/{id}/import``."""
 
     items: list[SpireImportItem]
     enterOtherVolumes: bool
+
+
+class SpireImportResponse(TypedDict):
+    """``POST /api/spires/{id}/import`` (202): the import runs as a ``"ServerImport"`` running task."""
+
+    taskId: str
 
 
 class SpireImportScanRequest(TypedDict):
@@ -2491,15 +2601,57 @@ class SpireImportScanRequest(TypedDict):
 
 
 class SpireImportScanResponse(TypedDict):
-    """``POST /api/spires/{id}/import/scan``, game servers from other panels that could be imported.
+    """``POST /api/spires/{id}/import/scan``, game servers from other panels that could be imported."""
 
-    The shape of a found server isn't known yet.
-    """
-
-    servers: list[Any]
-    unreadable: list[Any]
+    servers: list[SpireImportScanServer]
+    unreadable: list[SpireImportUnreadable]
+    "Folders AMP couldn't look in, eg. one outside every import root."
+    # TODO: Type this once a capture shows it filled in (#3-53).
     truncatedRoots: list[Any]
     timedOut: bool
+
+
+class SpireImportScanServer(TypedDict):
+    """A game server a scan found, from `SpireImportScanResponse.servers`."""
+
+    path: str
+    rootPath: str
+    source: int
+    """Where AMP found it, the web panel's numbers: eg. 0 a folder named by hand, 8 LinuxGSM."""
+    matches: list[SpireImportMatch]
+    evidence: list[SpireImportEvidence]
+    suggestedName: str
+    installedVersion: Optional[str]
+    installedVersionIsBuildId: bool
+    recovery: SpireImportRecovery
+    listingTruncated: bool
+    links: int
+    # TODO: Type these once a capture shows them filled in (#3-53).
+    # A folder imported before still left them empty on AMP 3.0.0.6.
+    unmatchedSteamAppIds: list[Any]
+    alreadyImportedShardId: Optional[str]
+    alreadyImportedAs: Optional[Any]
+
+
+class SpireImportSize(TypedDict):
+    """A found server's size, from `SpireImportReadyItem.size`."""
+
+    bytes: int
+    files: int
+    truncated: bool
+    links: int
+    isUnderstated: bool
+    # TODO: Type this once a capture shows it filled in (#3-53).
+    unreadableDirectories: list[Any]
+
+
+class SpireImportUnreadable(TypedDict):
+    """A folder a scan couldn't look in, from `SpireImportScanResponse.unreadable`."""
+
+    path: str
+    code: str
+    """eg. ``"discovery.error.accessDenied"``."""
+    message: str
 
 
 class SpireIPAddress(TypedDict):

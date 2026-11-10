@@ -24,8 +24,8 @@ from __future__ import annotations
 __title__ = "AMPAPI Python"
 __author__ = "k8thekat"
 __license__ = "GNU"
-# PEP 440 form of 6.0.0-beta.1; pip treats it as a pre-release, so a plain install never picks it up.
-__version__ = "6.0.0b1"
+# PEP 440 form of 6.0.0-beta.2; pip treats it as a pre-release, so a plain install never picks it up.
+__version__ = "6.0.0b2"
 __credits__ = "AMP by CubeCoders and associates."
 
 from typing import Literal, NamedTuple
@@ -61,6 +61,6 @@ class VersionInfo(NamedTuple):
     serial: int
 
 
-version_info: VersionInfo = VersionInfo(Major=6, Minor=0, Revision=0, releaseLevel="beta", serial=1)
+version_info: VersionInfo = VersionInfo(Major=6, Minor=0, Revision=0, releaseLevel="beta", serial=2)
 
 del NamedTuple, Literal, VersionInfo

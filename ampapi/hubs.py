@@ -1022,8 +1022,8 @@ class PanelHub(Hub):
         self._sync_pending: bool = False
         # `add_subscribers()` with no list: every shard and spire, following new ones.
         self._subscribe_all: bool = False
-        self._subscribed_shards: set[str] = set()
-        self._subscribed_spires: set[str] = set()
+        # self._subscribed_shards: set[str] = set()
+        # self._subscribed_spires: set[str] = set()
         self._shard_records: dict[str, ShardResponse] = {}
         self._spire_records: dict[str, SpireResponse] = {}
         self._shard_objects: dict[str, weakref.WeakSet[ShardHub]] = {}
