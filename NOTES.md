@@ -85,6 +85,12 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   the kept object with `data` and `display_name` brought up to date. A shard belongs to a spire, so `Spire` has
   `get_shards` (the panel's list filtered by `spireId`, as AMP has no per-spire route) and `create_shard`.
   `create_shard` and `clone_shard` return a `Shard`.
+- Keeping the objects current (#3-51.6): `Shard._update_data` / `Spire._update_data` is the one place `data` and
+  `display_name` change, used by the panel's lookups and by the six `Shard` calls AMP answers with the shard
+  (`set_details`, `delete`, `restore`, `suspend`, `unsuspend`, `acknowledge_disk_warning`); a subclass overrides it to
+  refresh what it derives. `refresh()` reads either object again, and `get_spire_roster` refreshes the kept spires. The
+  panel's `purge_shard` and `delete_spire` override the module calls to drop what's gone from its registry, a deleted
+  spire's shards too.
 - The rest of `create_shard`'s reply rides on the `Shard` it returns (#3-50.11, Kat 2026-11-08): read-only
   `infra_settings`, `app_config`, `port_assignments`, `port_outcomes` and `over_licence_limit`, all `None` on a shard
   `create_shard` didn't make. `port_outcomes` and `over_licence_limit` exist only in that reply; the other three are a

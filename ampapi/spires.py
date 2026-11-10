@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Self
 
 from .base import Base
 
@@ -129,13 +129,26 @@ class Spire:
         return hash(self.id)
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
-        return isinstance(other, Spire) and self.id == other.id
+        # Another type answers `NotImplemented`, so Python asks the other side, and sorting a mixed list raises (#3-51.3h)
+        if not isinstance(other, Spire):
+            return NotImplemented
+        return self.id == other.id
 
     def __lt__(self, other: object) -> bool:  # noqa: D105
-        return isinstance(other, Spire) and self.display_name < other.display_name
+        if not isinstance(other, Spire):
+            return NotImplemented
+        return self.display_name < other.display_name
 
     def __repr__(self) -> str:  # noqa: D105
         return f"<{type(self).__name__} id={self.id!r} display_name={self.display_name!r}>"
+
+    def _update_data(self, data: SpireResponse) -> None:
+        """Take in the spire as AMP sent it again, from the panel.
+
+        A subclass overrides it, calling it through `super()`, to refresh anything it works out from `data`.
+        """
+        self.data = data
+        self.display_name = data["displayName"]
 
     # TODO: Type the reply once a spire behind the panel is updated live (#3-47.8).
     # It comes from `SpireModule.apply_spire_update`; only its refusal has been seen.
@@ -505,6 +518,26 @@ class Spire:
 
         """
         return await self._module.purge_spire_orphan_directory(spire_id=self.id, datastore_id=datastore_id, name=name)
+
+    async def refresh(self) -> Self:
+        """Read this spire from AMP again, so `data` and `display_name` are current, see :meth:`Panel.get_spire`.
+
+        |coro|
+
+        Its own calls, eg. :meth:`set_settings`, don't send the spire back, so call this after them when you need `data`.
+
+        Returns
+        -------
+        Self
+            This spire.
+
+        """
+        current: Spire = await self._module.get_spire(spire_id=self.id)
+        # One made by hand isn't the object the panel keeps, so it takes the fresh data from that one
+        if current is not self:
+            self._update_data(data=current.data)
+
+        return self
 
     async def rescan_usage(self) -> Optional[SpireUsageResponse]:
         """Measure this spire's disk use now, see :meth:`SpireModule.rescan_spire_usage`.

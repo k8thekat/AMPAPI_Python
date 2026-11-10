@@ -155,11 +155,14 @@ class Panel(
         """
         shard: Optional[Shard] = self._shards.get(data["id"])
         if shard is None:
-            shard = self.shard_class(module=self, data=data, created=created)
+            # `created` only when there is one, so a `shard_class` written as `__init__(self, module, data)` still works
+            if created is not None:
+                shard = self.shard_class(module=self, data=data, created=created)
+            else:
+                shard = self.shard_class(module=self, data=data)
             self._shards[shard.id] = shard
         else:
-            shard.data = data
-            shard.display_name = data["displayName"]
+            shard._update_data(data=data)  # pyright: ignore[reportPrivateUsage]
         return shard
 
     # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
@@ -325,6 +328,46 @@ class Panel(
         """
         return await self._request(method="GET", path="/api/shards/attention")
 
+    async def purge_shard(self, shard_id: str) -> None:
+        """Remove a deleted shard for good, see :meth:`ShardModule.purge_shard`; the panel stops keeping its object.
+
+        |coro|
+
+        Endpoint: ``POST /api/shards/{shard_id}/purge``
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+
+        """
+        await super().purge_shard(shard_id=shard_id)
+        # Only once AMP agreed, so a refused purge leaves the object kept
+        self._shards.pop(shard_id, None)
+
+    async def delete_spire(self, spire_id: str, *, force: bool = False) -> None:
+        """Remove a spire from the panel, see :meth:`SpireModule.delete_spire`; the panel stops keeping its object.
+
+        |coro|
+
+        Endpoint: ``DELETE /api/spires/{spire_id}``
+
+        The panel stops keeping the objects of the shards that were on it too.
+
+        Parameters
+        ----------
+        spire_id : :class:`str`
+            The spire's ID.
+        force : :class:`bool`, optional
+            If AMP should remove it even when it still holds shards or not, by default False.
+
+        """
+        await super().delete_spire(spire_id=spire_id, force=force)
+
+        self._spires.pop(spire_id, None)
+        for shard_id in [shard.id for shard in self._shards.values() if shard.data["spireId"] == spire_id]:
+            self._shards.pop(shard_id)
+
     def _make_spire(self, data: SpireResponse) -> Spire:
         """The spire object we keep for `data`'s ID, brought up to date, or a new `spire_class` one we keep from now on."""
         spire: Optional[Spire] = self._spires.get(data["id"])
@@ -332,8 +375,7 @@ class Panel(
             spire = self.spire_class(module=self, data=data)
             self._spires[spire.id] = spire
         else:
-            spire.data = data
-            spire.display_name = data["displayName"]
+            spire._update_data(data=data)  # pyright: ignore[reportPrivateUsage]
         return spire
 
     # auto_state : Union[:class:`bool`, None], optional
@@ -390,6 +432,8 @@ class Panel(
 
         Endpoint: ``GET /api/spires/roster``
 
+        The roster carries each spire whole, so the panel's :class:`Spire` objects are brought up to date from it too.
+
         Returns
         -------
         list[:class:`SpirePresence`]
@@ -397,4 +441,7 @@ class Panel(
 
         """
         result: list[dict[str, Any]] = await self._request(method="GET", path="/api/spires/roster")
-        return [SpirePresence(data=entry) for entry in result]
+        roster: list[SpirePresence] = [SpirePresence(data=entry) for entry in result]
+        for presence in roster:
+            self._make_spire(data=presence.spire)
+        return roster

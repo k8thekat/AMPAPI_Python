@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Self
 
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
@@ -216,13 +216,26 @@ class Shard:
         return hash(self.id)
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
-        return isinstance(other, Shard) and self.id == other.id
+        # Another type answers `NotImplemented`, so Python asks the other side, and sorting a mixed list raises (#3-51.3h)
+        if not isinstance(other, Shard):
+            return NotImplemented
+        return self.id == other.id
 
     def __lt__(self, other: object) -> bool:  # noqa: D105
-        return isinstance(other, Shard) and self.display_name < other.display_name
+        if not isinstance(other, Shard):
+            return NotImplemented
+        return self.display_name < other.display_name
 
     def __repr__(self) -> str:  # noqa: D105
         return f"<{type(self).__name__} id={self.id!r} display_name={self.display_name!r}>"
+
+    def _update_data(self, data: ShardResponse) -> None:
+        """Take in the shard as AMP sent it again, from the panel or from one of this shard's own calls.
+
+        A subclass overrides it, calling it through `super()`, to refresh anything it works out from `data`.
+        """
+        self.data = data
+        self.display_name = data["displayName"]
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.
@@ -253,7 +266,9 @@ class Shard:
         |coro|
 
         """
-        return await self._module.acknowledge_shard_disk_warning(shard_id=self.id)
+        result: ShardResponse = await self._module.acknowledge_shard_disk_warning(shard_id=self.id)
+        self._update_data(data=result)
+        return result
 
     async def archive_files(self, paths: list[str], destination: str) -> None:
         """Zip files and folders into an archive in this shard, see :meth:`ShardModule.archive_shard_files`.
@@ -369,7 +384,9 @@ class Shard:
         |coro|
 
         """
-        return await self._module.delete_shard(shard_id=self.id)
+        result: ShardResponse = await self._module.delete_shard(shard_id=self.id)
+        self._update_data(data=result)
+        return result
 
     async def delete_credential(self) -> None:
         """Take the stored secret off this shard, see :meth:`ShardModule.delete_shard_credential`.
@@ -760,6 +777,29 @@ class Shard:
         """
         await self._module.purge_shard(shard_id=self.id)
 
+    async def refresh(self) -> Self:
+        """Read this shard from AMP again, so `data` and `display_name` are current, see :meth:`Panel.get_shard`.
+
+        |coro|
+
+        Returns
+        -------
+        Self
+            This shard.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the shard is deleted (409, ``"shards.error.deleted"``) or purged (404).
+
+        """
+        current: Shard = await self._module.get_shard(shard_id=self.id)
+        # One made by hand isn't the object the panel keeps, so it takes the fresh data from that one
+        if current is not self:
+            self._update_data(data=current.data)
+
+        return self
+
     async def restart(self) -> None:
         """Restart this shard's game, see :meth:`ShardModule.restart_shard`.
 
@@ -774,7 +814,9 @@ class Shard:
         |coro|
 
         """
-        return await self._module.restore_shard(shard_id=self.id)
+        result: ShardResponse = await self._module.restore_shard(shard_id=self.id)
+        self._update_data(data=result)
+        return result
 
     async def restore_snapshot(self, snapshot_id: str) -> Snapshot:
         """Put this shard back to one of its snapshots, see :meth:`ShardModule.restore_shard_snapshot`.
@@ -828,7 +870,14 @@ class Shard:
         |coro|
 
         """
-        return await self._module.set_shard_details(shard_id=self.id, display_name=display_name, description=description, tags=tags)
+        result: ShardResponse = await self._module.set_shard_details(
+            shard_id=self.id,
+            display_name=display_name,
+            description=description,
+            tags=tags,
+        )
+        self._update_data(data=result)
+        return result
 
     async def set_file_acl(self, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may do what to a path in this shard, see :meth:`ShardModule.set_shard_file_acl`.
@@ -958,7 +1007,9 @@ class Shard:
         |coro|
 
         """
-        return await self._module.suspend_shard(shard_id=self.id)
+        result: ShardResponse = await self._module.suspend_shard(shard_id=self.id)
+        self._update_data(data=result)
+        return result
 
     async def take_snapshot(
         self,
@@ -989,7 +1040,9 @@ class Shard:
         |coro|
 
         """
-        return await self._module.unsuspend_shard(shard_id=self.id)
+        result: ShardResponse = await self._module.unsuspend_shard(shard_id=self.id)
+        self._update_data(data=result)
+        return result
 
     async def update(self) -> ShardUpdateResponse:
         """Install or update this shard's game, see :meth:`ShardModule.update_shard`.
