@@ -41,6 +41,7 @@ from .tasks import TaskModule
 from .templates import TemplateModule
 
 if TYPE_CHECKING:
+    import asyncio
     from types import TracebackType
 
     from ._types import (
@@ -109,6 +110,8 @@ class Panel(
     spire_class: type[Spire]
     _shards: dict[str, Shard]
     _spires: dict[str, Spire]
+    # One lock per shard ID, so `update_shard_infra` reads and writes one shard at a time (#3-51.2c)
+    _infra_locks: dict[str, asyncio.Lock]
 
     def __init__(  # noqa: D107
         self,
@@ -124,6 +127,7 @@ class Panel(
         self.spire_class = spire_class
         self._shards = {}
         self._spires = {}
+        self._infra_locks = {}
 
     async def __aenter__(self) -> Self:  # noqa: D105
         return self

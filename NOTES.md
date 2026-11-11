@@ -112,6 +112,18 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   chunked upload in 8 MiB chunks.
 - `set_shard_infra` refuses settings with a field missing before sending, as AMP resets any field a `PATCH /infra`
   leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
+- Writes that replace a whole record, and how the library keeps what the caller didn't name (#3-51.7, checked live on
+  vm4 2026-11-09):
+    - `set_shard_infra` checks only the fields a user can set: AMP ignores its own `shardId`, `tenantId`, `updatedAt`
+      and `updatedByUserId` in the PATCH. `update_shard_infra` holds a lock per shard on the panel, so two calls in
+      one program don't undo each other.
+    - A schedule PUT replaces everything it's sent (a `timeout` of `null` goes back to 30 minutes) and ignores
+      `retryPolicy` / `misfirePolicy`; `update_shard_schedule` reads the schedule first, so `None` keeps.
+    - `PUT /api/profile` clears the display name whenever it's left out, so `update_profile` reads it first; `""`
+      clears it. The admin's `PUT /api/users/{id}` keeps it for `null`, and `""` clears it.
+    - `set_settings` returns AMP's `notices`. AMP's own doc comment (`HttpsSetupService.FollowExposureAsync`, read
+      from the webapi binary, UTF-16) says a refused removal of the ports 80/443 front comes back as one; every save
+      seen so far answered 204.
 - `.scripts/amp3/session_check.py`, `panel_check.py`, `shard_check.py`, `move_check.py`, `datastore_check.py` and
   `hub_check.py` are the live checks; each removes what it makes. `hub_check.py` waits for the hubs (#3-50.1), and
   no check covers the invite calls yet: #3-50.7 was checked live with a one-off script.

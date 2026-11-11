@@ -24,7 +24,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 ---
 
 - (#3-48) A structure pass: lower-case routes and an Endpoint line on every call, docstrings without test-run context, request TypedDicts, body spacing. *DONE*
-- (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`): group A, the `Session` paths, *DONE*; group B (stale objects, the registry) *DONE* (#3-51.6); groups C (writes that lose data), D (uncatchable errors), E (names), F (types), G (structure) and H (docs) open.
+- (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`): group A, the `Session` paths, *DONE*; group B (stale objects, the registry) *DONE* (#3-51.6); group C (writes that lose data) *DONE* (#3-51.7); groups D (uncatchable errors), E (names), F (types), G (structure) and H (docs) open.
 
 ## ampapi/panel.py
 

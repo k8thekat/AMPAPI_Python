@@ -161,6 +161,7 @@ __all__ = (
     "SettingSpec",
     "SettingValues",
     "SettingsManifestResponse",
+    "SettingsSaveResponse",
     "ShardAddress",
     "ShardAgentResponse",
     "ShardAppConfig",
@@ -1925,6 +1926,17 @@ class SettingSpec(TypedDict):
     listValuePrefix: str
     listValueSeparator: str
     excludeFromImport: bool
+
+
+class SettingsSaveResponse(TypedDict):
+    """``POST /api/settings/values`` when the save went through only in part (AMP's `SettingsSaveResult`).
+
+    A full save answers 204 with nothing.
+    """
+
+    # TODO: Type a notice once AMP is seen sending one live (#3-51.7).
+    # AMP's docs say one comes back when exposure is turned off and the agent refuses to remove ports 80 and 443.
+    notices: list[Any]
 
 
 class ShardAddress(TypedDict):

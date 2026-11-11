@@ -712,23 +712,22 @@ class AccountModule(Base):
         """
         return await self._request(method="PATCH", path="/api/users/me/preferences", data=values)
 
-    async def update_profile(self, display_name: Optional[str], *, email: Optional[str] = None) -> ProfileResponse:
-        """Change the logged in user's display name and email.
+    async def update_profile(self, display_name: Optional[str] = None, *, email: Optional[str] = None) -> ProfileResponse:
+        """Change the logged in user's display name and email. Anything left as `None` stays as it is.
 
         |coro|
 
-        Endpoint: ``PUT /api/profile``
+        Endpoints: ``GET /api/profile`` when `display_name` is `None`, then ``PUT /api/profile``
 
-        .. note::
-            AMP treats the two differently: `None` clears the display name, but leaves the email as it is.
+        AMP clears the display name whenever the body leaves it out, so with `display_name` as `None` we read the
+        current one first and send it back. Pass ``""`` to clear it.
 
         Parameters
         ----------
-        display_name : Union[:class:`str`, None]
-            The new display name, or `None` to clear it.
+        display_name : Union[:class:`str`, None], optional
+            The new display name, ``""`` to clear it, by default None.
         email : Union[:class:`str`, None], optional
-            The new email address, by default None.
-            Without one the email stays as it is. AMP doesn't check it's an email address.
+            The new email address, by default None. AMP doesn't check it's an email address.
 
         Returns
         -------
@@ -736,6 +735,8 @@ class AccountModule(Base):
             The user's account.
 
         """
+        if display_name is None:
+            display_name = (await self.get_profile())["displayName"]
         data: ProfileRequest = {"displayName": display_name}
 
         if email is not None:
@@ -792,7 +793,7 @@ class AccountModule(Base):
         user_id : :class:`str`
             The user's ID.
         display_name : Union[:class:`str`, None], optional
-            The new display name, by default None.
+            The new display name, ``""`` to clear it, by default None.
         email : Union[:class:`str`, None], optional
             The new email address, by default None. AMP doesn't check it's an email address.
         role_ids : Union[list[:class:`str`], None], optional

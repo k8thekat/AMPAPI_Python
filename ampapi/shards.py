@@ -20,6 +20,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Self
 
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
         PortProtocol,
         PublicationResponse,
         ScheduleCatalogResponse,
+        ScheduleDefinition,
         ScheduleRunResponse,
         ScheduleStep,
         ScheduleTrigger,
@@ -1063,15 +1065,15 @@ class Shard:
     async def update_schedule(
         self,
         schedule_id: str,
-        name: str,
-        trigger: ScheduleTrigger,
-        steps: list[ScheduleStep],
+        name: Optional[str] = None,
+        trigger: Optional[ScheduleTrigger] = None,
+        steps: Optional[list[ScheduleStep]] = None,
         *,
         description: Optional[str] = None,
         run_timeout: Optional[str] = None,
-        enabled: bool = False,
+        enabled: Optional[bool] = None,
     ) -> ShardScheduleResponse:
-        """Replace one of this shard's schedules, see :meth:`ShardModule.update_shard_schedule`.
+        """Change one of this shard's schedules, see :meth:`ShardModule.update_shard_schedule`.
 
         |coro|
 
@@ -1140,7 +1142,10 @@ class ShardModule(Base):
     """
 
     if TYPE_CHECKING:
-        # The `Panel` gives this, so `clone_shard` hands back the copy the panel keeps.
+        # The `Panel` gives these: `get_shard` so `clone_shard` hands back the copy the panel keeps, and a lock per shard
+        # for `update_shard_infra`.
+        _infra_locks: dict[str, asyncio.Lock]
+
         async def get_shard(self, shard_id: str) -> Shard: ...  # noqa: D102
 
     # TODO: Remove this warning once AMP answers the route (U12).
@@ -2847,7 +2852,9 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         settings : :class:`ShardInfraSettings`
-            Every infra setting. AMP doesn't check the values, eg. a negative memory limit.
+            Every infra setting a user can set (the keys of `ShardInfraChanges`). AMP's own `shardId`, `tenantId`,
+            `updatedAt` and `updatedByUserId` may be left out, as AMP ignores them. AMP doesn't check the values, eg. a
+            negative memory limit.
 
         Returns
         -------
@@ -2857,10 +2864,10 @@ class ShardModule(Base):
         Raises
         ------
         ValueError
-            If `settings` is missing a field, before anything is sent.
+            If `settings` is missing a field a user can set, before anything is sent.
 
         """
-        missing: list[str] = sorted(ShardInfraSettings.__required_keys__ - settings.keys())
+        missing: list[str] = sorted(ShardInfraChanges.__optional_keys__ - settings.keys())
 
         if missing:
             msg = f"The infra settings are missing {', '.join(missing)}, which AMP would reset. Start from get_shard_infra's settings."
@@ -3231,14 +3238,16 @@ class ShardModule(Base):
     # TODO: Send only the changes once AMP's PATCH leaves the fields it isn't sent alone (U13).
     # AMP 3.0.0.6 resets every infra field a PATCH body leaves out.
     async def update_shard_infra(self, shard_id: str, changes: ShardInfraChanges) -> ShardInfraUpdateResponse:
-        """Change a few of how a shard runs, keeping the rest: we read the settings, change them and send them whole.
+        """Change any available settings for how a shard runs, keeping the rest: we read the settings from AMP, replace the
+        omitted settings with the results and then submit as a whole.
 
         |coro|
 
         Endpoints: ``GET /api/shards/{shard_id}/infra``, then ``PATCH /api/shards/{shard_id}/infra``
 
         It sends the reply's inner `settings` at the top level, as AMP ignores a `settings` wrapper and resets every
-        field the body doesn't name there.
+        field the body doesn't name there. Calls on one shard through one panel wait for each other, so none undoes
+        another; a second program changing the same shard at the same moment still can.
 
         Parameters
         ----------
@@ -3264,27 +3273,42 @@ class ShardModule(Base):
             msg = f"{', '.join(unknown)} aren't infra settings a user can change; see ShardInfraChanges for the names."
             raise ValueError(msg)
 
-        current: ShardInfraResponse = await self.get_shard_infra(shard_id=shard_id)
-        settings: ShardInfraSettings = {**current["settings"], **changes}
-        return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=settings)
+        # One read and write at a time per shard, or a second call reads the old settings and undoes the first (#3-51.2c)
+        lock: Optional[asyncio.Lock] = self._infra_locks.get(shard_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._infra_locks[shard_id] = lock
+
+        async with lock:
+            current: ShardInfraResponse = await self.get_shard_infra(shard_id=shard_id)
+            settings: ShardInfraSettings = {**current["settings"], **changes}
+            return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=settings)
 
     async def update_shard_schedule(
         self,
         shard_id: str,
         schedule_id: str,
-        name: str,
-        trigger: ScheduleTrigger,
-        steps: list[ScheduleStep],
+        name: Optional[str] = None,
+        trigger: Optional[ScheduleTrigger] = None,
+        steps: Optional[list[ScheduleStep]] = None,
         *,
         description: Optional[str] = None,
         run_timeout: Optional[str] = None,
-        enabled: bool = False,
+        enabled: Optional[bool] = None,
     ) -> ShardScheduleResponse:
-        """Replace one of a shard's schedules with a new definition.
+        """Change one of a shard's schedules. Anything left as `None` stays as it is.
 
         |coro|
 
-        Endpoint: ``PUT /api/shards/{shard_id}/schedules/{schedule_id}``
+        Endpoints: ``GET /api/shards/{shard_id}/schedules`` for the schedule as it is, then
+        ``PUT /api/shards/{shard_id}/schedules/{schedule_id}``
+
+        AMP replaces the whole schedule on a PUT, eg. a `timeout` left out goes back to 30 minutes, so we read the
+        schedule first and send the rest of it back as it was. Two calls at once on one schedule can still undo each
+        other.
+
+        .. note::
+            AMP ignores a schedule's `retryPolicy` and `misfirePolicy` here, so they keep what AMP gave them.
 
         Parameters
         ----------
@@ -3292,32 +3316,47 @@ class ShardModule(Base):
             The shard's ID.
         schedule_id : :class:`str`
             The schedule's ID.
-        name : :class:`str`
-            The schedule's name.
-        trigger : :class:`ScheduleTrigger`
-            When it runs.
-        steps : list[:class:`ScheduleStep`]
-            What it does, in order.
+        name : Union[:class:`str`, None], optional
+            The schedule's name, by default None.
+        trigger : Union[:class:`ScheduleTrigger`, None], optional
+            When it runs, by default None.
+        steps : Union[list[:class:`ScheduleStep`], None], optional
+            What it does, in order, by default None.
         description : Union[:class:`str`, None], optional
             A description, by default None.
         run_timeout : Union[:class:`str`, None], optional
-            How long a run may take, as a time span, by default None (AMP uses ``"00:30:00"``). AMP calls it `timeout`.
-        enabled : :class:`bool`, optional
-            If it runs on its trigger or not, by default False.
+            How long a run may take, as a time span, by default None. AMP calls it `timeout`.
+        enabled : Union[:class:`bool`, None], optional
+            If it runs on its trigger or not, by default None.
 
         Returns
         -------
         :class:`ShardScheduleResponse`
             The schedule.
 
+        Raises
+        ------
+        ValueError
+            If the shard has no schedule with that ID, before the PUT is sent.
+
         """
+        schedules: list[ShardScheduleResponse] = await self.get_shard_schedules(shard_id=shard_id)
+        current: Optional[ScheduleDefinition] = None
+        for entry in schedules:
+            if entry["definition"]["id"] == schedule_id:
+                current = entry["definition"]
+                break
+
+        if current is None:
+            msg = f"The shard has no schedule with the ID {schedule_id}."
+            raise ValueError(msg)
         data: ShardScheduleRequest = {
-            "name": name,
-            "description": description,
-            "trigger": trigger,
-            "steps": steps,
-            "timeout": run_timeout,
-            "enabled": enabled,
+            "name": name if name is not None else current["name"],
+            "description": description if description is not None else current["description"],
+            "trigger": trigger if trigger is not None else current["trigger"],
+            "steps": steps if steps is not None else current["steps"],
+            "timeout": run_timeout if run_timeout is not None else current["timeout"],
+            "enabled": enabled if enabled is not None else current["enabled"],
         }
 
         return await self._request(method="PUT", path=f"/api/shards/{shard_id}/schedules/{schedule_id}", data=data)

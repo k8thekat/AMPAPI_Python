@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         PlatformWarningResponse,
         SettingActionResponse,
         SettingsManifestResponse,
+        SettingsSaveResponse,
         SettingValues,
         UpdateStatusResponse,
     )
@@ -607,12 +608,17 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/https/own-proxy", data={"address": address, "apiOnly": api_only})
 
-    async def set_settings(self, values: SettingValues) -> None:
+    # TODO: Type the notices once AMP is seen sending one live (#3-51.7).
+    # Every save so far answered 204; the web panel shows each notice as a save error.
+    async def set_settings(self, values: SettingValues) -> list[Any]:
         """Change one or more platform settings.
 
         |coro|
 
         Endpoint: ``POST /api/settings/values``
+
+        A save that went through only in part answers with `notices` saying what didn't happen, eg. ports 80 and 443
+        left open; a full save answers with nothing.
 
         Parameters
         ----------
@@ -621,6 +627,11 @@ class PlatformModule(Base):
             eg. ``{"public-address.publicUrl": "https://amp.example.com"}``. A secret setting takes its value here
             too; the manifest then shows it in `secretHasValue`, never the value.
 
+        Returns
+        -------
+        list[Any]
+            AMP's notices, empty for a save that went through whole.
+
         Raises
         ------
         AMPAPIRequestError
@@ -628,7 +639,9 @@ class PlatformModule(Base):
             (400, ``"settings.error.invalidValue"``).
 
         """
-        await self._request(method="POST", path="/api/settings/values", data=values)
+        result: Optional[SettingsSaveResponse] = await self._request(method="POST", path="/api/settings/values", data=values)
+        # A full save is an empty 204, so there's no reply to read
+        return result["notices"] if result is not None else []
 
     async def set_update_stream(self, stream: str) -> UpdateStatusResponse:
         """Move the panel to another release stream.
