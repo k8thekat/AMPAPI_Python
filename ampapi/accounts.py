@@ -145,7 +145,7 @@ class AccountModule(Base):
         """
         data: PasswordChangeRequest = {"currentPassword": current_password, "newPassword": new_password}
         await self._request(method="POST", path="/api/profile/password", data=data)
-        self.session._password = new_password  # pyright: ignore[reportPrivateUsage]
+        self.session._keep_password(password=new_password)  # pyright: ignore[reportPrivateUsage]
 
     async def create_invite(
         self,
@@ -664,7 +664,7 @@ class AccountModule(Base):
         await self._request(method="POST", path=f"/api/users/{user_id}/reset-password", data={"newPassword": new_password})
 
         if user_id == self.session.user_id:
-            self.session._password = new_password  # pyright: ignore[reportPrivateUsage]
+            self.session._keep_password(password=new_password)  # pyright: ignore[reportPrivateUsage]
 
     async def set_passkey_name(self, passkey_id: str, name: str) -> None:
         """Rename one of the logged in user's passkeys.

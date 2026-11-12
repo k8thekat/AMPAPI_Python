@@ -157,16 +157,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the spire already runs the panel's version (400, ``"updates.error.spireCurrent"``).
-
         """
         return await self._module.apply_spire_update(spire_id=self.id)
 
@@ -174,22 +164,6 @@ class Spire:
         """Add a datastore to this spire, see :meth:`SpireModule.create_spire_datastore`.
 
         |coro|
-
-        Parameters
-        ----------
-        name : :class:`str`
-            The datastore's name.
-        path : :class:`str`
-            The folder on the spire, eg. ``"/opt/cubecoders/amp3/data/my_store"``.
-        is_default : :class:`bool`, optional
-            If new shards go here or not, by default False.
-        enabled : :class:`bool`, optional
-            If the datastore can be used or not, by default True.
-
-        Returns
-        -------
-        list[:class:`DatastoreResponse`]
-            Every datastore on the spire.
 
         """
         return await self._module.create_spire_datastore(
@@ -214,26 +188,6 @@ class Spire:
 
         |coro|
 
-        Parameters
-        ----------
-        template_slug : :class:`str`
-            The template, eg. ``"minecraft-java"``; see :meth:`TemplateModule.get_templates`.
-        display_name : :class:`str`
-            The shard's name. An empty one gets the template's name.
-        description : :class:`str`, optional
-            A description, by default "".
-        start_now : :class:`bool`, optional
-            If the shard should start once made or not, by default False.
-        start_on_boot : :class:`bool`, optional
-            If the shard starts when this spire boots or not, by default False.
-        credential_id : Union[:class:`str`, None], optional
-            A stored secret for the game's download, eg. a Steam login, by default None.
-
-        Returns
-        -------
-        :class:`Shard`
-            The new shard, with the calls that act on it.
-
         """
         return await self._module.create_shard(
             template_slug=template_slug,
@@ -250,18 +204,6 @@ class Spire:
 
         |coro|
 
-        Parameters
-        ----------
-        force : :class:`bool`, optional
-            If AMP should remove it even when it still holds shards or not, by default False.
-            The web panel says its shards are then deleted too.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the spire still holds shards and `force` is False (409, ``"spire.error.hasShards"``, its `params` holding
-            the `count` as a string), or there's no such spire (404).
-
         """
         await self._module.delete_spire(spire_id=self.id, force=force)
 
@@ -269,16 +211,6 @@ class Spire:
         """Remove a datastore from this spire, see :meth:`SpireModule.delete_spire_datastore`.
 
         |coro|
-
-        Parameters
-        ----------
-        datastore_id : :class:`str`
-            The datastore's ID.
-
-        Returns
-        -------
-        list[:class:`DatastoreResponse`]
-            Every datastore left on the spire.
 
         """
         return await self._module.delete_spire_datastore(spire_id=self.id, datastore_id=datastore_id)
@@ -288,11 +220,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        list[:class:`DatastoreResponse`]
-            The datastores.
-
         """
         return await self._module.get_spire_datastores(spire_id=self.id)
 
@@ -300,16 +227,6 @@ class Spire:
         """Get the addresses a shard on this spire can bind to, see :meth:`SpireModule.get_spire_ip_options`.
 
         |coro|
-
-        Parameters
-        ----------
-        include_auto : :class:`bool`, optional
-            If the list should start with AMP's ``"@auto-pool"`` choice or not, by default False.
-
-        Returns
-        -------
-        list[:class:`SpireIPOptionResponse`]
-            The addresses.
 
         """
         return await self._module.get_spire_ip_options(spire_id=self.id, include_auto=include_auto)
@@ -319,11 +236,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        list[:class:`PortClaimResponse`]
-            The ports and what holds each one.
-
         """
         return await self._module.get_spire_port_claims(spire_id=self.id)
 
@@ -332,11 +244,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        list[:class:`SpirePortResponse`]
-            The ports.
-
         """
         return await self._module.get_spire_ports(spire_id=self.id)
 
@@ -344,11 +251,6 @@ class Spire:
         """Get this spire's settings with their current values, see :meth:`SpireModule.get_spire_settings_manifest`.
 
         |coro|
-
-        Returns
-        -------
-        :class:`SettingsManifestResponse`
-            The settings and their values.
 
         """
         return await self._module.get_spire_settings_manifest(spire_id=self.id)
@@ -383,11 +285,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        list[:class:`SpireStartupResponse`]
-            The shards, in their start order.
-
         """
         return await self._module.get_spire_startup(spire_id=self.id)
 
@@ -395,11 +292,6 @@ class Spire:
         """Get this spire's live load, see :meth:`SpireModule.get_spire_state`.
 
         |coro|
-
-        Returns
-        -------
-        :class:`SpireStatus`
-            The spire's load, memory, network and machine details.
 
         """
         return await self._module.get_spire_state(spire_id=self.id)
@@ -409,11 +301,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        Union[:class:`SpireUsageResponse`, None]
-            The disk use per datastore, `None` before the first scan.
-
         """
         return await self._module.get_spire_usage(spire_id=self.id)
 
@@ -421,11 +308,6 @@ class Spire:
         """Get how often this spire measures its disk use, see :meth:`SpireModule.get_spire_usage_interval`.
 
         |coro|
-
-        Returns
-        -------
-        :class:`SpireUsageIntervalResponse`
-            The interval in minutes.
 
         """
         return await self._module.get_spire_usage_interval(spire_id=self.id)
@@ -435,18 +317,6 @@ class Spire:
 
         |coro|
 
-        Parameters
-        ----------
-        items : list[:class:`SpireImportItem`]
-            The servers to import.
-        enter_other_volumes : :class:`bool`, optional
-            If AMP may go into other volumes for them or not, by default False.
-
-        Returns
-        -------
-        :class:`SpireImportResponse`
-            The `taskId` of the ``"ServerImport"`` running task that does the import.
-
         """
         return await self._module.import_spire_servers(spire_id=self.id, items=items, enter_other_volumes=enter_other_volumes)
 
@@ -454,16 +324,6 @@ class Spire:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 
         |coro|
-
-        Parameters
-        ----------
-        items : list[:class:`SpireImportItem`]
-            The servers to check.
-
-        Returns
-        -------
-        :class:`SpireImportPreflightResponse`
-            Which servers are ready and which are blocked, and if the batch can go ahead.
 
         """
         return await self._module.preflight_spire_import(spire_id=self.id, items=items)
@@ -473,11 +333,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        :class:`SpireExpiredPurgeResponse`
-            How many shards AMP is purging.
-
         """
         return await self._module.purge_spire_expired_shards(spire_id=self.id)
 
@@ -486,16 +341,6 @@ class Spire:
 
         |coro|
 
-        Parameters
-        ----------
-        datastore_id : :class:`str`
-            The datastore's ID.
-
-        Returns
-        -------
-        :class:`SpireUsageResponse`
-            This spire's disk use after.
-
         """
         return await self._module.purge_spire_orphan_directories(spire_id=self.id, datastore_id=datastore_id)
 
@@ -503,18 +348,6 @@ class Spire:
         """Delete one orphan folder in a datastore, see :meth:`SpireModule.purge_spire_orphan_directory`.
 
         |coro|
-
-        Parameters
-        ----------
-        datastore_id : :class:`str`
-            The datastore's ID.
-        name : :class:`str`
-            The folder's name.
-
-        Returns
-        -------
-        :class:`SpireUsageResponse`
-            This spire's disk use after.
 
         """
         return await self._module.purge_spire_orphan_directory(spire_id=self.id, datastore_id=datastore_id, name=name)
@@ -544,11 +377,6 @@ class Spire:
 
         |coro|
 
-        Returns
-        -------
-        Union[:class:`SpireUsageResponse`, None]
-            The disk use per datastore.
-
         """
         return await self._module.rescan_spire_usage(spire_id=self.id)
 
@@ -556,18 +384,6 @@ class Spire:
         """Look for game servers from other panels on this spire, see :meth:`SpireModule.scan_spire_imports`.
 
         |coro|
-
-        Parameters
-        ----------
-        roots : list[:class:`str`]
-            The folders to look in.
-        automatic : :class:`bool`, optional
-            If AMP should pick the folders itself or not, by default False.
-
-        Returns
-        -------
-        :class:`SpireImportScanResponse`
-            What AMP found.
 
         """
         return await self._module.scan_spire_imports(spire_id=self.id, roots=roots, automatic=automatic)
@@ -577,11 +393,6 @@ class Spire:
 
         |coro|
 
-        Parameters
-        ----------
-        values : :class:`SettingValues`
-            Each setting's `fieldName` to its new value, eg. ``{"spire.sftpEnabled": "false"}``.
-
         """
         await self._module.set_spire_settings(spire_id=self.id, values=values)
 
@@ -590,16 +401,6 @@ class Spire:
 
         |coro|
 
-        Parameters
-        ----------
-        entries : list[:class:`SpireStartupEntry`]
-            The shards in the order they start.
-
-        Returns
-        -------
-        list[:class:`SpireStartupResponse`]
-            The start order AMP saved.
-
         """
         return await self._module.set_spire_startup(spire_id=self.id, entries=entries)
 
@@ -607,16 +408,6 @@ class Spire:
         """Set how often this spire measures its disk use, see :meth:`SpireModule.set_spire_usage_interval`.
 
         |coro|
-
-        Parameters
-        ----------
-        minutes : :class:`int`
-            The interval in minutes.
-
-        Returns
-        -------
-        :class:`SpireStorageResponse`
-            The spire's storage settings.
 
         """
         return await self._module.set_spire_usage_interval(spire_id=self.id, minutes=minutes)
@@ -725,8 +516,7 @@ class SpireModule(Base):
             the `count` as a string), or there's no such spire (404).
 
         """
-        parameters: Optional[dict[str, str]] = {"force": "true"} if force is True else None
-        await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters=parameters)
+        await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters={"force": force})
 
     # TODO: Reword the warning once AMP refuses a datastore that still holds an orphan folder (U23).
     # AMP 3.0.0.6 accepts it, and the folder drops out of the API's sight.
@@ -797,8 +587,7 @@ class SpireModule(Base):
             The addresses, eg. ``"0.0.0.0"``, ``"127.0.0.1"`` and the spire's own.
 
         """
-        parameters: Optional[dict[str, str]] = {"includeAuto": "true"} if include_auto is True else None
-        return await self._request(method="GET", path=f"/api/spires/{spire_id}/ip-options", parameters=parameters)
+        return await self._request(method="GET", path=f"/api/spires/{spire_id}/ip-options", parameters={"includeAuto": include_auto})
 
     async def get_spire_port_claims(self, spire_id: str) -> list[PortClaimResponse]:
         """Get every port held on a spire, by AMP's own services as well as shards.

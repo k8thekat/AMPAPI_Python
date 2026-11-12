@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 from .base import Base
 
@@ -30,15 +30,6 @@ if TYPE_CHECKING:
         BrandingResponse,
         DiagnosticsResponse,
         HealthStatusResponse,
-        HTTPSCheckResponse,
-        HTTPSSetupStatusResponse,
-        HTTPSStateResponse,
-        LicenceAgreementResponse,
-        LicenceQueryResponse,
-        LicenceResponse,
-        LicenceStatusResponse,
-        LicenceTermsAcceptance,
-        LicenceTermsRequest,
         MessageBusStatsResponse,
         MonitoringThresholdsResponse,
         PlatformWarningResponse,
@@ -55,49 +46,14 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class PlatformModule(Base):
-    """The panel-wide calls: health, branding, licences, settings, HTTPS, monitoring, updates and support.
+    """The panel-wide calls: health, branding, settings, monitoring, updates and support.
 
-    Networking is :class:`NetworkModule`, and the message bus a new spire joins over is :class:`EnrollmentModule`.
+    Licences are :class:`LicenceModule`, HTTPS is :class:`HTTPSModule`, networking is :class:`NetworkModule`, and the
+    message bus a new spire joins over is :class:`EnrollmentModule`.
 
     .. versionadded:: 6.0.0
 
     """
-
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only refusals are known; the reply to accepted terms isn't.
-    async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
-        """Accept the terms for a licence that is already active, eg. one whose `standing` is ``"TermsRequired"``.
-
-        |coro|
-
-        Endpoint: ``POST /api/licence/{spire_id}/{grade_id}/terms``
-
-        Parameters
-        ----------
-        spire_id : :class:`str`
-            The licence's `spireId`.
-        grade_id : :class:`str`
-            The licence's `gradeId`.
-        key : :class:`str`
-            The licence key.
-        terms : :class:`LicenceTermsAcceptance`
-            The terms acceptance, filled from :meth:`get_licence_agreement`.
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the licence needs no terms (400, ``"licence.error.termsNotApplicable"``), which is the case when
-            :meth:`query_licence` reads `termsRequired` as `False`. A wrong `key` gets 502
-            (``"licence.error.termsUnavailable"``), as AMP asks the licensing service before it checks the key.
-
-        """
-        data: LicenceTermsRequest = {**terms, "key": key}
-        return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
     # TODO: Reword the docstring once AMP refuses an unknown warning ID (U20a).
     # AMP 3.0.0.6 answers 200 with the warnings as they are.
@@ -129,39 +85,6 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
 
-    # TODO: Drop the note once AMP answers with the whole licence (U19b).
-    # AMP 3.0.0.6 answers before the licence service does, with the limit, totals, issue date and terms all `None`.
-    async def activate_licence(self, key: str, *, terms: Optional[LicenceTermsAcceptance] = None) -> LicenceResponse:
-        """Activate a licence key on this panel.
-
-        |coro|
-
-        Endpoint: ``POST /api/licence``
-
-        .. note::
-            The reply comes back before the licence service answers, so its `shardLimit`, `keyShardsTotal`, `issuedAt`
-            and terms versions are `None` and `limitKnown` is `False`. :meth:`get_licence_status` has them a few
-            seconds later.
-
-        The panel can restart once licensed: :meth:`get_health_status` reads ``"starting"`` until it is ``"ready"``
-        again, and a setting read before then can look unapplied.
-
-        Parameters
-        ----------
-        key : :class:`str`
-            The licence key.
-        terms : Union[:class:`LicenceTermsAcceptance`, None], optional
-            The licence terms acceptance, by default None.
-            Only a key whose `LicenceQueryResponse.termsRequired` is `True` needs one, see :meth:`query_licence`.
-
-        Returns
-        -------
-        :class:`LicenceResponse`
-            The licence AMP activated (201).
-
-        """
-        return await self._request(method="POST", path="/api/licence", data={"key": key, "terms": terms})
-
     # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
     # Only the refusal for no newer version is known; the reply to a real update isn't.
     async def apply_panel_update(self) -> Any:
@@ -185,71 +108,6 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="POST", path="/api/updates/apply", data={})
-
-    async def check_https(self, host_name: str) -> HTTPSCheckResponse:
-        """Check a domain name is ready for AMP's own HTTPS setup, before :meth:`start_https_setup`.
-
-        |coro|
-
-        Endpoint: ``POST /api/https/check``
-
-        Parameters
-        ----------
-        host_name : :class:`str`
-            The domain name, which has to point at this panel.
-
-        Returns
-        -------
-        :class:`HTTPSCheckResponse`
-            The outcome and each check, eg. if the name points at the panel's public address.
-
-        """
-        return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
-
-    async def delete_licence(self, spire_id: str, grade_id: str) -> None:
-        """Remove a licence from the panel.
-
-        |coro|
-
-        Endpoint: ``DELETE /api/licence/{spire_id}/{grade_id}``
-
-        With no licence left, :meth:`get_health_status` reads ``"preview-licence"`` until one is activated again.
-
-        Parameters
-        ----------
-        spire_id : :class:`str`
-            The licence's `spireId`.
-        grade_id : :class:`str`
-            The licence's `gradeId`.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If the panel has no such licence, eg. it was removed already (404).
-
-        """
-        await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
-
-    # TODO: Drop the note once AMP's reads follow the change at once (U19a).
-    # AMP 3.0.0.6 still shows the proxy in `GET /api/https` and the passkey capabilities for a few seconds.
-    async def delete_own_proxy(self) -> HTTPSStateResponse:
-        """Stop trusting the reverse proxy :meth:`set_own_proxy` set.
-
-        |coro|
-
-        Endpoint: ``DELETE /api/https/own-proxy``
-
-        .. note::
-            For a few seconds after, :meth:`get_https_state` and :meth:`Session.get_capabilities` still show the
-            proxy. Use the state this returns.
-
-        Returns
-        -------
-        :class:`HTTPSStateResponse`
-            The HTTPS state, with `mode` ``"none"`` and no `trustedProxies`.
-
-        """
-        return await self._request(method="DELETE", path="/api/https/own-proxy")
 
     async def delete_setting_secret(self, field_name: str) -> None:
         """Clear a stored secret setting.
@@ -338,80 +196,6 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/health/status", use_token=False)
 
-    async def get_https_setup_status(self) -> HTTPSSetupStatusResponse:
-        """Get the progress of AMP's own HTTPS setup.
-
-        |coro|
-
-        Endpoint: ``GET /api/https/setup/status``
-
-        Returns
-        -------
-        :class:`HTTPSSetupStatusResponse`
-            The setup's phase and checks.
-
-        """
-        return await self._request(method="GET", path="/api/https/setup/status")
-
-    async def get_https_state(self) -> HTTPSStateResponse:
-        """Get the panel's HTTPS setup and the addresses it is reached on.
-
-        |coro|
-
-        Endpoint: ``GET /api/https``
-
-        Returns
-        -------
-        :class:`HTTPSStateResponse`
-            The HTTPS mode, the panel's addresses and any trusted reverse proxies.
-
-        """
-        return await self._request(method="GET", path="/api/https")
-
-    async def get_licence_agreement(self, version: int, *, language: Optional[str] = None) -> LicenceAgreementResponse:
-        """Get the licence terms a key may need accepted.
-
-        |coro|
-
-        Endpoint: ``GET /api/licence/terms/agreement``
-
-        Parameters
-        ----------
-        version : :class:`int`
-            The terms version, a licence's `requiredTermsVersion`. An unknown one gets 404
-            (``"licence.error.termsUnknownVersion"``).
-        language : Union[:class:`str`, None], optional
-            The language to read them in, eg. ``"fr"``, by default None.
-            AMP sends English when it has no copy in that language.
-
-        Returns
-        -------
-        :class:`LicenceAgreementResponse`
-            The terms, with the hash and attestation a :class:`LicenceTermsAcceptance` sends back.
-
-        """
-        parameters: dict[str, Union[str, int]] = {"version": version}
-
-        if language is not None:
-            parameters["lang"] = language
-
-        return await self._request(method="GET", path="/api/licence/terms/agreement", parameters=parameters)
-
-    async def get_licence_status(self) -> LicenceStatusResponse:
-        """Get the panel's licences and how many shards they allow.
-
-        |coro|
-
-        Endpoint: ``GET /api/licence``
-
-        Returns
-        -------
-        :class:`LicenceStatusResponse`
-            The licences, with the shard count and limit.
-
-        """
-        return await self._request(method="GET", path="/api/licence")
-
     async def get_message_bus_stats(self) -> MessageBusStatsResponse:
         """Get the message bus's figures, for support.
 
@@ -489,66 +273,6 @@ class PlatformModule(Base):
         """
         return await self._request(method="GET", path="/api/updates/check")
 
-    async def query_licence(self, key: str) -> LicenceQueryResponse:
-        """Check what a licence key gives, without activating it.
-
-        |coro|
-
-        Endpoint: ``POST /api/licence/query``
-
-        Parameters
-        ----------
-        key : :class:`str`
-            The licence key.
-
-        Returns
-        -------
-        :class:`LicenceQueryResponse`
-            The key's product, grade and expiry, and if this panel can use it.
-
-        """
-        return await self._request(method="POST", path="/api/licence/query", data={"key": key})
-
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal for a panel without AMP's own HTTPS is known; the reply to a recheck isn't.
-    async def recheck_https(self) -> Any:
-        """Check AMP's own HTTPS again, eg. its certificate.
-
-        |coro|
-
-        Endpoint: ``POST /api/https/recheck``
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If AMP's own HTTPS isn't set up (409, ``"https.error.notConfigured"``); a proxy from :meth:`set_own_proxy`
-            doesn't count.
-
-        """
-        return await self._request(method="POST", path="/api/https/recheck")
-
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def remove_https(self) -> Any:
-        """Remove AMP's own HTTPS; the panel stays on plain HTTP at its own port.
-
-        |coro|
-
-        Endpoint: ``POST /api/https/remove``
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        """
-        return await self._request(method="POST", path="/api/https/remove")
-
     async def run_setting_action(self, action_id: str) -> SettingActionResponse:
         """Run one of the settings page's buttons, eg. sending a test email.
 
@@ -574,39 +298,6 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="POST", path=f"/api/settings/actions/{action_id}")
-
-    async def set_own_proxy(self, address: str, *, api_only: bool = False) -> HTTPSStateResponse:
-        """Trust a reverse proxy in front of the panel, such as Caddy or nginx.
-
-        |coro|
-
-        Endpoint: ``POST /api/https/own-proxy``
-
-        AMP then takes the forwarded headers from that address, so sign-ins and audit entries carry the user's real
-        address. Passkeys also need ``"public-address.publicUrl"`` set to the proxy's HTTPS address, see
-        :meth:`set_settings`.
-
-        Parameters
-        ----------
-        address : :class:`str`
-            The proxy's IP address as AMP sees it, eg. ``"127.0.0.1"`` for a proxy on the same machine, or a network
-            in CIDR form.
-        api_only : :class:`bool`, optional
-            If AMP should serve only its API from its next restart, leaving the web app to the proxy, or not,
-            by default False.
-
-        Returns
-        -------
-        :class:`HTTPSStateResponse`
-            The HTTPS state, with `mode` ``"ownProxy"`` and the proxy in `trustedProxies`.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If `address` is neither an IP address nor a network (400, ``"https.error.proxyAddressInvalid"``).
-
-        """
-        return await self._request(method="POST", path="/api/https/own-proxy", data={"address": address, "apiOnly": api_only})
 
     # TODO: Type the notices once AMP is seen sending one live (#3-51.7).
     # Every save so far answered 204; the web panel shows each notice as a save error.
@@ -668,34 +359,3 @@ class PlatformModule(Base):
 
         """
         return await self._request(method="PUT", path="/api/updates/stream", data={"stream": stream})
-
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal for a panel behind its own proxy is known; the reply to a setup that starts isn't.
-    async def start_https_setup(self, host_name: str) -> Any:
-        """Start AMP's own HTTPS setup, which asks Let's Encrypt for a certificate.
-
-        |coro|
-
-        Endpoint: ``POST /api/https/setup``
-
-        Follow it with :meth:`get_https_setup_status`. Let's Encrypt has to reach the panel, so this can't work on a
-        machine only reachable on its own network.
-
-        Parameters
-        ----------
-        host_name : :class:`str`
-            The domain name, which has to point at this panel.
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If a proxy from :meth:`set_own_proxy` is set (409, ``"https.error.ownProxyActive"``); clear it with
-            :meth:`delete_own_proxy` first.
-
-        """
-        return await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})

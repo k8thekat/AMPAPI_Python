@@ -39,8 +39,10 @@ from .base import *
 from .credentials import *
 from .enrollments import *
 from .errors import *
+from .https import *
 
 # from .hubs import *
+from .licence import *
 from .networking import *
 from .objects import *
 from .panel import *

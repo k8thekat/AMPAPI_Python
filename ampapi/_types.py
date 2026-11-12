@@ -1041,7 +1041,7 @@ class HTTPSStateResponse(TypedDict):
     "The panel's address on its own network."
     ipv6Address: Optional[str]
     trustedProxies: list[str]
-    "The reverse proxies AMP takes forwarded headers from, set by `PlatformModule.set_own_proxy`."
+    "The reverse proxies AMP takes forwarded headers from, set by `HTTPSModule.set_own_proxy`."
     serveFrontend: bool
     "If AMP serves the web app as well as its API or not."
     running: bool
@@ -1204,9 +1204,9 @@ class LicenceStatusResponse(TypedDict):
 
 
 class LicenceTermsAcceptance(TypedDict):
-    """The terms acceptance `PlatformModule.activate_licence` and `PlatformModule.accept_licence_terms` send.
+    """The terms acceptance `LicenceModule.activate_licence` and `LicenceModule.accept_licence_terms` send.
 
-    Its keys come from the web panel's code. AMP's checks on `PlatformModule.accept_licence_terms` require `agreementHash`,
+    Its keys come from the web panel's code. AMP's checks on `LicenceModule.accept_licence_terms` require `agreementHash`,
     `attestation` and `locale`, not `termsVersion` or `clickedAt`. Fill it from `LicenceAgreementResponse`.
     """
 
@@ -3504,6 +3504,7 @@ LoginResponse = Union[TokenResponse, PasswordChangeRequiredResponse, PasskeyRequ
 # A custom port's protocol; "Both" is TCP and UDP.
 PortProtocol = Literal["TCP", "UDP", "Both"]
 # A query string; a list value repeats its key, so {"shard": ["a", "b"]} is sent as shard=a&shard=b.
-QueryParameters = Mapping[str, Union[str, int, Sequence[str]]]
+# A `bool` is sent as "true" or "false".
+QueryParameters = Mapping[str, Union[bool, str, int, Sequence[str]]]
 # A settings change: each setting's `fieldName`, from its settings manifest, to the new value as a string.
 SettingValues = dict[str, str]

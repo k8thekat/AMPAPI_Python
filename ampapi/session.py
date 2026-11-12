@@ -39,7 +39,7 @@ from .errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
     from types import TracebackType
 
     from ._types import (
@@ -241,6 +241,16 @@ class Session:
         if use_token is True and self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
 
+        # aiohttp refuses a `bool` in the query string, so we write it the way AMP reads one (#3-51.4j)
+        query: Optional[dict[str, Union[str, int, Sequence[str]]]] = None
+        if parameters is not None:
+            query = {}
+            for key, value in parameters.items():
+                if isinstance(value, bool):
+                    query[key] = "true" if value is True else "false"
+                else:
+                    query[key] = value
+
         # We try again once for each delay, then hand back AMP's last answer.
         retries: int = 0
         while True:
@@ -261,11 +271,11 @@ class Session:
             else:
                 json_body = data
 
-            LOGGER.debug("<%s.%s> | Method: %s | Path: %s | Parameters: %s", __class__.__name__, "_send", method, path, parameters)
+            LOGGER.debug("<%s.%s> | Method: %s | Path: %s | Parameters: %s", __class__.__name__, "_send", method, path, query)
             async with self._session.request(
                 method=method,
                 url=self.url + path,
-                params=parameters,
+                params=query,
                 json=json_body,
                 data=raw_body,
                 headers=headers,
@@ -333,6 +343,11 @@ class Session:
         self._expiration = None
         self._renew_after = None
         self._claims = {}
+
+    # A password change made through a module (`change_password`, `reset_user_password`) keeps the new one here for
+    # the logins we make again (#3-51.4g)
+    def _keep_password(self, password: str) -> None:
+        self._password = password
 
     async def _login_result(self, data: LoginResponse) -> TokenResponse:
         """Keep the token from a login-like call, or raise for the follow-up step AMP asked for instead.

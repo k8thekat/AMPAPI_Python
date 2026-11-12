@@ -50,8 +50,6 @@ if TYPE_CHECKING:
         ShardAppConfig,
         ShardArchiveInfoResponse,
         ShardArchiveRequest,
-        ShardCloneRequest,
-        ShardCloneResponse,
         ShardConfigImportResponse,
         ShardConsoleRequest,
         ShardCreatedResponse,
@@ -295,7 +293,7 @@ class Shard:
         content: CloneContent = CloneContent.both,
         target_spire_id: Optional[str] = None,
     ) -> Shard:
-        """Copy this shard into a new one, see :meth:`ShardModule.clone_shard`.
+        """Copy this shard into a new one, see :meth:`Panel.clone_shard`.
 
         |coro|
 
@@ -1141,12 +1139,12 @@ class ShardModule(Base):
 
     """
 
-    if TYPE_CHECKING:
-        # The `Panel` gives these: `get_shard` so `clone_shard` hands back the copy the panel keeps, and a lock per shard
-        # for `update_shard_infra`.
-        _infra_locks: dict[str, asyncio.Lock]
+    # A lock per shard ID, so `update_shard_infra` reads and writes one shard at a time (#3-51.2c)
+    _infra_locks: dict[str, asyncio.Lock]
 
-        async def get_shard(self, shard_id: str) -> Shard: ...  # noqa: D102
+    def __init__(self, session: Session) -> None:  # noqa: D107
+        super().__init__(session=session)
+        self._infra_locks = {}
 
     # TODO: Remove this warning once AMP answers the route (U12).
     # AMP 3.0.0.6 answers 404 to POST /update/abort.
@@ -1254,52 +1252,6 @@ class ShardModule(Base):
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/cancel")
-
-    async def clone_shard(
-        self,
-        shard_id: str,
-        new_name: str,
-        *,
-        content: CloneContent = CloneContent.both,
-        target_spire_id: Optional[str] = None,
-    ) -> Shard:
-        """Copy a shard into a new one.
-
-        |coro|
-
-        Endpoints: ``POST /api/shards/{shard_id}/clone``, then ``GET /api/shards/{shard_id}`` for the copy
-
-        A ``"ShardClone"`` task copies the files, see :meth:`TaskModule.get_running_tasks`. The copy's ports are free
-        ones on its spire, so they can differ from the original's.
-
-        Parameters
-        ----------
-        shard_id : :class:`str`
-            The shard to copy.
-        new_name : :class:`str`
-            The copy's display name.
-        content : :class:`CloneContent`, optional
-            What to copy, by default `CloneContent.both`.
-        target_spire_id : Union[:class:`str`, None], optional
-            The spire to put the copy on, by default None (the same one).
-
-        Returns
-        -------
-        :class:`Shard`
-            The copy, of the panel's `shard_class`. It is there at once, but its `installedAt` is `None` even when the
-            original was installed, so run :meth:`update_shard` on it before starting it.
-
-        Raises
-        ------
-        AMPAPIRequestError
-            If `content` is 0 (400, ``"shards.error.cloneNothing"``) or there's no such spire
-            (400, ``"shards.error.spireNotFound"``).
-
-        """
-        data: ShardCloneRequest = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
-        # AMP only sends back the copy's ID, so we get the copy itself after.
-        result: ShardCloneResponse = await self._request(method="POST", path=f"/api/shards/{shard_id}/clone", data=data)
-        return await self.get_shard(shard_id=result["shardId"])
 
     async def commit_shard_file_upload(self, shard_id: str, session_id: str) -> None:
         """Finish a chunked upload, which writes the file.
@@ -2053,7 +2005,7 @@ class ShardModule(Base):
             The samples, empty while stopped.
 
         """
-        parameters: Optional[dict[str, int]] = {"minutes": minutes} if minutes is not None else None
+        parameters: dict[str, int] = self._without_none(mapping={"minutes": minutes})
         result: list[dict[str, Any]] = await self._request(method="GET", path=f"/api/shards/{shard_id}/metrics", parameters=parameters)
         return [ShardMetrics(data=entry) for entry in result]
 
@@ -2172,7 +2124,7 @@ class ShardModule(Base):
             The runs.
 
         """
-        parameters: Optional[dict[str, int]] = {"limit": limit} if limit is not None else None
+        parameters: dict[str, int] = self._without_none(mapping={"limit": limit})
         path: str = f"/api/shards/{shard_id}/schedules/{schedule_id}/history"
         result: list[dict[str, Any]] = await self._request(method="GET", path=path, parameters=parameters)
         return [ScheduleExecution(data=entry) for entry in result]
@@ -2232,8 +2184,11 @@ class ShardModule(Base):
             If the setting has no list (404, ``"shards.error.noValueSource"``).
 
         """
-        parameters: Optional[dict[str, str]] = {"refresh": "true"} if refresh is True else None
-        return await self._request(method="GET", path=f"/api/shards/{shard_id}/settings/{field_name}/candidates", parameters=parameters)
+        return await self._request(
+            method="GET",
+            path=f"/api/shards/{shard_id}/settings/{field_name}/candidates",
+            parameters={"refresh": refresh},
+        )
 
     async def get_shard_settings(self, shard_id: str) -> list[ShardSettingResponse]:
         """Get a shard's game settings with their values.

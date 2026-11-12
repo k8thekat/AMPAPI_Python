@@ -25,13 +25,16 @@ import logging
 # from typing import TYPE_CHECKING, ClassVar, Optional, Self
 from typing import TYPE_CHECKING, Any, Optional, Self
 
+from ._enums import CloneContent
 from .accounts import AccountModule
 from .analytics import AnalyticsModule
 from .audit import AuditModule
 from .credentials import CredentialModule
 from .enrollments import EnrollmentModule
+from .https import HTTPSModule
 
 # from .hubs import PanelHub
+from .licence import LicenceModule
 from .networking import NetworkModule
 from .objects import SpirePresence
 from .platform import PlatformModule
@@ -41,11 +44,12 @@ from .tasks import TaskModule
 from .templates import TemplateModule
 
 if TYPE_CHECKING:
-    import asyncio
     from types import TracebackType
 
     from ._types import (
         ShardAttentionResponse,
+        ShardCloneRequest,
+        ShardCloneResponse,
         ShardCreatedResponse,
         ShardCreateRequest,
         ShardEndpointResponse,
@@ -66,6 +70,8 @@ class Panel(
     AuditModule,
     CredentialModule,
     EnrollmentModule,
+    HTTPSModule,
+    LicenceModule,
     NetworkModule,
     PlatformModule,
     ShardModule,
@@ -110,8 +116,6 @@ class Panel(
     spire_class: type[Spire]
     _shards: dict[str, Shard]
     _spires: dict[str, Spire]
-    # One lock per shard ID, so `update_shard_infra` reads and writes one shard at a time (#3-51.2c)
-    _infra_locks: dict[str, asyncio.Lock]
 
     def __init__(  # noqa: D107
         self,
@@ -127,7 +131,6 @@ class Panel(
         self.spire_class = spire_class
         self._shards = {}
         self._spires = {}
-        self._infra_locks = {}
 
     async def __aenter__(self) -> Self:  # noqa: D105
         return self
@@ -168,6 +171,52 @@ class Panel(
         else:
             shard._update_data(data=data)  # pyright: ignore[reportPrivateUsage]
         return shard
+
+    async def clone_shard(
+        self,
+        shard_id: str,
+        new_name: str,
+        *,
+        content: CloneContent = CloneContent.both,
+        target_spire_id: Optional[str] = None,
+    ) -> Shard:
+        """Copy a shard into a new one.
+
+        |coro|
+
+        Endpoints: ``POST /api/shards/{shard_id}/clone``, then ``GET /api/shards/{shard_id}`` for the copy
+
+        A ``"ShardClone"`` task copies the files, see :meth:`TaskModule.get_running_tasks`. The copy's ports are free
+        ones on its spire, so they can differ from the original's.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard to copy.
+        new_name : :class:`str`
+            The copy's display name.
+        content : :class:`CloneContent`, optional
+            What to copy, by default `CloneContent.both`.
+        target_spire_id : Union[:class:`str`, None], optional
+            The spire to put the copy on, by default None (the same one).
+
+        Returns
+        -------
+        :class:`Shard`
+            The copy, of the panel's `shard_class`. It is there at once, but its `installedAt` is `None` even when the
+            original was installed, so run :meth:`update_shard` on it before starting it.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If `content` is 0 (400, ``"shards.error.cloneNothing"``) or there's no such spire
+            (400, ``"shards.error.spireNotFound"``).
+
+        """
+        data: ShardCloneRequest = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
+        # AMP only sends back the copy's ID, so we get the copy itself after.
+        result: ShardCloneResponse = await self._request(method="POST", path=f"/api/shards/{shard_id}/clone", data=data)
+        return await self.get_shard(shard_id=result["shardId"])
 
     # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
     # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.
@@ -308,8 +357,7 @@ class Panel(
             The shards, each with the calls that act on it.
 
         """
-        parameters: dict[str, str] = {"includeDeleted": "true" if include_deleted is True else "false"}
-        result: list[ShardResponse] = await self._request(method="GET", path="/api/shards", parameters=parameters)
+        result: list[ShardResponse] = await self._request(method="GET", path="/api/shards", parameters={"includeDeleted": include_deleted})
         # return [self._make_shard(data=entry, auto_state=auto_state) for entry in result]
         return [self._make_shard(data=entry) for entry in result]
 

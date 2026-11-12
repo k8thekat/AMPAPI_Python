@@ -164,6 +164,7 @@ class AuditModule(Base):
             Only events by this user's ID, by default None.
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
+            See :meth:`get_audit_facets` for the actions logged so far.
         origin : Union[:class:`AuditOrigin`, None], optional
             ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
         min_severity : Union[:class:`AuditSeverity`, None], optional
@@ -175,7 +176,7 @@ class AuditModule(Base):
         search : Union[:class:`str`, None], optional
             Text to look for, by default None.
         from_time : Union[:class:`str`, None], optional
-            The earliest time, ISO 8601, by default None.
+            The earliest time, ISO 8601 like ``"2026-11-01T00:00:00Z"``, by default None.
         to_time : Union[:class:`str`, None], optional
             The latest time, ISO 8601, by default None.
         page : Union[:class:`int`, None], optional
@@ -206,6 +207,7 @@ class AuditModule(Base):
             "sort": sort,
         }
 
+        # We only send the filters that are set, as the web panel does.
         parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
 
         return await self._request(method="GET", path="/api/audit/roots", parameters=parameters)

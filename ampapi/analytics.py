@@ -82,8 +82,7 @@ class AnalyticsModule(Base):
             If `user_key` isn't a player key AMP would make (400, ``"analytics.error.badUserKey"``).
 
         """
-        parameters: Optional[dict[str, str]] = {"demo": "true"} if demo is True else None
-        return await self._request(method="DELETE", path=f"/api/analytics/sessions/users/{user_key}", parameters=parameters)
+        return await self._request(method="DELETE", path=f"/api/analytics/sessions/users/{user_key}", parameters={"demo": demo})
 
     async def get_analytics_address_users(self, address: str, *, demo: bool = False) -> AnalyticsAddressUsersResponse:
         """Get the players seen at one address.
@@ -105,12 +104,7 @@ class AnalyticsModule(Base):
             The address, its network and its players.
 
         """
-        parameters: dict[str, str] = {"address": address}
-
-        if demo is True:
-            parameters["demo"] = "true"
-
-        return await self._request(method="GET", path="/api/analytics/addresses/users", parameters=parameters)
+        return await self._request(method="GET", path="/api/analytics/addresses/users", parameters={"address": address, "demo": demo})
 
     # TODO: Reword the warning once AMP answers a range search (#3-54).
     # AMP 3.0.0.6 answers 500 for every range, from an error in its address service.
@@ -139,12 +133,7 @@ class AnalyticsModule(Base):
             The address, if it's private or public, and the matching addresses and their players.
 
         """
-        parameters: dict[str, str] = {"q": search}
-
-        if demo is True:
-            parameters["demo"] = "true"
-
-        return await self._request(method="GET", path="/api/analytics/addresses", parameters=parameters)
+        return await self._request(method="GET", path="/api/analytics/addresses", parameters={"q": search, "demo": demo})
 
     async def get_analytics_avatar(self, avatar_hash: str, *, full: bool = False) -> bytes:
         """Get a Steam player's avatar image.
@@ -173,8 +162,7 @@ class AnalyticsModule(Base):
             (404).
 
         """
-        parameters: Optional[dict[str, str]] = {"full": "true"} if full is True else None
-        return await self._request(method="GET", path=f"/api/analytics/avatars/{avatar_hash}", parameters=parameters, raw_bytes=True)
+        return await self._request(method="GET", path=f"/api/analytics/avatars/{avatar_hash}", parameters={"full": full}, raw_bytes=True)
 
     async def get_analytics_connected_users(self, shard_id: str, user: str) -> AnalyticsConnectedResponse:
         """Get what a shard knows about one player connected to it now.
@@ -223,12 +211,7 @@ class AnalyticsModule(Base):
             The profiles, by service.
 
         """
-        parameters: dict[str, Union[str, list[str]]] = {"key": user_keys}
-
-        if demo is True:
-            parameters["demo"] = "true"
-
-        return await self._request(method="GET", path="/api/analytics/profiles", parameters=parameters)
+        return await self._request(method="GET", path="/api/analytics/profiles", parameters={"key": user_keys, "demo": demo})
 
     async def get_analytics_sessions(
         self,
@@ -271,18 +254,18 @@ class AnalyticsModule(Base):
             The totals, daily activity and busiest times.
 
         """
-        filters: dict[str, Optional[Union[str, int, list[str]]]] = {
+        filters: dict[str, Optional[Union[bool, str, int, list[str]]]] = {
             "from": from_time,
             "to": to_time,
             "shard": shard_ids,
             "country": country,
             "user": user,
             "topUsers": top_users,
-            "demo": "true" if demo is True else None,
+            "demo": demo,
         }
 
         # We only send the filters that are set, as the web panel does.
-        parameters: dict[str, Union[str, int, list[str]]] = self._without_none(mapping=filters)
+        parameters: dict[str, Union[bool, str, int, list[str]]] = self._without_none(mapping=filters)
 
         return await self._request(method="GET", path="/api/analytics/sessions", parameters=parameters)
 
@@ -332,8 +315,7 @@ class AnalyticsModule(Base):
             The addresses.
 
         """
-        parameters: Optional[dict[str, str]] = {"demo": "true"} if demo is True else None
-        return await self._request(method="GET", path=f"/api/analytics/users/{user_key}/addresses", parameters=parameters)
+        return await self._request(method="GET", path=f"/api/analytics/users/{user_key}/addresses", parameters={"demo": demo})
 
     async def get_analytics_user_sessions(
         self,
@@ -366,8 +348,8 @@ class AnalyticsModule(Base):
             The player's totals and sessions.
 
         """
-        filters: dict[str, Optional[str]] = {"from": from_time, "to": to_time, "demo": "true" if demo is True else None}
-        parameters: dict[str, str] = self._without_none(mapping=filters)
+        filters: dict[str, Optional[Union[bool, str]]] = {"from": from_time, "to": to_time, "demo": demo}
+        parameters: dict[str, Union[bool, str]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path=f"/api/analytics/sessions/users/{user_key}", parameters=parameters)
 
     async def get_analytics_users(
@@ -398,6 +380,6 @@ class AnalyticsModule(Base):
             The players found.
 
         """
-        filters: dict[str, Optional[Union[str, int]]] = {"q": search, "limit": limit, "demo": "true" if demo is True else None}
-        parameters: dict[str, Union[str, int]] = self._without_none(mapping=filters)
+        filters: dict[str, Optional[Union[bool, str, int]]] = {"q": search, "limit": limit, "demo": demo}
+        parameters: dict[str, Union[bool, str, int]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path="/api/analytics/users", parameters=parameters)

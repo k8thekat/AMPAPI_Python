@@ -38,7 +38,7 @@ __all__ = (
 
 
 class CloneContent(IntFlag):
-    """What :meth:`ShardModule.clone_shard` copies, named as the web panel's clone dialog names them.
+    """What :meth:`Panel.clone_shard` copies, named as the web panel's clone dialog names them.
 
     AMP also took 7 (every snapshot flag set) and copied everything, so the server may read it as `SnapshotContent`.
 

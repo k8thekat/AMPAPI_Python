@@ -69,9 +69,14 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - No per-call `request_params` (Kat, 2026-11-06): the `ClientSession` handed to `Session` already carries SSL,
   timeouts and proxies for every call.
 - The modules: `AccountModule`, `AnalyticsModule` (player analytics), `AuditModule`, `CredentialModule`,
-  `EnrollmentModule` (spire enrolments and the message bus, everything for joining a new spire), `NetworkModule`
-  (gateways, publications, tunnels, firewall), `PlatformModule`, `ShardModule` (with `Shard`), `SpireModule` (with
-  `Spire`, in `spires.py` to avoid a circular import), `TaskModule` and `TemplateModule` (#3-50).
+  `EnrollmentModule` (spire enrolments and the message bus, everything for joining a new spire), `HTTPSModule` and
+  `LicenceModule` (split out of `PlatformModule`, #3-51.3m), `NetworkModule` (gateways, publications, tunnels,
+  firewall), `PlatformModule`, `ShardModule` (with `Shard`), `SpireModule` (with `Spire`, in `spires.py` to avoid a
+  circular import), `TaskModule` and `TemplateModule` (#3-50).
+- `Panel` holds the calls that make a shard and hand back a `Shard`: `create_shard` and `clone_shard` (#3-51.1g), so
+  every module works on its own with a `Session`. `ShardModule` keeps its own lock per shard for `update_shard_infra`.
+- A `bool` in a query is sent as `"true"` / `"false"` by `Session._send`, as yarl (aiohttp's query builder) refuses a
+  `bool` (#3-51.4j). Calls send their flags every time, eg. `demo=false`, where they used to leave a `False` one out.
 - `Session` holds `accept_invite` and `preview_invite`, as the invitee has no account yet (#3-50.7). `accept_invite`
   previews the invite for its username, sends the session's own password, and keeps the token, so the session is
   logged in as the new account (live on vm4, 2026-11-08). A session it already held is logged out once the account
