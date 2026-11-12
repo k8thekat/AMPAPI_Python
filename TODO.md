@@ -25,6 +25,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 
 - (#3-48) A structure pass: lower-case routes and an Endpoint line on every call, docstrings without test-run context, request TypedDicts, body spacing. *DONE*
 - (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`): group A, the `Session` paths, *DONE*; group B (stale objects, the registry) *DONE* (#3-51.6); group C (writes that lose data) *DONE* (#3-51.7); group G (structure) *DONE* (#3-51.8); group D (uncatchable errors) *DONE* (#3-51.9); groups E (names), F (types) and H (docs) open.
+- (#3-56) Match the library to AMP's own OpenAPI document (`.local_data/plans/openapi_compare/plan.md`): the shards area *DONE* (#3-56.6); spires and platform (#3-56.7), accounts and session (#3-56.8) and first-run setup (#3-56.9) open.
 
 ## ampapi/panel.py
 

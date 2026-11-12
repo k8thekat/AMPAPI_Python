@@ -238,21 +238,6 @@ class Shard:
         self.data = data
         self.display_name = data["displayName"]
 
-    # TODO: Remove this warning once AMP answers the route (U12).
-    # AMP 3.0.0.6 answers 404 to POST /update/abort.
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.abort_shard_update`.
-    async def abort_update(self) -> Any:
-        """Stop this shard's update, see :meth:`ShardModule.abort_shard_update`.
-
-        |coro|
-
-        .. warning::
-            AMP 3.0.0.6 doesn't answer this route yet (404).
-
-        """
-        return await self._module.abort_shard_update(shard_id=self.id)
-
     async def accept_eula(self) -> None:
         """Accept the game's licence for this shard, see :meth:`ShardModule.accept_shard_eula`.
 
@@ -309,15 +294,15 @@ class Shard:
         """
         await self._module.commit_shard_file_upload(shard_id=self.id, session_id=session_id)
 
-    async def copy_file(self, source: str, destination: str) -> None:
+    async def copy_file(self, source: str, destination: str) -> Optional[ShardExtractResponse]:
         """Copy a file or folder in this shard, see :meth:`ShardModule.copy_shard_file`.
 
         |coro|
 
         """
-        await self._module.copy_shard_file(shard_id=self.id, source=source, destination=destination)
+        return await self._module.copy_shard_file(shard_id=self.id, source=source, destination=destination)
 
-    async def create_custom_port(self, name: str, protocol: PortProtocol, port: int) -> list[ShardPortResponse]:
+    async def create_custom_port(self, name: str, protocol: PortProtocol, port: Optional[int] = None) -> list[ShardPortResponse]:
         """Add a port to this shard, see :meth:`ShardModule.create_shard_custom_port`.
 
         |coro|
@@ -461,7 +446,7 @@ class Shard:
         """
         return await self._module.download_shard_snapshot(shard_id=self.id, snapshot_id=snapshot_id)
 
-    async def extract_archive(self, path: str, destination: str, *, overwrite: bool = False) -> ShardExtractResponse:
+    async def extract_archive(self, path: str, destination: Optional[str] = None, *, overwrite: bool = False) -> ShardExtractResponse:
         """Unpack an archive in this shard, see :meth:`ShardModule.extract_shard_archive`.
 
         |coro|
@@ -621,6 +606,14 @@ class Shard:
         """
         return await self._module.get_shard_ports(shard_id=self.id)
 
+    async def get_schedule(self, schedule_id: str) -> ShardScheduleResponse:
+        """Get one of this shard's schedules, see :meth:`ShardModule.get_shard_schedule`.
+
+        |coro|
+
+        """
+        return await self._module.get_shard_schedule(shard_id=self.id, schedule_id=schedule_id)
+
     async def get_schedule_catalog(self) -> ScheduleCatalogResponse:
         """Get the triggers and tasks this shard's schedules can use, see :meth:`ShardModule.get_shard_schedule_catalog`.
 
@@ -717,22 +710,15 @@ class Shard:
         """
         return await self._module.import_shard_config(shard_id=self.id, path=path, content=content)
 
-    # TODO: Remove this warning once AMP answers the route (U12).
-    # AMP 3.0.0.6 answers 404 to POST /kill.
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.kill_shard`.
-    async def kill(self) -> Any:
-        """End this shard's game at once, see :meth:`ShardModule.kill_shard`.
-
-        |coro|
-
-        .. warning::
-            AMP 3.0.0.6 doesn't answer this route yet (404).
-
-        """
-        return await self._module.kill_shard(shard_id=self.id)
-
-    async def migrate_to_spire(self, target_spire_id: str, target_datastore_id: str, *, bring_backups: bool, stop_if_running: bool) -> None:
+    async def migrate_to_spire(
+        self,
+        target_spire_id: str,
+        target_datastore_id: str,
+        *,
+        bring_backups: bool = False,
+        stop_if_running: bool = False,
+        start_after_move: Optional[bool] = None,
+    ) -> None:
         """Move this shard to another spire, see :meth:`ShardModule.migrate_shard_to_spire`.
 
         |coro|
@@ -744,6 +730,7 @@ class Shard:
             target_datastore_id=target_datastore_id,
             bring_backups=bring_backups,
             stop_if_running=stop_if_running,
+            start_after_move=start_after_move,
         )
 
     async def move_file(self, source: str, destination: str) -> None:
@@ -1014,11 +1001,11 @@ class Shard:
 
     async def take_snapshot(
         self,
-        name: str,
+        name: Optional[str],
         kind: SnapshotKind,
         content: SnapshotContent,
         *,
-        description: str = "",
+        description: Optional[str] = None,
         sticky: bool = False,
     ) -> Snapshot:
         """Take a snapshot (a backup) of this shard, see :meth:`ShardModule.take_shard_snapshot`.
@@ -1118,15 +1105,13 @@ class Shard:
         """
         await self._module.upload_shard_files(shard_id=self.id, folder=folder, files=files)
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # It comes from `ShardModule.wake_shard`.
-    async def wake(self) -> Any:
+    async def wake(self) -> None:
         """Wake this sleeping shard, see :meth:`ShardModule.wake_shard`.
 
         |coro|
 
         """
-        return await self._module.wake_shard(shard_id=self.id)
+        await self._module.wake_shard(shard_id=self.id)
 
 
 class ShardModule(Base):
@@ -1146,33 +1131,6 @@ class ShardModule(Base):
     def __init__(self, session: Session) -> None:  # noqa: D107
         super().__init__(session=session)
         self._infra_locks = {}
-
-    # TODO: Remove this warning once AMP answers the route (U12).
-    # AMP 3.0.0.6 answers 404 to POST /update/abort.
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # The web panel's code sends `{}` and ignores the reply.
-    async def abort_shard_update(self, shard_id: str) -> Any:
-        """Stop a shard's update.
-
-        |coro|
-
-        Endpoint: ``POST /api/shards/{shard_id}/update/abort``
-
-        .. warning::
-            AMP 3.0.0.6 doesn't answer this route yet (404). :meth:`stop_shard` aborts an update in the meantime.
-
-        Parameters
-        ----------
-        shard_id : :class:`str`
-            The shard's ID.
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        """
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/update/abort", data={})
 
     async def accept_shard_eula(self, shard_id: str) -> None:
         """Accept the game's licence for a shard, eg. Minecraft's EULA, which it needs before it starts.
@@ -1195,6 +1153,8 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/disk-warning/ack``
+
+        It silences only the first, advisory level, and AMP clears it once a scan finds the shard back under the limit.
 
         Parameters
         ----------
@@ -1271,12 +1231,15 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-commit", parameters={"session": session_id})
 
-    async def copy_shard_file(self, shard_id: str, source: str, destination: str) -> None:
-        """Copy a file or folder inside a shard.
+    async def copy_shard_file(self, shard_id: str, source: str, destination: str) -> Optional[ShardExtractResponse]:
+        """Copy a file or folder inside a shard, or out of an archive in it.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/files/copy``
+
+        A `source` inside an archive, eg. ``"backup.zip/world/level.dat"``, copies that entry out of it, and overwrites a
+        file already at `destination`. An entry the archive doesn't have isn't an error: every count reads 0.
 
         Parameters
         ----------
@@ -1287,10 +1250,21 @@ class ShardModule(Base):
         destination : :class:`str`
             The copy's path.
 
-        """
-        await self._request(method="POST", path=f"/api/shards/{shard_id}/files/copy", data={"from": source, "to": destination})
+        Returns
+        -------
+        Union[:class:`ShardExtractResponse`, None]
+            How many files came out of the archive, for a copy out of one (a 200); `None` for any other copy (a 204).
 
-    async def create_shard_custom_port(self, shard_id: str, name: str, protocol: PortProtocol, port: int) -> list[ShardPortResponse]:
+        """
+        return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/copy", data={"from": source, "to": destination})
+
+    async def create_shard_custom_port(
+        self,
+        shard_id: str,
+        name: str,
+        protocol: PortProtocol,
+        port: Optional[int] = None,
+    ) -> list[ShardPortResponse]:
         """Add a port of your own to a shard.
 
         |coro|
@@ -1305,8 +1279,8 @@ class ShardModule(Base):
             The port's name; its `ref` becomes ``"Custom"`` and the name without spaces.
         protocol : :class:`PortProtocol`
             ``"TCP"``, ``"UDP"`` or ``"Both"``. AMP stores anything else as ``"TCP"``.
-        port : :class:`int`
-            The port number.
+        port : Union[:class:`int`, None], optional
+            The port number, by default None for AMP to pick a free one.
 
         Returns
         -------
@@ -1316,7 +1290,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the port is taken (400, ``"shards.error.portConflict"``) or out of range (400, ``"shards.error.invalidPort"``).
+            If the port is taken (400, ``"shards.error.portConflict"``), out of range (400, ``"shards.error.invalidPort"``)
+            or one AMP uses itself, eg. 4222 for its message bus (400, ``"shards.error.portReservedByAmp"``).
 
         """
         data: ShardCustomPortRequest = {"name": name, "protocol": protocol, "port": port}
@@ -1358,6 +1333,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/schedules``
 
+        The user who makes it is the one its runs act as, its `runAsUserId`.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -1369,9 +1346,10 @@ class ShardModule(Base):
         steps : list[:class:`ScheduleStep`]
             What it does, in order; can be empty. See :meth:`get_shard_schedule_catalog` for the tasks.
         description : Union[:class:`str`, None], optional
-            A description, by default None.
+            A description, by default None. AMP trims it.
         run_timeout : Union[:class:`str`, None], optional
-            How long a run may take, as a time span, by default None (AMP uses ``"00:30:00"``). AMP calls it `timeout`.
+            How long a run may take, as a time span, by default None (AMP uses ``"00:30:00"``). AMP calls it `timeout`,
+            and keeps it between 1 minute and 2 hours.
         enabled : :class:`bool`, optional
             If it runs on its trigger or not, by default False.
 
@@ -1455,6 +1433,11 @@ class ShardModule(Base):
         list[:class:`ShardPortResponse`]
             The shard's ports left.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If a publication still forwards to the port (409); remove it first, see :meth:`NetworkModule.delete_publication`.
+
         """
         return await self._request(method="DELETE", path=f"/api/shards/{shard_id}/ports/custom/{port_reference}")
 
@@ -1472,11 +1455,17 @@ class ShardModule(Base):
         path : :class:`str`
             The path to delete.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If the delete reached a folder another disk is mounted at (``"shards.error.deleteStoppedAtMount"``, the rest
+            deleted), or `path` is that folder (``"shards.error.deleteIsMount"``, nothing deleted).
+
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
-    # TODO: Reword the docstring once AMP clears a failed move's task and refuses an early dismissal cleanly (U22a, U22c).
-    # AMP 3.0.0.6 keeps the task in `get_running_tasks`, and answers 500 to a dismissal while the move is starting or copying.
+    # TODO: Reword Raises once AMP refuses an early dismissal cleanly (U22a).
+    # AMP 3.0.0.6 answers 500 to a dismissal while the move is starting or copying.
     async def delete_shard_migration(self, shard_id: str) -> None:
         """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has none.
 
@@ -1485,8 +1474,8 @@ class ShardModule(Base):
         Endpoint: ``DELETE /api/shards/{shard_id}/migration``
 
         It only clears the record. The copy a move leaves on the old spire stays until
-        :meth:`SpireModule.purge_spire_orphan_directory`, and a failed move's task until
-        :meth:`TaskModule.delete_running_task`.
+        :meth:`SpireModule.purge_spire_orphan_directory`, and a failed move's task stays in
+        :meth:`TaskModule.get_running_tasks` for about 30 minutes, or until :meth:`TaskModule.delete_running_task`.
 
         Parameters
         ----------
@@ -1612,21 +1601,30 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/download", raw_bytes=True)
 
-    async def extract_shard_archive(self, shard_id: str, path: str, destination: str, *, overwrite: bool = False) -> ShardExtractResponse:
+    async def extract_shard_archive(
+        self,
+        shard_id: str,
+        path: str,
+        destination: Optional[str] = None,
+        *,
+        overwrite: bool = False,
+    ) -> ShardExtractResponse:
         """Unpack an archive inside a shard.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/files/extract``
 
+        A file the user may not write, or one AMP writes itself from the settings, is skipped rather than failing the rest.
+
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
         path : :class:`str`
-            The archive's path.
-        destination : :class:`str`
-            The folder to unpack it into.
+            The archive's path, or a folder or file inside it to unpack only that.
+        destination : Union[:class:`str`, None], optional
+            The folder to unpack it into, by default None for the archive's own folder.
         overwrite : :class:`bool`, optional
             If files already there should be replaced or not, by default False.
 
@@ -1634,6 +1632,11 @@ class ShardModule(Base):
         -------
         :class:`ShardExtractResponse`
             How many files came out, and how many were skipped.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If `path` isn't an archive (400).
 
         """
         data: ShardExtractRequest = {"path": path, "destination": destination, "overwrite": overwrite}
@@ -1645,6 +1648,8 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``GET /api/shards/{shard_id}/agent``
+
+        It only means something for a running shard, as a stopped one starts with the newest agent anyway.
 
         Parameters
         ----------
@@ -1694,14 +1699,16 @@ class ShardModule(Base):
 
         Endpoint: ``GET /api/shards/{shard_id}/console/history``
 
+        To page back, pass the first line's `seq` as `before_seq` while `has_more` is True.
+
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
         limit : Union[:class:`int`, None], optional
-            The most lines to get, by default None. The web panel asks for 300; 0 still gives one.
+            The most lines to get, by default None (AMP's 300). 0 still gives one.
         before_seq : Union[:class:`int`, None], optional
-            Only lines before this `seq`, for paging back, by default None.
+            Only lines before this `seq`, for paging back, by default None for the newest.
 
         Returns
         -------
@@ -1746,8 +1753,9 @@ class ShardModule(Base):
         Endpoint: ``GET /api/shards/{shard_id}/disk``
 
         AMP only answers it for a shard with a disk limit, its `diskLimitMb` in :meth:`get_shard_infra`; for any other
-        it is a 204, running or stopped and even after :meth:`SpireModule.rescan_spire_usage`. An exceeded limit
-        doesn't list the shard in :meth:`Panel.get_shards_awaiting_action`.
+        it is a 204, running or stopped and even after :meth:`SpireModule.rescan_spire_usage`. It is the spire's last
+        disk scan, not measured on the call. An exceeded limit doesn't list the shard in
+        :meth:`Panel.get_shards_awaiting_action`.
 
         Parameters
         ----------
@@ -1758,7 +1766,8 @@ class ShardModule(Base):
         -------
         Union[:class:`ShardUsage`, None]
             The shard's entry from :meth:`SpireModule.get_spire_usage`, its `limitLevel` ``"Exceeded"`` once the use
-            passes the limit; `None` with no disk limit (a 204).
+            passes the limit; `None` (a 204) with no disk limit, before a scan has covered the shard or when the scan
+            didn't find its folder. Read `None` as unknown, never as under the limit.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/disk")
@@ -1893,7 +1902,8 @@ class ShardModule(Base):
         Returns
         -------
         list[:class:`ShardFileResponse`]
-            The entries, each `path` relative to the shard's folder.
+            The entries, each `path` relative to the shard's folder. AMP's own ``.amp`` folder and anything the user may
+            not read are left out.
 
         Raises
         ------
@@ -1993,12 +2003,14 @@ class ShardModule(Base):
 
         Endpoint: ``GET /api/shards/{shard_id}/metrics``
 
+        AMP keeps about the last 2 hours in memory.
+
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
         minutes : Union[:class:`int`, None], optional
-            How far back to go, by default None.
+            How far back to go, by default None. 0 or less gives all AMP keeps.
 
         Returns
         -------
@@ -2077,6 +2089,33 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/ports")
 
+    async def get_shard_schedule(self, shard_id: str, schedule_id: str) -> ShardScheduleResponse:
+        """Get one of a shard's schedules.
+
+        |coro|
+
+        Endpoint: ``GET /api/shards/{shard_id}/schedules/{schedule_id}``
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+        schedule_id : :class:`str`
+            The schedule's ID.
+
+        Returns
+        -------
+        :class:`ShardScheduleResponse`
+            The schedule, with how it last ran; the same as its entry in :meth:`get_shard_schedules`.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the shard has no schedule with that ID (404).
+
+        """
+        return await self._request(method="GET", path=f"/api/shards/{shard_id}/schedules/{schedule_id}")
+
     async def get_shard_schedule_catalog(self, shard_id: str) -> ScheduleCatalogResponse:
         """Get the triggers and tasks a shard's schedules can use.
 
@@ -2117,7 +2156,7 @@ class ShardModule(Base):
         schedule_id : :class:`str`
             The schedule's ID.
         limit : Union[:class:`int`, None], optional
-            The most runs to get, by default None. The web panel asks for 50.
+            The most runs to get, by default None (AMP's 50). AMP keeps it between 1 and 200.
 
         Returns
         -------
@@ -2137,6 +2176,9 @@ class ShardModule(Base):
 
         Endpoint: ``GET /api/shards/{shard_id}/schedules``
 
+        A user who can read the schedules but not change them gets a webhook step's `url` and `body` as
+        ``"[withheld]"``, listed in each schedule's `withheld`.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -2145,7 +2187,7 @@ class ShardModule(Base):
         Returns
         -------
         list[:class:`ShardScheduleResponse`]
-            The schedules, with how each last ran.
+            The schedules, oldest first, with how each last ran.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/schedules")
@@ -2307,7 +2349,8 @@ class ShardModule(Base):
         Returns
         -------
         :class:`ShardStatus`
-            The state, its `status` a :class:`ShardState`.
+            The state, its `status` a :class:`ShardState`. A shard that has never reported gets an empty default state,
+            not a 404.
 
         """
         result: dict[str, Any] = await self._request(method="GET", path=f"/api/shards/{shard_id}/state")
@@ -2328,7 +2371,8 @@ class ShardModule(Base):
         Returns
         -------
         list[:class:`ShardPlayer`]
-            The players online, the same objects the shard hub's `players` event carries.
+            The players online, the same objects the shard hub's `players` event carries. Empty while stopped, or when
+            the template doesn't track players.
 
         """
         result: list[dict[str, Any]] = await self._request(method="GET", path=f"/api/shards/{shard_id}/users")
@@ -2358,44 +2402,18 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/config/import", data={"path": path, "content": content})
 
-    # TODO: Remove this warning once AMP answers the route (U12).
-    # AMP 3.0.0.6 answers 404 to POST /kill.
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
-    # The web panel's code sends `{}` and ignores the reply.
-    async def kill_shard(self, shard_id: str) -> Any:
-        """End a shard's game at once, without the clean stop.
-
-        |coro|
-
-        Endpoint: ``POST /api/shards/{shard_id}/kill``
-
-        .. warning::
-            AMP 3.0.0.6 doesn't answer this route yet (404).
-
-        Parameters
-        ----------
-        shard_id : :class:`str`
-            The shard's ID.
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
-        """
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/kill", data={})
-
-    # TODO: Trim the move notes once AMP fixes the gaps in U22b, U22c, U22d and U22e.
-    # AMP 3.0.0.6 answers 409 to another spire's datastore, keeps a failed move's task, starts a moved running shard
-    # though `startAfterMove` is `False`, and fails the move of a stopped shard that was never updated.
+    # TODO: Trim the move notes once AMP fixes the gaps in U22b, U22e and U32.
+    # AMP 3.0.0.6 answers 409 to another spire's datastore, has failed the move of a stopped shard that was never updated,
+    # and fails the move of a running shard it stopped for `stop_if_running`.
     async def migrate_shard_to_spire(
         self,
         shard_id: str,
         target_spire_id: str,
         target_datastore_id: str,
         *,
-        bring_backups: bool,
-        stop_if_running: bool,
+        bring_backups: bool = False,
+        stop_if_running: bool = False,
+        start_after_move: Optional[bool] = None,
     ) -> None:
         """Move a shard to another spire.
 
@@ -2412,9 +2430,13 @@ class ShardModule(Base):
             shard's `workingDirName`. :meth:`delete_shard_migration` doesn't remove it.
 
         The shard's ports become free ones on the target spire, and they stay so if it moves back. A failed move's
-        task stays in :meth:`TaskModule.get_running_tasks` until it is deleted. A shard that was running starts again
-        on the target by itself, once that spire has its container image, although the move's record reads
-        `startAfterMove` `False`.
+        task stays in :meth:`TaskModule.get_running_tasks` for about 30 minutes, unless it is dismissed.
+
+        .. warning::
+            On AMP 3.0.0.6 a move of a running shard with `stop_if_running` has failed after AMP stopped it for the move
+            ("Stop the server before moving it to another spire"), leaving it stopped on its old spire. It was seen with
+            games whose stop ends in a kill, while a ``"minecraft-java"`` shard moved fine that way. Stop the shard with
+            :meth:`stop_shard` first.
 
         Parameters
         ----------
@@ -2424,24 +2446,29 @@ class ShardModule(Base):
             The spire to move it to.
         target_datastore_id : :class:`str`
             A datastore on that spire, see :meth:`SpireModule.get_spire_datastores`.
-        bring_backups : :class:`bool`
-            If its snapshots move too or not.
-        stop_if_running : :class:`bool`
-            If AMP may stop a running shard for the move or not. It works when the game stops cleanly. A game whose
-            stop ends in a kill makes the move fail, and the shard is left stopped on its old spire.
+        bring_backups : :class:`bool`, optional
+            If its snapshots move too or not, by default False. Snapshots left behind stay on the old spire and can't be
+            restored from the new one.
+        stop_if_running : :class:`bool`, optional
+            If AMP may stop a running shard for the move or not, by default False. AMP waits for the stop, its grace
+            period and a little more, before it sends the move.
+        start_after_move : Union[:class:`bool`, None], optional
+            If AMP starts the shard on the target once the move is done or not, by default None for AMP's own default,
+            `stop_if_running`. So a running shard the move stopped starts again, and False keeps it stopped.
 
         Raises
         ------
         AMPAPIRequestError
             If the shard already lives on that spire (400, an English sentence in `message` and no `code`), there's
-            no such spire (400, ``"shards.error.spireNotFound"``), or the shard is running and `stop_if_running` is
-            `False` (409, ``"shards.error.moveNeedsStop"``). A datastore of another spire gets 409
-            ``"spire.error.internal"``.
+            no such spire (400, ``"shards.error.spireNotFound"``), the spire can't take the shard, eg. a Windows spire
+            for a game that needs a Linux container (400, ``"shards.error.needsLinuxSpire"``), the shard is running and
+            `stop_if_running` is False (409, ``"shards.error.moveNeedsStop"``), or it didn't stop in time (409,
+            ``"shards.error.moveStopTimedOut"``). A datastore of another spire gets 409 ``"spire.error.internal"``.
 
         .. note::
-            A shard that was never updated, its `installedAt` `None` (eg. a fresh clone), fails its move in the
+            A shard that was never updated, its `installedAt` `None` (eg. a fresh clone), has failed its move in the
             ``"tasks.migration.stage.preparing"`` stage with "Stop the server before moving it to another spire",
-            though it is stopped. Run :meth:`update_shard` on it first.
+            though it was stopped. Run :meth:`update_shard` on it first.
 
         """
         data: ShardMigrationRequest = {
@@ -2450,6 +2477,10 @@ class ShardModule(Base):
             "bringBackups": bring_backups,
             "stopIfRunning": stop_if_running,
         }
+
+        # Left out, AMP starts the shard when `stopIfRunning` is set
+        if start_after_move is not None:
+            data["startAfterMove"] = start_after_move
 
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/spire", data=data)
 
@@ -2491,6 +2522,11 @@ class ShardModule(Base):
         list[:class:`str`]
             The next five times, ISO 8601; empty for an event trigger.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            If the trigger is bad, eg. a wrong cron expression, an interval under a minute or an unknown event (400).
+
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/schedules/preview-firings", data={"trigger": trigger})
 
@@ -2505,6 +2541,11 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID, deleted with :meth:`delete_shard` first.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If the shard isn't deleted (400).
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/purge")
@@ -2579,6 +2620,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/schedules/{schedule_id}/run``
 
+        The user who sends it becomes the one the schedule's runs act as, this one and those after.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -2629,7 +2672,7 @@ class ShardModule(Base):
         session_id : :class:`str`
             The upload's `sessionId` from :meth:`start_shard_file_upload`.
         chunk : :class:`bytes`
-            The bytes that follow the ones AMP holds; the web panel sends 8 MiB at a time.
+            The bytes that follow the ones AMP holds, at most 16 MB; the web panel sends 8 MiB at a time.
 
         Returns
         -------
@@ -2734,7 +2777,8 @@ class ShardModule(Base):
         ------
         AMPAPIRequestError
             If the change needs access the user doesn't hold (403, ``"files.acl.error.notYoursToGrant"``). A `state`
-            that isn't one of the three gets the same 403, not a 400.
+            that isn't one of the three gets the same 403, not a 400. A change that takes away the user's own read of
+            the path is refused (409).
 
         """
         return await self._request(
@@ -2875,6 +2919,12 @@ class ShardModule(Base):
             The shard's ID.
         ports : dict[:class:`str`, :class:`int`]
             Each port's `ref` to its new number, eg. ``{"RemoteAdminPort": 25576}``; a port left out stays as it is.
+            They take effect when the shard next starts.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            If a port is outside the spire's range or clashes with another shard's on the same spire (400).
 
         """
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/ports", data={**ports})
@@ -2885,6 +2935,9 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/schedules/{schedule_id}/enabled``
+
+        The user who sends it becomes the one its runs act as. Turning it on clears the reason AMP turned it off, its
+        status's `turnedOff`.
 
         Parameters
         ----------
@@ -3003,8 +3056,8 @@ class ShardModule(Base):
         ------
         AMPAPIRequestError
             If the game's licence isn't accepted (409, ``"shards.error.eulaRequired"``, see :meth:`accept_shard_eula`), a
-            setting it needs is empty (409, ``"shards.error.settingRequiredBeforeStart"``) or the shard is suspended
-            (400, ``"shards.error.suspended"``).
+            setting it needs is empty (409, ``"shards.error.settingRequiredBeforeStart"``), the shard is already running
+            (409) or the shard is suspended (400, ``"shards.error.suspended"``).
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/start")
@@ -3068,14 +3121,19 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration", data={"targetDatastoreId": target_datastore_id})
 
     async def stop_shard(self, shard_id: str) -> None:
-        """Stop a shard's game cleanly.
+        """Stop a shard's game cleanly, or kill it once it outlasts its grace period.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/stop``
 
-        Follow it with :meth:`get_shard_state`; AMP answers before the game has stopped. On a shard that is updating,
-        it aborts the update (``"Update aborted"``), which is the only way while :meth:`abort_shard_update` answers 404.
+        Follow it with :meth:`get_shard_state`; AMP answers before the game has stopped. A game still running after its
+        template's `TemplateLifecycle.exitTimeout` is killed (``"shards.msg.stopGraceExpired"``). On a shard that is
+        updating, it aborts the update (``"Update aborted"``); it is the only call that does, as
+        :meth:`TaskModule.cancel_task` doesn't.
+
+        AMP 3.0.0 has no call that kills a game at once. A schedule step of the task ``"power.kill"`` does, run with
+        :meth:`run_shard_schedule` (``"shards.msg.forciblyKilled"``).
 
         Parameters
         ----------
@@ -3091,6 +3149,8 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/suspend``
+
+        A running shard is stopped. A suspended one also refuses a restart, a wake and an update.
 
         Parameters
         ----------
@@ -3108,11 +3168,11 @@ class ShardModule(Base):
     async def take_shard_snapshot(
         self,
         shard_id: str,
-        name: str,
+        name: Optional[str],
         kind: SnapshotKind,
         content: SnapshotContent,
         *,
-        description: str = "",
+        description: Optional[str] = None,
         sticky: bool = False,
     ) -> Snapshot:
         """Take a snapshot (a backup) of a shard.
@@ -3125,16 +3185,16 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        name : :class:`str`
-            The snapshot's name.
+        name : Union[:class:`str`, None]
+            The snapshot's name, or None for AMP's, eg. ``"Manual Backup - admin"``.
         kind : :class:`SnapshotKind`
             A full snapshot, or a partial one that builds on the newest.
         content : :class:`SnapshotContent`
             What it holds, eg. ``SnapshotContent.game_state | SnapshotContent.amp_config``. AMP refuses none.
-        description : :class:`str`, optional
-            A description, by default "". AMP writes one when it's empty.
+        description : Union[:class:`str`, None], optional
+            A description, by default None. AMP writes one when it's None or empty.
         sticky : :class:`bool`, optional
-            If it's marked to keep or not, by default False. It doesn't stop a delete.
+            If it's kept out of AMP's automatic clean-up or not, by default False. It doesn't stop a delete.
 
         Returns
         -------
@@ -3147,7 +3207,7 @@ class ShardModule(Base):
         return Snapshot(data=result)
 
     async def unsuspend_shard(self, shard_id: str) -> ShardResponse:
-        """Let a suspended shard start again.
+        """Let a suspended shard start again. It doesn't start it.
 
         |coro|
 
@@ -3173,7 +3233,7 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/update``
 
-        A running shard is stopped for the update and left stopped.
+        A running shard is stopped for the update and left stopped. :meth:`stop_shard` aborts an update.
 
         Parameters
         ----------
@@ -3183,13 +3243,14 @@ class ShardModule(Base):
         Returns
         -------
         :class:`ShardUpdateResponse`
-            The update's task ID; follow it with :meth:`TaskModule.get_running_tasks`.
+            The update's task ID; follow it with :meth:`TaskModule.get_running_tasks`, or :meth:`TaskModule.get_task` for
+            each step.
 
         Raises
         ------
         AMPAPIRequestError
-            If the download needs a Steam login the shard doesn't have (409, ``"shards.error.steamLoginRequired"``, from
-            the web panel's code), see :meth:`set_shard_credential`.
+            If an update is already running (409), or the download needs a Steam login the shard doesn't have (409,
+            ``"shards.error.steamLoginRequired"``, from the web panel's code), see :meth:`set_shard_credential`.
 
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/update")
@@ -3259,12 +3320,16 @@ class ShardModule(Base):
 
         |coro|
 
-        Endpoints: ``GET /api/shards/{shard_id}/schedules`` for the schedule as it is, then
+        Endpoints: ``GET /api/shards/{shard_id}/schedules/{schedule_id}`` for the schedule as it is, then
         ``PUT /api/shards/{shard_id}/schedules/{schedule_id}``
 
         AMP replaces the whole schedule on a PUT, eg. a `timeout` left out goes back to 30 minutes, so we read the
         schedule first and send the rest of it back as it was. Two calls at once on one schedule can still undo each
-        other.
+        other. The user who changes it becomes the one its runs act as, and AMP clears a refusal it recorded (and,
+        saved enabled, the reason it turned the schedule off).
+
+        A webhook step's `url` or `body` sent back as ``"[withheld]"`` keeps what AMP holds, so a user who can't read
+        them can still save the schedule.
 
         .. note::
             AMP ignores a schedule's `retryPolicy` and `misfirePolicy` here, so they keep what AMP gave them.
@@ -3284,7 +3349,8 @@ class ShardModule(Base):
         description : Union[:class:`str`, None], optional
             A description, by default None.
         run_timeout : Union[:class:`str`, None], optional
-            How long a run may take, as a time span, by default None. AMP calls it `timeout`.
+            How long a run may take, as a time span, by default None. AMP calls it `timeout`, and keeps it between 1
+            minute and 2 hours.
         enabled : Union[:class:`bool`, None], optional
             If it runs on its trigger or not, by default None.
 
@@ -3295,20 +3361,12 @@ class ShardModule(Base):
 
         Raises
         ------
-        ValueError
-            If the shard has no schedule with that ID, before the PUT is sent.
+        AMPAPIRequestError
+            If the shard has no schedule with that ID (404), before the PUT is sent.
 
         """
-        schedules: list[ShardScheduleResponse] = await self.get_shard_schedules(shard_id=shard_id)
-        current: Optional[ScheduleDefinition] = None
-        for entry in schedules:
-            if entry["definition"]["id"] == schedule_id:
-                current = entry["definition"]
-                break
-
-        if current is None:
-            msg = f"The shard has no schedule with the ID {schedule_id}."
-            raise ValueError(msg)
+        schedule: ShardScheduleResponse = await self.get_shard_schedule(shard_id=shard_id, schedule_id=schedule_id)
+        current: ScheduleDefinition = schedule["definition"]
         data: ShardScheduleRequest = {
             "name": name if name is not None else current["name"],
             "description": description if description is not None else current["description"],
@@ -3326,6 +3384,9 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``PUT /api/shards/{shard_id}/snapshots/{snapshot_id}/meta``
+
+        AMP replaces all three, so pass the ones to keep as they are, eg. from :meth:`get_shard_snapshots`; ``""``
+        clears the name or description.
 
         Parameters
         ----------
@@ -3384,7 +3445,7 @@ class ShardModule(Base):
         content : :class:`bytes`
             The file.
         chunk_size : :class:`int`, optional
-            How many bytes to send at a time, by default 8 MiB like the web panel.
+            How many bytes to send at a time, by default 8 MiB like the web panel. AMP takes at most 16 MB in one chunk.
         resume : :class:`bool`, optional
             If we carry on an upload to `path` that AMP already holds part of, by default False.
             Only pass True when it is this same file, eg. after this call failed partway.
@@ -3474,11 +3535,11 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload", files=files, parameters={"path": folder})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.7).
+    # TODO: Check the reply against a live capture; AMP's OpenAPI alone says the 202 has no body (#3-47.7, #3-56.1w).
     # Only the 400 for a shard that isn't asleep is known. Only `minecraft-java` claims sleep, and AMP refused to put
     # it to sleep on the test VMs: it took longer to start than AMP's 25 second limit (#3-54), then U18b.
-    async def wake_shard(self, shard_id: str) -> Any:
-        """Wake a sleeping shard.
+    async def wake_shard(self, shard_id: str) -> None:
+        """Wake a sleeping shard, before a player's connection would.
 
         |coro|
 
@@ -3489,15 +3550,10 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
         Raises
         ------
         AMPAPIRequestError
-            If the shard isn't asleep (400, ``"shards.error.notAsleep"``).
+            If the shard isn't asleep (400, ``"shards.error.notAsleep"``) or is suspended.
 
         """
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/wake")
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/wake")

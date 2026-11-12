@@ -75,6 +75,14 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   circular import), `TaskModule` and `TemplateModule` (#3-50).
 - `Panel` holds the calls that make a shard and hand back a `Shard`: `create_shard` and `clone_shard` (#3-51.1g), so
   every module works on its own with a `Session`. `ShardModule` keeps its own lock per shard for `update_shard_infra`.
+- AMP's own OpenAPI document (#3-56) is served at `/openapi/v1.json` and Scalar at `/scalar/v1` when the panel runs
+  `ASPNETCORE_ENVIRONMENT=Development`; the same document ships beside the binary as `webapi.json`. A type taken from
+  it alone carries a `# TODO:` until a capture confirms it (Kat, 2026-11-12). Its `required` lists only C# `required`
+  members, so it isn't evidence that AMP leaves a field out.
+- There is no kill and no update abort in AMP 3.0.0 (#3-56.4c): neither route is in its OpenAPI, `stop_shard` kills a
+  game that outlasts its template's `exitTimeout`, and a schedule's `power.kill` step kills at once. The Tasks cancel
+  (`cancel_task`) answers 202 for an update and is ignored (upstream U33); a failed task leaves the running list after
+  about 30 minutes.
 - Chunked uploads (#3-51.9, checked live 2026-11-11, upstream U30): `upload-start` hands back an unfinished upload's
   session for any start on the same path (vm3, whatever the size), AMP keeps it 24 hours, and no call cancels it, so
   `upload_shard_file` refuses to carry on an upload AMP holds part of unless `resume=True`. On a remote spire

@@ -67,6 +67,8 @@ class TemplateModule(Base):
 
         Endpoint: ``GET /api/templates``, or ``GET /api/templates/sources/{source_id}``
 
+        A template whose slug is in two sources comes from the one with the higher priority.
+
         .. note::
             Each template is its whole definition, so the full list is large (tens of MB).
 
@@ -84,7 +86,8 @@ class TemplateModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no source with that ID (404, its `message` an English sentence).
+            If there's no source with that ID (404, its `message` an English sentence), or no source has synced yet
+            (409).
 
         """
         path: str = "/api/templates" if source_id is None else f"/api/templates/sources/{source_id}"

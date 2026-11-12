@@ -194,7 +194,7 @@ class ConsoleLine(AMPObject):
     seq: int
     "Rises with each line, with gaps."
     kind: str
-    """eg. ``"line"``, ``"info"``, ``"error"`` or ``"marker"``, which marks a change of `state`."""
+    """eg. ``"line"``, ``"info"``, ``"notice"``, ``"error"`` or ``"marker"``, which marks a change of `state`."""
     state: Optional[Union[ShardState, int]]
     "The status a marker line announces, `None` on other lines."
     success: Optional[bool]
@@ -301,8 +301,9 @@ class NetworkStatus(AMPObject):
 class RunningTask(AMPObject):
     """One long job, such as a shard update: the tasks hub's `TaskUpsert` event, and each of ``GET /api/running-tasks``.
 
-    A finished task leaves the list on its own after about 7 seconds. A failed move's task stays until
-    `TaskModule.delete_running_task`.
+    A finished task leaves the list on its own after about 7 seconds. A failed one stays for about 30 minutes, unless
+    `TaskModule.delete_running_task` dismisses it or a later task of its type on the same target ends.
+    `TaskModule.get_task` reads AMP's own record of a task, with its steps.
 
     .. versionadded:: 6.0.0
     """
@@ -366,20 +367,25 @@ class ScheduleExecution(AMPObject):
     schedule_id: str
     tenant_id: str
     shard_id: str
-    event_payload: Optional[Any]
+    event_payload: Optional[str]
+    """The event that set off an event-triggered run, as a JSON string, eg. ``'{"EventId": ..., "ShardId": ...}'``;
+    `None` for a run on a time trigger or a manual one."""
     canonical_fire_time: str
     timeout: str
     queued_at: str
     started_at: str
-    completed_at: str
+    completed_at: Optional[str]
+    "`None` while it runs."
     status: str
-    """eg. ``"Running"``, ``"Succeeded"`` or ``"Skipped"`` (a disabled schedule that was run)."""
+    """``"Queued"``, ``"Running"``, ``"Succeeded"``, ``"CompletedWithErrors"``, ``"Failed"``, ``"TimedOut"`` or
+    ``"Skipped"`` (a disabled schedule that was run)."""
     attempt_number: int
     worker_node: Optional[str]
     "The spire that ran it."
     error_message: Optional[str]
     step_outcomes: list[ScheduleStepOutcome]
-    duration: str
+    duration: Optional[str]
+    "`None` while it runs."
 
 
 class ShardMetrics(AMPObject):
@@ -397,12 +403,19 @@ class ShardMetrics(AMPObject):
     cpu_percent: float
     memory_mb: int
     memory_limit_mb: int
+    "0 for no limit."
     io_read_kbps: float
     io_write_kbps: float
     active_users: int
+    "-1 when the game doesn't say."
     max_users: int
-    custom: dict[str, Any]
+    "0 when it's unknown or unlimited."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ShardMetricsSample` alone (#3-56.1z).
+    # Every capture has it empty; it needs a template with a `Console.MetricsRegex`.
+    custom: dict[str, float]
+    """The game's own numbers read from its console, by name, eg. ``"TPS"``."""
     listening_ports: list[int]
+    "The shard's ports that are listening now."
 
 
 class ShardMigration(AMPObject):
@@ -444,11 +457,10 @@ class ShardMigration(AMPObject):
     started_at: str
     finished_at: Optional[str]
     started_by_user_id: str
-    # TODO: Drop the second half once the record says what AMP does (U22d).
-    # AMP 3.0.0.6 reads `False` for a running shard that moves fine, then starts it on the target.
     start_after_move: bool
-    """`True` on a move that stopped the shard and failed. A running shard that moves fine reads `False`, yet starts
-    on the target."""
+    """If the move starts the shard on the target once it's done: the `start_after_move` it was started with, or else
+    its `stop_if_running`. AMP clears it to `False` once it has started the shard, so a finished move that did reads
+    `False`."""
     is_active: bool
     "If the move is still running; `True` only while copying."
     blocks_launch: bool
@@ -469,9 +481,9 @@ class ShardPlayer(AMPObject):
     name: str
     session_id: str
     "Empty on `minecraft-java`."
-    endpoint: str
-    """The address and port the player connected from, as the shard sees it. Under rootless Podman that is the
-    container network's address, eg. ``"10.0.2.100:58590"``, not the player's own."""
+    endpoint: Optional[str]
+    """The address and port the player connected from, as the shard sees it, `None` when it's not known. Under rootless
+    Podman that is the container network's address, eg. ``"10.0.2.100:58590"``, not the player's own."""
     joined_at: str
     "When the player joined, an ISO 8601 time."
     id_kind: str
@@ -517,7 +529,10 @@ class ShardStatus(AMPObject):
     "`None` while stopped."
     last_heartbeat: str
     active_task_id: Optional[str]
-    process_id: Optional[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ShardState` alone (#3-56.1o, #3-56.1z).
+    # Every capture has it `None`, even while running.
+    process_id: Optional[int]
+    "The game's process ID, `None` while stopped."
     running_version: Optional[str]
     agent_version: Optional[str]
     last_error_message: Optional[str]
@@ -583,9 +598,10 @@ class SpirePresence(AMPObject):
 
     spire: SpireResponse
     online: bool
-    last_seen: str
-    "The spire's last contact, when it went offline."
-    version: str
+    last_seen: Optional[str]
+    "The spire's last contact, when it went offline; `None` if it never made one."
+    version: Optional[str]
+    "The AMP version the spire last reported, `None` if it never has."
     behind: bool
     "If the spire runs an older AMP than the panel."
     installation_version: str

@@ -187,8 +187,8 @@ class Panel(
 
         Endpoints: ``POST /api/shards/{shard_id}/clone``, then ``GET /api/shards/{shard_id}`` for the copy
 
-        A ``"ShardClone"`` task copies the files, see :meth:`TaskModule.get_running_tasks`. The copy's ports are free
-        ones on its spire, so they can differ from the original's.
+        A ``"ShardClone"`` task copies the files, see :meth:`TaskModule.get_running_tasks`; a copy of the configuration
+        alone is done at once. The copy's ports are free ones on its spire, so they can differ from the original's.
 
         Parameters
         ----------
@@ -210,9 +210,10 @@ class Panel(
         Raises
         ------
         AMPAPIRequestError
-            If `content` is 0 (400, ``"shards.error.cloneNothing"``) or there's no such spire
-            (400, ``"shards.error.spireNotFound"``). If reading the copy back fails, the copy was still made, and a note
-            on the error names its ID for :meth:`get_shard`.
+            If `content` is 0 (400, ``"shards.error.cloneNothing"``), there's no such spire
+            (400, ``"shards.error.spireNotFound"``), or the copy takes the files while the original runs or is busy (409).
+            If reading the copy back fails, the copy was still made, and a note on the error names its ID for
+            :meth:`get_shard`.
 
         """
         data: ShardCloneRequest = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
@@ -230,7 +231,7 @@ class Panel(
         self,
         template_slug: str,
         display_name: str,
-        spire_id: str,
+        spire_id: Optional[str] = None,
         *,
         description: str = "",
         start_now: bool = False,
@@ -252,12 +253,13 @@ class Panel(
             The template, eg. ``"minecraft-java"``; see :meth:`TemplateModule.get_templates`.
         display_name : :class:`str`
             The shard's name. An empty one gets the template's name.
-        spire_id : :class:`str`
-            The spire to put it on.
+        spire_id : Union[:class:`str`, None], optional
+            The spire to put it on, by default None for the panel's own spire.
         description : :class:`str`, optional
             A description, by default "".
         start_now : :class:`bool`, optional
-            If the shard should start once made or not, by default False.
+            If the shard's first update should run at once, and the shard start once it succeeds, or not, by default
+            False. A failed or cancelled update starts nothing.
         start_on_boot : :class:`bool`, optional
             If the shard starts when its spire boots or not, by default False.
         credential_id : Union[:class:`str`, None], optional
@@ -301,7 +303,7 @@ class Panel(
         Returns
         -------
         dict[:class:`str`, list[:class:`ShardEndpointResponse`]]
-            Each shard's ID to its public ports and addresses.
+            Each shard's ID to its public ports and addresses. A shard with no address is left out.
 
         """
         return await self._request(method="GET", path="/api/shards/endpoints")

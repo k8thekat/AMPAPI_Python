@@ -142,15 +142,19 @@ __all__ = (
     "ScheduleCatalogResponse",
     "ScheduleCatalogTask",
     "ScheduleCatalogTrigger",
+    "ScheduleCondition",
     "ScheduleDefinition",
     "ScheduleEmit",
+    "ScheduleRefusal",
     "ScheduleRetryPolicy",
     "ScheduleRunResponse",
     "ScheduleStatus",
     "ScheduleStep",
     "ScheduleStepOutcome",
+    "ScheduleSwitchCase",
     "ScheduleTaskParameter",
     "ScheduleTrigger",
+    "ScheduleWithheld",
     "SecondFactorRequest",
     "SettingAction",
     "SettingActionResponse",
@@ -172,6 +176,7 @@ __all__ = (
     "ShardCreateRequest",
     "ShardCreatedResponse",
     "ShardCredentialResponse",
+    "ShardCustomPort",
     "ShardCustomPortRequest",
     "ShardDetailsRequest",
     "ShardEndpointResponse",
@@ -182,6 +187,7 @@ __all__ = (
     "ShardFileIgnoresResponse",
     "ShardFileResponse",
     "ShardImportResponse",
+    "ShardImportSkippedFile",
     "ShardInfraChanges",
     "ShardInfraResponse",
     "ShardInfraSettings",
@@ -241,6 +247,9 @@ __all__ = (
     "SpireUsageIntervalResponse",
     "SpireUsageResponse",
     "SystemBusResponse",
+    "TaskResponse",
+    "TaskStep",
+    "TaskStepProgress",
     "TemplateConfigFile",
     "TemplateConfigSection",
     "TemplateConsole",
@@ -848,7 +857,9 @@ class FileVerb(TypedDict):
     source: Optional[str]
     "The path that sets it, once `explicit`; `None` otherwise."
     inheritedState: str
-    inheritedSource: Optional[Any]
+    "What the verb falls back to once this path's own rule is cleared, from the folders above."
+    inheritedSource: Optional[str]
+    """The folder whose rule gives `inheritedState`, eg. ``"my_folder"``; `None` when none does."""
 
 
 class FirewallResponse(TypedDict):
@@ -1690,6 +1701,19 @@ class ScheduleCatalogTrigger(TypedDict):
     description: str
 
 
+class ScheduleCondition(TypedDict):
+    """One test an ``"if"`` step makes, from its `conditions`, eg. ``{"value": "{@State}", "operator": "Equals", ...}``."""
+
+    value: str
+    """The left side, which can use the trigger's values, eg. ``"{@State}"``."""
+    operator: str
+    """``"Equals"``, ``"NotEquals"``, ``"Contains"``, ``"NotContains"``, ``"StartsWith"``, ``"EndsWith"``,
+    ``"MatchesRegex"``, ``"GreaterThan"``, ``"GreaterOrEqual"``, ``"LessThan"``, ``"LessOrEqual"``, ``"IsEmpty"`` or
+    ``"IsNotEmpty"``. The text tests ignore case; a number test on a value that isn't a number doesn't match."""
+    comparand: str
+    """The right side, unused by ``"IsEmpty"`` and ``"IsNotEmpty"``."""
+
+
 class ScheduleDefinition(TypedDict):
     """A schedule as it was saved, from `ShardScheduleResponse.definition`."""
 
@@ -1703,7 +1727,7 @@ class ScheduleDefinition(TypedDict):
     steps: list[ScheduleStep]
     retryPolicy: ScheduleRetryPolicy
     misfirePolicy: str
-    """eg. ``"Skip"``."""
+    """``"Skip"`` or ``"FireOnce"``."""
     timeout: str
     """A time span, ``"00:30:00"`` when it was made with `None`."""
     enabled: bool
@@ -1722,13 +1746,28 @@ class ScheduleEmit(TypedDict):
     description: str
 
 
+# TODO: Check against a live capture; typed from AMP's OpenAPI `StepRefusal` alone (#3-56.1z).
+# A refused step needs one AMP won't run, eg. a webhook to a destination its owner may not call.
+class ScheduleRefusal(TypedDict):
+    """A step AMP refused and skipped on a schedule's latest run, from `ScheduleStatus.refusal`.
+
+    The rest of the run carries on, and the refusal is audited once.
+    """
+
+    notice: CodedErrorResponse
+    "Why AMP refused it."
+    stepId: str
+    "The refused step's `id`."
+
+
 class ScheduleRetryPolicy(TypedDict):
     """How a schedule tries again after a failed run, from `ScheduleDefinition.retryPolicy`."""
 
     maxAttempts: int
     initialDelay: str
     """A time span, eg. ``"00:00:05"``."""
-    backoffMultiplier: int
+    backoffMultiplier: float
+    "1.0 waits the same each time, 2.0 doubles the wait each time."
     maxDelay: str
 
 
@@ -1745,29 +1784,51 @@ class ScheduleStatus(TypedDict):
     scheduleId: str
     lastRunAt: str
     lastRunStatus: str
+    """``"Queued"``, ``"Running"``, ``"Succeeded"``, ``"CompletedWithErrors"``, ``"Failed"``, ``"TimedOut"`` or
+    ``"Skipped"``."""
     lastError: Optional[str]
     lastExecutionId: str
     consecutiveFailures: int
-    turnedOff: Optional[Any]
-    refusal: Optional[Any]
+    # TODO: Check these two against a live capture; typed from AMP's OpenAPI `ScheduleStatus` alone (#3-56.1z).
+    # Every capture has them `None`: AMP hasn't turned a schedule off or refused a step on the test VMs.
+    turnedOff: Optional[CodedErrorResponse]
+    """Why AMP turned the schedule off, `None` while it hasn't. It stays off until someone who can manage the shard's
+    schedules turns it back on."""
+    refusal: Optional[ScheduleRefusal]
+    "A step AMP refused and skipped on the latest run, `None` when it refused none."
     refusalAudited: bool
+    "If the refusal has been audited since the schedule was last changed; a refusal on every run is audited once."
 
 
-# One schedule step, for `ShardScheduleRequest.steps`; the functional form, as one of its keys is `await`, eg.
-#    {"type": "task", "id": <a new UUID>, "taskType": "app.consoleSend", "parameters": {"command": "say hi"},
-#     "await": True, "onSuccess": [], "onFailure": [], "failureOverride": None}
-# The items of `onSuccess` and `onFailure` aren't known yet.
+# One schedule step, for `ShardScheduleRequest.steps`; the functional form, as two of its keys are `await` and `else`.
+# Each `type` uses its own keys, and AMP gives every step an `id` when it is left out, eg.
+#    {"type": "task", "taskType": "app.consoleSend", "parameters": {"command": "say hi"}, "await": True}
+#    {"type": "if", "conditions": [{"value": "{@State}", "operator": "Equals", "comparand": "Ready"}],
+#     "match": "All", "then": [<steps>], "else": [{"type": "stop"}]}
 ScheduleStep = TypedDict(
     "ScheduleStep",
     {
+        # "task", "if", "switch" or "stop" (which ends the steps it is among).
         "type": str,
         "id": str,
+        # A "task" step's keys.
         "taskType": str,
         "parameters": dict[str, Any],
         "await": bool,
-        "onSuccess": list[Any],
-        "onFailure": list[Any],
-        "failureOverride": Optional[Any],
+        "onSuccess": list["ScheduleStep"],
+        "onFailure": list["ScheduleStep"],
+        # "Continue" or "Abort", overriding the task's own `defaultFailure`, or `None` for that.
+        "failureOverride": Optional[str],
+        # An "if" step's keys; `match` is "All" or "Any".
+        "conditions": list[ScheduleCondition],
+        "match": str,
+        "then": list["ScheduleStep"],
+        "else": list["ScheduleStep"],
+        # TODO: Check a "switch" step against a live capture; typed from AMP's OpenAPI `StepSwitchStep` alone (#3-56.1k).
+        # It runs the first case whose test matches `value`, else `default`.
+        "value": str,
+        "cases": list["ScheduleSwitchCase"],
+        "default": list["ScheduleStep"],
     },
     total=False,
 )
@@ -1779,12 +1840,25 @@ class ScheduleStepOutcome(TypedDict):
     stepId: str
     "AMP's own ID for the step, not the one it was saved with."
     lane: str
-    """eg. ``"main"``."""
+    """eg. ``"main"``, or ``"bg:<step id>"`` for the steps an un-awaited task runs after it."""
     status: str
+    """``"Succeeded"``, ``"Failed"``, ``"Skipped"`` or ``"NotReached"``."""
     detail: str
     """eg. ``"Sent: say hello"``."""
     startedAt: str
     duration: str
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `SwitchCase` alone (#3-56.1k).
+# No "switch" step has been saved on the test VMs.
+class ScheduleSwitchCase(TypedDict):
+    """One case of a ``"switch"`` step, from its `cases`; any `ScheduleCondition.operator` works, not only equality."""
+
+    operator: str
+    "A `ScheduleCondition.operator`."
+    comparand: str
+    steps: list[ScheduleStep]
+    "What runs when it matches."
 
 
 class ScheduleTaskParameter(TypedDict):
@@ -1816,6 +1890,14 @@ class ScheduleTrigger(TypedDict):
     """eg. ``"UTC"``."""
     eventType: NotRequired[str]
     """A `ScheduleCatalogTrigger.id`, eg. ``"player.joined"``."""
+
+
+class ScheduleWithheld(TypedDict):
+    """A step parameter AMP hides from the caller, from `ShardScheduleResponse.withheld`, eg. a webhook's `url`."""
+
+    stepId: str
+    parameter: str
+    """The parameter's name, eg. ``"url"`` or ``"body"``."""
 
 
 class SecondFactorRequest(LoginRequest):
@@ -1916,7 +1998,10 @@ class SettingSpec(TypedDict):
     maxValue: Optional[float]
     "`None` for no upper limit."
     isHostCap: bool
-    multiplier: Optional[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `SettingSpec` alone (#3-56.1z).
+    # Every capture has it `None`.
+    multiplier: Optional[float]
+    "AMP reads a template's value but doesn't use it yet."
     multipleOf: Optional[float]
     "`None` for any step."
     maxLength: int
@@ -1947,12 +2032,13 @@ class ShardAddress(TypedDict):
     display: str
     """The address as the web panel shows it, eg. ``"192.0.2.1:25565"``."""
     source: str
-    """eg. ``"ExternalProbe"``, ``"LocalAddress"``, ``"Published"`` (a publication through another spire) or
-    ``"Gateway"`` (the shard's gateway)."""
+    """``"Advertised"`` (the shard's infra `advertisedAddress`), ``"Published"`` (a publication through another
+    spire), ``"Gateway"`` (the shard's gateway), ``"SpirePublicHost"``, ``"SpireAddress"``, ``"ExternalProbe"`` or
+    ``"LocalAddress"``."""
     uri: Optional[str]
     notes: list[str]
-    """eg. ``"NeedsForward"``, ``"NoHairpin"``, ``"ViaFront"`` (served by another spire), ``"NotReady"`` (its
-    tunnel still connecting) or ``"Paused"`` (a disabled publication)."""
+    """Each of ``"NeedsForward"``, ``"Cgnat"``, ``"NoHairpin"``, ``"ViaFront"`` (served by another spire),
+    ``"Declared"``, ``"NotReady"`` (its tunnel still connecting) or ``"Paused"`` (a disabled publication)."""
     viaSpireId: Optional[str]
     "The front spire, on a published or gateway address."
     viaSpireName: Optional[str]
@@ -1968,13 +2054,18 @@ class ShardAgentResponse(TypedDict):
 
     runningVersion: Optional[str]
     "`None` while the shard is stopped."
-    availableVersion: str
+    availableVersion: Optional[str]
+    "The agent a restart would start, `None` when AMP can't tell."
     outOfDate: bool
+    "`True` only for a running shard whose agent is older; `False` whenever either version is unknown."
     spireId: str
     spireName: str
-    spireVersion: str
+    spireVersion: Optional[str]
+    "The AMP version the shard's spire reports, `None` when it's unknown."
     installationVersion: str
+    "The newest AMP version any spire reports."
     spireBehind: bool
+    "If the shard's spire runs an older AMP than the rest; it needs updating before a restart can help."
 
 
 class ShardAppConfig(TypedDict):
@@ -2063,7 +2154,8 @@ class ShardCreateRequest(TypedDict):
     templateSlug: str
     displayName: str
     description: str
-    spireId: str
+    spireId: Optional[str]
+    "`None` for the panel's own spire."
     startNow: bool
     startOnBoot: bool
     credentialId: NotRequired[str]
@@ -2073,9 +2165,24 @@ class ShardCredentialResponse(TypedDict):
     """``GET /api/shards/{id}/credential``, the stored secret a shard uses, eg. a Steam login."""
 
     required: bool
-    credential: Optional[Any]
-    "The shape of a set credential isn't known yet."
-    usable: list[Any]
+    "If the game can only be downloaded by an account that owns it, so an update needs a credential."
+    credential: Optional[CredentialResponse]
+    "The credential the shard uses, `None` when it has none. Its `username` is there only for the user who made it."
+    usable: list[CredentialResponse]
+    "The credentials the user may give the shard: their own and the public ones."
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `CustomPortDef` alone (#3-56.1z).
+# Every `ShardPortAssignments` captured has an empty `customPorts`.
+class ShardCustomPort(TypedDict):
+    """A port a user added to a shard, from `ShardPortAssignments.customPorts`; its number is in `assignments`."""
+
+    ref: str
+    name: str
+    protocol: str
+    """``"Both"``, ``"TCP"`` or ``"UDP"``."""
+    createdAt: str
+    createdByUserId: str
 
 
 class ShardCustomPortRequest(TypedDict):
@@ -2083,7 +2190,8 @@ class ShardCustomPortRequest(TypedDict):
 
     name: str
     protocol: PortProtocol
-    port: int
+    port: Optional[int]
+    "`None` lets AMP pick a free port."
 
 
 class ShardDetailsRequest(TypedDict):
@@ -2111,20 +2219,27 @@ class ShardExtractRequest(TypedDict):
     """The body of ``POST /api/shards/{id}/files/extract``."""
 
     path: str
-    destination: str
+    destination: Optional[str]
+    "`None` for the archive's own folder."
     overwrite: bool
 
 
 class ShardExtractResponse(TypedDict):
-    """``POST /api/shards/{id}/files/extract``, how many files came out of an archive."""
+    """``POST /api/shards/{id}/files/extract``, how many files came out of an archive; a copy out of one answers it too."""
 
     extracted: int
     skippedOnDisk: int
-    "Files already there that weren't overwritten."
+    "Files already there that weren't overwritten, or no longer in the archive."
     skippedDenied: int
+    "Files the user may not write there."
     skippedBlocked: int
+    "Files of a type the panel blocks."
     skippedManaged: int
-    examples: list[Any]
+    "Files AMP writes itself from the shard's settings."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ExtractResultDto` alone (#3-56.1z).
+    # Every capture has it empty.
+    examples: list[str]
+    "A few of the skipped paths."
 
 
 class ShardFileACLResponse(TypedDict):
@@ -2174,14 +2289,29 @@ class ShardImportResponse(TypedDict):
     recovered: int
     refused: int
     nameOrigin: int
-    # TODO: Type these once an import that moves a port or leaves something behind is seen live (#3-53).
-    # Every capture has them empty.
-    portsMoved: list[Any]
-    settingsExcluded: list[Any]
-    settingsMissing: list[Any]
-    settingsRefused: list[Any]
-    filesSkipped: list[Any]
+    # TODO: Check these against a live capture; typed from AMP's OpenAPI `ImportChangeRecord` alone (#3-53, #3-56.1z).
+    # Every capture has them empty; they need an import that moves a port or leaves something behind.
+    portsMoved: list[ShardPortOutcome]
+    "The ports that couldn't be kept, with the old and new numbers and why."
+    settingsExcluded: list[str]
+    "Settings AMP kept for itself rather than taking from the files."
+    settingsMissing: list[str]
+    "Settings the files didn't have."
+    settingsRefused: list[str]
+    "Settings AMP refused, as the value names a path outside the shard or a program to run."
+    filesSkipped: list[ShardImportSkippedFile]
     hasAnythingToSay: bool
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `ImportSkippedFile` alone (#3-53, #3-56.1z).
+# Every capture has `filesSkipped` empty.
+class ShardImportSkippedFile(TypedDict):
+    """A file an import left behind, from `ShardImportResponse.filesSkipped`."""
+
+    path: str
+    "Relative to the server's folder, with forward slashes."
+    reason: str
+    "AMP's token for why."
 
 
 class ShardInfraChanges(TypedDict, total=False):
@@ -2198,7 +2328,7 @@ class ShardInfraChanges(TypedDict, total=False):
     memoryLimitMb: int
     memoryReservationMb: int
     memorySwapMb: int
-    cpuLimit: int
+    cpuLimit: float
     maxUsersCap: int
     enableAnalytics: bool
     userSpecificData: bool
@@ -2224,6 +2354,7 @@ class ShardInfraResponse(TypedDict):
     containerPolicy: int
     logicalCores: int
     templateOs: int
+    "The systems the template runs on, as flags: 1 Windows, 2 Linux."
     supportsSleep: bool
     tracksUsers: bool
     reportsAddresses: bool
@@ -2239,20 +2370,27 @@ class ShardInfraSettings(TypedDict):
     tenantId: str
     startOnBoot: bool
     autoRestartOnCrash: bool
+    "Restarts a game that exits on its own, once it has run for at least 5 minutes."
     startupOrder: int
+    "The order shards start in when their spire boots, lowest first and equal ones together; 100 by default."
     sleepMode: bool
     "Takes effect when the shard next starts."
     advertisedAddress: str
     advertisedAddressIncludesPort: bool
     containerMode: str
-    """eg. ``"Podman"`` or ``"Native"``."""
+    """``"Native"``, ``"Docker"``, ``"Podman"`` or ``"WslContainers"``."""
     containerImageOverride: Optional[str]
     memoryLimitMb: int
     "0 for no limit. AMP stores a negative number without complaint."
     memoryReservationMb: int
+    "A soft limit, 0 for none; at most `memoryLimitMb` when both are set."
     memorySwapMb: int
-    cpuLimit: int
+    "Memory and swap together: -1 for no limit, 0 for the container's default (about twice `memoryLimitMb`)."
+    cpuLimit: float
+    "In cores, eg. 1.5; 0 for no limit."
     maxUsersCap: int
+    """The most players AMP lets in, whatever the game's `$MaxUsers` says; 0 for none. A lower cap lowers `$MaxUsers`
+    at once."""
     enableAnalytics: bool
     userSpecificData: bool
     minimumSessionTimeForRetention: int
@@ -2263,6 +2401,7 @@ class ShardInfraSettings(TypedDict):
     geoFilterKickMessage: str
     geoFilterKickCommand: str
     diskLimitMb: int
+    "0 for no limit; AMP checks it at the spire's next disk scan."
     importConfigFilesFromSftp: bool
     extraEnvironment: dict[str, str]
     updatedAt: str
@@ -2272,7 +2411,11 @@ class ShardInfraSettings(TypedDict):
 class ShardInfraUpdateResponse(ShardInfraSettings):
     """``PATCH /api/shards/{id}/infra``, the settings as AMP saved them."""
 
-    clampRefused: Optional[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ShardInfraSaveResult` alone (#3-56.1z).
+    # Every capture has it `None`; it needs a game that refuses to lower its `$MaxUsers`.
+    clampRefused: Optional[CodedErrorResponse]
+    """Why the game's `$MaxUsers` wasn't lowered to a new `maxUsersCap`, eg. ``"shards.error.maxUsersClampRefused"``;
+    `None` when it was, or didn't need to be. The cap is saved either way."""
 
 
 class ShardManagedFileResponse(TypedDict):
@@ -2297,6 +2440,8 @@ class ShardMigrationRequest(TypedDict):
     targetDatastoreId: str
     bringBackups: bool
     stopIfRunning: bool
+    startAfterMove: NotRequired[bool]
+    "Left out, AMP uses `stopIfRunning`."
 
 
 class ShardMigrationTargetResponse(TypedDict):
@@ -2318,7 +2463,7 @@ class ShardPortAssignments(TypedDict):
     tenantId: str
     assignments: dict[str, int]
     """A port's `ref` to its number, eg. ``{"ServerPort": 25565}``."""
-    customPorts: list[Any]
+    customPorts: list[ShardCustomPort]
     privatePortRefs: list[str]
     assignedAt: str
     assignedBySpireId: str
@@ -2395,14 +2540,21 @@ class ShardScheduleRequest(TypedDict):
 
 
 class ShardScheduleResponse(TypedDict):
-    """One of a shard's schedules, from ``GET /api/shards/{id}/schedules``; making or changing one answers with it too."""
+    """One of a shard's schedules, from ``GET /api/shards/{id}/schedules``; making or changing one answers with it too.
+
+    ``GET /api/shards/{id}/schedules/{schedule_id}`` answers one alone.
+    """
 
     definition: ScheduleDefinition
+    """The schedule. A parameter listed in `withheld` reads ``"[withheld]"``, and sending that back keeps what AMP
+    holds."""
     status: Optional[ScheduleStatus]
     "`None` until it has run."
     nextFireTime: Optional[str]
     "`None` while it's off, or for an event trigger."
-    withheld: list[Any]
+    withheld: list[ScheduleWithheld]
+    """The step parameters AMP hides from a user who can't change schedules, eg. a webhook's `url` and `body`; empty
+    for one who can."""
 
 
 class ShardSettingCandidatesResponse(TypedDict):
@@ -2432,7 +2584,8 @@ class ShardSFTPResponse(TypedDict):
     port: int
     userName: str
     folder: str
-    hostKeyFingerprint: str
+    hostKeyFingerprint: Optional[str]
+    "The spire's SSH host key, to check on the first connect; `None` for a shard on another spire than the panel's."
     hasKeys: bool
     "If the logged in user has an SSH key added, see `AccountModule.add_ssh_key`."
 
@@ -2441,10 +2594,11 @@ class ShardSleepStatus(TypedDict):
     """If a shard can sleep, from `ShardStatus.sleep`."""
 
     available: bool
-    reason: str
-    reasonCode: str
-    """eg. ``"agent.msg.sleepUnavailable"``."""
-    reasonParams: dict[str, str]
+    reason: Optional[str]
+    "Why it can't, in English; `None` when it can."
+    reasonCode: Optional[str]
+    """A translation key for `reason`, eg. ``"agent.msg.sleepUnavailable"``."""
+    reasonParams: Optional[dict[str, str]]
     reportedAt: str
 
 
@@ -2455,10 +2609,10 @@ class ShardStateMetrics(TypedDict):
     memoryUsageMB: int
     memoryLimitMB: int
     activeConnections: int
-    networkInKBps: float
-    networkOutKBps: float
-    diskReadKBps: float
-    diskWriteKBps: float
+    networkInKBps: int
+    networkOutKBps: int
+    diskReadKBps: int
+    diskWriteKBps: int
     taskQueueLength: int
 
 
@@ -2489,7 +2643,7 @@ class ShardUsage(TypedDict):
     """One shard's disk use, from `DatastoreUsage.shards`, or `ShardModule.get_shard_disk`. A deleted shard stays until it is purged."""
 
     kind: str
-    """eg. ``"Shard"`` or ``"Orphan"``, a folder no shard owns, eg. the copy a move leaves on the old spire.
+    """``"Shard"``, ``"Backups"`` or ``"Orphan"``, a folder no shard owns, eg. the copy a move leaves on the old spire.
     An orphan's `shardId` is all zeros and its `displayName` empty."""
     shardId: str
     name: str
@@ -2501,11 +2655,14 @@ class ShardUsage(TypedDict):
     limitMb: int
     "The shard's disk limit, its infra `diskLimitMb`; 0 for none, and 0 too until the next measure after one is set."
     limitLevel: str
-    """eg. ``"None"`` or ``"Exceeded"``, against `limitMb` once the disk use is measured."""
+    """``"None"``, ``"Warning"``, ``"Critical"`` or ``"Exceeded"``, against `limitMb` once the disk use is measured."""
 
 
 class SnapshotMetaRequest(TypedDict):
-    """The body of ``PUT /api/shards/{id}/snapshots/{snapshot_id}/meta``."""
+    """The body of ``PUT /api/shards/{id}/snapshots/{snapshot_id}/meta``.
+
+    AMP replaces all three, so a field left out or `None` is cleared.
+    """
 
     name: str
     description: str
@@ -2519,8 +2676,10 @@ class SnapshotRequest(TypedDict):
     "A `SnapshotKind` value."
     content: int
     "A `SnapshotContent` value."
-    name: str
-    description: str
+    name: Optional[str]
+    """`None` lets AMP name it, eg. ``"Manual Backup - admin"``."""
+    description: Optional[str]
+    "`None` or empty lets AMP describe it."
     sticky: bool
 
 
@@ -3006,6 +3165,86 @@ class SystemBusResponse(TypedDict):
     servers: list[Any]
 
 
+class TaskResponse(TypedDict):
+    """``GET /api/tasks/{tenant_id}/{task_id}``, AMP's own record of a task and its steps.
+
+    Not the same shape as a `RunningTask`: it has no `state`, `name`, message or `progressPercent`, but it has each
+    step, and it stays after the task leaves the running list.
+    """
+
+    id: str
+    tenantId: str
+    ownerSpireId: str
+    runId: str
+    type: str
+    """eg. ``"ApplicationUpdate"``."""
+    displayName: str
+    """eg. ``"Update my-shard"``."""
+    targetType: str
+    """eg. ``"Shard"``."""
+    targetId: str
+    principal: Principal
+    visibility: int
+    correlationId: WrappedID
+    causationActionId: WrappedID
+    actionId: WrappedID
+    origin: int
+    rootPrincipal: Principal
+    status: int
+    """AMP's numbers, as seen live: 0 not started yet, 1 running, 2 succeeded, 3 failed, 4 cancel asked for (not
+    finished)."""
+    steps: list[TaskStep]
+    currentStep: Optional[TaskStep]
+    "The step running now, `None` once finished."
+    createdAt: str
+    startedAt: Optional[str]
+    "`None` until it starts."
+    completedAt: Optional[str]
+    "`None` until it finishes."
+    cancellationRequestedAt: Optional[str]
+    "When `TaskModule.cancel_task` was sent, `None` when it wasn't; set even when the task finished anyway."
+    isTerminal: bool
+    "If the task has finished."
+
+
+class TaskStep(TypedDict):
+    """One step of a task, from `TaskResponse.steps`, eg. one of an update's download steps."""
+
+    id: str
+    index: int
+    "From 0."
+    handlerType: str
+    """What the step does, eg. ``"FetchURL"``, ``"Executable"`` or ``"CreateDirectory"``."""
+    displayName: str
+    """eg. ``"Server Download"``."""
+    status: int
+    "AMP's numbers, as seen live: 0 not started, 1 running, 2 succeeded, 3 failed, 4 skipped (after a failed step)."
+    # TODO: Type `spanId`, `input`, `output`, `children` and `stackTrace` once a capture shows them filled in (#3-56.4c).
+    # Every capture has them `None`, and `children` empty; AMP's OpenAPI gives this reply no shape.
+    spanId: Optional[Any]
+    input: Optional[Any]
+    output: Optional[Any]
+    progress: Optional[TaskStepProgress]
+    "`None` until the step reports any."
+    children: list[Any]
+    startedAt: Optional[str]
+    completedAt: Optional[str]
+    errorMessage: Optional[str]
+    """A translation key on a failed step, eg. ``"tasks.error.stepFailed"``."""
+    stackTrace: Optional[Any]
+    duration: Optional[str]
+    """A time span, eg. ``"00:00:00.8139796"``; `None` while it runs and on a step that never started."""
+
+
+class TaskStepProgress(TypedDict):
+    """How far a step has got, from `TaskStep.progress`."""
+
+    percent: int
+    "How far the whole task has got."
+    message: str
+    """eg. ``"Server Files Copy"`` or ``"Update complete"``."""
+
+
 class TemplateConfigFile(TypedDict):
     """A config file AMP writes the settings into, from `TemplateResponse.configFileMappings`."""
 
@@ -3104,6 +3343,7 @@ class TemplateLifecycle(TypedDict):
     exitMethodWindows: int
     startupAuthenticationRequired: bool
     exitTimeout: int
+    "How many seconds a stop waits for the game to exit before killing it."
     exitString: str
     """The console command that stops the game, eg. ``"stop"``."""
     exitFile: str
@@ -3169,8 +3409,12 @@ class TemplateMetadata(TypedDict):
     containerPolicy: int
     containerPolicyReason: str
     extraSetupStepsURI: str
-    prerequisites: list[Any]
-    extraContainerPackages: list[Any]
+    # TODO: Check these two against a live capture; typed from AMP's OpenAPI `SpecMetadata` alone (#3-56.1z).
+    # Every template captured has them empty.
+    prerequisites: list[str]
+    "Packages the host must have."
+    extraContainerPackages: list[str]
+    "Packages AMP adds to the container image."
     configReleaseState: int
     noCommercialUsage: bool
     eulaLocation: str
@@ -3265,25 +3509,30 @@ class TemplateSyncResponse(TypedDict):
 
 
 class TemplateUpdateStage(TypedDict):
-    """One step of an update or pre-start, from `TemplateResponse.updateStages`."""
+    """One step of an update or pre-start, from `TemplateResponse.updateStages`.
+
+    The text fields a template leaves out are usually empty, but can be `None`, eg. on ``"duneawakening"``'s
+    ``"Run schema migrations"`` step.
+    """
 
     updateSource: int
     "What the step does, eg. 3 downloads a Steam app; the numbers aren't named anywhere AMP shows."
     updateStageName: str
-    updateStageDescription: str
+    updateStageDescription: Optional[str]
     updateSourcePlatform: int
     updateSourceArch: int
     updateSourceData: str
     updateSourceArgs: str
-    updateSourceVersion: str
-    updateSourceExtra: str
-    updateSourceTarget: str
+    updateSourceVersion: Optional[str]
+    updateSourceExtra: Optional[str]
+    updateSourceTarget: Optional[str]
     unzipUpdateSource: bool
     overwriteExistingFiles: bool
     forceDownloadPlatform: NotRequired[int]
-    "Only on a few update steps."
-    updateSourceConditionSetting: str
-    updateSourceConditionValue: str
+    """Only on a few update steps: the system whose files a SteamCMD step downloads, eg. 1 (Windows) for a server run
+    through Wine or Proton. Left out, it's the host's own."""
+    updateSourceConditionSetting: Optional[str]
+    updateSourceConditionValue: Optional[str]
     deleteAfterExtract: bool
     runInBackground: bool
     skipOnFailure: bool
