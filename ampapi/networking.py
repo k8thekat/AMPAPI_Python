@@ -23,7 +23,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Optional
 
-from ._enums import GatewayState, PublicationState
 from .base import Base
 
 if TYPE_CHECKING:
@@ -96,8 +95,7 @@ class NetworkModule(Base):
 
         """
         data: GatewayRequest = {"shardId": shard_id, "frontSpireId": front_spire_id}
-        result: GatewayResponse = await self._request(method="POST", path="/api/networking/gateways", data=data)
-        return self._gateway_enums(gateway=result)
+        return await self._request(method="POST", path="/api/networking/gateways", data=data)
 
     # TODO: Drop the note once AMP stops reading `TunnelFault` while a first tunnel is set up (U26a).
     # AMP 3.0.0.6 reads it for about a minute, then the publication turns active by itself.
@@ -148,8 +146,7 @@ class NetworkModule(Base):
             "portRef": port_reference,
         }
 
-        result: PublicationResponse = await self._request(method="POST", path="/api/networking/publications", data=data)
-        return self._publication_enums(publication=result)
+        return await self._request(method="POST", path="/api/networking/publications", data=data)
 
     async def delete_gateway(self, gateway_id: str) -> None:
         """Remove a gateway.
@@ -223,11 +220,6 @@ class NetworkModule(Base):
         """
         return await self._request(method="GET", path="/api/networking/gateway-eligibility")
 
-    def _gateway_enums(self, gateway: GatewayResponse) -> GatewayResponse:
-        if gateway["status"] is not None:
-            gateway["status"]["state"] = self._to_enum(GatewayState, gateway["status"]["state"])
-        return gateway
-
     async def get_gateways(self) -> list[GatewayResponse]:
         """Get the gateways, each a shard's route through a front spire, see :meth:`create_gateway`.
 
@@ -238,16 +230,10 @@ class NetworkModule(Base):
         Returns
         -------
         list[:class:`GatewayResponse`]
-            The gateways, each `status.state` a :class:`GatewayState`.
+            The gateways, each `status.state` a :class:`GatewayState` value as AMP sends it.
 
         """
-        result: list[GatewayResponse] = await self._request(method="GET", path="/api/networking/gateways")
-        return [self._gateway_enums(gateway=gateway) for gateway in result]
-
-    def _publication_enums(self, publication: PublicationResponse) -> PublicationResponse:
-        if publication["status"] is not None:
-            publication["status"]["state"] = self._to_enum(PublicationState, publication["status"]["state"])
-        return publication
+        return await self._request(method="GET", path="/api/networking/gateways")
 
     async def get_publications(self) -> list[PublicationResponse]:
         """Get the public port forwards from front spires to shards.
@@ -259,11 +245,10 @@ class NetworkModule(Base):
         Returns
         -------
         list[:class:`PublicationResponse`]
-            The publications, each `status.state` a :class:`PublicationState`.
+            The publications, each `status.state` a :class:`PublicationState` value as AMP sends it.
 
         """
-        result: list[PublicationResponse] = await self._request(method="GET", path="/api/networking/publications")
-        return [self._publication_enums(publication=publication) for publication in result]
+        return await self._request(method="GET", path="/api/networking/publications")
 
     async def get_tunnel_fronts(self) -> list[TunnelFrontResponse]:
         """Get the spires that can front a tunnel, for a publication or a gateway through them.
@@ -368,9 +353,8 @@ class NetworkModule(Base):
         """
         data: PublicationUpdateRequest = {"enabled": enabled, "publicPort": public_port}
         # We only send what changes, as the web panel does.
-        result: PublicationResponse = await self._request(
+        return await self._request(
             method="PUT",
             path=f"/api/networking/publications/{publication_id}",
             data=self._without_none(mapping=data),
         )
-        return self._publication_enums(publication=result)

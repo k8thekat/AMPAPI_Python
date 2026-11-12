@@ -30,6 +30,7 @@ __all__ = (
     "AMPAPIPasskeyRequiredError",
     "AMPAPIPasswordChangeRequiredError",
     "AMPAPIRequestError",
+    "AMPAPIUploadError",
 )
 
 LOGGER: logging.Logger = logging.getLogger("AMPAPI_Python.errors")
@@ -217,3 +218,38 @@ class AMPAPIRequestError(AMPAPIError):
         message = "We encountered an error response from the AMP API. Status: %s | Request: %s %s | Code: %s | Message: %s | Errors: %s"
         super().__init__(message % (status, method, path, self.code, self.message, self.errors))
         LOGGER.error(message, status, method, path, self.code, self.message, self.errors)
+
+
+class AMPAPIUploadError(AMPAPIError):
+    """Raised when a chunked upload can't go on, see :meth:`~ampapi.ShardModule.upload_shard_file`.
+
+    Either AMP already holds part of an earlier upload to the path, or it stopped taking the chunks.
+
+    .. versionadded:: 6.0.0
+
+    Attributes
+    ----------
+    path : :class:`str`
+        The file's path in the shard.
+    session_id : :class:`str`
+        The upload's `sessionId`.
+    received : :class:`int`
+        How many bytes AMP holds for the upload.
+    size : :class:`int`
+        The file's size in bytes.
+
+    """
+
+    path: str
+    session_id: str
+    received: int
+    size: int
+
+    def __init__(self, path: str, session_id: str, received: int, size: int, reason: str) -> None:  # noqa: D107
+        self.path = path
+        self.session_id = session_id
+        self.received = received
+        self.size = size
+        message = "%s | Path: %s | Session ID: %s | Received: %s of %s bytes"
+        super().__init__(message % (reason, path, session_id, received, size))
+        LOGGER.error(message, reason, path, session_id, received, size)

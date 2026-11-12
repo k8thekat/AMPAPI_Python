@@ -75,6 +75,19 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   circular import), `TaskModule` and `TemplateModule` (#3-50).
 - `Panel` holds the calls that make a shard and hand back a `Shard`: `create_shard` and `clone_shard` (#3-51.1g), so
   every module works on its own with a `Session`. `ShardModule` keeps its own lock per shard for `update_shard_infra`.
+- Chunked uploads (#3-51.9, checked live 2026-11-11, upstream U30): `upload-start` hands back an unfinished upload's
+  session for any start on the same path (vm3, whatever the size), AMP keeps it 24 hours, and no call cancels it, so
+  `upload_shard_file` refuses to carry on an upload AMP holds part of unless `resume=True`. On a remote spire
+  (`via: "agent"`) the file at the path is resized as the upload starts, and a failed upload leaves it padded with
+  zeros; on the panel's own spire it is untouched until the commit. A move onto an existing file is refused.
+- A failed call that leaves something behind says so: `AMPAPIUploadError` carries the upload's session and bytes
+  held, and an `AMPAPIRequestError` mid-upload or in `clone_shard`'s read-back gains a note (`add_note`) naming the
+  session or the copy's ID.
+- A TypedDict holds only what AMP sends (Kat, 2026-11-11, #3-51.9g): no enums in `_types.py`, which imports nothing
+  from `_enums`, so `typing.get_type_hints` resolves every type (#3-51.4m). A closed set is the plain `str` / `int`
+  with a field doc naming its enum, eg. a gateway's `status.state` is ``"Active"``, and `GatewayState(state)` gives the
+  member (a `StrEnum` compares equal to its string). Request bodies take the enum's value; the method parameters keep
+  the enum types. Converting into enums is the `AMPObject`s' job, from their hints.
 - A `bool` in a query is sent as `"true"` / `"false"` by `Session._send`, as yarl (aiohttp's query builder) refuses a
   `bool` (#3-51.4j). Calls send their flags every time, eg. `demo=false`, where they used to leave a `False` one out.
 - `Session` holds `accept_invite` and `preview_invite`, as the invitee has no account yet (#3-50.7). `accept_invite`

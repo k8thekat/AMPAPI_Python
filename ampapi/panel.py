@@ -31,6 +31,7 @@ from .analytics import AnalyticsModule
 from .audit import AuditModule
 from .credentials import CredentialModule
 from .enrollments import EnrollmentModule
+from .errors import AMPAPIRequestError
 from .https import HTTPSModule
 
 # from .hubs import PanelHub
@@ -210,13 +211,18 @@ class Panel(
         ------
         AMPAPIRequestError
             If `content` is 0 (400, ``"shards.error.cloneNothing"``) or there's no such spire
-            (400, ``"shards.error.spireNotFound"``).
+            (400, ``"shards.error.spireNotFound"``). If reading the copy back fails, the copy was still made, and a note
+            on the error names its ID for :meth:`get_shard`.
 
         """
         data: ShardCloneRequest = {"newName": new_name, "content": content, "targetSpireId": target_spire_id}
         # AMP only sends back the copy's ID, so we get the copy itself after.
         result: ShardCloneResponse = await self._request(method="POST", path=f"/api/shards/{shard_id}/clone", data=data)
-        return await self.get_shard(shard_id=result["shardId"])
+        try:
+            return await self.get_shard(shard_id=result["shardId"])
+        except AMPAPIRequestError as error:
+            error.add_note(f"The copy was made, but reading it back failed. Read it with get_shard. | Copy ID: {result['shardId']}")
+            raise
 
     # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
     # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.

@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Optional, Self
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
 from .base import Base
+from .errors import AMPAPIRequestError, AMPAPIUploadError
 
 # from .hubs import PanelHub, ShardHub
 from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardPlayer, ShardSnapshots, ShardStatus, Snapshot
@@ -1101,13 +1102,13 @@ class Shard:
             sticky=sticky,
         )
 
-    async def upload_file(self, path: str, content: bytes, *, chunk_size: int = UPLOAD_CHUNK_SIZE) -> None:
+    async def upload_file(self, path: str, content: bytes, *, chunk_size: int = UPLOAD_CHUNK_SIZE, resume: bool = False) -> None:
         """Upload one file to this shard in chunks, see :meth:`ShardModule.upload_shard_file`.
 
         |coro|
 
         """
-        await self._module.upload_shard_file(shard_id=self.id, path=path, content=content, chunk_size=chunk_size)
+        await self._module.upload_shard_file(shard_id=self.id, path=path, content=content, chunk_size=chunk_size, resume=resume)
 
     async def upload_files(self, folder: str, files: Mapping[str, bytes]) -> None:
         """Upload files to a folder in this shard in one request, see :meth:`ShardModule.upload_shard_files`.
@@ -3018,6 +3019,9 @@ class ShardModule(Base):
         Send the bytes with :meth:`send_shard_file_chunk`, then :meth:`commit_shard_file_upload`;
         :meth:`upload_shard_file` does all three.
 
+        A start for a path that has an unfinished upload hands back that upload's session and `received`, whatever
+        `size` says.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -3345,14 +3349,31 @@ class ShardModule(Base):
         data: SnapshotMetaRequest = {"name": name, "description": description, "sticky": sticky}
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/meta", data=data)
 
-    async def upload_shard_file(self, shard_id: str, path: str, content: bytes, *, chunk_size: int = UPLOAD_CHUNK_SIZE) -> None:
+    # TODO: Drop the warning once AMP keeps the old file until the commit (U30a).
+    # AMP 3.0.0.6 on a remote spire resizes the file at `upload-start`, so a failed upload leaves it padded with zeros.
+    async def upload_shard_file(
+        self,
+        shard_id: str,
+        path: str,
+        content: bytes,
+        *,
+        chunk_size: int = UPLOAD_CHUNK_SIZE,
+        resume: bool = False,
+    ) -> None:
         """Upload one file to a shard in chunks, as the web panel does for a big file.
 
         |coro|
 
         Endpoints: ``POST /api/shards/{shard_id}/files/upload-start``, ``.../upload-chunk`` and ``.../upload-commit``
 
-        AMP may already hold part of the file from an earlier try, so we carry on from where it is.
+        A start for a path with an unfinished upload hands back that upload, whatever size the start asks for, and AMP
+        keeps it for 24 hours. No call cancels it. Finishing it with another file's bytes splices the two, so we refuse
+        to carry on an upload AMP already holds part of unless `resume` is True.
+
+        .. warning::
+            On a shard on a remote spire (`via` ``"agent"``), AMP resizes the file at `path` as the upload starts, so a
+            failed upload leaves the file it was replacing padded with zero bytes. Upload under a new name when the old
+            file matters.
 
         Parameters
         ----------
@@ -3364,28 +3385,73 @@ class ShardModule(Base):
             The file.
         chunk_size : :class:`int`, optional
             How many bytes to send at a time, by default 8 MiB like the web panel.
+        resume : :class:`bool`, optional
+            If we carry on an upload to `path` that AMP already holds part of, by default False.
+            Only pass True when it is this same file, eg. after this call failed partway.
 
         Raises
         ------
-        RuntimeError
-            If AMP stops taking the chunks, rather than sending the same one forever.
+        ValueError
+            If `chunk_size` is less than 1. Nothing is sent.
+        AMPAPIUploadError
+            If AMP already holds part of an upload to `path` and `resume` is False, or holds more bytes than `content`
+            has whatever `resume` says. No chunk is sent then. It is also raised when AMP stops taking the chunks,
+            rather than sending the same one forever.
+        AMPAPIRequestError
+            If AMP refuses a chunk or the commit. A note on it names the upload's session ID and the bytes AMP holds,
+            and `resume=True` carries on from there.
 
         """
+        if chunk_size < 1:
+            msg = f"The chunk size has to be at least 1 byte, not {chunk_size}. | Path: {path}"
+            raise ValueError(msg)
+
         upload: ShardUploadSessionResponse = await self.start_shard_file_upload(shard_id=shard_id, path=path, size=len(content))
+        session_id: str = upload["sessionId"]
         received: int = upload["received"]
-
-        while received < len(content):
-            reply: ShardUploadChunkResponse = await self.send_shard_file_chunk(
-                shard_id=shard_id,
-                session_id=upload["sessionId"],
-                chunk=content[received : received + chunk_size],
+        # AMP hands back any unfinished upload to this path, so the bytes it holds may be another file's
+        if received > len(content):
+            raise AMPAPIUploadError(
+                path=path,
+                session_id=session_id,
+                received=received,
+                size=len(content),
+                reason="AMP holds more of an earlier upload to this path than the file has.",
             )
-            if reply["received"] <= received:
-                msg = f"AMP stopped taking the upload at {received} of {len(content)} bytes. | Path: {path}"
-                raise RuntimeError(msg)
-            received = reply["received"]
+        if received > 0 and resume is False:
+            raise AMPAPIUploadError(
+                path=path,
+                session_id=session_id,
+                received=received,
+                size=len(content),
+                reason="AMP already holds part of an earlier upload to this path. Pass resume=True only when it is this same file.",
+            )
 
-        await self.commit_shard_file_upload(shard_id=shard_id, session_id=upload["sessionId"])
+        try:
+            while received < len(content):
+                reply: ShardUploadChunkResponse = await self.send_shard_file_chunk(
+                    shard_id=shard_id,
+                    session_id=session_id,
+                    chunk=content[received : received + chunk_size],
+                )
+                if reply["received"] <= received:
+                    raise AMPAPIUploadError(
+                        path=path,
+                        session_id=session_id,
+                        received=received,
+                        size=len(content),
+                        reason="AMP stopped taking the upload.",
+                    )
+                received = reply["received"]
+
+            await self.commit_shard_file_upload(shard_id=shard_id, session_id=session_id)
+        except AMPAPIRequestError as error:
+            note: str = (
+                f"AMP holds {received} of {len(content)} bytes of the upload to {path}. Pass resume=True to carry on from there."
+                f" | Session ID: {session_id}"
+            )
+            error.add_note(note)
+            raise
 
     async def upload_shard_files(self, shard_id: str, folder: str, files: Mapping[str, bytes]) -> None:
         """Upload small files to a folder in a shard, all in one request.

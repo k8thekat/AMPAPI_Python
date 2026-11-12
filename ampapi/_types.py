@@ -21,10 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union
-
-if TYPE_CHECKING:
-    from ._enums import CloneContent, GatewayState, PublicationState, SnapshotContent, SnapshotKind
+from typing import Any, Literal, NotRequired, Optional, TypedDict, Union
 
 __all__ = (
     "AnalyticsAddressSearchResponse",
@@ -950,8 +947,8 @@ class GatewayStatus(TypedDict):
 
     bindingId: str
     "The gateway's `id`."
-    state: Union[GatewayState, str]
-    "A name the library doesn't know stays a plain string."
+    state: str
+    """As AMP sends it, a `GatewayState` value, eg. ``"Active"``; `GatewayState(state)` gives the member."""
     address: str
     """The shard's address on the tunnel, eg. ``"10.83.0.10"``, set from the start."""
     error: Optional[str]
@@ -1578,8 +1575,8 @@ class PublicationStatus(TypedDict):
     """A port forward's state, from `PublicationResponse.status`."""
 
     publicationId: str
-    state: Union[PublicationState, str]
-    "A name the library doesn't know stays a plain string."
+    state: str
+    """As AMP sends it, a `PublicationState` value, eg. ``"Active"``; `PublicationState(state)` gives the member."""
     targetSpireId: str
     "The shard's spire; all zeros while the forward is disabled."
     resolvedPort: int
@@ -2019,7 +2016,8 @@ class ShardCloneRequest(TypedDict):
     """The body of ``POST /api/shards/{id}/clone``."""
 
     newName: str
-    content: CloneContent
+    content: int
+    "A `CloneContent` value."
     targetSpireId: Optional[str]
 
 
@@ -2517,8 +2515,10 @@ class SnapshotMetaRequest(TypedDict):
 class SnapshotRequest(TypedDict):
     """The body of ``POST /api/shards/{id}/snapshots``."""
 
-    kind: SnapshotKind
-    content: SnapshotContent
+    kind: int
+    "A `SnapshotKind` value."
+    content: int
+    "A `SnapshotContent` value."
     name: str
     description: str
     sticky: bool
