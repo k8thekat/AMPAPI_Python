@@ -92,8 +92,8 @@ class LifecycleKind(IntEnum):
 class MigrationStatus(IntEnum):
     """A shard move's `status`, named as the web panel's `ShardMigrationStatus` names it. AMP sends the number.
 
-    A move reads 0 while copying, 2 once it is done, and 3 for a failed one or one
-    :meth:`ShardModule.cancel_shard_migration` stopped (its `error` reads ``"Cancelled."``). A move can be done within
+    A move reads 0 while copying, 2 once it is done, and 3 once it has failed or :meth:`ShardModule.cancel_shard_migration`
+    stopped it (a cancelled move's `error` reads ``"Cancelled."``). A move can be done within
     one round trip. The record stays until :meth:`ShardModule.delete_shard_migration`. The rest are from the web
     panel's code.
 

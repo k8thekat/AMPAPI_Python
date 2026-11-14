@@ -77,9 +77,9 @@ class AuditModule(Base):
         min_severity : Union[:class:`AuditSeverity`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
         target_type : Union[:class:`str`, None], optional
-            Only events about this kind of thing, eg. ``"Shard"``, by default None.
+            Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional
-            Only events about the thing with this ID, by default None.
+            Only events about the target with this ID, by default None.
         search : Union[:class:`str`, None], optional
             Text to look for, by default None.
         from_time : Union[:class:`str`, None], optional
@@ -170,9 +170,9 @@ class AuditModule(Base):
         min_severity : Union[:class:`AuditSeverity`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
         target_type : Union[:class:`str`, None], optional
-            Only events about this kind of thing, eg. ``"Shard"``, by default None.
+            Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional
-            Only events about the thing with this ID, by default None.
+            Only events about the target with this ID, by default None.
         search : Union[:class:`str`, None], optional
             Text to look for, by default None.
         from_time : Union[:class:`str`, None], optional

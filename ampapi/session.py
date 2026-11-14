@@ -568,7 +568,7 @@ class Session:
             # A login failed while we waited, so we raise its error instead of sending the same password again
             if login_attempt != self._login_attempts and self._token is None and self._login_error is not None:
                 raise self._login_error
-            # A token AMP refused, or one that has run out, can't be renewed, so we log in again
+            # A token AMP refused, or a token that has run out, can't be renewed, so we log in again
             if self._token is not None and (used_token == self._token or self.logged_in is False):
                 self._forget_token()
             if self._token is not None and self._renew_after is not None and datetime.now(tz=UTC) >= self._renew_after:

@@ -60,7 +60,7 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - Each API area is a `...Module` mixin on `Base` (`AccountModule`, `PlatformModule`, then shards, spires, templates
   and the rest), composed into `Panel`, the way 5.x composes `Controller`.
 - A module method carries the resource noun and takes IDs (`panel.start_shard(shard_id)`); a `Shard` or `Spire`
-  object's method drops both (`shard.start()`) and calls the module method, so no name means two things.
+  object's method drops both (`shard.start()`) and calls the module method, so no method name has two meanings.
 - Calls return TypedDicts, except where a reply has the same shape as a hub event: then it's the event's object
   (`objects.py`, an `AMPObject` with snake_case attributes and the raw dict on `.data`), eg. `get_shard_state` gives
   a `ShardStatus` (Kat, 2026-11-07). `Shard` and `Spire` are classes too. There is no `format_data`.
@@ -129,8 +129,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   snapshot from creation, kept when the panel hands the object out again (`get_infra` / `get_settings` / `get_ports`
   give current values). Live on vm4, `infra_settings` equals `get_infra()["settings"]` straight after creation.
 - `Shard` and `Spire` are equal and hash the same by ID, and sort by `display_name` (#3-50.10, Kat 2026-11-08). The
-  registry stays a dict, as a set can't hand back the object it holds without a scan; discord.py pairs the two the
-  same way. The check is `isinstance(other, Shard)`, not `self.__class__`, so the panel's `shard_class` subclass and a
+  registry stays a dict, as a set can't hand back the object it holds without a scan. discord.py pairs a dict
+  registry with equal-by-ID objects the same way. The check is `isinstance(other, Shard)`, not `self.__class__`, so the panel's `shard_class` subclass and a
   plain `Shard` agree both ways.
 - A reply never seen live gets a `# TODO:` above its method naming the index entry, and the method returns `Any`; a
   list only ever seen empty is `list[Any]` (Kat, 2026-11-07: a TODO, not a docstring warning). A `.. warning::` is
@@ -248,8 +248,8 @@ body, enum and reply, which settled several of these before any call.
   `connected/{shard_id}?user=<id>`; the library had all three keyed by the player's key until #3-54.
 - Every analytics range search (CIDR, prefix, wildcard) answers 500 on AMP 3.0.0.6 (a NATS consumer error in its
   address service); a whole address works. Erasing a player left them in the sessions summary for at least 11 minutes.
-- A platform warning is raised by things such as a spire whose IPv6 goes nowhere (`ipv6BlackHoled`), not by an
-  offline spire. One that needs action can't be acknowledged (400 `platform.error.warningNotDismissable`).
+- A platform warning is raised by conditions such as a spire whose IPv6 goes nowhere (`ipv6BlackHoled`), not by an
+  offline spire. A warning that needs action can't be acknowledged (400 `platform.error.warningNotDismissable`).
 - A shard waiting on a user (status 110): a `hytale` shard's update waits for a device sign-in, and the sign-in code
   shows in the running task's `message`. `stop` aborts the update; `update/abort` and `kill` still answer 404 (U12).
 - `ShardPortOutcome.reason` is always 0 from `POST /api/shards`, which silently drops unknown keys such as
@@ -325,7 +325,7 @@ Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py
   `passkeys.error.cloneDetected` **and AMP deletes that passkey**. A forged signature with a low counter is only
   `assertionRejected` and the passkey stays, so AMP checks the signature first and nobody without the key can get a
   passkey deleted. The same answer sent twice works once (then `passkeys.error.ceremonyExpired`, a misleading "took
-  too long"), and one flow's answer sent to another is refused.
+  too long"), and an answer sent to a different sign-in flow from the flow that asked for it is refused.
 - Failed sign-ins are throttled per client IP (it honours the trusted proxy's forwarded address): 429
   `auth.login.errorThrottled`, with no `Retry-After` header. It also blocks `passkey/begin`.
 

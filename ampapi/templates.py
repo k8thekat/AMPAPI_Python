@@ -61,7 +61,7 @@ class TemplateModule(Base):
         return await self._request(method="GET", path=f"/api/templates/{template_slug}")
 
     async def get_templates(self, *, source_id: Optional[str] = None) -> list[TemplateResponse]:
-        """Get every template, or one source's.
+        """Get every template, or the templates from one source.
 
         |coro|
 

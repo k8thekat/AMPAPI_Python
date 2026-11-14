@@ -3453,8 +3453,9 @@ class ShardModule(Base):
         Endpoints: ``POST /api/shards/{shard_id}/files/upload-start``, ``.../upload-chunk`` and ``.../upload-commit``
 
         A start for a path with an unfinished upload hands back that upload, whatever size the start asks for, and AMP
-        keeps it for 24 hours. No call cancels it. Finishing it with another file's bytes splices the two, so we refuse
-        to carry on an upload AMP already holds part of unless `resume` is True.
+        keeps the upload for 24 hours. No call cancels it. Finishing the upload with another file's bytes splices the
+        held upload and the new file into one, so we refuse to carry on an upload AMP already holds part of unless
+        `resume` is True.
 
         .. warning::
             On a shard on a remote spire (`via` ``"agent"``), AMP resizes the file at `path` as the upload starts, so a

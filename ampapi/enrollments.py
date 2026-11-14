@@ -145,7 +145,7 @@ class EnrollmentModule(Base):
         if expires_in_hours is not None:
             data["expiresInHours"] = expires_in_hours
 
-        # Only an entry node takes the two; AMP ignores the host on a standard enrolment
+        # `entryNode` and `publicHost` matter only for an entry node. AMP ignores the host on a standard enrolment.
         if entry_node is True:
             data["entryNode"] = True
 

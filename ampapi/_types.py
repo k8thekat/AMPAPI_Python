@@ -880,7 +880,7 @@ class FilePrincipal(TypedDict):
 
 
 class FileVerb(TypedDict):
-    """One thing a principal may or may not do to a path, from `FilePrincipal.verbs`."""
+    """One action a principal may or may not take on a path, from `FilePrincipal.verbs`."""
 
     verb: str
     """``"read"``, ``"write"`` or ``"delete"``."""
@@ -1151,7 +1151,8 @@ class HealthStatusResponse(TypedDict):
     """``GET /api/health/status``, which needs no session.
 
     `phase` runs through the first-run setup (``"setup-database"``, ``"setup-admin"``, ``"preview-licence"``) to ``"ready"``.
-    A panel with no licence reads ``"preview-licence"`` again, and one joining as a spire reads ``"starting"`` until it is approved.
+    A panel with no licence reads ``"preview-licence"`` again.
+    A machine joining as a spire reads ``"starting"`` until its enrolment is approved.
     """
 
     phase: str

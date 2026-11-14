@@ -18,7 +18,7 @@ CubeCoders AMP 3 API wrapper in Python.
 ---
 
 - **AMP 3's API is not published.** Every call here was worked out from the web panel, so any of them can change between AMP builds.
-- AMP 3 renamed a few things, and the library uses its names:
+- AMP 3 renamed some of AMP's terms, and the library uses AMP 3's terms:
   - An Instance is a **shard** (`Shard`).
   - An ADS or a Target is a **spire** (`Spire`).
   - A game definition is a **template**, eg. `minecraft-java` or `teeworlds`.
