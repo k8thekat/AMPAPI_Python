@@ -83,6 +83,10 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   game that outlasts its template's `exitTimeout`, and a schedule's `power.kill` step kills at once. The Tasks cancel
   (`cancel_task`) answers 202 for an update and is ignored (upstream U33); a failed task leaves the running list after
   about 30 minutes.
+- Writes that replace a whole record (#3-56.4b, #3-56.7): a datastore POST carrying an `id` resets every field it
+  isn't sent (`softLimitMb` 0, `tags` [], `enabled` true), and an unknown `id` creates one, so
+  `update_spire_datastore` reads first and refuses an ID the spire doesn't list. AMP adds the storage medium it detects
+  (eg. `"HDD"`) to a datastore's tags. Creating a gateway deletes the shard's publications (upstream U31).
 - Chunked uploads (#3-51.9, checked live 2026-11-11, upstream U30): `upload-start` hands back an unfinished upload's
   session for any start on the same path (vm3, whatever the size), AMP keeps it 24 hours, and no call cancels it, so
   `upload_shard_file` refuses to carry on an upload AMP holds part of unless `resume=True`. On a remote spire

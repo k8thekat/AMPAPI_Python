@@ -28,6 +28,7 @@ from .base import Base
 if TYPE_CHECKING:
     from ._types import (
         BrandingResponse,
+        CodedErrorResponse,
         DiagnosticsResponse,
         HealthStatusResponse,
         MessageBusStatsResponse,
@@ -79,14 +80,14 @@ class PlatformModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the warning needs action and can't be dismissed, its `dismissable` False
-            (400, ``"platform.error.warningNotDismissable"``, its `params` holding the warning's `code`).
+            **400** - If the warning needs action and can't be dismissed `platform.error.warningNotDismissable`. The
+            warning's `dismissable` is `False`, and the error's `params` holds the warning's `code`.
 
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal for no newer version is known; the reply to a real update isn't.
+    # TODO: Type the reply once AMP is seen answering it live (#3-47.10, #3-56.2an).
+    # Only the refusal for no newer version is known. AMP's OpenAPI says the body carries the running task's ID, with no shape.
     async def apply_panel_update(self) -> Any:
         """Update the panel's AMP to the latest version on its stream; the panel restarts.
 
@@ -94,7 +95,9 @@ class PlatformModule(Base):
 
         Endpoint: ``POST /api/updates/apply``
 
-        The web panel then watches :meth:`get_health_status` and :meth:`get_update_status` while the panel restarts.
+        AMP tells every other spire to follow, and names the ones that couldn't in the update's running task, see
+        :meth:`TaskModule.get_running_tasks`. Shards keep running. The web panel then watches :meth:`get_health_status`
+        and :meth:`get_update_status` while the panel restarts.
 
         Returns
         -------
@@ -104,7 +107,9 @@ class PlatformModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no newer version on the stream (400, ``"updates.error.noUpdate"``); nothing restarts then.
+            **400** - If there's no newer version on the stream `updates.error.noUpdate`. Nothing restarts.\n
+            **400** - If AMP doesn't run under its supervisor, see `UpdateStatusResponse.supervised`.\n
+            **400** - If the new version fails its checks.
 
         """
         return await self._request(method="POST", path="/api/updates/apply", data={})
@@ -116,18 +121,18 @@ class PlatformModule(Base):
 
         Endpoint: ``DELETE /api/settings/secrets/{field_name}``
 
-        Clearing one that holds no value is fine too.
+        Clearing a secret setting that holds no value is fine too.
 
         Parameters
         ----------
         field_name : :class:`str`
-            The setting's `fieldName`, one in `SettingsManifestResponse.secretHasValue`.
+            The setting's `fieldName`, one of the names in `SettingsManifestResponse.secretHasValue`.
 
         Raises
         ------
         AMPAPIRequestError
-            If there's no such setting (400, ``"settings.error.unknownNode"``) or it isn't a secret
-            (400, ``"settings.error.notASecret"``).
+            **400** - If there's no setting with that name `settings.error.unknownNode`.\n
+            **400** - If the setting isn't a secret `settings.error.notASecret`.
 
         """
         await self._request(method="DELETE", path=f"/api/settings/secrets/{field_name}")
@@ -169,7 +174,7 @@ class PlatformModule(Base):
 
         Endpoint: ``GET /api/support/diagnostics/bundle``
 
-        AMP sends it as an attachment named ``"amp-diagnostics-<yyyymmdd-hhmmss>.zip"``, a few KB.
+        AMP sends the bundle as an attachment named ``"amp-diagnostics-<yyyymmdd-hhmmss>.zip"``, a few KB.
 
         Returns
         -------
@@ -186,7 +191,7 @@ class PlatformModule(Base):
 
         Endpoint: ``GET /api/health/status``
 
-        This one needs no session, so it works before anyone logs in.
+        This call needs no session, so it works before anyone logs in.
 
         Returns
         -------
@@ -202,6 +207,9 @@ class PlatformModule(Base):
         |coro|
 
         Endpoint: ``GET /api/support/message-bus-stats``
+
+        AMP measures the round trip on the call. With no connection to the bus AMP answers an empty shell, not an
+        error.
 
         Returns
         -------
@@ -227,18 +235,21 @@ class PlatformModule(Base):
         return await self._request(method="GET", path="/api/monitoring/thresholds")
 
     async def get_platform_warnings(self) -> list[PlatformWarningResponse]:
-        """Get the panel's warnings for whoever runs it, eg. a spire whose IPv6 goes nowhere.
+        """Get the panel's warnings for whoever runs the panel, eg. a spire whose IPv6 goes nowhere.
 
         |coro|
 
         Endpoint: ``GET /api/monitoring/platform-warnings``
 
-        A spire that's offline isn't one of these; see :meth:`Panel.get_spire_roster` for that.
+        An offline spire isn't a platform warning; see :meth:`Panel.get_spire_roster` for offline spires. The warnings
+        cover the message bus running without credentials or its storage not answering, and an update that failed or
+        was taken back.
 
         Returns
         -------
         list[:class:`PlatformWarningResponse`]
-            The warnings, empty when there are none.
+            The warnings the logged in user hasn't dismissed, empty when there are no warnings. A user who can't change
+            the platform settings always gets an empty list.
 
         """
         return await self._request(method="GET", path="/api/monitoring/platform-warnings")
@@ -259,7 +270,7 @@ class PlatformModule(Base):
         return await self._request(method="GET", path="/api/settings/manifest")
 
     async def get_update_status(self) -> UpdateStatusResponse:
-        """Get the panel's AMP version against the latest one.
+        """Get the panel's AMP version against the latest version.
 
         |coro|
 
@@ -293,41 +304,49 @@ class PlatformModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no such action (400, ``"settings.error.unknownAction"``) or the action failed, eg. Steam
-            refused the key that ``"steam-key.check"`` tests (400, ``"settings.analytics.error.steamKeyRejected"``).
+            **400** - If there's no action with that ID `settings.error.unknownAction`.\n
+            **400** - If the action failed, eg. Steam refused the key that ``"steam-key.check"`` tests
+            `settings.analytics.error.steamKeyRejected`.
 
         """
         return await self._request(method="POST", path=f"/api/settings/actions/{action_id}")
 
-    # TODO: Type the notices once AMP is seen sending one live (#3-51.7).
+    # TODO: Check the notices against a live capture; AMP's OpenAPI alone says each is an `ApiError` (#3-51.7, #3-56.2ak).
     # Every save so far answered 204; the web panel shows each notice as a save error.
-    async def set_settings(self, values: SettingValues) -> list[Any]:
+    async def set_settings(self, values: SettingValues) -> list[CodedErrorResponse]:
         """Change one or more platform settings.
 
         |coro|
 
         Endpoint: ``POST /api/settings/values``
 
-        A save that went through only in part answers with `notices` saying what didn't happen, eg. ports 80 and 443
-        left open; a full save answers with nothing.
+        A save whose changes stand but where something that follows from them couldn't be done answers with `notices`,
+        eg. ports 80 and 443 left open when the panel stops being exposed and AMP's own HTTPS can't be removed; a full
+        save answers with nothing. A refused save changes nothing.
+
+        A change to the security policy ends this spire's SFTP sessions for the accounts the new policy puts on hold.
 
         Parameters
         ----------
         values : :class:`SettingValues`
             Each setting's `SettingSpec.fieldName` to its new value, a string like the manifest's values,
             eg. ``{"public-address.publicUrl": "https://amp.example.com"}``. A secret setting takes its value here
-            too; the manifest then shows it in `secretHasValue`, never the value.
+            too; the manifest then shows the secret in `secretHasValue`, never its value. An empty value for a secret
+            keeps the stored value; :meth:`delete_setting_secret` clears the secret.
 
         Returns
         -------
-        list[Any]
-            AMP's notices, empty for a save that went through whole.
+        list[:class:`CodedErrorResponse`]
+            AMP's notices, each still to put right; empty for a save that went through whole.
 
         Raises
         ------
         AMPAPIRequestError
-            If there's no such setting (400, ``"settings.error.unknownNode"``) or a value doesn't fit it
-            (400, ``"settings.error.invalidValue"``).
+            **400** - If there's no setting with that name `settings.error.unknownNode`.\n
+            **400** - If a value doesn't fit its setting `settings.error.invalidValue`.\n
+            **400** - If the setting is fixed on this build `settings.error.locked`.\n
+            **400** - If the logged in user may not choose that credential `settings.error.credentialNotUsable`.\n
+            **409** - If the machine can't take the setting, eg. the panel's exposure on a public entry node.
 
         """
         result: Optional[SettingsSaveResponse] = await self._request(method="POST", path="/api/settings/values", data=values)
@@ -340,6 +359,9 @@ class PlatformModule(Base):
         |coro|
 
         Endpoint: ``PUT /api/updates/stream``
+
+        It moves every spire to the stream and installs nothing. Only a version newer than the running one is ever
+        offered, so moving to another stream can't go back a version.
 
         Parameters
         ----------
@@ -355,7 +377,7 @@ class PlatformModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the panel can't follow that stream (400, ``"updates.error.streamInvalid"``).
+            **400** - If the panel can't follow that stream `updates.error.streamInvalid`.
 
         """
         return await self._request(method="PUT", path="/api/updates/stream", data={"stream": stream})

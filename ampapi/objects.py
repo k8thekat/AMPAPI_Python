@@ -211,7 +211,7 @@ class ConsoleLine(AMPObject):
 
 # TODO: Nothing makes this until the hubs come back (#3-50.1).
 # TODO: Check which fields kinds 4, 6 and 8 fill once a capture shows one (#3-47.2.1).
-# They need a game that asks the user something, a sleep-capable template and a notice.
+# Those kinds need a game that asks the player something, a sleep-capable template and a notice.
 class LifecycleEvent(AMPObject):
     """The shard hub's `Lifecycle` event: a step in a shard's start, stop or update.
 

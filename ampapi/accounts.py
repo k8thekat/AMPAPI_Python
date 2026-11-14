@@ -72,7 +72,7 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/users/me/preferences/favourites/{template_slug}``
 
-        Adding one already there changes nothing. AMP doesn't check the slug is a template.
+        Adding a favourite that's already there changes nothing. AMP doesn't check the slug is a template.
 
         Parameters
         ----------
@@ -82,7 +82,7 @@ class AccountModule(Base):
         Returns
         -------
         :class:`PreferencesResponse`
-            All of the user's preferences.
+            All of the logged in user's preferences.
 
         """
         return await self._request(method="POST", path=f"/api/users/me/preferences/favourites/{template_slug}")
@@ -102,7 +102,7 @@ class AccountModule(Base):
             A name for the key.
         expires_at : Union[:class:`str`, None], optional
             When the key stops working, ISO 8601 like ``"2027-01-01T00:00:00Z"``, by default None.
-            Without one it never runs out.
+            Without an expiry the key never runs out.
 
         Returns
         -------
@@ -127,20 +127,22 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/profile/password``
 
-        AMP ends every other session of the user and keeps this one. The new password is kept for later logins.
+        AMP ends every other session of the logged in user and keeps the current session. The new password is kept for later
+        logins.
 
         Parameters
         ----------
         current_password : :class:`str`
-            The password the user has now.
+            The logged in user's current password.
         new_password : :class:`str`
             The new password; it has to pass :meth:`Session.get_password_policy`.
 
         Raises
         ------
         AMPAPIRequestError
-            If `current_password` is wrong (400, ``"profile.error.wrongPassword"``) or `new_password` is too weak
-            (400, ``"profile.error.weakPassword"``, naming only the first rule it fails).
+            **400** - If `current_password` is wrong `profile.error.wrongPassword`.\n
+            **400** - If `new_password` is too weak `profile.error.weakPassword`. The error names only the first rule
+            the password fails.
 
         """
         data: PasswordChangeRequest = {"currentPassword": current_password, "newPassword": new_password}
@@ -166,7 +168,7 @@ class AccountModule(Base):
         user_name : :class:`str`
             The username the new account gets.
         role_ids : list[:class:`str`]
-            The roles the new account gets; AMP wants at least one that exists.
+            The roles the new account gets; AMP wants at least one role that exists.
         expires_in_hours : :class:`int`
             How long the invite code works for. AMP turns 0 into 1.
         display_name : Union[:class:`str`, None], optional
@@ -180,8 +182,8 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If no role in `role_ids` exists (400, ``"access.error.inviteRoleRequired"``), or a user already has
-            `user_name` (409).
+            **400** - If no ID in `role_ids` matches a role `access.error.inviteRoleRequired`.\n
+            **409** - If a user already has `user_name`.
 
         """
         data: InviteRequest = {"userName": user_name, "displayName": display_name, "roleIds": role_ids, "expiresInHours": expires_in_hours}
@@ -197,10 +199,10 @@ class AccountModule(Base):
         Parameters
         ----------
         name : :class:`str`
-            The role's name; no two roles can share one.
+            The role's name; no two roles can share a name.
         permissions : list[:class:`str`]
-            The permission strings, eg. ``["users.read", "spire.*.shard.*.view"]``; a leading ``-`` denies one.
-            AMP doesn't check that they exist, so a typo grants nothing.
+            The permission strings, eg. ``["users.read", "spire.*.shard.*.view"]``; a leading ``-`` denies that
+            permission. AMP doesn't check that the permissions exist, so a typo grants nothing.
         description : :class:`str`, optional
             A description of the role, by default "".
 
@@ -241,12 +243,12 @@ class AccountModule(Base):
         display_name : Union[:class:`str`, None], optional
             The new user's display name, by default None.
         role_ids : Union[list[:class:`str`], None], optional
-            The roles to give the user, by default None.
-            A user can have none, and AMP drops an ID that isn't a role.
+            The roles to give the new user, by default None.
+            - A user can have no roles, and AMP drops an ID that isn't a role.
         password_expires : :class:`bool`, optional
             If the password runs out after the platform's maximum age or not, by default False.
         require_password_change : :class:`bool`, optional
-            If the user has to change the password at their first login or not, by default False.
+            If the new user has to change the password at their first login or not, by default False.
 
         Returns
         -------
@@ -256,7 +258,8 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the username is taken, or the password is too weak (400, with every rule it fails in `errors`).
+            **400** - If the username is taken.\n
+            **400** - If the password is too weak. The error's `errors` holds every rule the password fails.
 
         """
         data: UserCreateRequest = {
@@ -278,7 +281,7 @@ class AccountModule(Base):
 
         Endpoint: ``DELETE /api/users/me/preferences/favourites/{template_slug}``
 
-        Taking out one that isn't there changes nothing.
+        Taking out a favourite that isn't there changes nothing.
 
         Parameters
         ----------
@@ -288,7 +291,7 @@ class AccountModule(Base):
         Returns
         -------
         :class:`PreferencesResponse`
-            All of the user's preferences.
+            All of the logged in user's preferences.
 
         """
         return await self._request(method="DELETE", path=f"/api/users/me/preferences/favourites/{template_slug}")
@@ -309,7 +312,7 @@ class AccountModule(Base):
         await self._request(method="DELETE", path=f"/api/invites/{invite_id}")
 
     async def delete_other_profile_sessions(self) -> RevokedSessionsResponse:
-        """End every session of the logged in user except this one.
+        """End every session of the logged in user except this session.
 
         |coro|
 
@@ -330,7 +333,7 @@ class AccountModule(Base):
 
         Endpoint: ``DELETE /api/profile/passkeys/{passkey_id}``
 
-        AMP wants a recent proof of the password for this; call :meth:`Session.reauth` first if AMP answers
+        AMP wants a recent proof of the password to remove a passkey; call :meth:`Session.reauth` first if AMP answers
         ``"auth.error.recentProofRequired"``.
 
         Parameters
@@ -416,11 +419,11 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/profile/recovery-codes``
 
-        AMP wants a recent proof of the password for this. A fresh login counts; later on, call :meth:`Session.reauth`
-        first if AMP answers ``"auth.error.recentProofRequired"``.
+        AMP wants a recent proof of the password to make new codes. A fresh login counts; later on, call
+        :meth:`Session.reauth` first if AMP answers ``"auth.error.recentProofRequired"``.
 
         .. warning::
-            A new set replaces the old one, and AMP never shows the codes again. Keep them somewhere safe.
+            AMP never shows the codes again, so keep them somewhere safe. The new set replaces the old set.
 
         Returns
         -------
@@ -440,7 +443,7 @@ class AccountModule(Base):
         Returns
         -------
         list[:class:`InviteResponse`]
-            The invites; a revoked one isn't listed.
+            The invites; a revoked invite isn't listed.
 
         """
         return await self._request(method="GET", path="/api/invites")
@@ -470,7 +473,7 @@ class AccountModule(Base):
         Returns
         -------
         :class:`PermissionsResponse`
-            The grants, the catalog and the user's role IDs.
+            The grants, the catalog and the logged in user's role IDs.
 
         """
         return await self._request(method="GET", path="/api/me/permissions")
@@ -485,7 +488,7 @@ class AccountModule(Base):
         Returns
         -------
         :class:`PreferencesResponse`
-            The preferences; one never set is `None`.
+            The preferences; a preference never set is `None`.
 
         """
         return await self._request(method="GET", path="/api/users/me/preferences")
@@ -500,13 +503,13 @@ class AccountModule(Base):
         Returns
         -------
         :class:`ProfileResponse`
-            The user's ID, names and email.
+            The logged in user's ID, names and email.
 
         """
         return await self._request(method="GET", path="/api/profile")
 
     async def get_profile_sessions(self) -> list[ProfileSessionResponse]:
-        """Get the logged in user's sessions, this one included.
+        """Get the logged in user's sessions, this session included.
 
         |coro|
 
@@ -515,7 +518,7 @@ class AccountModule(Base):
         Returns
         -------
         list[:class:`ProfileSessionResponse`]
-            The sessions, with `isCurrent` set on this one.
+            The sessions, with `isCurrent` set on this session.
 
         """
         return await self._request(method="GET", path="/api/profile/sessions")
@@ -530,13 +533,13 @@ class AccountModule(Base):
         Returns
         -------
         :class:`RecoveryCodesStatusResponse`
-            The codes left out of the set, when it was made, and if it is running low.
+            The codes left out of the set, when the set was made, and if the set is running low.
 
         """
         return await self._request(method="GET", path="/api/profile/recovery-codes")
 
     async def get_roles(self) -> list[RoleResponse]:
-        """Get the roles. A fresh panel has none.
+        """Get the roles. A fresh panel has no roles.
 
         |coro|
 
@@ -607,7 +610,7 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/users/{user_id}/logout``
 
-        Ending our own user's sessions ends this one too; the next call logs in again.
+        Ending the logged in user's sessions ends this session too; the next call logs in again.
 
         Parameters
         ----------
@@ -618,7 +621,7 @@ class AccountModule(Base):
         await self._request(method="POST", path=f"/api/users/{user_id}/logout", data={})
 
     async def rearm_invite(self, invite_id: str, expires_in_hours: int) -> InviteTokenResponse:
-        """Give an invite a new code, which stops the old one from working.
+        """Give an invite a new code, which stops the old code from working.
 
         |coro|
 
@@ -639,7 +642,7 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the invite was already accepted (409).
+            **409** - If the invite was already accepted.
 
         """
         return await self._request(method="POST", path=f"/api/invites/{invite_id}/rearm", data={"expiresInHours": expires_in_hours})
@@ -651,7 +654,7 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/users/{user_id}/reset-password``
 
-        Resetting our own user's password keeps the new one for later logins.
+        Resetting the logged in user's own password keeps the new password for later logins.
 
         Parameters
         ----------
@@ -678,12 +681,12 @@ class AccountModule(Base):
         passkey_id : :class:`str`
             The passkey's `id` from :meth:`get_passkeys`.
         name : :class:`str`
-            The new name. AMP trims it and keeps the first 64 characters, and takes an empty one as ``""``.
+            The new name. AMP trims the name and keeps its first 64 characters, and takes an empty name as ``""``.
 
         Raises
         ------
         AMPAPIRequestError
-            If the passkey isn't one of the logged in user's (404).
+            **404** - If the passkey isn't one of the logged in user's passkeys.
 
         """
         await self._request(method="PATCH", path=f"/api/profile/passkeys/{passkey_id}", data={"name": name})
@@ -696,7 +699,7 @@ class AccountModule(Base):
         Endpoint: ``PATCH /api/users/me/preferences``
 
         .. note::
-            AMP ignores a name it doesn't know.
+            AMP ignores a preference name it doesn't know.
 
         Parameters
         ----------
@@ -707,7 +710,7 @@ class AccountModule(Base):
         Returns
         -------
         :class:`PreferencesResponse`
-            All of the user's preferences.
+            All of the logged in user's preferences.
 
         """
         return await self._request(method="PATCH", path="/api/users/me/preferences", data=values)
@@ -720,19 +723,19 @@ class AccountModule(Base):
         Endpoints: ``GET /api/profile`` when `display_name` is `None`, then ``PUT /api/profile``
 
         AMP clears the display name whenever the body leaves it out, so with `display_name` as `None` we read the
-        current one first and send it back. Pass ``""`` to clear it.
+        current display name first and send it back. Pass ``""`` to clear the display name.
 
         Parameters
         ----------
         display_name : Union[:class:`str`, None], optional
             The new display name, ``""`` to clear it, by default None.
         email : Union[:class:`str`, None], optional
-            The new email address, by default None. AMP doesn't check it's an email address.
+            The new email address, by default None. AMP doesn't check that the value is an email address.
 
         Returns
         -------
         :class:`ProfileResponse`
-            The user's account.
+            The logged in user's account.
 
         """
         if display_name is None:
@@ -758,7 +761,7 @@ class AccountModule(Base):
         name : :class:`str`
             The role's name.
         permissions : list[:class:`str`]
-            The permission strings, which replace the old ones; a leading ``-`` denies one.
+            The permission strings, which replace the role's old permissions; a leading ``-`` denies that permission.
         description : :class:`str`, optional
             A description of the role, by default "".
 
@@ -795,21 +798,22 @@ class AccountModule(Base):
         display_name : Union[:class:`str`, None], optional
             The new display name, ``""`` to clear it, by default None.
         email : Union[:class:`str`, None], optional
-            The new email address, by default None. AMP doesn't check it's an email address.
+            The new email address, by default None. AMP doesn't check that the value is an email address.
         role_ids : Union[list[:class:`str`], None], optional
-            The roles the user has, which replace the old ones, by default None. An empty list takes them all away.
+            The roles to give the user being changed, which replace their old roles, by default None.
+            An empty list removes every role.
         suspended : Union[:class:`bool`, None], optional
-            If the user is suspended or not, by default None.
-            Suspending ends their sessions, and they stay ended once the user is let back in.
+            If the user being changed is suspended or not, by default None.
+            Suspending a user ends their sessions, and those sessions stay ended once the user is let back in.
         password_expires : Union[:class:`bool`, None], optional
             If the password runs out after the platform's maximum age or not, by default None.
         require_password_change : Union[:class:`bool`, None], optional
-            If the user has to change the password at their next login or not, by default None.
+            If the user being changed has to change their password at their next login or not, by default None.
 
         Returns
         -------
         :class:`UserResponse`
-            The user.
+            The changed user.
 
         """
         data: UserUpdateRequest = {

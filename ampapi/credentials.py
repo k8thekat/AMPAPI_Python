@@ -57,23 +57,30 @@ class CredentialModule(Base):
 
         Endpoint: ``POST /api/credentials``
 
+        Any logged in user can store credentials of their own.
+
         Parameters
         ----------
         kind : :class:`CredentialKind`
-            What it's for: ``"SteamCmd"``, ``"Smtp"``, ``"DiscordWebhook"`` or ``"ApiKey"``.
+            What the credential is for: ``"SteamCmd"``, ``"Smtp"``, ``"DiscordWebhook"`` or ``"ApiKey"``.
         title : :class:`str`
-            A name for it.
+            A name for the credential.
         username : :class:`str`
             The account name that goes with the secret.
         secret : :class:`str`
             The secret itself, eg. a password.
         visibility : Union[:class:`CredentialVisibility`, None], optional
-            ``"Private"`` or ``"Public"``, by default None. Without one AMP makes it ``"Private"``.
+            ``"Private"`` or ``"Public"``, by default None. Without a visibility AMP makes the credential ``"Private"``.
 
         Returns
         -------
         :class:`CredentialResponse`
             The credential, without its secret.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If the title, username or secret isn't valid for the `kind` `credentials.error.invalid`.
 
         """
         data: CredentialRequest = {"kind": kind, "title": title, "username": username, "secret": secret}
@@ -90,10 +97,18 @@ class CredentialModule(Base):
 
         Endpoint: ``DELETE /api/credentials/{credential_id}``
 
+        Shards that used this credential have no credential until their next update, which picks a credential again.
+
         Parameters
         ----------
         credential_id : :class:`str`
             The credential's ID.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the logged in user didn't create the credential and lacks `credentials.manage`.\n
+            **404** - If there's no credential with that ID.
 
         """
         await self._request(method="DELETE", path=f"/api/credentials/{credential_id}")
@@ -108,7 +123,11 @@ class CredentialModule(Base):
         Returns
         -------
         list[:class:`CredentialResponse`]
-            The credentials.
+            The credentials, newest first. Only the user who created the credential sees its `username`.
+
+            - The credentials the logged in user created.
+            - Every ``"Public"`` credential.
+            - Every credential, when the logged in user holds `credentials.manage`.
 
         """
         return await self._request(method="GET", path="/api/credentials")
@@ -130,7 +149,9 @@ class CredentialModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If AMP refuses the secret (400, ``"credentials.error.invalid"``), eg. an empty one.
+            **400** - If AMP refuses the secret, eg. an empty secret `credentials.error.invalid`.\n
+            **403** - If the logged in user didn't create the credential and lacks `credentials.manage`.\n
+            **404** - If there's no credential with that ID.
 
         """
         await self._request(method="PUT", path=f"/api/credentials/{credential_id}/secret", data={"secret": secret})
@@ -148,6 +169,12 @@ class CredentialModule(Base):
             The credential's ID.
         visibility : :class:`CredentialVisibility`
             ``"Private"`` or ``"Public"``.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the logged in user didn't create the credential and lacks `credentials.manage`.\n
+            **404** - If there's no credential with that ID.
 
         """
         await self._request(method="PUT", path=f"/api/credentials/{credential_id}/visibility", data={"visibility": visibility})

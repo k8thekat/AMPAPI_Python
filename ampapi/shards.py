@@ -107,11 +107,11 @@ UPLOAD_CHUNK_SIZE: int = 8 * 1024 * 1024
 class Shard:
     """A shard, AMP 3's name for an Instance, with the calls that act on it.
 
-    The panel makes these, of its `shard_class`, from :meth:`Panel.get_shards`, :meth:`Panel.get_shard`,
-    :meth:`Panel.create_shard`, :meth:`clone` and a spire's :meth:`Spire.get_shards`, and keeps one for each shard. Each
-    method calls the panel's one with this shard's ID, eg. :meth:`start` is :meth:`ShardModule.start_shard` and
-    :meth:`create_gateway` is :meth:`NetworkModule.create_gateway`; its parameters, reply and errors are documented
-    there.
+    The panel makes these shard objects, of its `shard_class`, from :meth:`Panel.get_shards`, :meth:`Panel.get_shard`,
+    :meth:`Panel.create_shard`, :meth:`clone` and a spire's :meth:`Spire.get_shards`, and keeps one object for each
+    shard. Each method calls the panel's method of the same purpose with this shard's ID, eg. :meth:`start` is
+    :meth:`ShardModule.start_shard` and :meth:`create_gateway` is :meth:`NetworkModule.create_gateway`; the panel's
+    method documents the parameters, reply and errors.
 
     Two shard objects are equal, and hash the same, when they have the same ID, so they work in sets and as dict keys.
     They sort by `display_name`.
@@ -326,7 +326,14 @@ class Shard:
         """
         return await self._module.create_gateway(shard_id=self.id, front_spire_id=front_spire_id)
 
-    async def create_publication(self, front_spire_id: str, public_port: int, port_reference: str) -> PublicationResponse:
+    async def create_publication(
+        self,
+        front_spire_id: str,
+        public_port: int,
+        port_reference: str,
+        *,
+        front_public_host: Optional[str] = None,
+    ) -> PublicationResponse:
         """Forward a public port on a front spire to one of this shard's ports, see :meth:`NetworkModule.create_publication`.
 
         |coro|
@@ -337,6 +344,7 @@ class Shard:
             public_port=public_port,
             shard_id=self.id,
             port_reference=port_reference,
+            front_public_host=front_public_host,
         )
 
     async def create_schedule(
@@ -778,11 +786,12 @@ class Shard:
         Raises
         ------
         AMPAPIRequestError
-            If the shard is deleted (409, ``"shards.error.deleted"``) or purged (404).
+            **404** - If the shard is purged.\n
+            **409** - If the shard is deleted `shards.error.deleted`.
 
         """
         current: Shard = await self._module.get_shard(shard_id=self.id)
-        # One made by hand isn't the object the panel keeps, so it takes the fresh data from that one
+        # A shard object made by hand isn't the object the panel keeps, so it copies the fresh data from the panel's object
         if current is not self:
             self._update_data(data=current.data)
 
@@ -1208,8 +1217,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If no move is running (409, ``"shards.migration.notRunning"``), eg. there's none, or it's done, failed,
-            cancelled or dismissed.
+            **409** - If no move is running `shards.migration.notRunning`. The shard may have had no move, or its last
+            move is done, failed, cancelled or dismissed.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration/cancel")
@@ -1280,7 +1289,7 @@ class ShardModule(Base):
         protocol : :class:`PortProtocol`
             ``"TCP"``, ``"UDP"`` or ``"Both"``. AMP stores anything else as ``"TCP"``.
         port : Union[:class:`int`, None], optional
-            The port number, by default None for AMP to pick a free one.
+            The port number, by default None for AMP to pick a free port.
 
         Returns
         -------
@@ -1290,15 +1299,16 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the port is taken (400, ``"shards.error.portConflict"``), out of range (400, ``"shards.error.invalidPort"``)
-            or one AMP uses itself, eg. 4222 for its message bus (400, ``"shards.error.portReservedByAmp"``).
+            **400** - If the port is taken `shards.error.portConflict`.\n
+            **400** - If the port is out of range `shards.error.invalidPort`.\n
+            **400** - If AMP uses the port itself, eg. 4222 for its message bus `shards.error.portReservedByAmp`.
 
         """
         data: ShardCustomPortRequest = {"name": name, "protocol": protocol, "port": port}
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/ports/custom", data=data)
 
     async def create_shard_folder(self, shard_id: str, path: str) -> None:
-        """Make a folder inside a shard. One that's already there is fine.
+        """Make a folder inside a shard. A folder that's already there is fine.
 
         |coro|
 
@@ -1361,7 +1371,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If a step or the trigger has an unknown `type` (400). A step with no `type` at all gets a 500.
+            **400** - If a step or the trigger has an unknown `type`.\n
+            **500** - If a step has no `type` at all.
 
         """
         data: ShardScheduleRequest = {
@@ -1404,7 +1415,7 @@ class ShardModule(Base):
 
         Endpoint: ``DELETE /api/shards/{shard_id}/credential``
 
-        A shard with none is fine too.
+        A shard with no stored secret is fine too.
 
         Parameters
         ----------
@@ -1436,7 +1447,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If a publication still forwards to the port (409); remove it first, see :meth:`NetworkModule.delete_publication`.
+            **409** - If a publication still forwards to the port. Remove the publication first, see
+            :meth:`NetworkModule.delete_publication`.
 
         """
         return await self._request(method="DELETE", path=f"/api/shards/{shard_id}/ports/custom/{port_reference}")
@@ -1458,8 +1470,9 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the delete reached a folder another disk is mounted at (``"shards.error.deleteStoppedAtMount"``, the rest
-            deleted), or `path` is that folder (``"shards.error.deleteIsMount"``, nothing deleted).
+            If the delete reached a folder another disk is mounted at (``"shards.error.deleteStoppedAtMount"``); the
+            rest of `path` is deleted.
+            If `path` is a folder another disk is mounted at (``"shards.error.deleteIsMount"``); nothing is deleted.
 
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
@@ -1467,13 +1480,13 @@ class ShardModule(Base):
     # TODO: Reword Raises once AMP refuses an early dismissal cleanly (U22a).
     # AMP 3.0.0.6 answers 500 to a dismissal while the move is starting or copying.
     async def delete_shard_migration(self, shard_id: str) -> None:
-        """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has none.
+        """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has no move to show.
 
         |coro|
 
         Endpoint: ``DELETE /api/shards/{shard_id}/migration``
 
-        It only clears the record. The copy a move leaves on the old spire stays until
+        Dismissing only clears the move's record. The copy a move leaves on the old spire stays until
         :meth:`SpireModule.purge_spire_orphan_directory`, and a failed move's task stays in
         :meth:`TaskModule.get_running_tasks` for about 30 minutes, or until :meth:`TaskModule.delete_running_task`.
 
@@ -1485,7 +1498,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the move is still copying or was only just started (500, ``"common.error.unexpected"``). The move
+            **500** - If the move is still copying or was only just started `common.error.unexpected`. The move
             carries on unharmed.
 
         """
@@ -1525,7 +1538,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If other snapshots build on it (400, ``"snapshots.error.hasDependents"``).
+            **400** - If other snapshots build on the snapshot `snapshots.error.hasDependents`.
 
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}")
@@ -1552,7 +1565,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the path is missing or a folder (400, ``"files.error.notFound"``).
+            **400** - If the path is missing or a folder `files.error.notFound`.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/download", parameters={"path": path}, raw_bytes=True)
@@ -1615,7 +1628,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/files/extract``
 
-        A file the user may not write, or one AMP writes itself from the settings, is skipped rather than failing the rest.
+        A file the logged in user may not write, or a file AMP writes itself from the settings, is skipped rather than
+        failing the rest of the archive.
 
         Parameters
         ----------
@@ -1636,7 +1650,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `path` isn't an archive (400).
+            **400** - If `path` isn't an archive.
 
         """
         data: ShardExtractRequest = {"path": path, "destination": destination, "overwrite": overwrite}
@@ -1836,7 +1850,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the file isn't there (400, ``"files.error.notFound"``).
+            **400** - If the file isn't there `files.error.notFound`.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/content", parameters={"path": path})
@@ -1897,24 +1911,24 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         path : :class:`str`, optional
-            The folder, by default "" (the shard's own). One that isn't there gives an empty list.
+            The folder, by default "" (the shard's own folder). A folder that isn't there gives an empty list.
 
         Returns
         -------
         list[:class:`ShardFileResponse`]
-            The entries, each `path` relative to the shard's folder. AMP's own ``.amp`` folder and anything the user may
-            not read are left out.
+            The entries, each `path` relative to the shard's folder. AMP's own ``.amp`` folder and anything the logged in
+            user may not read are left out.
 
         Raises
         ------
         AMPAPIRequestError
-            If the path leaves the shard's folder, eg. ``"../.."`` (403).
+            **403** - If the path leaves the shard's folder, eg. ``"../.."``.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
     async def get_shard_import(self, shard_id: str) -> Optional[ShardImportResponse]:
-        """Get how the import that made a shard went, see :meth:`SpireModule.import_spire_servers`.
+        """Get how the import that made the shard went, see :meth:`SpireModule.import_spire_servers`.
 
         |coro|
 
@@ -2064,7 +2078,8 @@ class ShardModule(Base):
         Returns
         -------
         list[:class:`ShardMigrationTargetResponse`]
-            The spire's other datastores, without the one the shard is in; empty when the spire has one datastore.
+            The spire's other datastores, without the datastore the shard is in; empty when the spire has a single
+            datastore.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/migration/targets")
@@ -2111,7 +2126,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the shard has no schedule with that ID (404).
+            **404** - If the shard has no schedule with that ID.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/schedules/{schedule_id}")
@@ -2224,7 +2239,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the setting has no list (404, ``"shards.error.noValueSource"``).
+            **404** - If the setting has no list `shards.error.noValueSource`.
 
         """
         return await self._request(
@@ -2427,48 +2442,51 @@ class ShardModule(Base):
         .. note::
             The copy on the old spire stays, as an ``"Orphan"`` in :meth:`SpireModule.get_spire_usage`, until
             :meth:`SpireModule.purge_spire_orphan_directory` is called on the **old** spire's datastore with the
-            shard's `workingDirName`. :meth:`delete_shard_migration` doesn't remove it.
+            shard's `workingDirName`. :meth:`delete_shard_migration` doesn't remove the old copy.
 
-        The shard's ports become free ones on the target spire, and they stay so if it moves back. A failed move's
-        task stays in :meth:`TaskModule.get_running_tasks` for about 30 minutes, unless it is dismissed.
+        The shard's ports become free ports on the target spire. A shard that moves back keeps those new ports. A failed
+        move's task stays in :meth:`TaskModule.get_running_tasks` for about 30 minutes, unless the task is dismissed.
 
         .. warning::
-            On AMP 3.0.0.6 a move of a running shard with `stop_if_running` has failed after AMP stopped it for the move
-            ("Stop the server before moving it to another spire"), leaving it stopped on its old spire. It was seen with
-            games whose stop ends in a kill, while a ``"minecraft-java"`` shard moved fine that way. Stop the shard with
-            :meth:`stop_shard` first.
+            On AMP 3.0.0.6 a move of a running shard with `stop_if_running` has failed after AMP stopped the shard for
+            the move ("Stop the server before moving it to another spire"), leaving the shard stopped on its old spire.
+            The failure was seen with games whose stop ends in a kill, while a ``"minecraft-java"`` shard moved fine
+            that way. Stop the shard with :meth:`stop_shard` first.
 
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
         target_spire_id : :class:`str`
-            The spire to move it to.
+            The spire to move the shard to.
         target_datastore_id : :class:`str`
-            A datastore on that spire, see :meth:`SpireModule.get_spire_datastores`.
+            A datastore on the target spire, see :meth:`SpireModule.get_spire_datastores`.
         bring_backups : :class:`bool`, optional
-            If its snapshots move too or not, by default False. Snapshots left behind stay on the old spire and can't be
-            restored from the new one.
+            If the shard's snapshots move too or not, by default False. Snapshots left behind stay on the old spire and
+            can't be restored from the new spire.
         stop_if_running : :class:`bool`, optional
-            If AMP may stop a running shard for the move or not, by default False. AMP waits for the stop, its grace
-            period and a little more, before it sends the move.
+            If AMP may stop a running shard for the move or not, by default False. AMP waits for the stop, the shard's
+            grace period and a little more, before it sends the move.
         start_after_move : Union[:class:`bool`, None], optional
             If AMP starts the shard on the target once the move is done or not, by default None for AMP's own default,
-            `stop_if_running`. So a running shard the move stopped starts again, and False keeps it stopped.
+            `stop_if_running`. So a running shard the move stopped starts again, and False keeps the shard stopped.
 
         Raises
         ------
         AMPAPIRequestError
-            If the shard already lives on that spire (400, an English sentence in `message` and no `code`), there's
-            no such spire (400, ``"shards.error.spireNotFound"``), the spire can't take the shard, eg. a Windows spire
-            for a game that needs a Linux container (400, ``"shards.error.needsLinuxSpire"``), the shard is running and
-            `stop_if_running` is False (409, ``"shards.error.moveNeedsStop"``), or it didn't stop in time (409,
-            ``"shards.error.moveStopTimedOut"``). A datastore of another spire gets 409 ``"spire.error.internal"``.
+            **400** - If the shard already lives on the target spire. AMP's `message` is an English sentence, and
+            there's no `code`.\n
+            **400** - If there's no spire with that ID `shards.error.spireNotFound`.\n
+            **400** - If the target spire can't take the shard, eg. a Windows spire for a game that needs a Linux
+            container `shards.error.needsLinuxSpire`.\n
+            **409** - If the shard is running and `stop_if_running` is `False` `shards.error.moveNeedsStop`.\n
+            **409** - If the shard didn't stop in time `shards.error.moveStopTimedOut`.\n
+            **409** - If the datastore belongs to another spire `spire.error.internal`.
 
         .. note::
             A shard that was never updated, its `installedAt` `None` (eg. a fresh clone), has failed its move in the
             ``"tasks.migration.stage.preparing"`` stage with "Stop the server before moving it to another spire",
-            though it was stopped. Run :meth:`update_shard` on it first.
+            though the shard was stopped. Run :meth:`update_shard` on the shard first.
 
         """
         data: ShardMigrationRequest = {
@@ -2525,7 +2543,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the trigger is bad, eg. a wrong cron expression, an interval under a minute or an unknown event (400).
+            **400** - If the trigger is bad, eg. a wrong cron expression, an interval under a minute or an unknown
+            event.
 
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/schedules/preview-firings", data={"trigger": trigger})
@@ -2545,7 +2564,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the shard isn't deleted (400).
+            **400** - If the shard isn't deleted.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/purge")
@@ -2705,7 +2724,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the user can't use that credential (400, ``"shards.error.credentialUnknown"``).
+            **400** - If the logged in user can't use that credential `shards.error.credentialUnknown`.
 
         """
         return await self._request(method="PUT", path=f"/api/shards/{shard_id}/credential", data={"credentialId": credential_id})
@@ -2729,11 +2748,11 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         display_name : Union[:class:`str`, None], optional
-            The new name, by default None. AMP refuses an empty one (``"shards.error.displayNameRequired"``).
+            The new name, by default None. AMP refuses an empty name (``"shards.error.displayNameRequired"``).
         description : Union[:class:`str`, None], optional
             The new description, by default None.
         tags : Union[list[:class:`str`], None], optional
-            The tags, which replace the old ones, by default None.
+            The tags, which replace the shard's old tags, by default None.
 
         Returns
         -------
@@ -2755,7 +2774,7 @@ class ShardModule(Base):
         Endpoint: ``PUT /api/shards/{shard_id}/files/acl``
 
         .. warning::
-            A user who denies themself a verb can't undo it: sending ``"inherit"`` or ``"allow"`` back answers 403
+            A user who denies themself a verb can't undo the deny: sending ``"inherit"`` or ``"allow"`` back answers 403
             ``"files.acl.error.notYoursToGrant"``, even for the admin, and the deny stays until the shard is deleted.
             The deny itself takes effect, eg. writing the file then gets 403.
 
@@ -2766,7 +2785,7 @@ class ShardModule(Base):
         path : :class:`str`
             The path.
         changes : list[:class:`FileACLChange`]
-            The changes, each a principal, a verb and the state to give it; ``"inherit"`` clears an explicit one.
+            The changes, each a principal, a verb and the state to give it; ``"inherit"`` clears an explicit state.
 
         Returns
         -------
@@ -2776,9 +2795,10 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the change needs access the user doesn't hold (403, ``"files.acl.error.notYoursToGrant"``). A `state`
-            that isn't one of the three gets the same 403, not a 400. A change that takes away the user's own read of
-            the path is refused (409).
+            **403** - If the change needs access the logged in user doesn't hold `files.acl.error.notYoursToGrant`.\n
+            **403** - If a `state` isn't ``"allow"``, ``"deny"`` or ``"inherit"`` `files.acl.error.notYoursToGrant`.
+            AMP sends the same 403 here, not a 400.\n
+            **409** - If the change takes away the logged in user's own read of the path.
 
         """
         return await self._request(
@@ -2889,7 +2909,7 @@ class ShardModule(Base):
         port_reference : :class:`str`
             The port's `ref`, eg. ``"RemoteAdminPort"``.
         public : :class:`bool`
-            If players can reach it or not.
+            If players can reach the port or not.
 
         Returns
         -------
@@ -2899,8 +2919,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the port is the one players connect to, which stays public (400, ``"shards.error.primaryPortIsPublic"``),
-            or there's no such port (400, ``"shards.error.unknownPortRef"``).
+            **400** - If the port is the port players connect to, which stays public `shards.error.primaryPortIsPublic`.\n
+            **400** - If the shard has no port with that `ref` `shards.error.unknownPortRef`.
 
         """
         path: str = f"/api/shards/{shard_id}/ports/{port_reference}/access"
@@ -2924,7 +2944,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If a port is outside the spire's range or clashes with another shard's on the same spire (400).
+            **400** - If a port is outside the spire's range.\n
+            **400** - If a port clashes with another shard's port on the same spire.
 
         """
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/ports", data={**ports})
@@ -2969,7 +2990,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If an enum value isn't one the setting allows (400, ``"shards.error.valueNotAllowed"``).
+            **400** - If the setting doesn't allow an enum value `shards.error.valueNotAllowed`.
 
         """
         await self._request(method="PATCH", path=f"/api/shards/{shard_id}/settings", data=values)
@@ -3019,7 +3040,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/sleep``
 
-        See `ShardStatus.sleep` for if it can; a template whose sleep port doesn't exist can't.
+        `ShardStatus.sleep` says if the shard can sleep; a shard whose template names a sleep port that doesn't exist
+        can't sleep.
 
         Parameters
         ----------
@@ -3029,8 +3051,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If sleep mode is off (400, ``"shards.error.sleepDisabled"``) or the shard can't sleep
-            (400, ``"shards.error.sleepUnavailable"``).
+            **400** - If sleep mode is off `shards.error.sleepDisabled`.\n
+            **400** - If the shard can't sleep `shards.error.sleepUnavailable`.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/sleep")
@@ -3044,8 +3066,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/start``
 
-        Follow it with :meth:`get_shard_state`; AMP answers before the game is up. A shard never updated starts too,
-        then fails after pulling its container, so run :meth:`update_shard` first.
+        Follow the start with :meth:`get_shard_state`; AMP answers before the game is up. A shard that was never updated
+        starts too, then fails after pulling its container, so run :meth:`update_shard` first.
 
         Parameters
         ----------
@@ -3055,9 +3077,10 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the game's licence isn't accepted (409, ``"shards.error.eulaRequired"``, see :meth:`accept_shard_eula`), a
-            setting it needs is empty (409, ``"shards.error.settingRequiredBeforeStart"``), the shard is already running
-            (409) or the shard is suspended (400, ``"shards.error.suspended"``).
+            **400** - If the shard is suspended `shards.error.suspended`.\n
+            **409** - If the game's licence isn't accepted `shards.error.eulaRequired`. See :meth:`accept_shard_eula`.\n
+            **409** - If a setting the game needs is empty `shards.error.settingRequiredBeforeStart`.\n
+            **409** - If the shard is already running.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/start")
@@ -3115,7 +3138,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `target_datastore_id` is the shard's own datastore or an unknown one (409, ``"spire.error.internal"``).
+            **409** - If `target_datastore_id` is the shard's own datastore `spire.error.internal`.\n
+            **409** - If no datastore has the ID `target_datastore_id` `spire.error.internal`.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/migration", data={"targetDatastoreId": target_datastore_id})
@@ -3243,14 +3267,15 @@ class ShardModule(Base):
         Returns
         -------
         :class:`ShardUpdateResponse`
-            The update's task ID; follow it with :meth:`TaskModule.get_running_tasks`, or :meth:`TaskModule.get_task` for
-            each step.
+            The update's task ID; follow the task with :meth:`TaskModule.get_running_tasks`, or with
+            :meth:`TaskModule.get_task` for each step.
 
         Raises
         ------
         AMPAPIRequestError
-            If an update is already running (409), or the download needs a Steam login the shard doesn't have (409,
-            ``"shards.error.steamLoginRequired"``, from the web panel's code), see :meth:`set_shard_credential`.
+            **409** - If an update is already running.\n
+            **409** - If the download needs a Steam login the shard doesn't have `shards.error.steamLoginRequired`.
+            See :meth:`set_shard_credential`. The code is from the web panel's source, not seen live.
 
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/update")
@@ -3362,7 +3387,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the shard has no schedule with that ID (404), before the PUT is sent.
+            **404** - If the shard has no schedule with that ID. The PUT is never sent.
 
         """
         schedule: ShardScheduleResponse = await self.get_shard_schedule(shard_id=shard_id, schedule_id=schedule_id)
@@ -3404,7 +3429,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no such snapshot (400, ``"snapshots.error.notFound"``).
+            **400** - If there's no snapshot with that ID `snapshots.error.notFound`.
 
         """
         data: SnapshotMetaRequest = {"name": name, "description": description, "sticky": sticky}
@@ -3553,7 +3578,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the shard isn't asleep (400, ``"shards.error.notAsleep"``) or is suspended.
+            **400** - If the shard isn't asleep `shards.error.notAsleep`.\n
+            **400** - If the shard is suspended.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/wake")

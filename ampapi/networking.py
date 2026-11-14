@@ -28,6 +28,7 @@ from .base import Base
 if TYPE_CHECKING:
     from ._types import (
         FirewallResponse,
+        GatewayEgressRequest,
         GatewayEligibilityResponse,
         GatewayPreflightResponse,
         GatewayRequest,
@@ -65,20 +66,24 @@ class NetworkModule(Base):
 
         A gateway is the shard's route over a WireGuard tunnel between its spire and the front spire, which AMP sets up
         itself (see :meth:`get_tunnels`). The shard gets an `address` on that tunnel, eg. ``"10.83.0.10"``, and an
-        `egressAllowList`. Once it routes, the shard answers on the front spire's address at its own port. Follow it
-        with :meth:`get_gateways`.
+        `egressAllowList` (see :meth:`set_gateway_egress`). Once the gateway routes, the shard answers on the front
+        spire's address at the shard's own port. Follow the gateway with :meth:`get_gateways`.
+
+        .. warning::
+            AMP deletes the shard's publications (:meth:`create_publication`) when it makes the gateway, as the gateway
+            carries all of the shard's ports, and the reply doesn't say so.
 
         .. note::
-            A shard that was running before the gateway only routes once it restarts. Until then the gateway reads
+            A shard that was running before the gateway only routes once the shard restarts. Until then the gateway reads
             `GatewayState.awaiting_shard` with `runningWithoutRoute`, though the shard's endpoint already lists the
-            front's address. A new gateway also reads `GatewayState.fault` while its tunnel connects.
+            front spire's address. A new gateway also reads `GatewayState.fault` while its tunnel connects.
 
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
         front_spire_id : :class:`str`
-            The front spire's ID. It needs its ``"spire.publicHost"`` setting set, see
+            The front spire's ID. The front spire needs its ``"spire.publicHost"`` setting set, see
             :meth:`SpireModule.set_spire_settings`.
 
         Returns
@@ -89,9 +94,10 @@ class NetworkModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the front spire doesn't exist or has no public host (400, ``"networking.error.frontNotRoutable"``), or
-            the shard already runs on it (400, ``"networking.error.gatewaySameSpire"``). :meth:`preflight_gateway`
-            catches neither.
+            **400** - If the front spire doesn't exist or has no public host `networking.error.frontNotRoutable`.\n
+            **400** - If the shard already runs on the front spire `networking.error.gatewaySameSpire`.\n
+            **409** - If the shard already has a gateway. A shard has one gateway at most.\n
+            :meth:`preflight_gateway` catches none of these.
 
         """
         data: GatewayRequest = {"shardId": shard_id, "frontSpireId": front_spire_id}
@@ -99,7 +105,15 @@ class NetworkModule(Base):
 
     # TODO: Drop the note once AMP stops reading `TunnelFault` while a first tunnel is set up (U26a).
     # AMP 3.0.0.6 reads it for about a minute, then the publication turns active by itself.
-    async def create_publication(self, front_spire_id: str, public_port: int, shard_id: str, port_reference: str) -> PublicationResponse:
+    async def create_publication(
+        self,
+        front_spire_id: str,
+        public_port: int,
+        shard_id: str,
+        port_reference: str,
+        *,
+        front_public_host: Optional[str] = None,
+    ) -> PublicationResponse:
         """Forward a public port on a front spire to a shard's port.
 
         |coro|
@@ -107,7 +121,8 @@ class NetworkModule(Base):
         Endpoint: ``POST /api/networking/publications``
 
         Through another spire, AMP sets up a WireGuard tunnel between the two spires (see :meth:`get_tunnels`), and the
-        forward works once :meth:`get_publications` reads it `PublicationState.active`.
+        forward works once :meth:`get_publications` reads the publication as `PublicationState.active`. The protocol is
+        always the shard port's own protocol.
 
         .. note::
             A first publication through another spire can read `PublicationState.tunnel_fault` with
@@ -117,14 +132,20 @@ class NetworkModule(Base):
         Parameters
         ----------
         front_spire_id : :class:`str`
-            The front spire's ID. The shard's own spire works as it is; another spire needs its ``"spire.publicHost"``
-            setting set first, see :meth:`SpireModule.set_spire_settings`.
+            The front spire's ID. The shard's own spire works as it is; another spire needs a public host, either its
+            ``"spire.publicHost"`` setting (see :meth:`SpireModule.set_spire_settings`) or `front_public_host`.
         public_port : :class:`int`
-            The port players connect to.
+            The port players connect to, 1 to 65535. A front spire forwards each port once, and ``"Both"`` counts as
+            TCP and UDP.
         shard_id : :class:`str`
-            The shard's ID.
+            The shard's ID. A shard routed through a gateway can't have publications, see :meth:`create_gateway`.
         port_reference : :class:`str`
-            The shard port's `ref`, eg. ``"ServerPort"``, see :meth:`ShardModule.get_shard_ports`.
+            The shard port's `ref`, eg. ``"ServerPort"``, see :meth:`ShardModule.get_shard_ports`. The port has to be
+            marked publicly reachable in the shard's ports.
+        front_public_host : Union[:class:`str`, None], optional
+            A public host for the front spire, eg. ``"amp.example.com"``, by default None. A front spire without a
+            public host keeps this host as its ``"spire.publicHost"`` setting; a front spire that already has a public
+            host ignores it.
 
         Returns
         -------
@@ -134,9 +155,14 @@ class NetworkModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the front is another spire with no public host (400, ``"networking.error.frontNoPublicHost"``), which
-            AMP checks before the port. Else if `public_port` isn't a port number (400, ``"networking.error.invalidPort"``),
-            or the shard has no port named `port_reference` (400, ``"networking.error.portRefMissing"``).
+            AMP checks the front spire first, then the port and the shard, in this order.\n
+            **400** - If the front is another spire with no public host and no `front_public_host`
+            `networking.error.frontNoPublicHost`.\n
+            **400** - If `front_public_host` isn't a bare host `spire.error.invalidPublicHost`.\n
+            **400** - If `public_port` isn't a port number `networking.error.invalidPort`.\n
+            **400** - If the shard has no port named `port_reference` `networking.error.portRefMissing`.\n
+            **409** - If the shard is routed through a gateway.\n
+            **409** - If the front spire already forwards `public_port`.
 
         """
         data: PublicationRequest = {
@@ -145,6 +171,10 @@ class NetworkModule(Base):
             "shardId": shard_id,
             "portRef": port_reference,
         }
+
+        # Left out, AMP uses the front spire's own public host
+        if front_public_host is not None:
+            data["frontPublicHost"] = front_public_host
 
         return await self._request(method="POST", path="/api/networking/publications", data=data)
 
@@ -165,7 +195,7 @@ class NetworkModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no such gateway, eg. it was removed already (404).
+            **404** - If there's no gateway with that ID, eg. the gateway was removed already.
 
         """
         await self._request(method="DELETE", path=f"/api/networking/gateways/{gateway_id}")
@@ -185,7 +215,7 @@ class NetworkModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no such publication, eg. it was removed already (404).
+            **404** - If there's no publication with that ID, eg. the publication was removed already.
 
         """
         await self._request(method="DELETE", path=f"/api/networking/publications/{publication_id}")
@@ -196,6 +226,8 @@ class NetworkModule(Base):
         |coro|
 
         Endpoint: ``GET /api/networking/firewall``
+
+        It is the panel's own spire's firewall, as AMP's system agent last applied it; another spire's can't be read.
 
         Returns
         -------
@@ -272,9 +304,9 @@ class NetworkModule(Base):
 
         Endpoint: ``GET /api/networking/tunnels``
 
-        AMP makes one on demand for a publication or a gateway through another spire, with addresses such as
-        ``"10.83.0.1"`` (the front) and ``"10.83.0.2"`` (the back), and removes it some seconds after it's no longer
-        needed.
+        AMP makes a tunnel on demand for a publication or a gateway through another spire, with addresses such as
+        ``"10.83.0.1"`` (the front) and ``"10.83.0.2"`` (the back), and removes the tunnel some seconds after it's no
+        longer needed.
 
         Returns
         -------
@@ -313,6 +345,44 @@ class NetworkModule(Base):
         data: GatewayRequest = {"shardId": shard_id, "frontSpireId": front_spire_id}
         return await self._request(method="POST", path="/api/networking/gateways/preflight", data=data)
 
+    async def set_gateway_egress(self, gateway_id: str, allow_list: list[str]) -> GatewayResponse:
+        """Set which private networks a shard routed through a gateway may reach.
+
+        |coro|
+
+        Endpoint: ``PUT /api/networking/gateways/{gateway_id}/egress``
+
+        A gateway sends all of the shard's traffic through the front spire, and the front spire drops anything bound for
+        a private network by default (10/8, 172.16/12, 192.168/16, 100.64/10, 169.254/16 and loopback). This allow list
+        is the exception. The front spire's own services aren't covered by the list: a service the front spire serves
+        on its network address stays reachable unless the front spire's firewall says otherwise.
+
+        Parameters
+        ----------
+        gateway_id : :class:`str`
+            The gateway's ID, see :meth:`get_gateways`.
+        allow_list : list[:class:`str`]
+            IPv4 networks in CIDR form, no wider than a /8, eg. ``["192.168.4.0/24"]``, at most 32 networks. The list
+            replaces the gateway's old list, and an empty list leaves the shard the internet only.
+
+        Returns
+        -------
+        :class:`GatewayResponse`
+            The gateway, with its new `egressAllowList`.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If a network is wider than a /8 `networking.error.egressTooWide`. AMP also audits the attempt as
+            a security event.\n
+            **400** - If an entry isn't an IPv4 network in CIDR form, eg. an IPv6 network or a bare address
+            `networking.error.egressNotCidr`.\n
+            **404** - If there's no gateway with that ID.
+
+        """
+        data: GatewayEgressRequest = {"egressAllowList": allow_list}
+        return await self._request(method="PUT", path=f"/api/networking/gateways/{gateway_id}/egress", data=data)
+
     # TODO: Drop the old status sentence once AMP answers with the new one (U26c).
     # AMP 3.0.0.6 answers a publication turned off with its old `Active` status.
     async def update_publication(
@@ -348,7 +418,7 @@ class NetworkModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no such publication (404).
+            **404** - If there's no publication with that ID.
 
         """
         data: PublicationUpdateRequest = {"enabled": enabled, "publicPort": public_port}

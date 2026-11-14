@@ -41,7 +41,7 @@ def _is_dotted_key(value: object) -> bool:
     # A sentence has spaces in it.
     if not isinstance(value, str) or value.split() != [value]:
         return False
-    # A key has its dots between words; a one word sentence would only end with one.
+    # A key has its dots between words; a one word sentence would only end with a dot.
     return "." in value.rstrip(".")
 
 

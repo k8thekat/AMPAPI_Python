@@ -52,13 +52,13 @@ class TaskModule(Base):
 
         Endpoint: ``POST /api/running-tasks/{task_id}/cancel``
 
-        Clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have `isCancellable` set, an update doesn't, so its
-        cancel is refused; :meth:`ShardModule.stop_shard` ends an update. To stop a shard move, use
-        :meth:`ShardModule.cancel_shard_migration`.
+        Clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have `isCancellable` set and an update task
+        doesn't, so cancelling an update is refused; :meth:`ShardModule.stop_shard` ends an update. To stop a shard
+        move, use :meth:`ShardModule.cancel_shard_migration`.
 
         .. warning::
-            A clone's cancel is answered 202 and its task reads `TaskState.cancelling`, then it carries on copying and
-            the clone completes.
+            Cancelling a clone is answered 202 and the clone's task reads `TaskState.cancelling`, then the clone carries
+            on copying and completes.
 
         Parameters
         ----------
@@ -68,7 +68,8 @@ class TaskModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the task can't be cancelled (409), or it has left the list (404).
+            **404** - If the task has left the list.\n
+            **409** - If the task can't be cancelled.
 
         """
         await self._request(method="POST", path=f"/api/running-tasks/{task_id}/cancel", data={})
@@ -82,40 +83,42 @@ class TaskModule(Base):
 
         Endpoint: ``POST /api/tasks/{tenant_id}/{task_id}/cancel``
 
-        AMP answers at once (202) and passes the cancel to the shard the task works on, which stops the task when it
-        next looks. :meth:`get_task` shows it as `cancellationRequestedAt`. A second cancel before the task finishes is
-        answered 202 too.
+        AMP answers at once (202) and passes the cancel to the shard the task works on, which stops the task at its next
+        check. :meth:`get_task` shows the request as `cancellationRequestedAt`. A second cancel before the task finishes
+        is answered 202 too.
 
         .. warning::
-            AMP 3.0.0.6's shard update ignores it: the record reads status 4 (cancel asked for) while the update carries
-            on, whether it was downloading, between steps or starting its container. :meth:`ShardModule.stop_shard` is
-            what ends an update.
+            AMP 3.0.0.6's shard update ignores the cancel: the task's record reads status 4 (cancel asked for) while the
+            update carries on, whether the update was downloading, between steps or starting its container.
+            :meth:`ShardModule.stop_shard` is what ends an update.
 
         Parameters
         ----------
         task_id : :class:`str`
             The task's ID, eg. the `taskId` from :meth:`ShardModule.update_shard`.
         tenant_id : :class:`str`, optional
-            The task's tenant, its `tenantId`, by default ``"_root"``, the only one seen live.
+            The task's tenant, its `tenantId`, by default ``"_root"``, the only tenant seen live.
 
         Raises
         ------
         AMPAPIRequestError
-            If the task has finished (409, ``"tasks.error.alreadyComplete"``) or works on no shard (409), the user may
-            see it but not stop it (403), or there's no such task the user can see (404).
+            **403** - If the logged in user may see the task but not stop it.\n
+            **404** - If the logged in user can see no task with that ID.\n
+            **409** - If the task has finished `tasks.error.alreadyComplete`.\n
+            **409** - If the task works on no shard.
 
         """
         await self._request(method="POST", path=f"/api/tasks/{tenant_id}/{task_id}/cancel", data={})
 
     async def delete_running_task(self, task_id: str) -> None:
-        """Dismiss a finished task, so it leaves the list at once.
+        """Dismiss a finished task, so the task leaves the list at once.
 
         |coro|
 
         Endpoint: ``DELETE /api/running-tasks/{task_id}``
 
-        A failed task otherwise stays for about 30 minutes, through :meth:`ShardModule.delete_shard_migration` and even
-        the shard's purge in a failed move's case.
+        A failed task otherwise stays for about 30 minutes, through :meth:`ShardModule.delete_shard_migration` and, for
+        a failed move, even the shard's purge.
 
         Parameters
         ----------
@@ -125,21 +128,21 @@ class TaskModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the task is still running (409). One still marked running can be dismissed once it has stopped reporting
-            for a couple of minutes.
+            **409** - If the task is still running. A task still marked running can be dismissed once the task has
+            stopped reporting for a couple of minutes.
 
         """
         await self._request(method="DELETE", path=f"/api/running-tasks/{task_id}")
 
     async def get_running_tasks(self) -> list[RunningTask]:
-        """Get the user's own tasks running now, and those that finished in the last few seconds, oldest first.
+        """Get the logged in user's own tasks running now, and their tasks that finished in the last few seconds, oldest first.
 
         |coro|
 
         Endpoint: ``GET /api/running-tasks``
 
-        A failed task stays for about 30 minutes, unless :meth:`delete_running_task` dismisses it or a later task of its
-        type on the same target ends. Nothing in the list says when it will go.
+        A failed task stays for about 30 minutes, unless :meth:`delete_running_task` dismisses the task or a later task of
+        the same type on the same target ends. Nothing in the list says when a failed task will go.
 
         Returns
         -------
@@ -157,15 +160,16 @@ class TaskModule(Base):
 
         Endpoint: ``GET /api/tasks/{tenant_id}/{task_id}``
 
-        Unlike :meth:`get_running_tasks`, it isn't limited to the user's own tasks, and the record stays after the task
-        leaves that list. A shard move's task isn't here (404), only in :meth:`get_running_tasks`.
+        Unlike :meth:`get_running_tasks`, this call isn't limited to the logged in user's own tasks, and the record stays
+        after the task leaves that list. A shard move's task has no record here (404), only an entry in
+        :meth:`get_running_tasks`.
 
         Parameters
         ----------
         task_id : :class:`str`
             The task's ID, eg. the `taskId` from :meth:`ShardModule.update_shard`.
         tenant_id : :class:`str`, optional
-            The task's tenant, its `tenantId`, by default ``"_root"``, the only one seen live.
+            The task's tenant, its `tenantId`, by default ``"_root"``, the only tenant seen live.
 
         Returns
         -------
@@ -175,7 +179,8 @@ class TaskModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no such task the user can see, or it's a move's (404).
+            **404** - If the logged in user can see no task with that ID.\n
+            **404** - If the task belongs to a shard move.
 
         """
         return await self._request(method="GET", path=f"/api/tasks/{tenant_id}/{task_id}")

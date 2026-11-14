@@ -79,7 +79,7 @@ class AnalyticsModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `user_key` isn't a player key AMP would make (400, ``"analytics.error.badUserKey"``).
+            **400** - If `user_key` isn't a player key AMP would make `analytics.error.badUserKey`.
 
         """
         return await self._request(method="DELETE", path=f"/api/analytics/sessions/users/{user_key}", parameters={"demo": demo})
@@ -122,8 +122,7 @@ class AnalyticsModule(Base):
         Parameters
         ----------
         search : :class:`str`
-            The address to look for, IPv4 or IPv6. AMP refuses a bare fragment such as ``"192"``
-            (400, ``"analytics.error.badAddress"``).
+            The address to look for, IPv4 or IPv6, a whole address only.
         demo : :class:`bool`, optional
             If the call is for the demo data or not, by default False.
 
@@ -131,6 +130,12 @@ class AnalyticsModule(Base):
         -------
         :class:`AnalyticsAddressSearchResponse`
             The address, if it's private or public, and the matching addresses and their players.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If `search` is a bare fragment such as ``"192"`` `analytics.error.badAddress`.\n
+            **500** - If `search` is a range, eg. ``"203.0.113.0/24"``, see the warning above.
 
         """
         return await self._request(method="GET", path="/api/analytics/addresses", parameters={"q": search, "demo": demo})
@@ -158,8 +163,8 @@ class AnalyticsModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `avatar_hash` isn't 40 hex digits (400, ``"analytics.error.badAvatar"``), or Steam has no such avatar
-            (404).
+            **400** - If `avatar_hash` isn't 40 hex digits `analytics.error.badAvatar`.\n
+            **404** - If Steam has no avatar with that hash.
 
         """
         return await self._request(method="GET", path=f"/api/analytics/avatars/{avatar_hash}", parameters={"full": full}, raw_bytes=True)
@@ -186,7 +191,8 @@ class AnalyticsModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the player isn't connected to the shard, or `user` is their name (404, ``"analytics.error.notConnected"``).
+            **404** - If the player isn't connected to the shard `analytics.error.notConnected`.\n
+            **404** - If `user` is the player's name rather than their `id` `analytics.error.notConnected`.
 
         """
         return await self._request(method="GET", path=f"/api/analytics/connected/{shard_id}", parameters={"user": user})
@@ -290,7 +296,7 @@ class AnalyticsModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If AMP has no skin for the hash (404).
+            **404** - If AMP has no skin for the hash.
 
         """
         return await self._request(method="GET", path=f"/api/analytics/skins/{texture_hash}", raw_bytes=True)

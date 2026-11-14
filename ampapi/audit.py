@@ -232,7 +232,7 @@ class AuditModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If no events carry that ID (404, ``"audit.error.flowNotFound"``).
+            **404** - If no events carry that ID `audit.error.flowNotFound`.
 
         """
         return await self._request(method="GET", path=f"/api/audit/tree/{correlation_id}")

@@ -23,7 +23,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal, NotRequired, Optional, TypedDict, Union
 
-__all__ = (
+# Typed, as pyright stops inferring a tuple's items past 256 of them
+__all__: tuple[str, ...] = (
     "AnalyticsAddressSearchResponse",
     "AnalyticsAddressSummary",
     "AnalyticsAddressUsersResponse",
@@ -73,9 +74,21 @@ __all__ = (
     "FileACLChange",
     "FilePrincipal",
     "FileVerb",
+    "FirewallGatewayRoute",
+    "FirewallGatewayRouteKey",
+    "FirewallRejectedGatewayRoute",
+    "FirewallRejectedInterface",
+    "FirewallRejectedPeer",
+    "FirewallRejectedRule",
     "FirewallResponse",
     "FirewallRule",
     "FirewallStatus",
+    "FirewallWireGuardInterface",
+    "FirewallWireGuardInterfaceStatus",
+    "FirewallWireGuardPeer",
+    "FirewallWithheldRule",
+    "GatewayConflict",
+    "GatewayEgressRequest",
     "GatewayEligibilityResponse",
     "GatewayPreflightResponse",
     "GatewayRequest",
@@ -225,8 +238,10 @@ __all__ = (
     "SpireIPAddress",
     "SpireIPOptionResponse",
     "SpireImportBlockedItem",
+    "SpireImportDiscoveredPort",
     "SpireImportEvidence",
     "SpireImportItem",
+    "SpireImportLiveness",
     "SpireImportMatch",
     "SpireImportPreflightResponse",
     "SpireImportReadyItem",
@@ -238,6 +253,7 @@ __all__ = (
     "SpireImportScanServer",
     "SpireImportSize",
     "SpireImportUnreadable",
+    "SpireJavaRuntime",
     "SpirePlatform",
     "SpirePortResponse",
     "SpireResponse",
@@ -271,6 +287,8 @@ __all__ = (
     "TunnelFrontResponse",
     "TunnelResponse",
     "TunnelStatus",
+    "UpdateRolledBack",
+    "UpdateSpireBehind",
     "UpdateStatusResponse",
     "UserCreateRequest",
     "UserResponse",
@@ -528,7 +546,7 @@ class AnalyticsUsersResponse(TypedDict):
     serverInfo: dict[str, AnalyticsServerInfo]
     isDemo: bool
     address: Optional[AnalyticsAddressSummary]
-    "A summary of the address when the search text is one, else `None`."
+    "A summary of the address when the search text is an address, else `None`."
 
 
 class AuditActionCount(TypedDict):
@@ -670,11 +688,13 @@ class BusFirewallOutcome(TypedDict):
     """The port AMP opened on the host for the message bus, from `BusExpandResponse.firewall`."""
 
     outcome: str
-    """eg. ``"Open"``."""
+    """``"Open"``, ``"NotManaged"``, ``"Pending"`` or ``"WriteFailed"``."""
     port: int
     "eg. 4222."
-    generation: int
+    generation: Optional[int]
+    """The firewall state that opens the port, `None` unless `outcome` is ``"Open"``."""
     agentRunning: bool
+    "If AMP's system agent, which opens the port, was running; without it the port has to be opened by hand."
 
 
 class BusJoinInfo(TypedDict):
@@ -736,19 +756,26 @@ class CredentialResponse(TypedDict):
     visibility: str
     """``"Private"`` or ``"Public"``."""
     mine: bool
-    username: str
-    shardCount: int
+    "If the logged in user made it."
+    username: Optional[str]
+    "`None` for anyone but the user who made it."
+    shardCount: Optional[int]
+    "How many shards use it; `None` for anyone but the user who made it and a ``credentials.manage`` holder."
     createdAt: str
     updatedAt: str
 
 
 class DatastoreRequest(TypedDict):
-    """The body of ``POST /api/spires/{id}/datastores``."""
+    """The body of ``POST /api/spires/{id}/datastores``, which makes a datastore, or with `id` replaces that datastore whole."""
 
+    id: NotRequired[str]
+    "The datastore to replace. AMP makes a new datastore with this ID when the spire has no datastore by that ID."
     name: str
     path: str
     isDefault: bool
     enabled: bool
+    softLimitMb: int
+    tags: list[str]
 
 
 class DatastoreResponse(TypedDict):
@@ -760,9 +787,13 @@ class DatastoreResponse(TypedDict):
     """eg. ``"/opt/cubecoders/amp3/data/Datastores/Default"``. AMP doesn't check the folder exists."""
     isDefault: bool
     enabled: bool
+    "If new shards can be put here or not."
     softLimitMb: int
+    """0 for no limit. Once the scanned use reaches it, AMP refuses new shards here (the import preflight's
+    `batchBlock` 3); the shards already here keep running and can still grow."""
     tags: list[str]
-    """AMP sets these itself, eg. ``["HDD"]``."""
+    """The user's own labels, eg. ``["scratch"]``, and the storage medium where AMP detected it (``"NVMe"``, ``"SSD"``
+    or ``"HDD"``), as on a spire's ``"Default"`` datastore."""
 
 
 class DatastoreUsage(TypedDict):
@@ -800,7 +831,7 @@ class DiagnosticsResponse(TypedDict):
     virtualization: str
     """eg. ``"QEMU_KVM"``."""
     natsStatus: str
-    """The message bus, eg. ``"Connected"``."""
+    """The message bus, ``"Connected"`` or ``"Disconnected"``."""
     # TODO: Drop the field doc once AMP reports its uptime (U11).
     # AMP 3.0.0.6 sends 0 however long the panel has run.
     uptimeSeconds: int
@@ -808,14 +839,17 @@ class DiagnosticsResponse(TypedDict):
     auditOrphanWrites: int
     auditRelaunchCarriedWrites: int
     ipv6: str
-    """eg. ``"Unavailable"``, with the reason in `ipv6Detail`."""
+    """``"Unknown"``, ``"Unavailable"``, ``"Working"`` or ``"BlackHoled"``, with the reason in `ipv6Detail`."""
     ipv6Detail: str
     containerRuntime: str
-    """eg. ``"Podman"``."""
+    """``"Podman"`` or ``"Docker"``, empty when neither answered."""
     containerRuntimeVersion: str
     containerRuntimeVerdict: str
-    """eg. ``"Usable"``."""
-    containerRuntimeReason: Optional[str]
+    """``"Unknown"`` before the first check, then ``"NotFound"``, ``"Usable"`` or ``"Unusable"``."""
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `DiagnosticsDto` alone (#3-56.2h).
+    # Every capture has it `None`, with the runtime usable.
+    containerRuntimeReason: Optional[CodedErrorResponse]
+    "The coded reason behind `containerRuntimeVerdict`, when AMP gives a reason."
 
 
 class ExpiredPasswordRequest(TypedDict):
@@ -862,12 +896,77 @@ class FileVerb(TypedDict):
     """The folder whose rule gives `inheritedState`, eg. ``"my_folder"``; `None` when none does."""
 
 
+class FirewallGatewayRoute(TypedDict):
+    """A gateway's port AMP's system agent forwards on the front spire, from `FirewallStatus.gatewayApplied`."""
+
+    interfaceName: str
+    """The WireGuard tunnel it goes over, eg. ``"amp-7f7e2fff"``."""
+    publicPort: int
+    protocol: str
+    """``"Tcp"`` or ``"Udp"``."""
+    targetIp: str
+    "The shard's address on the tunnel, its gateway's `GatewayStatus.address`."
+    targetPort: int
+    key: FirewallGatewayRouteKey
+
+
+class FirewallGatewayRouteKey(TypedDict):
+    """The protocol and port that tell gateway routes apart on the front spire, from `FirewallGatewayRoute.key`."""
+
+    protocol: str
+    """``"Tcp"`` or ``"Udp"``."""
+    publicPort: int
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `RejectedGatewayRoute` alone (#3-56.2ap).
+# Every capture has `gatewayRejected` empty.
+class FirewallRejectedGatewayRoute(TypedDict):
+    """A gateway route AMP's system agent couldn't apply, from `FirewallStatus.gatewayRejected`."""
+
+    route: FirewallGatewayRoute
+    reason: str
+
+
+class FirewallRejectedInterface(TypedDict):
+    """A WireGuard tunnel AMP's system agent couldn't bring up, from `FirewallStatus.wireGuardRejected`."""
+
+    interface: FirewallWireGuardInterface
+    reason: str
+    """eg. ``"The file does not exist."`` while a new tunnel is set up."""
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `RejectedPeer` alone (#3-56.2ap).
+# Every capture has `wireGuardPeersRejected` empty.
+class FirewallRejectedPeer(TypedDict):
+    """A WireGuard peer AMP's system agent couldn't add, from `FirewallStatus.wireGuardPeersRejected`."""
+
+    peer: FirewallWireGuardPeer
+    reason: str
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `RejectedRule` alone (#3-56.2ap).
+# Every capture has `rejected` empty.
+class FirewallRejectedRule(TypedDict):
+    """A port AMP's system agent couldn't open, from `FirewallStatus.rejected`."""
+
+    rule: FirewallRule
+    reason: str
+
+
 class FirewallResponse(TypedDict):
-    """``GET /api/networking/firewall``, the firewall rules AMP keeps on the host."""
+    """``GET /api/networking/firewall``, the firewall rules AMP's system agent keeps on the panel's own spire.
+
+    Another spire's firewall can't be read yet.
+    """
 
     running: bool
-    status: FirewallStatus
-    withheld: list[Any]
+    "If AMP's system agent runs here; `False` when none is installed, or its status is over five minutes old."
+    status: Optional[FirewallStatus]
+    "What the agent last applied, `None` when no agent has run here and AMP manages no firewall rules."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `FirewallStatusDto` alone (#3-56.2ap).
+    # Every capture has it empty; AMP refuses a shard port it holds itself up front (`shards.error.portReservedByAmp`).
+    withheld: list[FirewallWithheldRule]
+    "A shard's ports AMP left closed, as it holds the numbers itself."
 
 
 class FirewallRule(TypedDict):
@@ -875,17 +974,17 @@ class FirewallRule(TypedDict):
 
     port: int
     protocol: str
-    """eg. ``"Tcp"``."""
+    """``"Tcp"`` or ``"Udp"``."""
     tag: str
     """eg. ``"panel-web"``, ``"nats"`` or ``"sftp"``."""
     label: str
     """eg. ``"AMP panel"``."""
     scope: str
-    """eg. ``"Any"`` or ``"HostOnly"``."""
+    """``"Any"`` or ``"HostOnly"``."""
 
 
 class FirewallStatus(TypedDict):
-    """The firewall's state, from `FirewallResponse.status`. The item shape of the lists past `applied` isn't known yet."""
+    """The firewall's state as AMP's system agent last applied it, from `FirewallResponse.status`."""
 
     schema: int
     generation: int
@@ -893,17 +992,95 @@ class FirewallStatus(TypedDict):
     """eg. ``"iptables+ip6tables"``."""
     healthy: bool
     applied: list[FirewallRule]
-    rejected: list[Any]
-    wireGuardApplied: list[Any]
-    wireGuardRejected: list[Any]
-    wireGuardPeersApplied: list[Any]
-    wireGuardPeersRejected: list[Any]
-    gatewayApplied: list[Any]
-    gatewayRejected: list[Any]
-    advisories: list[Any]
+    # TODO: Check these two against a live capture; typed from AMP's OpenAPI `NetworkStatus` alone (#3-56.2ap).
+    # Every capture has them empty, a gateway's tunnel included.
+    rejected: list[FirewallRejectedRule]
+    wireGuardApplied: list[FirewallWireGuardInterfaceStatus]
+    wireGuardRejected: list[FirewallRejectedInterface]
+    "The tunnels it couldn't bring up, eg. a new gateway's while AMP puts its agent in place."
+    # TODO: Check these two against a live capture; typed from AMP's OpenAPI `NetworkStatus` alone (#3-56.2ap).
+    # Every capture has them empty, a gateway's tunnel included.
+    wireGuardPeersApplied: list[FirewallWireGuardPeer]
+    wireGuardPeersRejected: list[FirewallRejectedPeer]
+    gatewayApplied: list[FirewallGatewayRoute]
+    "The gateway ports it forwards, on a front spire."
+    # TODO: Check these two against a live capture; typed from AMP's OpenAPI `NetworkStatus` alone (#3-56.2ap).
+    # Every capture has them empty.
+    gatewayRejected: list[FirewallRejectedGatewayRoute]
+    advisories: list[str]
     error: Optional[str]
     updatedAt: str
     agentVersion: str
+
+
+class FirewallWireGuardInterface(TypedDict):
+    """A WireGuard tunnel's interface on the host, from `FirewallRejectedInterface.interface`."""
+
+    interfaceName: str
+    """eg. ``"amp-7f7e2fff"``."""
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `WireGuardInterfaceStatus` alone (#3-56.2ap).
+# Every capture has `wireGuardApplied` empty.
+class FirewallWireGuardInterfaceStatus(FirewallWireGuardInterface):
+    """A WireGuard tunnel AMP's system agent brought up, from `FirewallStatus.wireGuardApplied`."""
+
+    installed: bool
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `WireGuardPeer` and `WireGuardPeerStatus` alone (#3-56.2ap).
+# Every capture has `wireGuardPeersApplied` and `wireGuardPeersRejected` empty.
+class FirewallWireGuardPeer(TypedDict):
+    """The other end of a WireGuard tunnel, from `FirewallStatus.wireGuardPeersApplied` and `FirewallRejectedPeer.peer`."""
+
+    interfaceName: str
+    publicKey: str
+    allowedIp: str
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `WithheldPortRule` alone (#3-56.2ap).
+# Every capture has `withheld` empty.
+class FirewallWithheldRule(TypedDict):
+    """A shard's port AMP left closed as it holds the number itself, from `FirewallResponse.withheld`.
+
+    The shard can't be reached on that port until it moves to another.
+    """
+
+    shardId: str
+    shardName: str
+    source: str
+    """What asked for the rule: ``"Shard"``, ``"Publication"`` or ``"Gateway"``."""
+    port: int
+    protocol: str
+    """``"TCP"`` or ``"UDP"``."""
+    kind: str
+    """Which of AMP's own listeners holds the port: ``"Panel"``, ``"Bus"``, ``"Sftp"``, ``"EntryNodeBootstrap"``,
+    ``"WireGuardTunnel"`` or ``"TunnelProbe"``."""
+
+
+class GatewayConflict(TypedDict):
+    """A shard port that clashes on the front spire, from `GatewayPreflightResponse.conflicts`.
+
+    A gateway maps the shard's ports one to one onto the front spire, so it is the shard's port that has to move.
+    """
+
+    port: int
+    protocol: str
+    """``"TCP"``, ``"UDP"`` or ``"Both"``."""
+    portRef: str
+    """The shard port's name in its template, eg. ``"ServerPort"``."""
+    heldBy: str
+    """What holds the port on the front spire, eg. ``"Publication"``."""
+    holderName: str
+    "Its name, eg. the shard a publication forwards to."
+    suggestedPort: int
+    "A port that is free on the front spire."
+
+
+class GatewayEgressRequest(TypedDict):
+    """The body of ``PUT /api/networking/gateways/{id}/egress``."""
+
+    egressAllowList: list[str]
 
 
 class GatewayEligibilityResponse(TypedDict):
@@ -919,8 +1096,9 @@ class GatewayPreflightResponse(TypedDict):
 
     # TODO: Drop the field doc once AMP's preflight checks what the create checks (U20b, U20c).
     # AMP 3.0.0.6 sends no conflicts for gateways the create refuses.
-    conflicts: list[Any]
-    "Empty even for a gateway `NetworkModule.create_gateway` refuses, see `NetworkModule.preflight_gateway`."
+    conflicts: list[GatewayConflict]
+    """The shard's ports a publication on the front spire already holds; a shard's own port there isn't one. Empty even
+    for a gateway `NetworkModule.create_gateway` refuses, see `NetworkModule.preflight_gateway`."""
 
 
 class GatewayRequest(TypedDict):
@@ -943,7 +1121,8 @@ class GatewayResponse(TypedDict):
     frontSpireName: str
     enabled: bool
     egressAllowList: list[str]
-    "Where the shard may reach out to over the route."
+    """The private IPv4 networks the shard may reach through the front spire, eg. ``["192.168.4.0/24"]``; see
+    `NetworkModule.set_gateway_egress`. Empty for the internet only."""
     createdAt: str
     status: Optional[GatewayStatus]
     "`None` when it's new; the list fills it in once AMP has set the route up."
@@ -960,8 +1139,9 @@ class GatewayStatus(TypedDict):
     "The gateway's `id`."
     state: str
     """As AMP sends it, a `GatewayState` value, eg. ``"Active"``; `GatewayState(state)` gives the member."""
-    address: str
-    """The shard's address on the tunnel, eg. ``"10.83.0.10"``, set from the start."""
+    address: Optional[str]
+    """The shard's address on the tunnel, eg. ``"10.83.0.10"``, `None` until AMP gives it one; every capture had it
+    from the first status."""
     error: Optional[str]
     """Why it's at `GatewayState.fault`, eg. ``"The tunnel this server routes over is not up."``."""
     updatedAt: str
@@ -980,9 +1160,10 @@ class HealthStatusResponse(TypedDict):
     `EnrollmentModule.approve_spire_enrollment`."""
     preview: Optional[PreviewStatus]
     "Set on a preview build."
-    messageParams: Optional[dict[str, Any]]
+    messageParams: Optional[dict[str, str]]
     """Values for the `message` translation, eg. the `fingerprint` the panel's admin compares before approving."""
     plainText: bool
+    "If this request came over plain HTTP from a public address, which the login page warns about."
 
 
 class HTTPSCheck(TypedDict):
@@ -1002,16 +1183,18 @@ class HTTPSCheck(TypedDict):
 class HTTPSCheckResponse(TypedDict):
     """``POST /api/https/check``, if a domain name is ready for AMP's own HTTPS setup."""
 
-    hostName: str
+    hostName: Optional[str]
+    """The name as AMP normalised it, `None` for one that isn't a domain name (`outcome` ``"invalid"``)."""
     outcome: str
-    """eg. ``"elsewhere"``, for a name that points at another address than the panel's public one."""
+    """eg. ``"elsewhere"``, for a name that points at another address than the panel's public one, or ``"invalid"``,
+    with the first check's `code` saying why, eg. ``"https.name.characters"``."""
     checks: list[HTTPSCheck]
     reachability: str
-    """eg. ``"Nat"``."""
-    externalAddress: str
-    "The panel's public IP address."
-    internalAddress: str
-    "The panel's address on its own network."
+    """``"Unknown"``, ``"Direct"``, ``"Nat"`` or ``"Cgnat"``."""
+    externalAddress: Optional[str]
+    """The panel's public IP address, `None` when AMP didn't learn it, eg. for an ``"invalid"`` name."""
+    internalAddress: Optional[str]
+    """The panel's address on its own network, `None` when AMP didn't learn it, eg. for an ``"invalid"`` name."""
     addresses: list[str]
     "The addresses the name resolved to."
 
@@ -1020,10 +1203,11 @@ class HTTPSSetupStatusResponse(TypedDict):
     """``GET /api/https/setup/status``, the progress of AMP's own HTTPS setup."""
 
     phase: str
-    """eg. ``"idle"``."""
+    """``"idle"``, ``"running"``, ``"done"`` (configured) or ``"failed"`` (nothing configured)."""
     hostName: Optional[str]
-    checks: list[Any]
+    checks: list[HTTPSCheck]
     url: Optional[str]
+    "The panel's address through AMP's own HTTPS once it's configured."
     certificateVerified: bool
     updatedUtc: str
     """``"0001-01-01T00:00:00+00:00"`` before any setup."""
@@ -1033,7 +1217,7 @@ class HTTPSStateResponse(TypedDict):
     """``GET /api/https``, the panel's HTTPS setup. Setting and clearing the own proxy answer with it too."""
 
     mode: str
-    """eg. ``"none"`` or ``"ownProxy"``."""
+    """``"none"``, ``"managed"`` (AMP's own HTTPS, through Caddy) or ``"ownProxy"`` (`HTTPSModule.set_own_proxy`)."""
     hostName: Optional[str]
     url: Optional[str]
     certificateVerified: bool
@@ -1044,15 +1228,17 @@ class HTTPSStateResponse(TypedDict):
     externalAddress: str
     "The panel's public IP address."
     reachability: str
-    """eg. ``"Nat"``."""
+    """``"Unknown"``, ``"Direct"``, ``"Nat"`` or ``"Cgnat"``."""
     internalAddress: str
     "The panel's address on its own network."
     ipv6Address: Optional[str]
+    "A public IPv6 address of the machine's, `None` when the machine has no public IPv6 address."
     trustedProxies: list[str]
     "The reverse proxies AMP takes forwarded headers from, set by `HTTPSModule.set_own_proxy`."
     serveFrontend: bool
     "If AMP serves the web app as well as its API or not."
     running: bool
+    "If a setup is running."
 
 
 class HubTokenResponse(TypedDict):
@@ -1142,7 +1328,7 @@ class LicenceAgreementResponse(TypedDict):
     fallbackFrom: Optional[str]
     """The language asked for when AMP had to send English instead, eg. ``"fr"``."""
     attestation: str
-    "The sentence the user agrees to, sent back in a `LicenceTermsAcceptance`."
+    "The sentence the person accepting the terms agrees to, sent back in a `LicenceTermsAcceptance`."
 
 
 class LicenceQueryResponse(TypedDict):
@@ -1150,10 +1336,12 @@ class LicenceQueryResponse(TypedDict):
 
     productName: str
     gradeName: str
-    expires: str
+    expires: Optional[str]
+    "`None` for a lifetime licence."
     usage: int
     "How many installations already use the key; one key covers several."
     alreadyActive: bool
+    "If the key's edition is active here already; activating it again refreshes it."
     eligible: bool
     termsRequired: bool
     "If activating the key needs a terms acceptance."
@@ -1173,10 +1361,13 @@ class LicenceResponse(TypedDict):
     gradeName: str
     """eg. ``"Beta Preview"``."""
     state: str
-    """eg. ``"Valid"``."""
+    """What the activation file says alone: ``"Valid"``, ``"Expired"`` or ``"Invalid"``."""
     standing: str
-    """eg. ``"Active"``, or ``"TermsRequired"``, which the web panel checks for."""
-    expires: str
+    """What counts, with the licence service's last answer: ``"Active"``, ``"Grace"``, ``"Lapsed"``, ``"Revoked"``,
+    ``"Disabled"``, ``"Unrecognised"``, ``"OutOfTouch"``, ``"Invalid"`` or ``"TermsRequired"``. Only ``"Active"`` and
+    ``"Grace"`` allow shards."""
+    expires: Optional[str]
+    "`None` for a lifetime licence."
     graceEnds: Optional[str]
     "The web panel shows it as a date."
     usage: int
@@ -1225,9 +1416,9 @@ class LicenceTermsAcceptance(TypedDict):
     attestation: str
     "The agreement's `attestation`."
     locale: str
-    """The language the user read it in, eg. ``"en"``."""
+    """The language the terms were read in, eg. ``"en"``."""
     clickedAt: str
-    "When the user agreed, ISO 8601."
+    "When the terms were accepted, ISO 8601."
 
 
 class LicenceTermsRequest(LicenceTermsAcceptance):
@@ -1245,40 +1436,53 @@ class LoginRequest(TypedDict):
 
 
 class MessageBusService(TypedDict):
-    """The message bus's own process, from `MessageBusStatsResponse.service`."""
+    """The message bus's own process, from `MessageBusStatsResponse.service`, as the record it leaves says.
+
+    The fields AMP reads from that record are `None` while there's none, `condition` ``"Absent"``.
+    """
 
     condition: str
-    """eg. ``"Running"``."""
+    """``"Absent"``, ``"Stale"``, ``"Stopped"``, ``"Idle"``, ``"Blocked"``, ``"Running"``, ``"Backoff"`` or
+    ``"CrashLoop"``."""
     pid: int
-    startedAtUtc: str
-    binaryVersion: str
-    configHash: str
+    startedAtUtc: Optional[str]
+    binaryVersion: Optional[str]
+    configHash: Optional[str]
     configCurrent: bool
-    fileStoreBytes: int
+    "If the bus runs the config file as it is now; `False` while a restart AMP asked for is pending."
+    fileStoreBytes: Optional[int]
     lastExitReason: Optional[str]
-    updatedAtUtc: str
-    serviceVersion: str
+    "Why the last bus process is gone, or what the service waits for."
+    updatedAtUtc: Optional[str]
+    serviceVersion: Optional[str]
     """eg. ``"amp3-host 3.0.0.6+f3d1a77cea"``."""
     serviceUp: bool
 
 
 class MessageBusStatsResponse(TypedDict):
-    """``GET /api/support/message-bus-stats``, the NATS message bus's figures."""
+    """``GET /api/support/message-bus-stats``, the NATS message bus's figures.
+
+    With no connection to the bus, AMP answers with a shell rather than an error: `state` isn't ``"Open"``, and the
+    server's details, figures and `service` are `None`.
+    """
 
     state: str
-    """eg. ``"Open"``."""
-    serverId: str
-    serverName: str
-    serverVersion: str
+    """``"Open"``, ``"Closed"``, ``"Reconnecting"`` and the like."""
+    serverId: Optional[str]
+    "The first 8 characters of the server's ID."
+    serverName: Optional[str]
+    serverVersion: Optional[str]
     clusterName: Optional[str]
-    rttMs: float
+    "`None` for a server that isn't in a cluster."
+    rttMs: Optional[float]
+    "Measured on the call."
     jetStreamAvailable: bool
     jsStreams: int
     jsConsumers: int
-    jsStorageBytes: int
-    jsApiTotal: int
-    jsApiErrors: int
-    service: MessageBusService
+    jsStorageBytes: Optional[int]
+    jsApiTotal: Optional[int]
+    jsApiErrors: Optional[int]
+    service: Optional[MessageBusService]
 
 
 class MessageErrorResponse(TypedDict):
@@ -1384,7 +1588,7 @@ class PermissionsResponse(TypedDict):
     """``GET /api/me/permissions``, the session user's grants plus the whole permission catalog."""
 
     grants: list[str]
-    "``>`` is every permission (the admin); a user with no roles has none."
+    "``>`` is every permission (the admin); a user with no roles has no grants."
     catalog: list[PermissionNode]
     roleIds: list[str]
 
@@ -1480,8 +1684,11 @@ class PreviewStatus(TypedDict):
     """The preview build's countdown in `HealthStatusResponse`."""
 
     expiresAt: str
-    daysRemaining: int
+    daysRemaining: Optional[int]
+    "Counted from the time the licence service vouched for, not the machine's clock; `None` until it first answers."
     reason: Optional[str]
+    """Why the build is blocked, ``"expired"``, ``"clockWrong"``, ``"unreachable"`` or ``"unstamped"``; `None` while it
+    runs normally."""
     update: Optional[PreviewUpdate]
     "Often `None`."
 
@@ -1490,10 +1697,12 @@ class PreviewUpdate(TypedDict):
     """The preview build's update check in `PreviewStatus`."""
 
     state: str
-    """eg. ``"current"``."""
+    """``"current"``, ``"available"``, ``"installing"`` (an expired build putting the newer one in place) or ``"failed"``."""
     version: Optional[str]
+    "The newer version, when a newer version exists."
     stream: Optional[str]
     reason: Optional[str]
+    """An ``"updates.error.*"`` key on ``"failed"``."""
 
 
 class Principal(TypedDict):
@@ -1559,6 +1768,8 @@ class PublicationRequest(TypedDict):
     publicPort: int
     shardId: str
     portRef: str
+    frontPublicHost: NotRequired[str]
+    """The front spire's ``"spire.publicHost"`` setting to keep, when the front spire has no public host yet."""
 
 
 class PublicationResponse(TypedDict):
@@ -1956,6 +2167,7 @@ class SettingSpec(TypedDict):
     """
     paramFieldName: str
     effectiveKey: str
+    "`paramFieldName` when it's set, else `fieldName`."
     required: bool
     hidden: bool
     platform: int
@@ -2016,9 +2228,10 @@ class SettingsSaveResponse(TypedDict):
     A full save answers 204 with nothing.
     """
 
-    # TODO: Type a notice once AMP is seen sending one live (#3-51.7).
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `SettingsSaveResult` alone (#3-51.7, #3-56.2ak).
     # AMP's docs say one comes back when exposure is turned off and the agent refuses to remove ports 80 and 443.
-    notices: list[Any]
+    notices: list[CodedErrorResponse]
+    "What followed from the change and couldn't be done, each still to put right; the change itself stands."
 
 
 class ShardAddress(TypedDict):
@@ -2167,9 +2380,10 @@ class ShardCredentialResponse(TypedDict):
     required: bool
     "If the game can only be downloaded by an account that owns it, so an update needs a credential."
     credential: Optional[CredentialResponse]
-    "The credential the shard uses, `None` when it has none. Its `username` is there only for the user who made it."
+    """The credential the shard uses, `None` when the shard has no credential. The credential's `username` is there
+    only for the user who created the credential."""
     usable: list[CredentialResponse]
-    "The credentials the user may give the shard: their own and the public ones."
+    "The credentials the logged in user may give the shard: their own credentials and the public credentials."
 
 
 # TODO: Check against a live capture; typed from AMP's OpenAPI `CustomPortDef` alone (#3-56.1z).
@@ -2231,7 +2445,7 @@ class ShardExtractResponse(TypedDict):
     skippedOnDisk: int
     "Files already there that weren't overwritten, or no longer in the archive."
     skippedDenied: int
-    "Files the user may not write there."
+    "Files the logged in user may not write at the destination."
     skippedBlocked: int
     "Files of a type the panel blocks."
     skippedManaged: int
@@ -2279,7 +2493,7 @@ class ShardFileResponse(TypedDict):
 
 
 class ShardImportResponse(TypedDict):
-    """``GET /api/shards/{id}/import``, what the import that made a shard brought across."""
+    """``GET /api/shards/{id}/import``, what the import that made the shard brought across."""
 
     importedAt: str
     sourcePath: str
@@ -2714,13 +2928,13 @@ class SpireCPU(TypedDict):
 
 
 class SpireEnrollmentAdmission(TypedDict):
-    """The machine that used a join file, from `SpireEnrollmentResponse.admission`."""
+    """The machine that used the enrolment's join file, from `SpireEnrollmentResponse.admission`."""
 
     fingerprint: str
     """eg. ``"4W26-457D-1PBK"``; the joining machine shows the same one in `HealthStatusResponse.messageParams`."""
     machineName: str
-    sourceAddress: str
-    """The address and port it came from, eg. ``"192.0.2.1:33002"``."""
+    sourceAddress: Optional[str]
+    """The address and port it came from, eg. ``"192.0.2.1:33002"``; `None` when AMP couldn't ask the message bus."""
     requestedAt: str
     lastSeenAt: str
     expiresAt: str
@@ -2763,6 +2977,9 @@ class SpireEnrollmentRequest(TypedDict):
     label: str
     hosts: list[str]
     expiresInHours: NotRequired[int]
+    entryNode: NotRequired[bool]
+    publicHost: NotRequired[str]
+    "The entry node's public address; AMP ignores it on a standard enrolment."
 
 
 class SpireEnrollmentResponse(TypedDict):
@@ -2774,8 +2991,8 @@ class SpireEnrollmentResponse(TypedDict):
     createdAt: str
     expiresAt: str
     status: str
-    """eg. ``"pending"`` (made), ``"awaitingapproval"`` (a machine used it), ``"approved"``,
-    ``"redeemed"`` (the machine joined) or ``"revoked"``."""
+    """``"pending"`` (made), ``"awaitingapproval"`` (a machine used it), ``"approved"``, ``"denied"``,
+    ``"redeemed"`` (the machine joined), ``"expired"`` or ``"revoked"``."""
     redeemedAt: Optional[str]
     redeemedSpireId: Optional[str]
     """The spire the machine became, once `status` is ``"redeemed"``."""
@@ -2783,17 +3000,28 @@ class SpireEnrollmentResponse(TypedDict):
     revokedReason: Optional[str]
     "`None` when the revoke sent no reason."
     role: str
-    """eg. ``"standard"``."""
+    """``"standard"``, or ``"publicentrynode"`` for a public entry node, which hosts no shards."""
     entryNodeHost: Optional[str]
-    "The types of this and the other entry node and tunnel fields are from the web panel's code."
+    """The public address AMP dials for an entry node, eg. ``"203.0.113.10"``; `None` on a standard enrolment."""
     entryNodeState: Optional[str]
-    """The web panel knows ``"waiting"``, ``"notpasted"``, ``"unreachable"``, ``"wrongsecret"`` and ``"collected"``."""
+    """How AMP's last try to reach the entry node went: ``"waiting"``, ``"unreachable"``, ``"notpasted"``,
+    ``"wrongsecret"`` or ``"collected"``. It stays ``"waiting"`` after a revoke."""
     entryNodeStateCode: Optional[str]
-    entryNodeStateParams: Optional[dict[str, Any]]
+    "A translation key with more about `entryNodeState`, when there is more to say."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `EnrollmentDto` alone (#3-56.2z).
+    # Every capture has it `None`; an entry node only fills it once AMP has reached the machine.
+    entryNodeStateParams: Optional[dict[str, str]]
+    "Values for the `entryNodeStateCode` translation."
     entryNodeObservedHost: Optional[str]
+    "The address the entry node says it has, when it differs from `entryNodeHost`; `None` until it answers."
     entryNodeBlockedPort: Optional[int]
-    tunnelPhase: Optional[Any]
-    tunnelFault: Optional[Any]
+    "The tunnel port the entry node can't bind, `None` when it can."
+    # TODO: Check these two against a live capture; typed from AMP's OpenAPI `EnrollmentDto` alone (#3-56.2at).
+    # Every capture has them `None`; they need an entry node AMP has reached.
+    tunnelPhase: Optional[str]
+    "How far the entry node's tunnel has got, a `TunnelStatus.phase`; `None` before AMP collects its details."
+    tunnelFault: Optional[str]
+    "What is wrong at the panel's end, eg. its system agent not running; `None` when nothing is, or the fault is elsewhere."
     admission: Optional[SpireEnrollmentAdmission]
     "The machine that used the join file; `None` until one does."
 
@@ -2820,6 +3048,20 @@ class SpireImportBlockedItem(TypedDict):
     detail: str
 
 
+# TODO: Check against a live capture; typed from AMP's OpenAPI `DiscoveredPort` alone (#3-53, #3-56.2i).
+# Both captures have `portsDiscovered` empty.
+class SpireImportDiscoveredPort(TypedDict):
+    """A port number a scan read from a found server's own config file, from `SpireImportRecovery.portsDiscovered`."""
+
+    ref: str
+    """The template port it belongs to, eg. ``"ServerPort"``."""
+    port: int
+    configFile: str
+    "The file it was read from."
+    address: str
+    "The key in that file."
+
+
 class SpireImportEvidence(TypedDict):
     """A clue a scan read a server or a template match from, in `SpireImportScanServer.evidence` and `SpireImportMatch.evidence`."""
 
@@ -2843,6 +3085,17 @@ class SpireImportItem(TypedDict):
     network setup, so 7 is all of it."""
 
 
+# TODO: Check against a live capture; typed from AMP's OpenAPI `LivenessEvidence` alone (#3-53, #3-56.2ar).
+# A running server still left `liveness` empty on AMP 3.0.0.6.
+class SpireImportLiveness(TypedDict):
+    """A sign a found server is still running, from `SpireImportReadyItem.liveness`."""
+
+    code: str
+    "A translation key for the reason."
+    message: str
+    "The English text, naming what was found."
+
+
 class SpireImportMatch(TypedDict):
     """A template a found server could be imported as, from `SpireImportScanServer.matches`."""
 
@@ -2864,8 +3117,8 @@ class SpireImportPreflightResponse(TypedDict):
     """What stops the whole batch, the web panel's numbers: 0 nothing, 1 the licence's shard limit, 2 not enough space,
     3 the datastore's soft limit, 4 nothing importable."""
     shortfallBytes: int
-    licenceHeadroom: int
-    "How many more shards the licence allows."
+    licenceHeadroom: Optional[int]
+    "How many more shards the licence allows, `None` with no limit."
     sizesAreUnderstated: bool
     links: int
     canProceed: bool
@@ -2877,29 +3130,39 @@ class SpireImportReadyItem(TypedDict):
     candidatePath: str
     size: SpireImportSize
     exists: bool
-    # TODO: Type these once a capture shows them filled in (#3-53).
+    # TODO: Check these against a live capture; typed from AMP's OpenAPI `PreflightCandidate` alone (#3-53, #3-56.2ar).
     # A running server, and a folder imported before, both still left them empty on AMP 3.0.0.6.
-    liveness: list[Any]
-    unavailableReason: Optional[Any]
-    alreadyImportedAs: Optional[Any]
+    liveness: list[SpireImportLiveness]
+    "Signs the server is still running, empty when AMP found no such signs."
+    unavailableReason: Optional[str]
+    "Why the folder couldn't be read at all, in the words of what read it; `None` when it could."
+    alreadyImportedAs: Optional[str]
+    "The name of the shard already made from this folder, `None` when there's none."
 
 
 class SpireImportRecovery(TypedDict):
     """What an import of a found server could bring back, from `SpireImportScanServer.recovery`."""
 
     available: int
+    "The parts that can be brought back, the same bit flags as `SpireImportItem.content`."
     settingsRecovered: int
-    portsDiscovered: list[str]
-    """Port names, eg. ``"Voice"``."""
+    "How many settings were read from the server's own config files."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ImportRecoveryReport` alone (#3-53, #3-56.2i).
+    # Both captures have it empty.
+    portsDiscovered: list[SpireImportDiscoveredPort]
+    "The ports read from the server's config files."
     portsNotDiscovered: list[str]
+    """The template's port names nothing on disk gave, eg. ``"Voice"``; they get new numbers."""
     primaryPortRecovered: bool
+    "If the port players connect to was kept."
     settings: int
     defaultSelection: int
+    "What the import takes unless told otherwise, the same bit flags as `SpireImportItem.content`: all of `available`."
     hasCaveats: bool
 
 
 class SpireImportRequest(TypedDict):
-    """The body of ``POST /api/spires/{id}/import``."""
+    """The body of ``POST /api/spires/{id}/import`` and ``POST /api/spires/{id}/import/preflight``."""
 
     items: list[SpireImportItem]
     enterOtherVolumes: bool
@@ -2924,8 +3187,10 @@ class SpireImportScanResponse(TypedDict):
     servers: list[SpireImportScanServer]
     unreadable: list[SpireImportUnreadable]
     "Folders AMP couldn't look in, eg. one outside every import root."
-    # TODO: Type this once a capture shows it filled in (#3-53).
-    truncatedRoots: list[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `DiscoveryResult` alone (#3-53, #3-56.2ar).
+    # Every capture has it empty.
+    truncatedRoots: list[str]
+    "The roots where a cap stopped the scan."
     timedOut: bool
 
 
@@ -2944,11 +3209,14 @@ class SpireImportScanServer(TypedDict):
     recovery: SpireImportRecovery
     listingTruncated: bool
     links: int
-    # TODO: Type these once a capture shows them filled in (#3-53).
+    # TODO: Check these against a live capture; typed from AMP's OpenAPI `DiscoveredServer` alone (#3-53, #3-56.2ar).
     # A folder imported before still left them empty on AMP 3.0.0.6.
-    unmatchedSteamAppIds: list[Any]
+    unmatchedSteamAppIds: list[str]
+    "Steam apps found that no template covers."
     alreadyImportedShardId: Optional[str]
-    alreadyImportedAs: Optional[Any]
+    "The shard already made from this folder, `None` when there's none."
+    alreadyImportedAs: Optional[str]
+    "That shard's name."
 
 
 class SpireImportSize(TypedDict):
@@ -2959,8 +3227,10 @@ class SpireImportSize(TypedDict):
     truncated: bool
     links: int
     isUnderstated: bool
-    # TODO: Type this once a capture shows it filled in (#3-53).
-    unreadableDirectories: list[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `CandidateSize` alone (#3-53, #3-56.2ar).
+    # Every capture has it empty.
+    unreadableDirectories: list[str]
+    "Folders that couldn't be read, so their files aren't counted."
 
 
 class SpireImportUnreadable(TypedDict):
@@ -2991,6 +3261,26 @@ class SpireIPOptionResponse(SpireIPAddress):
     """eg. ``"all"`` (``"0.0.0.0"``), ``"localhost"``, ``"address"`` or ``"auto"`` (``"@auto-pool"``)."""
 
 
+class SpireJavaRuntime(TypedDict):
+    """A Java installed on the spire's machine, from `SpirePlatform.installedJava`, for a game that isn't in a container."""
+
+    path: str
+    """The Java program, the value a setting takes, eg. ``"/usr/lib/jvm/java-21-openjdk-amd64/bin/java"``, or
+    ``"$PATH/java"`` for whichever Java the machine finds at launch."""
+    majorVersion: int
+    "eg. 21; 0 when AMP couldn't tell."
+    vendor: str
+    """eg. ``"OpenJDK"`` or ``"Adoptium"``; empty when AMP couldn't tell."""
+    kind: str
+    """``"JDK"`` or ``"JRE"``, empty when AMP couldn't tell. A JRE package can read ``"JDK"``."""
+    name: str
+    """The install folder's name, eg. ``"java-21-openjdk-amd64"``."""
+    isDefault: bool
+    "If it's the Java the machine's PATH finds."
+    isSystemDefault: bool
+    """If it's the ``"$PATH/java"`` entry rather than a fixed install."""
+
+
 class SpirePlatform(TypedDict):
     """The machine a spire runs on, from `SpireStatus.platform`."""
 
@@ -3006,10 +3296,12 @@ class SpirePlatform(TypedDict):
     virtualization: int
     "eg. 5 on a QEMU/KVM VM."
     reportedIps: list[SpireIPAddress]
-    installedJava: list[Any]
+    installedJava: list[SpireJavaRuntime]
+    "Empty with no Java installed."
     externalIp: str
+    "The address the internet sees the machine as, empty when AMP couldn't find it."
     reachability: str
-    """eg. ``"Nat"``."""
+    """``"Unknown"``, ``"Direct"``, ``"Nat"`` (needs a port forward) or ``"Cgnat"`` (only a tunnel works)."""
     freeDiskMb: int
     totalDiskMb: int
     freeRamMb: int
@@ -3162,7 +3454,10 @@ class SystemBusResponse(TypedDict):
     isPublic: bool
     "If other machines can reach it; a new spire can only join once it's public."
     joinInfo: BusJoinInfo
-    servers: list[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `BusInfo` alone (#3-56.2at).
+    # Every capture is of a bus AMP runs, which leaves it empty.
+    servers: list[str]
+    "The bus's addresses, on a bus AMP doesn't run (`managed` False)."
 
 
 class TaskResponse(TypedDict):
@@ -3617,8 +3912,8 @@ class TunnelFrontResponse(TypedDict):
 class TunnelResponse(TypedDict):
     """One WireGuard tunnel between two spires, from ``GET /api/networking/tunnels``.
 
-    AMP makes one on demand for a publication or a gateway through another spire, and removes it some seconds after
-    the last one goes.
+    AMP makes a tunnel on demand for a publication or a gateway through another spire, and removes the tunnel some
+    seconds after the last publication or gateway using it goes.
     """
 
     id: str
@@ -3660,6 +3955,37 @@ class TunnelStatus(TypedDict):
     error: Optional[str]
 
 
+# TODO: Check against a live capture; typed from AMP's OpenAPI `UpdateRolledBackDto` alone (#3-47.8, #3-56.2g).
+# Every capture has `rolledBack` `None`: no update has failed on the test VMs.
+class UpdateRolledBack(TypedDict):
+    """An update this machine tried and AMP's supervisor (``amp3-host``) took back, from `UpdateStatusResponse.rolledBack`."""
+
+    version: str
+    "The version that was taken back."
+    kind: str
+    """Why: ``"crash-loop"``, ``"never-ready"``, ``"revert"``, ``"payload"``, or empty when the record doesn't say."""
+    atUtc: str
+    reason: str
+    "The reason as the supervisor logged it."
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `SpireBehindDto` alone (#3-47.8, #3-56.2ao).
+# Every capture has `spiresBehind` empty: there was no older AMP 3 release to put a spire behind.
+class UpdateSpireBehind(TypedDict):
+    """A spire on an older AMP than the rest, from `UpdateStatusResponse.spiresBehind`; see `SpireModule.apply_spire_update`."""
+
+    spireId: str
+    name: str
+    version: Optional[str]
+    "The AMP version it reports, `None` when it's unknown."
+    online: bool
+    "If it can be told to update now."
+    rolledBackFrom: Optional[str]
+    "A newer version it tried and took back, `None` when it reports none."
+    rolledBackKind: Optional[str]
+    "Why, an `UpdateRolledBack.kind`; `None` when it's unknown."
+
+
 class UpdateStatusResponse(TypedDict):
     """``GET /api/updates/check``, the panel's AMP version against the latest one. ``PUT /api/updates/stream`` answers with it too."""
 
@@ -3672,20 +3998,30 @@ class UpdateStatusResponse(TypedDict):
     "Empty on a stream with no build yet."
     updateAvailable: bool
     mandatory: bool
+    "If the current version is below the stream's lowest, so the update is forced."
     codename: str
     """eg. ``"Neptune"``."""
     releaseNotesUrl: str
     supervised: bool
+    "If AMP runs under its supervisor (``amp3-host``), which an update needs."
     canApply: bool
     "If the panel can update itself."
     canChangeStream: bool
     note: Optional[str]
     """A translation key, eg. ``"updates.error.streamMissing"`` on a stream with no build yet."""
     installationVersion: str
-    spiresBehind: list[Any]
+    "The highest version any spire reports."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `UpdateStatusDto` alone (#3-47.8, #3-56.2ao).
+    # Every capture has it empty.
+    spiresBehind: list[UpdateSpireBehind]
+    "The spires on an older version than `installationVersion`, each updated on its own."
     canUpdateSpires: bool
     packageManaged: bool
-    rolledBack: Optional[bool]
+    "If the machine's package manager updates AMP, so nothing here can."
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `UpdateStatusDto` alone (#3-47.8, #3-56.2g).
+    # Every capture has it `None`.
+    rolledBack: Optional[UpdateRolledBack]
+    "The update this machine last took back, `None` when there's none."
 
 
 class UserCreateRequest(TypedDict):

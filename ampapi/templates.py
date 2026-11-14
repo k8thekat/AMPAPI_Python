@@ -86,8 +86,8 @@ class TemplateModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If there's no source with that ID (404, its `message` an English sentence), or no source has synced yet
-            (409).
+            **404** - If there's no source with that ID. AMP's `message` is an English sentence, not a code.\n
+            **409** - If no source has synced yet.
 
         """
         path: str = "/api/templates" if source_id is None else f"/api/templates/sources/{source_id}"

@@ -581,8 +581,9 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If the code is wrong, used, revoked or out of date (404 from the preview, ``"invalid_or_expired"``), or the
-            session's password is too weak for :meth:`get_password_policy` (400).
+            **400** - If the session's password is too weak for :meth:`get_password_policy`.\n
+            **404** - If the invite code is wrong, used, revoked or out of date `invalid_or_expired`. The 404 comes from
+            reading the invite first, so nothing is made.
 
         """
         preview: InvitePreviewResponse = await self.preview_invite(token=token)
@@ -755,7 +756,8 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If the session has already ended (401), or AMP answers with any other error status.
+            **401** - If the session has already ended.\n
+            If AMP answers with any other error status.
 
         """
         status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/renew", data={})
@@ -799,7 +801,7 @@ class Session:
 
         Endpoint: ``POST /api/invites/preview``
 
-        This one needs no session.
+        Reading an invite needs no session.
 
         Parameters
         ----------
@@ -814,7 +816,7 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If the code is wrong, used, revoked or out of date (404, ``"invalid_or_expired"``).
+            **404** - If the invite code is wrong, used, revoked or out of date `invalid_or_expired`.
 
         """
         return await self._request(method="POST", path="/api/invites/preview", data={"token": token}, use_token=False)
@@ -835,7 +837,7 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If AMP refuses the password (401, ``"auth.error.reproofRejected"``).
+            **401** - If AMP refuses the password `auth.error.reproofRejected`.
 
         """
         confirm_password: str = password if password is not None else self._password
@@ -870,7 +872,7 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If AMP refuses the code (401, ``"auth.login.recoveryCodeRejected"``), a wrong or already used one alike.
+            **401** - If the recovery code is wrong or already used `auth.login.recoveryCodeRejected`.
         AMPAPIPasswordChangeRequiredError
             If the account also has to change its password.
 

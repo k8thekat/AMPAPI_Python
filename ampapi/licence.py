@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from .base import Base
 
@@ -47,14 +47,17 @@ class LicenceModule(Base):
 
     """
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only refusals are known; the reply to accepted terms isn't.
-    async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> Any:
+    # TODO: Check the reply against a live capture; AMP's OpenAPI alone says the 204 has no body (#3-47.10, #3-56.2am).
+    # Only refusals are known; it needs a licence whose `standing` is `TermsRequired`.
+    async def accept_licence_terms(self, spire_id: str, grade_id: str, key: str, terms: LicenceTermsAcceptance) -> None:
         """Accept the terms for a licence that is already active, eg. one whose `standing` is ``"TermsRequired"``.
 
         |coro|
 
         Endpoint: ``POST /api/licence/{spire_id}/{grade_id}/terms``
+
+        Accepting terms already accepted is fine too. AMP sends the key to the licence service for this call only and
+        never keeps it.
 
         Parameters
         ----------
@@ -67,21 +70,20 @@ class LicenceModule(Base):
         terms : :class:`LicenceTermsAcceptance`
             The terms acceptance, filled from :meth:`get_licence_agreement`.
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
-
         Raises
         ------
         AMPAPIRequestError
-            If the licence needs no terms (400, ``"licence.error.termsNotApplicable"``), which is the case when
-            :meth:`query_licence` reads `termsRequired` as `False`. A wrong `key` gets 502
-            (``"licence.error.termsUnavailable"``), as AMP asks the licensing service before it checks the key.
+            **400** - If the licence needs no terms `licence.error.termsNotApplicable`. :meth:`query_licence` reads
+            `termsRequired` as `False` for such a licence.\n
+            **404** - If the spire has no licence of that grade.\n
+            **409** - If the spire holding the licence refuses.\n
+            **502** - If the key is wrong `licence.error.termsUnavailable`. AMP asks the licensing service before it
+            checks the key.\n
+            **503** - If the spire holding the licence doesn't answer.
 
         """
         data: LicenceTermsRequest = {**terms, "key": key}
-        return await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
+        await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
     # TODO: Drop the note once AMP answers with the whole licence (U19b).
     # AMP 3.0.0.6 answers before the licence service does, with the limit, totals, issue date and terms all `None`.
@@ -98,7 +100,8 @@ class LicenceModule(Base):
             seconds later.
 
         The panel can restart once licensed: :meth:`PlatformModule.get_health_status` reads ``"starting"`` until it is
-        ``"ready"`` again, and a setting read before then can look unapplied.
+        ``"ready"`` again, and a setting read before then can look unapplied. Activating an edition that is already
+        active refreshes it rather than adding another.
 
         Parameters
         ----------
@@ -113,6 +116,12 @@ class LicenceModule(Base):
         :class:`LicenceResponse`
             The licence AMP activated (201).
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If the licensing server doesn't know the key.\n
+            **502** - If the licensing server couldn't be reached.
+
         """
         return await self._request(method="POST", path="/api/licence", data={"key": key, "terms": terms})
 
@@ -123,8 +132,8 @@ class LicenceModule(Base):
 
         Endpoint: ``DELETE /api/licence/{spire_id}/{grade_id}``
 
-        With no licence left, :meth:`PlatformModule.get_health_status` reads ``"preview-licence"`` until one is
-        activated again.
+        Anything only that edition allowed stops at once; the key can be activated again later. With no licence left,
+        :meth:`PlatformModule.get_health_status` reads ``"preview-licence"`` until one is activated again.
 
         Parameters
         ----------
@@ -136,7 +145,9 @@ class LicenceModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the panel has no such licence, eg. it was removed already (404).
+            **404** - If the spire has no licence of that grade, eg. the licence was removed already.\n
+            **409** - If the licence is held on another spire and that spire refuses.\n
+            **503** - If the licence is held on another spire and that spire doesn't answer.
 
         """
         await self._request(method="DELETE", path=f"/api/licence/{spire_id}/{grade_id}")
@@ -172,6 +183,8 @@ class LicenceModule(Base):
         |coro|
 
         Endpoint: ``GET /api/licence``
+
+        AMP reads the activation files again for it, so a change made outside AMP shows.
 
         Returns
         -------

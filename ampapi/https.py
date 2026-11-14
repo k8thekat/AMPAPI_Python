@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from .base import Base
 
@@ -46,6 +46,9 @@ class HTTPSModule(Base):
         |coro|
 
         Endpoint: ``POST /api/https/check``
+
+        It changes nothing. A name that isn't a domain name is answered rather than refused, with `outcome`
+        ``"invalid"``.
 
         Parameters
         ----------
@@ -111,42 +114,49 @@ class HTTPSModule(Base):
         """
         return await self._request(method="GET", path="/api/https")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal for a panel without AMP's own HTTPS is known; the reply to a recheck isn't.
-    async def recheck_https(self) -> Any:
-        """Check AMP's own HTTPS again, eg. its certificate.
+    # TODO: Check the reply against a live capture; AMP's OpenAPI alone says the 202 has no body (#3-47.10, #3-56.2al).
+    # Only the refusal for a panel without AMP's own HTTPS is known; a recheck needs AMP's own HTTPS set up.
+    async def recheck_https(self) -> None:
+        """Check AMP's own HTTPS again for its certificate.
 
         |coro|
 
         Endpoint: ``POST /api/https/recheck``
 
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        AMP answers at once (202); follow the recheck with :meth:`get_https_setup_status`.
 
         Raises
         ------
         AMPAPIRequestError
-            If AMP's own HTTPS isn't set up (409, ``"https.error.notConfigured"``); a proxy from :meth:`set_own_proxy`
-            doesn't count.
+            **409** - If AMP's own HTTPS isn't set up `https.error.notConfigured`. A proxy from :meth:`set_own_proxy`
+            doesn't count.\n
+            **409** - If a setup is running.
 
         """
-        return await self._request(method="POST", path="/api/https/recheck")
+        await self._request(method="POST", path="/api/https/recheck")
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # The path comes from the web panel's code; no capture shows the response yet.
-    async def remove_https(self) -> Any:
+    # TODO: Check the reply against a live capture; typed from AMP's OpenAPI `HttpsState` alone (#3-47.10, #3-56.2al).
+    # Removing AMP's own HTTPS needs it set up first, which Let's Encrypt can't give the test VMs.
+    async def remove_https(self) -> HTTPSStateResponse:
         """Remove AMP's own HTTPS; the panel stays on plain HTTP at its own port.
 
         |coro|
 
         Endpoint: ``POST /api/https/remove``
 
+        AMP's system agent puts Caddy's old configuration back, or stops Caddy, and closes the ports.
+
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`HTTPSStateResponse`
+            The HTTPS state after.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If AMP's own HTTPS isn't set up.\n
+            **409** - If a setup is running.\n
+            **409** - If the system agent couldn't remove AMP's own HTTPS.
 
         """
         return await self._request(method="POST", path="/api/https/remove")
@@ -158,7 +168,7 @@ class HTTPSModule(Base):
 
         Endpoint: ``POST /api/https/own-proxy``
 
-        AMP then takes the forwarded headers from that address, so sign-ins and audit entries carry the user's real
+        AMP then takes the forwarded headers from that address, so sign-ins and audit entries carry each visitor's real
         address. Passkeys also need ``"public-address.publicUrl"`` set to the proxy's HTTPS address, see
         :meth:`PlatformModule.set_settings`.
 
@@ -179,38 +189,39 @@ class HTTPSModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If `address` is neither an IP address nor a network (400, ``"https.error.proxyAddressInvalid"``).
+            **400** - If `address` is neither an IP address nor a network `https.error.proxyAddressInvalid`.\n
+            **409** - If AMP's own HTTPS is set up.
 
         """
         return await self._request(method="POST", path="/api/https/own-proxy", data={"address": address, "apiOnly": api_only})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10).
-    # Only the refusal for a panel behind its own proxy is known; the reply to a setup that starts isn't.
-    async def start_https_setup(self, host_name: str) -> Any:
+    # TODO: Check the reply against a live capture; AMP's OpenAPI alone says the 202 has no body (#3-47.10, #3-56.2al).
+    # Only the refusal for a panel behind its own proxy is known; a setup that starts needs Let's Encrypt to reach the VM.
+    async def start_https_setup(self, host_name: str) -> None:
         """Start AMP's own HTTPS setup, which asks Let's Encrypt for a certificate.
 
         |coro|
 
         Endpoint: ``POST /api/https/setup``
 
-        Follow it with :meth:`get_https_setup_status`. Let's Encrypt has to reach the panel, so this can't work on a
-        machine only reachable on its own network.
+        AMP answers at once (202) and runs the checks in the background; follow the setup with
+        :meth:`get_https_setup_status`. Let's Encrypt has to reach the panel, so the setup can't work on a machine only
+        reachable on its own network.
 
         Parameters
         ----------
         host_name : :class:`str`
-            The domain name, which has to point at this panel.
-
-        Returns
-        -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+            The domain name, which has to point at this panel, see :meth:`check_https`.
 
         Raises
         ------
         AMPAPIRequestError
-            If a proxy from :meth:`set_own_proxy` is set (409, ``"https.error.ownProxyActive"``); clear it with
-            :meth:`delete_own_proxy` first.
+            **400** - If no certificate can be issued for `host_name`.\n
+            **409** - If a proxy from :meth:`set_own_proxy` is set `https.error.ownProxyActive`. Clear the proxy with
+            :meth:`delete_own_proxy` first.\n
+            **409** - If the panel is a public entry node.\n
+            **409** - If the panel is kept out of AMP's firewall.\n
+            **409** - If a setup is already running.
 
         """
-        return await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})
+        await self._request(method="POST", path="/api/https/setup", data={"hostName": host_name})

@@ -82,11 +82,13 @@ class Panel(
 ):
     """An AMP 3 panel, with every call this library wraps.
 
-    The calls come from the `...Module` classes it is built from, and each one logs in through the :class:`Session` when
-    it needs to. The calls over all of the panel's shards or spires are its own, eg. :meth:`get_shards`.
+    The calls come from the `...Module` classes the panel is built from, and each call logs in through the
+    :class:`Session` when it needs to. The calls over all of the panel's shards or spires are the panel's own, eg.
+    :meth:`get_shards`.
 
-    It keeps the shard and spire objects it hands out, one for each ID, so ``panel.get_shard(shard_id=...)`` gives back
-    the same object each time, with its `data` and `display_name` brought up to date.
+    The panel keeps the shard and spire objects it hands out, one object for each ID, so
+    ``panel.get_shard(shard_id=...)`` gives back the same object each time, with its `data` and `display_name` brought
+    up to date.
 
     .. note::
         Any call that needs a session logs in first when it has to, so it can raise :exc:`AMPAPILoginError`,
@@ -163,7 +165,7 @@ class Panel(
         """
         shard: Optional[Shard] = self._shards.get(data["id"])
         if shard is None:
-            # `created` only when there is one, so a `shard_class` written as `__init__(self, module, data)` still works
+            # `created` only when there's a creation reply, so a `shard_class` written as `__init__(self, module, data)` still works
             if created is not None:
                 shard = self.shard_class(module=self, data=data, created=created)
             else:
@@ -210,9 +212,10 @@ class Panel(
         Raises
         ------
         AMPAPIRequestError
-            If `content` is 0 (400, ``"shards.error.cloneNothing"``), there's no such spire
-            (400, ``"shards.error.spireNotFound"``), or the copy takes the files while the original runs or is busy (409).
-            If reading the copy back fails, the copy was still made, and a note on the error names its ID for
+            **400** - If `content` is 0 `shards.error.cloneNothing`.\n
+            **400** - If there's no spire with that ID `shards.error.spireNotFound`.\n
+            **409** - If the copy takes the files while the original runs or is busy.\n
+            If reading the copy back fails. The copy was still made, and a note on the error names the copy's ID for
             :meth:`get_shard`.
 
         """
@@ -275,7 +278,7 @@ class Panel(
         Raises
         ------
         AMPAPIRequestError
-            If the template doesn't exist (400, ``"shards.error.createFailed"``, which doesn't name the cause).
+            **400** - If the template doesn't exist `shards.error.createFailed`. The code doesn't name the cause.
 
         """
         data: ShardCreateRequest = {
@@ -332,7 +335,8 @@ class Panel(
         Raises
         ------
         AMPAPIRequestError
-            If the shard is deleted (409, ``"shards.error.deleted"``) or purged (404).
+            **404** - If the shard is purged.\n
+            **409** - If the shard is deleted `shards.error.deleted`.
 
         """
         result: ShardResponse = await self._request(method="GET", path=f"/api/shards/{shard_id}")

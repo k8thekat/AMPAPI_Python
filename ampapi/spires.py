@@ -50,6 +50,7 @@ if TYPE_CHECKING:
         SpireStorageResponse,
         SpireUsageIntervalResponse,
         SpireUsageResponse,
+        UpdateStatusResponse,
     )
     from .panel import Panel
     from .session import Session
@@ -150,9 +151,7 @@ class Spire:
         self.data = data
         self.display_name = data["displayName"]
 
-    # TODO: Type the reply once a spire behind the panel is updated live (#3-47.8).
-    # It comes from `SpireModule.apply_spire_update`; only its refusal has been seen.
-    async def apply_update(self) -> Any:
+    async def apply_update(self) -> UpdateStatusResponse:
         """Update this spire's AMP, see :meth:`SpireModule.apply_spire_update`.
 
         |coro|
@@ -160,7 +159,16 @@ class Spire:
         """
         return await self._module.apply_spire_update(spire_id=self.id)
 
-    async def create_datastore(self, name: str, path: str, *, is_default: bool = False, enabled: bool = True) -> list[DatastoreResponse]:
+    async def create_datastore(
+        self,
+        name: str,
+        path: str,
+        *,
+        is_default: bool = False,
+        enabled: bool = True,
+        soft_limit_mb: int = 0,
+        tags: Optional[list[str]] = None,
+    ) -> list[DatastoreResponse]:
         """Add a datastore to this spire, see :meth:`SpireModule.create_spire_datastore`.
 
         |coro|
@@ -172,6 +180,8 @@ class Spire:
             path=path,
             is_default=is_default,
             enabled=enabled,
+            soft_limit_mb=soft_limit_mb,
+            tags=tags,
         )
 
     async def create_shard(
@@ -320,13 +330,13 @@ class Spire:
         """
         return await self._module.import_spire_servers(spire_id=self.id, items=items, enter_other_volumes=enter_other_volumes)
 
-    async def preflight_import(self, items: list[SpireImportItem]) -> SpireImportPreflightResponse:
+    async def preflight_import(self, items: list[SpireImportItem], *, enter_other_volumes: bool = False) -> SpireImportPreflightResponse:
         """Check game servers can be imported, see :meth:`SpireModule.preflight_spire_import`.
 
         |coro|
 
         """
-        return await self._module.preflight_spire_import(spire_id=self.id, items=items)
+        return await self._module.preflight_spire_import(spire_id=self.id, items=items, enter_other_volumes=enter_other_volumes)
 
     async def purge_expired_shards(self) -> SpireExpiredPurgeResponse:
         """Remove for good this spire's deleted shards that are past keeping, see :meth:`SpireModule.purge_spire_expired_shards`.
@@ -366,7 +376,7 @@ class Spire:
 
         """
         current: Spire = await self._module.get_spire(spire_id=self.id)
-        # One made by hand isn't the object the panel keeps, so it takes the fresh data from that one
+        # A spire object made by hand isn't the object the panel keeps, so it copies the fresh data from the panel's object
         if current is not self:
             self._update_data(data=current.data)
 
@@ -412,6 +422,33 @@ class Spire:
         """
         return await self._module.set_spire_usage_interval(spire_id=self.id, minutes=minutes)
 
+    async def update_datastore(
+        self,
+        datastore_id: str,
+        *,
+        name: Optional[str] = None,
+        path: Optional[str] = None,
+        is_default: Optional[bool] = None,
+        enabled: Optional[bool] = None,
+        soft_limit_mb: Optional[int] = None,
+        tags: Optional[list[str]] = None,
+    ) -> list[DatastoreResponse]:
+        """Change one of this spire's datastores, see :meth:`SpireModule.update_spire_datastore`.
+
+        |coro|
+
+        """
+        return await self._module.update_spire_datastore(
+            spire_id=self.id,
+            datastore_id=datastore_id,
+            name=name,
+            path=path,
+            is_default=is_default,
+            enabled=enabled,
+            soft_limit_mb=soft_limit_mb,
+            tags=tags,
+        )
+
 
 class SpireModule(Base):
     """The calls for one spire, AMP 3's name for an ADS or Target, each taking its ID: datastores, ports, start order
@@ -424,15 +461,17 @@ class SpireModule(Base):
 
     """
 
-    # TODO: Type the reply once a spire behind the panel is updated live (#3-47.8).
-    # Only the refusal for a current spire has been seen; there was no older AMP 3 release to put one behind.
-    # The web panel keeps the reply where it keeps `get_update_status`'s, so it's likely that shape.
-    async def apply_spire_update(self, spire_id: str) -> Any:
+    # TODO: Check the reply against a live capture; AMP's OpenAPI alone says the reply is `UpdateStatusDto` (#3-47.8, #3-56.2ai).
+    # Only the refusal for a current spire has been seen: on the 3.0.1 update (2026-11-13) vm5 followed its panel by itself.
+    async def apply_spire_update(self, spire_id: str) -> UpdateStatusResponse:
         """Update a spire's AMP to the panel's version.
 
         |coro|
 
         Endpoint: ``POST /api/updates/spires/{spire_id}``
+
+        Only AMP on that spire restarts. The spire's shards keep running, and each shard's agent takes the new version
+        when the shard next restarts.
 
         Parameters
         ----------
@@ -441,14 +480,16 @@ class SpireModule(Base):
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`UpdateStatusResponse`
+            The update status after the spire accepted, as :meth:`PlatformModule.get_update_status` reads it.
 
         Raises
         ------
         AMPAPIRequestError
-            If the spire already runs the panel's version (400, ``"updates.error.spireCurrent"``, its `params` holding
-            the spire's display name as `spire`).
+            **400** - If the spire already runs the panel's version `updates.error.spireCurrent`. The error's `params`
+            holds the spire's display name as `spire`.\n
+            **400** - If the spire is unknown or offline.\n
+            **400** - If the spire refused the update.
 
         """
         return await self._request(method="POST", path=f"/api/updates/spires/{spire_id}", data={})
@@ -461,6 +502,8 @@ class SpireModule(Base):
         *,
         is_default: bool = False,
         enabled: bool = True,
+        soft_limit_mb: int = 0,
+        tags: Optional[list[str]] = None,
     ) -> list[DatastoreResponse]:
         """Add a datastore, a folder shards are kept in, to a spire.
 
@@ -475,19 +518,40 @@ class SpireModule(Base):
         name : :class:`str`
             The datastore's name.
         path : :class:`str`
-            The folder on the spire, eg. ``"/opt/cubecoders/amp3/data/my_store"``. AMP doesn't check it exists.
+            The folder on the spire, eg. ``"/opt/cubecoders/amp3/data/my_store"``. AMP doesn't check that the folder
+            exists.
         is_default : :class:`bool`, optional
-            If new shards go here or not, by default False.
+            If new shards go in this datastore or not, by default False.
         enabled : :class:`bool`, optional
-            If the datastore can be used or not, by default True.
+            If new shards can be put in this datastore or not, by default True.
+        soft_limit_mb : :class:`int`, optional
+            The use in MB at which AMP stops putting new shards in this datastore, by default 0 for no limit. The
+            shards already in the datastore keep running and can still grow.
+        tags : Union[list[:class:`str`], None], optional
+            Labels of your own, eg. ``["scratch"]``, by default None for no labels. AMP adds the storage medium it
+            detects, eg. ``"HDD"``, to the labels.
 
         Returns
         -------
         list[:class:`DatastoreResponse`]
             Every datastore on the spire.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If `name` or `path` is empty `datastore.error.nameAndPathRequired`.\n
+            **400** - If AMP refuses the path.
+
         """
-        data: DatastoreRequest = {"name": name, "path": path, "isDefault": is_default, "enabled": enabled}
+        data: DatastoreRequest = {
+            "name": name,
+            "path": path,
+            "isDefault": is_default,
+            "enabled": enabled,
+            "softLimitMb": soft_limit_mb,
+            "tags": tags if tags is not None else [],
+        }
+
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores", data=data)
 
     async def delete_spire(self, spire_id: str, *, force: bool = False) -> None:
@@ -497,23 +561,26 @@ class SpireModule(Base):
 
         Endpoint: ``DELETE /api/spires/{spire_id}``
 
-        The machine keeps running AMP, and its health reads ``"waiting"``. Joining it to the panel again was only seen
-        after reinstalling AMP on it (see :meth:`EnrollmentModule.create_spire_enrollment`), and it came back as a new
-        spire with a new ID.
+        The machine keeps running AMP, and its health reads ``"waiting"``. Joining the machine to the panel again was
+        only seen after reinstalling AMP on the machine (see :meth:`EnrollmentModule.create_spire_enrollment`), and the
+        machine came back as a new spire with a new ID.
 
         Parameters
         ----------
         spire_id : :class:`str`
             The spire's ID.
         force : :class:`bool`, optional
-            If AMP should remove it even when it still holds shards or not, by default False.
-            The web panel says its shards are then deleted too.
+            If AMP should remove the spire even when it still holds shards or not, by default False. Forcing is for a
+            machine that is gone: the spire's shards are deleted rather than purged, as their files went with the
+            machine.
 
         Raises
         ------
         AMPAPIRequestError
-            If the spire still holds shards and `force` is False (409, ``"spire.error.hasShards"``, its `params` holding
-            the `count` as a string), or there's no such spire (404).
+            **400** - If the spire is the one answering the call, its `isLocal` `True`. That spire can't be removed.\n
+            **404** - If there's no spire with that ID.\n
+            **409** - If the spire still holds shards and `force` is `False` `spire.error.hasShards`. The error's
+            `params` holds the shard `count` as a string.
 
         """
         await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters={"force": force})
@@ -726,7 +793,7 @@ class SpireModule(Base):
         Returns
         -------
         :class:`SpireUsageIntervalResponse`
-            The interval in minutes, 5 by default.
+            The interval in minutes, 5 by default, as the spire applies it: AMP keeps it in the range it supports.
 
         """
         return await self._request(method="GET", path=f"/api/spires/{spire_id}/usage/interval")
@@ -760,7 +827,8 @@ class SpireModule(Base):
         items : list[:class:`SpireImportItem`]
             The servers to import, from :meth:`scan_spire_imports`.
         enter_other_volumes : :class:`bool`, optional
-            If AMP may go into other volumes for them or not, by default False.
+            If AMP copies a disk mounted inside a server's folder, eg. a second disk holding its worlds, rather than
+            stopping at it or not, by default False.
 
         Returns
         -------
@@ -771,7 +839,13 @@ class SpireModule(Base):
         data: SpireImportRequest = {"items": items, "enterOtherVolumes": enter_other_volumes}
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/import", data=data)
 
-    async def preflight_spire_import(self, spire_id: str, items: list[SpireImportItem]) -> SpireImportPreflightResponse:
+    async def preflight_spire_import(
+        self,
+        spire_id: str,
+        items: list[SpireImportItem],
+        *,
+        enter_other_volumes: bool = False,
+    ) -> SpireImportPreflightResponse:
         """Check game servers can be imported into a spire, before :meth:`import_spire_servers`.
 
         |coro|
@@ -779,7 +853,7 @@ class SpireModule(Base):
         Endpoint: ``POST /api/spires/{spire_id}/import/preflight``
 
         A path AMP can't use lands in `blocked` rather than raising, and so does an empty `items`. It doesn't check
-        the `templateSlug`.
+        the `templateSlug`. AMP runs the same check again when the import is sent, so send both the same values.
 
         Parameters
         ----------
@@ -787,6 +861,9 @@ class SpireModule(Base):
             The spire's ID.
         items : list[:class:`SpireImportItem`]
             The servers to check, from :meth:`scan_spire_imports`.
+        enter_other_volumes : :class:`bool`, optional
+            If AMP copies a disk mounted inside a server's folder rather than stopping at it or not, by default False.
+            It changes the space the import needs.
 
         Returns
         -------
@@ -795,7 +872,8 @@ class SpireModule(Base):
             (`canProceed`).
 
         """
-        return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/preflight", data={"items": items})
+        data: SpireImportRequest = {"items": items, "enterOtherVolumes": enter_other_volumes}
+        return await self._request(method="POST", path=f"/api/spires/{spire_id}/import/preflight", data=data)
 
     async def purge_spire_expired_shards(self, spire_id: str) -> SpireExpiredPurgeResponse:
         """Remove for good a spire's deleted shards that are past keeping.
@@ -804,7 +882,9 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/spires/{spire_id}/purge-expired-shards``
 
-        A shard deleted but not yet past its keeping time stays; use :meth:`ShardModule.purge_shard` for one now.
+        AMP keeps a deleted shard for 30 days. A shard deleted less than 30 days ago stays; use
+        :meth:`ShardModule.purge_shard` to purge that shard now. The spire carries on with the work after the reply, and
+        the outcome, any shard the spire couldn't purge included, goes to the audit log.
 
         Parameters
         ----------
@@ -816,6 +896,12 @@ class SpireModule(Base):
         :class:`SpireExpiredPurgeResponse`
             How many shards AMP is purging.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If a shard's message bus credentials couldn't be revoked. Nothing was purged.\n
+            **503** - If the spire didn't answer in time.
+
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/purge-expired-shards")
 
@@ -826,8 +912,9 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans``
 
-        AMP measures the disk use again for the reply, so it needs no :meth:`rescan_spire_usage` after. A datastore
-        with no orphans gets the same reply.
+        AMP measures the disk use again for the reply, so the purge needs no :meth:`rescan_spire_usage` after. A
+        datastore with no orphans gets the same reply. A folder AMP can't delete is skipped, and so are a deleted
+        shard's folder (see :meth:`ShardModule.purge_shard`) and the folders AMP keeps for itself, eg. the backups.
 
         Parameters
         ----------
@@ -844,7 +931,7 @@ class SpireModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the spire has no such datastore (409, ``"datastore.error.notFound"``).
+            **409** - If the spire has no datastore with that ID `datastore.error.notFound`.
 
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans")
@@ -856,10 +943,10 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan``
 
-        This is how the copy a move leaves behind goes, from :meth:`ShardModule.migrate_shard_to_spire` or a move between
-        datastores with :meth:`ShardModule.start_shard_migration`. Call it on the old spire and datastore, with the
-        shard's `workingDirName` as `name`. The orphan is only listed once the spire's disk use is measured again, see
-        :meth:`rescan_spire_usage`.
+        This purge removes the copy a move leaves behind, from :meth:`ShardModule.migrate_shard_to_spire` or a move
+        between datastores with :meth:`ShardModule.start_shard_migration`. Call it on the old spire and datastore, with
+        the shard's `workingDirName` as `name`. The orphan is only listed once the spire's disk use is measured again,
+        see :meth:`rescan_spire_usage`.
 
         Parameters
         ----------
@@ -868,7 +955,7 @@ class SpireModule(Base):
         datastore_id : :class:`str`
             The datastore's ID.
         name : :class:`str`
-            The folder's name, an ``"Orphan"`` entry's `name` in :meth:`get_spire_usage`.
+            The folder's name, an ``"Orphan"`` entry's `name` in :meth:`get_spire_usage`; a single folder, not a path.
 
         Returns
         -------
@@ -878,7 +965,11 @@ class SpireModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the datastore has no such folder, eg. it was purged already (409, ``"datastore.error.purgeMissing"``).
+            **400** - If `name` is a path.\n
+            **400** - If `name` is a shard's folder, a deleted shard's folder too. See :meth:`ShardModule.purge_shard`.\n
+            **400** - If `name` is a folder AMP keeps for itself, eg. the backups.\n
+            **409** - If the datastore has no folder by that name, eg. the folder was purged already
+            `datastore.error.purgeMissing`.
 
         """
         path: str = f"/api/spires/{spire_id}/datastores/{datastore_id}/purge-orphan"
@@ -922,7 +1013,8 @@ class SpireModule(Base):
         spire_id : :class:`str`
             The spire's ID.
         roots : list[:class:`str`]
-            The folders to look in. AMP refuses an empty list (``"import.error.noRoots"``) unless `automatic` is set.
+            The folders to look in. AMP refuses an empty list (``"import.error.noRoots"``) unless `automatic` is set,
+            and ignores the list with it.
         automatic : :class:`bool`, optional
             If AMP should pick the folders itself or not, by default False.
 
@@ -946,7 +1038,7 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/settings/spire/{spire_id}/values``
 
-        AMP answers 204. There's no call that reads the values back on their own; they're in
+        AMP answers 204. No call reads the setting values back by themselves; the values are in
         :meth:`get_spire_settings_manifest`'s `values`.
 
         Parameters
@@ -961,7 +1053,7 @@ class SpireModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            If the spire has no such setting (400, ``"settings.error.unknownNode"``).
+            **400** - If the spire has no setting with that name `settings.error.unknownNode`.
 
         """
         await self._request(method="POST", path=f"/api/settings/spire/{spire_id}/values", data=values)
@@ -1000,6 +1092,9 @@ class SpireModule(Base):
 
         Endpoint: ``PUT /api/spires/{spire_id}/usage/interval``
 
+        A scan reads every file in every datastore, so the right interval depends on the disks. It is also how late a
+        shard over its disk limit can be noticed. The spire takes it at its next report.
+
         Parameters
         ----------
         spire_id : :class:`str`
@@ -1014,3 +1109,80 @@ class SpireModule(Base):
 
         """
         return await self._request(method="PUT", path=f"/api/spires/{spire_id}/usage/interval", data={"minutes": minutes})
+
+    async def update_spire_datastore(
+        self,
+        spire_id: str,
+        datastore_id: str,
+        *,
+        name: Optional[str] = None,
+        path: Optional[str] = None,
+        is_default: Optional[bool] = None,
+        enabled: Optional[bool] = None,
+        soft_limit_mb: Optional[int] = None,
+        tags: Optional[list[str]] = None,
+    ) -> list[DatastoreResponse]:
+        """Change one of a spire's datastores. Anything left as `None` stays as it is.
+
+        |coro|
+
+        Endpoints: ``GET /api/spires/{spire_id}/datastores`` for the datastore as it is, then
+        ``POST /api/spires/{spire_id}/datastores``
+
+        AMP replaces the whole datastore on the POST, eg. a `softLimitMb` left out goes back to 0 and `tags` to empty,
+        so we read the datastore first and send the rest of it back as it was. Two calls at once on one datastore can
+        still undo each other.
+
+        Parameters
+        ----------
+        spire_id : :class:`str`
+            The spire's ID.
+        datastore_id : :class:`str`
+            The datastore's ID.
+        name : Union[:class:`str`, None], optional
+            The datastore's name, by default None.
+        path : Union[:class:`str`, None], optional
+            The folder on the spire, by default None.
+        is_default : Union[:class:`bool`, None], optional
+            If new shards go here or not, by default None.
+        enabled : Union[:class:`bool`, None], optional
+            If new shards can be put here or not, by default None.
+        soft_limit_mb : Union[:class:`int`, None], optional
+            The use in MB at which AMP stops putting new shards here, 0 for no limit, by default None.
+        tags : Union[list[:class:`str`], None], optional
+            The datastore's labels, by default None. They replace the old ones, so keep any AMP added, eg. ``"HDD"``.
+
+        Returns
+        -------
+        list[:class:`DatastoreResponse`]
+            Every datastore on the spire.
+
+        Raises
+        ------
+        ValueError
+            If the spire has no datastore with that ID, before anything is changed. AMP would make a new datastore
+            with that ID rather than refuse it.
+
+        """
+        datastores: list[DatastoreResponse] = await self.get_spire_datastores(spire_id=spire_id)
+        current: Optional[DatastoreResponse] = None
+        for datastore in datastores:
+            if datastore["id"] == datastore_id:
+                current = datastore
+                break
+
+        if current is None:
+            msg = f"The spire {spire_id} has no datastore {datastore_id}; see SpireModule.get_spire_datastores for its IDs."
+            raise ValueError(msg)
+
+        data: DatastoreRequest = {
+            "id": datastore_id,
+            "name": name if name is not None else current["name"],
+            "path": path if path is not None else current["path"],
+            "isDefault": is_default if is_default is not None else current["isDefault"],
+            "enabled": enabled if enabled is not None else current["enabled"],
+            "softLimitMb": soft_limit_mb if soft_limit_mb is not None else current["softLimitMb"],
+            "tags": tags if tags is not None else current["tags"],
+        }
+
+        return await self._request(method="POST", path=f"/api/spires/{spire_id}/datastores", data=data)
