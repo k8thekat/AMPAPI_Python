@@ -35,6 +35,7 @@ CubeCoders AMP 3 API wrapper in Python.
 - `Shard` and `Spire` objects carry the calls that act on them, eg. `await shard.start()`.
 - Typed replies: `TypedDict`s for most calls, and small objects for live data such as `ShardStatus`, `ConsoleLine` and `RunningTask`. The package ships `py.typed`.
 - File downloads and uploads, including AMP's chunked upload for big files.
+- Every request and AMP's reply can be saved as redacted JSON files, see [Capturing replies](#capturing-replies).
 <!-- The hubs are set aside for now (#3-50.1).
 - Live events from AMP's hubs, through decorators on your own `Shard`, `Spire` and `Panel` subclasses, or plain functions.
 -->
@@ -178,6 +179,30 @@ The events, and where you can listen for them:
 - On a spire or the panel: `spire_state`.
 - On the panel only: `spire_presence` and `network_status`.
 -->
+
+### Capturing replies
+
+---
+
+A `Session` can save every request it sends, and AMP's reply, as a JSON file. It's handy for a bug report, or for seeing what AMP really sent when a reply doesn't match its type.
+
+- `Session(..., capture_dir=Path("captures"))` captures the whole run.
+- `with session.capture(Path("captures")):` captures only the calls made inside the block.
+- Every call is captured, logins, renewals and error replies included. Each file is named from the method and the path, with each ID as `{id}`, then the UTC time to the microsecond, eg. `GET_api_shards_{id}_state_2026-11-13_21-52-07.123456.json`, so a route's files sort in time order. A file already in the folder is never written over.
+- Inside a `capture` block, a `capture_dir` the session was made with still gets every reply too.
+- Each file holds the request (method, path, query parameters, headers and body) and the reply (status, the useful headers and body). A download or any other binary reply is kept as its content type and length only.
+- Captures are redacted by default: tokens, passwords, keys, recovery codes and the `Authorization` header become `<redacted str len=N>`, a game's sign-in code is blanked, and public IP addresses become `<public ip>`. Private addresses are kept. `redact=False` writes them as sent, so keep those files to yourself.
+- A capture that fails to write, eg. to a read-only folder, is logged as a warning and the call carries on.
+
+```py
+from pathlib import Path
+
+from ampapi import Panel, Session
+
+# Inside an `async with Panel(session=session) as panel:` block.
+with session.capture(Path("captures")):
+    await panel.get_shards()
+```
 
 ### Errors
 

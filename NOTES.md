@@ -29,7 +29,9 @@ Developer context for the AMP 3 (6.0.0 beta) branch. AMP 2 support stays on `Ref
 ## Tooling in this worktree
 
 **Capture redaction.** `capture.py` hides values under secret-looking keys (by length) and blanks public IP addresses
-under address keys (`host`, `display`, ...). A scrub on 2026-11-06 ~22:55 UTC took four-part version strings for IP
+under address keys (`host`, `display`, ...). It uses the library's `ampapi.redact` (in `session.py`), so the project
+script hides the same secrets and addresses as `Session.capture`. The script's copy of the rules was dropped on
+2026-11-14, after the script's `redact` and the library's gave identical results over all 2,972 saved captures. A scrub on 2026-11-06 ~22:55 UTC took four-part version strings for IP
 addresses and ran redaction twice, so captures saved before then show `<redacted str len=22>` instead of the original
 length, and some `agentVersion` values carry a "version lost to a scrub" marker. The build is `3.0.0.6+f3d1a77cea`.
 

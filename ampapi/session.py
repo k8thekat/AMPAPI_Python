@@ -22,11 +22,14 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import ipaddress
 import json
 import logging
+import re
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
-from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, Union
+from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, TypeGuard, Union
 
 from aiohttp import ClientError, ClientSession, FormData
 
@@ -35,11 +38,12 @@ from .errors import (
     AMPAPIPasskeyRequiredError,
     AMPAPIPasswordChangeRequiredError,
     AMPAPIRequestError,
+    _is_dotted_key,  # pyright: ignore[reportPrivateUsage]
     _is_json_object,  # pyright: ignore[reportPrivateUsage]
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Generator, Mapping, Sequence
     from types import TracebackType
 
     from ._types import (
@@ -58,9 +62,87 @@ if TYPE_CHECKING:
         TokenResponse,
     )
 
-__all__ = ("Session",)
+__all__ = ("Session", "redact")
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
+
+# The rules below are the project's own capture tool's (`.scripts/amp3/capture.py`), so both redact alike.
+# Matched on the key's ending, so `code` / `errorCode` stay readable and `licenceKey` / `refreshToken` do not.
+# `passkeyMessageKey` (a translation key) and a setting's `effectiveKey` (its config name) are not secrets, so kept.
+# An analytics `userKey` / `analyticsKey` is kept too, as it means nothing outside this installation.
+# `authorization` and `cookie` cover the request and reply headers that carry a session.
+SECRET_KEYS = re.compile(
+    r"(token|password|secret|jwt|(?<!message)(?<!effective)(?<!user)(?<!analytics)key|credentials|recoverycodes|codes|cacert|blob"
+    r"|externalip|externaladdress|authorization|cookie)$",
+    re.IGNORECASE,
+)
+# A game's device sign-in code, wherever it sits in a string: a hytale update put "Authorization code: <code>" in its
+# running task's `message`, and the sign-in URL carries it as `user_code=`.
+SIGN_IN_CODES = re.compile(r"(user_code=|Authorization code: )[A-Za-z0-9-]+", re.IGNORECASE)
+# Any IPv4 address in a string value. Only the global ones are blanked, and only under keys that name an address,
+# as four-part version strings (`minAMPVersion`, `agentVersion`) look just like global IPs.
+IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+# `uri` and `url` too, as an endpoint's `steam://connect/<address>:<port>` link carries the public address.
+ADDRESS_KEYS = re.compile(r"(host|hosts|address|addresses|ip|ips|display|endpoint|endpoints|origin|uri|url)$", re.IGNORECASE)
+# A GUID in a request path, which a capture's file name swaps for `{id}` so one route's captures sort together.
+GUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+# Anything else a file name shouldn't hold, eg. the `%` of an escaped file path.
+UNSAFE_NAME = re.compile(r"[^A-Za-z0-9._{}-]")
+# The reply headers worth keeping in a capture; the rest is transport noise.
+KEEP_HEADERS = ("content-type", "www-authenticate", "set-cookie", "location", "retry-after", "x-")
+
+
+def _is_json_list(value: object) -> TypeGuard[list[Any]]:
+    return isinstance(value, list)
+
+
+def _blank_public_ip(match: re.Match[str]) -> str:
+    try:
+        return "<public ip>" if ipaddress.ip_address(match.group(0)).is_global else match.group(0)
+    except ValueError:
+        return match.group(0)
+
+
+def redact(value: Any, key: str = "") -> Any:
+    """Hide the secrets in a request or a reply, at any depth.
+
+    A string under a secret-looking key (a token, password, key, secret, recovery code, or the `Authorization`
+    header) becomes ``"<redacted str len=N>"``. A game's sign-in code is blanked wherever it sits in a string, and a
+    public IP address under an address-like key (`host`, `address`, `url`, ...) becomes ``"<public ip>"``.
+    Private addresses are left as they are. Running `redact` again over a redacted copy changes nothing.
+
+    .. versionadded:: 6.0.0
+
+    Parameters
+    ----------
+    value : Any
+        The decoded JSON to redact. Dicts and lists are walked, and anything that isn't a string is kept as it is.
+    key : :class:`str`, optional
+        The key `value` sits under, by default "".
+
+    Returns
+    -------
+    Any
+        A copy of `value` with its secrets hidden.
+
+    """
+    if _is_json_object(value=value):
+        return {item_key: redact(item, item_key) for item_key, item in value.items()}
+    if _is_json_list(value=value):
+        return [redact(item, key) for item in value]
+
+    if not isinstance(value, str) or value.startswith("<redacted str len="):
+        return value
+
+    if SECRET_KEYS.search(key) and value:
+        return f"<redacted str len={len(value)}>"
+    # A recovery code is sent as `code`, but AMP's error codes there are dotted keys and a crash's exit code is a number
+    if key.lower() == "code" and value and _is_dotted_key(value=value) is False and value.lstrip("-").isdigit() is False:
+        return f"<redacted str len={len(value)}>"
+    value = SIGN_IN_CODES.sub(r"\1<redacted>", value)
+    if ADDRESS_KEYS.search(key):
+        return IPV4.sub(_blank_public_ip, value)
+    return value
 
 
 class Session:
@@ -104,6 +186,9 @@ class Session:
     session : Union[:class:`ClientSession`, None], optional
         An aiohttp session to send requests through, by default None.
         Without one we make our own, and :meth:`clean_up` closes it. :meth:`clean_up` logs out either way.
+    capture_dir : Union[:class:`Path`, None], optional
+        A folder to save every request and AMP's reply in, redacted, for the whole run, by default None.
+        See :meth:`capture` for what each file holds, and for capturing only part of a run.
 
     Attributes
     ----------
@@ -135,6 +220,9 @@ class Session:
     # How many logins `_ensure_login` has finished, and the error the last one raised, for the calls that waited on it.
     _login_attempts: int
     _login_error: Optional[Exception]
+    # The whole run's capture folder (`None` when off), and each open `capture` block's folder and if it's redacted.
+    _capture_dir: Optional[Path]
+    _capture_blocks: list[tuple[Path, bool]]
 
     # How far through a token's lifetime we renew it, the same point AMP's web panel uses.
     _renew_point: ClassVar[float] = 0.75
@@ -152,6 +240,7 @@ class Session:
         *,
         remember_me: bool = False,
         session: Optional[ClientSession] = None,
+        capture_dir: Optional[Path] = None,
     ) -> None:
         self.url = url.rstrip("/")
         self.username = username
@@ -166,6 +255,8 @@ class Session:
         self._login_lock = asyncio.Lock()
         self._login_attempts = 0
         self._login_error = None
+        self._capture_dir = capture_dir
+        self._capture_blocks = []
 
     async def __aenter__(self) -> Self:  # noqa: D105
         return self
@@ -206,6 +297,76 @@ class Session:
         """The logged in user's ID, the same as `ProfileResponse.id`."""
         return self._claims.get("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
 
+    def _write_capture(
+        self,
+        *,
+        method: str,
+        path: str,
+        query: Optional[Mapping[str, Any]],
+        headers: Mapping[str, str],
+        data: Optional[Union[Mapping[str, Any], list[Any], bytes]],
+        files: Optional[Mapping[str, bytes]],
+        status: int,
+        reply_headers: Mapping[str, str],
+        reply: bytes,
+        body: Any,
+    ) -> None:
+        """Save one request and AMP's reply in every capture folder that's on: `capture_dir` and each open :meth:`capture`.
+
+        The file is named from the method, the path with each GUID as ``{id}``, and the UTC time to the microsecond.
+        A failure to write the file is logged, never raised, so the call carries on.
+        """
+        # The `capture_dir` folder is always redacted. A folder named twice gets the reply once.
+        folders: dict[Path, bool] = {} if self._capture_dir is None else {self._capture_dir: True}
+        for block_dir, block_redact in self._capture_blocks:
+            if block_dir not in folders:
+                folders[block_dir] = block_redact
+        if not folders:
+            return
+
+        request_body: Any = data
+        if isinstance(data, bytes):
+            request_body = {"<bytes>": {"contentType": "application/octet-stream", "length": len(data)}}
+        elif files is not None:
+            request_body = {"<files>": [{"path": relative_path, "length": len(content)} for relative_path, content in files.items()]}
+
+        # A download, an image or any other binary reply is kept as its type and size, never its bytes
+        content_type: str = reply_headers.get("Content-Type", "")
+        reply_body: Any = body
+        if isinstance(body, bytes) or (reply and not content_type.startswith(("application/json", "application/problem+json", "text/"))):
+            reply_body = {"<bytes>": {"contentType": content_type, "length": len(reply)}}
+
+        # One moment for both the file name and `time`, so the file name and `time` always agree
+        now: datetime = datetime.now(tz=UTC)
+        capture: dict[str, Any] = {
+            "time": now.isoformat(),
+            "request": {"method": method, "url": self.url, "path": path, "parameters": query, "headers": headers, "body": request_body},
+            "status": status,
+            "headers": {key: value for key, value in reply_headers.items() if key.lower().startswith(KEEP_HEADERS)},
+            "body": reply_body,
+        }
+        route: str = "_".join("{id}" if GUID.fullmatch(part) else part for part in path.strip("/").split("/"))
+        route = UNSAFE_NAME.sub("_", route)[:150]
+        # Year first sorts a route's files in time order. Windows refuses `:` and `|` in a file name, so neither is used.
+        file_name: str = f"{method}_{route}_{now.strftime('%Y-%m-%d_%H-%M-%S.%f')}.json"
+        for folder, hide in folders.items():
+            # Mode "x" refuses a name that exists, so a second reply on the route in the same microsecond logs a warning
+            try:
+                text: str = json.dumps(redact(capture) if hide is True else capture, indent=4) + "\n"
+                folder.mkdir(parents=True, exist_ok=True)
+                with folder.joinpath(file_name).open(mode="x", encoding="utf-8") as file:
+                    file.write(text)
+            except (OSError, TypeError, ValueError) as error:
+                LOGGER.warning(
+                    "<%s.%s> | Failed to write a capture, carrying on | Method: %s | Path: %s | Folder: %s | Error: %r",
+                    __class__.__name__,
+                    "_write_capture",
+                    method,
+                    path,
+                    folder,
+                    error,
+                )
+
     async def _send(
         self,
         method: str,
@@ -225,6 +386,7 @@ class Session:
         Every request goes through here, logins and renewals too. A 503 whose `code` says AMP's database
         (``"session.storeUnavailable"``) or message bus (``"common.error.busUnavailable"``) is down is sent again after
         1, 2 and 4 seconds, then 8 seconds twice, the way the web panel does.
+        While :meth:`capture` or `capture_dir` has capturing on, each reply is saved by `_write_capture`.
 
         Returns
         -------
@@ -285,16 +447,31 @@ class Session:
                 status: int = res.status
 
             # A download comes back as bytes, but AMP's errors are JSON either way.
-            if raw_bytes is True and 200 <= status < 300:
-                return status, authenticate_header, reply
+            download: bool = raw_bytes is True and 200 <= status < 300
             # AMP answers some calls (logout, reauth) with an empty 204, and some GETs use a 204 for "nothing yet".
-            body: Any = None
-            if reply:
+            body: Any = reply if download is True else None
+            if download is False and reply:
                 try:
                     body = json.loads(reply)
                 except ValueError:
                     # A proxy in front of AMP answers with its own page, eg. an HTML 502, so we keep it as text
                     body = reply.decode(encoding="utf-8", errors="replace")
+
+            # Every reply is captured once `capture` is on, a 503 we send again included
+            self._write_capture(
+                method=method,
+                path=path,
+                query=query,
+                headers=headers,
+                data=data,
+                files=files,
+                status=status,
+                reply_headers=res.headers,
+                reply=reply,
+                body=body,
+            )
+            if download is True:
+                return status, authenticate_header, body
             code: Optional[str] = body.get("code") if _is_json_object(value=body) else None
             if status != 503 or code not in self._outage_codes or retries == len(self._outage_delays):
                 return status, authenticate_header, body
@@ -600,6 +777,46 @@ class Session:
         self.username = preview["userName"]
         await self._login_result(data=result)
         return result
+
+    @contextmanager
+    def capture(self, path: Path, *, redact: bool = True) -> Generator[None]:
+        """Save every request this session sends, and AMP's reply, as a JSON file in `path` while the block runs.
+
+        Every call through this session is captured, logins, renewals and error replies included, from any task that
+        uses the session while the block runs.
+
+        - Each file holds the request: method, path, query parameters, headers and body.
+        - Each file holds the reply: status, the headers worth keeping and body.
+        - A binary reply, such as a download, is kept as its content type and length only.
+        - Each file is named from the method, the path with each GUID as ``{id}``, then the UTC time to the
+          microsecond, eg. ``GET_api_shards_{id}_state_2026-11-13_21-52-07.123456.json``. A route's files sort in
+          time order, and a file already in `path` is never written over.
+
+        A capture that fails to write is logged as a warning, and the call carries on. While the block runs, the
+        `capture_dir` the session was made with, and any block this block is inside, still get every reply too.
+
+        .. versionadded:: 6.0.0
+
+        Parameters
+        ----------
+        path : :class:`Path`
+            The folder to save the captures in. The folder is made when missing.
+        redact : :class:`bool`, optional
+            If secrets and public IP addresses are hidden in the captures or not, by default True.
+            See :func:`redact` for what is hidden. With `False` the files hold your password and tokens as sent.
+
+        Yields
+        ------
+        None
+            Nothing, the captures go to `path`.
+
+        """
+        block: tuple[Path, bool] = (path, redact)
+        self._capture_blocks.append(block)
+        try:
+            yield
+        finally:
+            self._capture_blocks.remove(block)
 
     async def change_expired_password(self, new_password: str) -> TokenResponse:
         """Change the password AMP asked for at login, which logs in.
