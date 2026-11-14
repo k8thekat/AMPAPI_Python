@@ -135,7 +135,7 @@ class TaskModule(Base):
         await self._request(method="DELETE", path=f"/api/running-tasks/{task_id}")
 
     async def get_running_tasks(self) -> list[RunningTask]:
-        """Get the logged in user's own tasks running now, and their tasks that finished in the last few seconds, oldest first.
+        """Get the logged in user's tasks running now, and their tasks that finished in the last few seconds, oldest first.
 
         |coro|
 

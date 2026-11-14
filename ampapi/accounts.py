@@ -494,7 +494,7 @@ class AccountModule(Base):
         return await self._request(method="GET", path="/api/users/me/preferences")
 
     async def get_profile(self) -> ProfileResponse:
-        """Get the logged in user's own account.
+        """Get the logged in user's account.
 
         |coro|
 
@@ -654,7 +654,7 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/users/{user_id}/reset-password``
 
-        Resetting the logged in user's own password keeps the new password for later logins.
+        Resetting the logged in user's password keeps the new password for later logins.
 
         Parameters
         ----------
@@ -800,15 +800,15 @@ class AccountModule(Base):
         email : Union[:class:`str`, None], optional
             The new email address, by default None. AMP doesn't check that the value is an email address.
         role_ids : Union[list[:class:`str`], None], optional
-            The roles to give the user being changed, which replace their old roles, by default None.
+            The roles to give the user, which replace their old roles, by default None.
             An empty list removes every role.
         suspended : Union[:class:`bool`, None], optional
-            If the user being changed is suspended or not, by default None.
+            If the user is suspended or not, by default None.
             Suspending a user ends their sessions, and those sessions stay ended once the user is let back in.
         password_expires : Union[:class:`bool`, None], optional
             If the password runs out after the platform's maximum age or not, by default None.
         require_password_change : Union[:class:`bool`, None], optional
-            If the user being changed has to change their password at their next login or not, by default None.
+            If the user has to change their password at their next login or not, by default None.
 
         Returns
         -------

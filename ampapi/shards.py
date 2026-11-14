@@ -2798,7 +2798,7 @@ class ShardModule(Base):
             **403** - If the change needs access the logged in user doesn't hold `files.acl.error.notYoursToGrant`.\n
             **403** - If a `state` isn't ``"allow"``, ``"deny"`` or ``"inherit"`` `files.acl.error.notYoursToGrant`.
             AMP sends the same 403 here, not a 400.\n
-            **409** - If the change takes away the logged in user's own read of the path.
+            **409** - If the change takes away the logged in user's read of the path.
 
         """
         return await self._request(
