@@ -107,11 +107,11 @@ class AccountModule(Base):
             The public key line, eg. ``"ssh-ed25519 AAAA... laptop"``.
         label : Union[:class:`str`, None], optional
             A name for the key, by default None.
-            Without a label AMP names the key after the key line's comment, eg. ``"laptop"``. A key line with no
-            comment is named after its key type, eg. ``"ssh-ed25519"``.
+            - Without a label AMP names the key after the key line's comment, eg. ``"laptop"``.
+            - A key line with no comment is named after its key type, eg. ``"ssh-ed25519"``.
         expires_at : Union[:class:`str`, None], optional
             When the key stops working, ISO 8601 like ``"2027-01-01T00:00:00Z"``, by default None.
-            Without an expiry the key never runs out.
+            - Without an expiry the key never runs out.
 
         Returns
         -------
@@ -798,7 +798,7 @@ class AccountModule(Base):
             The invite's ID.
         expires_in_hours : Union[:class:`int`, None], optional
             How long the new code works for, by default None for AMP's 72 hours.
-            AMP keeps the value between 1 and 720.
+            - AMP keeps the value between 1 and 720.
 
         Returns
         -------
@@ -947,7 +947,8 @@ class AccountModule(Base):
             The role's new name, by default None.
         permissions : Union[list[:class:`str`], None], optional
             The permission strings, which replace the role's old permissions, by default None.
-            A leading ``-`` denies that permission. An empty list removes every permission.
+            - A leading ``-`` denies that permission.
+            - An empty list removes every permission.
         description : Union[:class:`str`, None], optional
             The role's new description, ``""`` to clear it, by default None.
 
@@ -998,15 +999,16 @@ class AccountModule(Base):
             The new email address, by default None. AMP doesn't check that the value is an email address.
         role_ids : Union[list[:class:`str`], None], optional
             The roles to give the user, which replace their old roles, by default None.
-            An empty list removes every role.
+            - An empty list removes every role.
         suspended : Union[:class:`bool`, None], optional
             If the user is suspended or not, by default None.
-            Suspending a user ends their sessions, and those sessions stay ended once the user is let back in.
+            - Suspending a user ends their sessions, and those sessions stay ended once the user is let back in.
         password_expires : Union[:class:`bool`, None], optional
             If the password runs out after the platform's maximum age or not, by default None.
         require_password_change : Union[:class:`bool`, None], optional
             If the user has to change their password at their next login or not, by default None.
-            Turning it on ends the user's sessions, SFTP included, the same way suspending does.
+            - Turning `require_password_change` on ends the user's sessions, SFTP included, the same way suspending
+              does.
 
         Returns
         -------

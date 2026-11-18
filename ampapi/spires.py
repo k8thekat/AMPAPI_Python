@@ -96,7 +96,7 @@ class Spire:
         The spire's name.
     data : :class:`SpireResponse`
         The spire as AMP sent it, when this object was made.
-        The panel brings it up to date each time it hands this object out again.
+        - The panel brings `data` up to date each time the panel hands this object out again.
     session : :class:`Session`
         The panel's session.
 
@@ -279,7 +279,7 @@ class Spire:
         ----------
         include_deleted : :class:`bool`, optional
             If deleted shards that aren't purged yet are listed too or not, by default False.
-            A deleted one answers only :meth:`Shard.restore` and :meth:`Shard.purge`.
+            - A deleted shard answers only :meth:`Shard.restore` and :meth:`Shard.purge`.
 
         Returns
         -------
@@ -863,7 +863,7 @@ class SpireModule(Base):
             The servers to check, from :meth:`scan_spire_imports`.
         enter_other_volumes : :class:`bool`, optional
             If AMP copies a disk mounted inside a server's folder rather than stopping at it or not, by default False.
-            It changes the space the import needs.
+            - `enter_other_volumes` changes the space the import needs.
 
         Returns
         -------

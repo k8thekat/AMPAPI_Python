@@ -100,8 +100,8 @@ class Panel(
     Parameters
     ----------
     session : :class:`Session`
-        The session to send calls through.
-        Leaving an ``async with`` block, or :meth:`clean_up`, logs it out and closes it.
+        The `Session` to send calls through.
+        - Leaving an ``async with`` block, or calling :meth:`clean_up`, logs the `Session` out and closes the `Session`.
     shard_class : type[:class:`Shard`], optional
         The class the panel makes its shards from, eg. a subclass of your own, by default :class:`Shard`.
     spire_class : type[:class:`Spire`], optional

@@ -139,7 +139,7 @@ class Shard:
         The shard's name.
     data : :class:`ShardResponse`
         The data response as AMP sent it, when this object was made.
-        The panel brings it up to date each time it hands this object out again.
+        - The panel brings `data` up to date each time the panel hands this object out again.
     session : :class:`Session`
         The panel's session.
 
@@ -2670,8 +2670,8 @@ class ShardModule(Base):
         command : :class:`str`
             The command, eg. ``"say hello"``.
         prompt_reply : :class:`bool`, optional
-            If it answers a prompt the game is waiting on rather than being a command or not, by default False.
-            With no prompt waiting it's sent as a command.
+            If `command` answers a prompt the game is waiting on rather than being a command or not, by default False.
+            - With no prompt waiting, `command` is sent as a command.
 
         """
         data: ShardConsoleRequest = {"command": command, "promptReply": prompt_reply}
@@ -2938,8 +2938,9 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         ports : dict[:class:`str`, :class:`int`]
-            Each port's `ref` to its new number, eg. ``{"RemoteAdminPort": 25576}``; a port left out stays as it is.
-            They take effect when the shard next starts.
+            Each port's `ref` to its new number, eg. ``{"RemoteAdminPort": 25576}``.
+            - A port left out stays as it is.
+            - The new numbers take effect when the shard next starts.
 
         Raises
         ------
@@ -2985,7 +2986,8 @@ class ShardModule(Base):
             The shard's ID.
         values : :class:`SettingValues`
             Each setting's `fieldName` to its new value, always a string, eg. ``{"motd": "Hello", "MaxMemory": "2048"}``.
-            AMP checks an enum's value, but not a number's, and ignores a name it doesn't know.
+            - AMP checks an enum's value, but not a number's.
+            - AMP ignores a setting name it doesn't know.
 
         Raises
         ------
@@ -3474,7 +3476,7 @@ class ShardModule(Base):
             How many bytes to send at a time, by default 8 MiB like the web panel. AMP takes at most 16 MB in one chunk.
         resume : :class:`bool`, optional
             If we carry on an upload to `path` that AMP already holds part of, by default False.
-            Only pass True when it is this same file, eg. after this call failed partway.
+            - Only pass True when the upload is this same file, eg. after this call failed partway.
 
         Raises
         ------

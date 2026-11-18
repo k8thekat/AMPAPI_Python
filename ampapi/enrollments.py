@@ -42,10 +42,13 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class EnrollmentModule(Base):
-    """The calls for joining a new spire to the panel: the message bus it joins over, and the join files (enrolments).
+    """The calls for joining a new spire to the panel: the message bus a spire joins over, and the join files (enrolments).
 
-    An enrolment is a machine that isn't a spire yet. Open the bus with :meth:`expand_message_bus`, make a join file
-    with :meth:`create_spire_enrollment`, then :meth:`approve_spire_enrollment` once the machine has used the join file.
+    An enrolment is a machine that isn't a spire yet. Open the message bus with :meth:`expand_message_bus`, make a join
+    file with :meth:`create_spire_enrollment`, then :meth:`approve_spire_enrollment` once the machine has used the join
+    file.
+
+    A fresh panel's first-run setup, its network step included, is :class:`SetupModule`.
 
     .. versionadded:: 6.0.0
 
@@ -59,8 +62,9 @@ class EnrollmentModule(Base):
         Endpoint: ``POST /api/spires/enrollments/{enrollment_id}/approve``
 
         Check the enrolment's `admission` first: its `fingerprint` should match the fingerprint the joining machine
-        shows in its `HealthStatusResponse.messageParams`. The machine collects its credential the next time it asks
-        and joins within seconds, and the enrolment's `status` goes from ``"approved"`` to ``"redeemed"``.
+        shows in its `HealthStatusResponse.messageParams`. The machine collects its credential the next time the machine
+        asks the panel, and joins within seconds. The enrolment's `status` then goes from ``"approved"`` to
+        ``"redeemed"``.
 
         Parameters
         ----------
@@ -99,30 +103,34 @@ class EnrollmentModule(Base):
             AMP refuses the enrolment with ``"spire.enroll.error.busNotPublic"`` until the message bus is opened to
             other machines (:meth:`expand_message_bus`).
 
-        The new machine's first-run setup takes the `joinBlob`, then waits in :meth:`PlatformModule.get_health_status`
-        until :meth:`approve_spire_enrollment`.
+        The new machine takes the join file's `joinBlob` in its own first-run setup, then waits for
+        :meth:`approve_spire_enrollment`. :meth:`PlatformModule.get_health_status` on the new machine shows the wait.
 
-        A public entry node is a relay and a front door for the panel that hosts no shards; its enrolment reads `role`
-        ``"publicentrynode"``. The panel dials the entry node at `public_host` over a WireGuard tunnel, so an entry node
-        needs the panel's own message bus and WireGuard on the panel's machine, and the logged in user needs the network
-        manage permission too. AMP only checks the host's form: a host nothing answers on is accepted, and the
-        enrolment's `entryNodeState` stays ``"waiting"``.
+        A public entry node is a relay and a front door for the panel that hosts no shards. Its enrolment reads `role`
+        ``"publicentrynode"``.
+
+        - The panel dials the entry node at `public_host` over a WireGuard tunnel.
+        - An entry node needs AMP's own message bus, and WireGuard on the panel's machine.
+        - The logged in user needs the network-manage capability as well as spire-create.
+        - AMP only checks the host's form. A host nothing answers on is accepted, and the enrolment's `entryNodeState`
+          stays ``"waiting"``.
 
         Parameters
         ----------
         label : :class:`str`
-            A name for the enrolment; the spire the machine becomes takes the label as its `displayName`.
+            A name for the enrolment. The spire the machine becomes takes the label as its `displayName`.
         expires_in_hours : Union[:class:`int`, None], optional
             How long the join file works for, 1 to 720, by default None for AMP's 72.
         hosts : Union[list[:class:`str`], None], optional
             The addresses the new machine should reach the panel on, by default None for the network address the
             message bus is bound to. The machine uses the first address it can reach, so a network address and a public
-            address together cover both cases. See :meth:`get_spire_enrollment_hosts`.
+            address together cover a machine on the panel's network and a machine outside it. See
+            :meth:`get_spire_enrollment_hosts`.
         entry_node : :class:`bool`, optional
             If the machine joins as a public entry node rather than a spire or not, by default False.
         public_host : Union[:class:`str`, None], optional
             The entry node's public address, eg. ``"203.0.113.10"``, by default None. An entry node needs a public
-            address, and a standard enrolment ignores it.
+            address. A standard enrolment ignores `public_host`.
 
         Returns
         -------
@@ -132,11 +140,15 @@ class EnrollmentModule(Base):
         Raises
         ------
         AMPAPIRequestError
+            **400** - If `label` is empty, or the message bus can't issue credentials, from AMP's docs and not seen
+            live.\n
             **400** - If an entry node has no `public_host` `spire.enroll.error.entryNodeHostRequired`.\n
-            **400** - If `public_host` isn't a host `spire.enroll.error.entryNodeHostInvalid`.\n
+            **400** - If `public_host` isn't a host name or an IP address `spire.enroll.error.entryNodeHostInvalid`.\n
             **400** - If an entry node is asked for and no tunnel slot is left, from AMP's docs and not seen live.\n
             **400** - If an entry node is asked for and the panel's machine has no WireGuard, from AMP's docs and not seen
             live.\n
+            **403** - If the logged in user lacks the spire-create capability, or network-manage for an entry node, from
+            AMP's docs and not seen live.\n
             **409** - If another entry node is being made at the same moment, from AMP's docs and not seen live.
 
         """
@@ -162,8 +174,8 @@ class EnrollmentModule(Base):
         Endpoint: ``DELETE /api/spires/enrollments/{enrollment_id}``
 
         The enrolment stays in :meth:`get_spire_enrollments` with `status` ``"revoked"``. Revoking the enrolment again is
-        fine too. Revoking doesn't remove a machine that already joined, which has its own credential; delete that spire
-        instead, see :meth:`SpireModule.delete_spire`.
+        fine too. Revoking doesn't remove a machine that already joined, as the machine has its own credential. Delete
+        that spire instead, see :meth:`SpireModule.delete_spire`.
 
         Parameters
         ----------
@@ -209,15 +221,39 @@ class EnrollmentModule(Base):
 
         Endpoint: ``POST /api/system/bus/expand``
 
-        .. warning::
-            Opening the bus changes how the panel is reached, and there's no call to close the bus again.
+        This call does the same as :meth:`SetupModule.expand_setup_network`, through the system route. Use this call
+        once the panel is set up, and :meth:`SetupModule.expand_setup_network` during the first-run setup.
 
-        AMP opens the bus's port on the host's firewall. Calling this again on an open bus answers the same.
+        - AMP opens the message bus's port (TCP 4222 unless the spire's `busPort` says otherwise) on the host's
+          firewall. Nothing restarts.
+        - The message bus's `servers` move from ``127.0.0.1`` to the machine's network address.
+        - Calling :meth:`expand_message_bus` again on an open message bus answers the same.
+
+        .. warning::
+            There's no call to close the message bus again. To close the message bus by hand on the panel's machine:
+
+            - Set `ManagedNats.MultiMachine` and `IsPublic` back to `false` in
+              ``/opt/cubecoders/amp3/data/bootstrap.local.json``. Keep the file owned by ``amp:amp`` with mode 600.
+            - Run ``systemctl restart amp3``. The health `phase` reads ``"starting"`` for under a minute, then the
+              firewall closes the port again. The logged in user's session survives the restart.
 
         Returns
         -------
         :class:`BusExpandResponse`
-            How to reach the bus now, and the port AMP opened.
+            How to reach the message bus now, and what became of the port's firewall rule. A firewall `outcome` other
+            than ``"Open"`` is information to act on, not a failed call.
+
+            - ``"Open"``: AMP opened the port.
+            - ``"NotManaged"``, ``"Pending"`` or ``"WriteFailed"``: AMP's docs name these outcomes without saying what
+              each means, and no capture shows them yet. Check the port on the host by hand.
+            - When `agentRunning` is `False`, the port has to be opened by hand.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the logged in user lacks the spire-create capability, from AMP's docs and not seen live.\n
+            **409** - If the panel uses an external message bus that AMP doesn't manage, from AMP's docs and not seen
+            live.
 
         """
         return await self._request(method="POST", path="/api/system/bus/expand")
@@ -232,7 +268,7 @@ class EnrollmentModule(Base):
         Returns
         -------
         :class:`SystemBusResponse`
-            If AMP runs the bus, if the bus is public and how to join the bus.
+            If AMP runs the message bus, if the message bus is open to other machines, and how to join the message bus.
 
         """
         return await self._request(method="GET", path="/api/system/bus")
@@ -262,7 +298,7 @@ class EnrollmentModule(Base):
         Returns
         -------
         list[:class:`SpireEnrollmentResponse`]
-            The enrolments, newest first. Revoked and redeemed ones stay in the list.
+            The enrolments, newest first. Revoked and redeemed enrolments stay in the list.
 
         """
         return await self._request(method="GET", path="/api/spires/enrollments")

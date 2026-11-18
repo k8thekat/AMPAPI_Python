@@ -76,7 +76,7 @@ class TemplateModule(Base):
         ----------
         source_id : Union[:class:`str`, None], optional
             Only the templates from this source, eg. ``"amp3"``, by default None.
-            See :meth:`get_template_sources`.
+            - See :meth:`get_template_sources`.
 
         Returns
         -------

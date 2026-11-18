@@ -148,29 +148,34 @@ def redact(value: Any, key: str = "") -> Any:
 
 
 class Session:
-    """One login to an AMP 3 panel.
+    """One login to an AMP 3 panel, which a :class:`Panel` sends its calls through.
 
-    It logs in on the first call that needs it, renews the token before it runs out, and logs in again if AMP ends the
-    session (a logout elsewhere, or an admin's force logout). Calls made at the same time share one login, and when AMP
-    refuses it they all raise its error instead of each sending it again. Hand it to a :class:`Panel` for the API calls.
+    .. code-block:: python
 
-    While AMP's database or message bus is down (a 503 with ``"session.storeUnavailable"`` or
-    ``"common.error.busUnavailable"``), a request is sent again after 1, 2 and 4 seconds, then 8 seconds twice, the way
-    the web panel does. A renew AMP refuses for any other reason than an ended session is logged, and we keep using the
-    token until it runs out.
+        session = Session(url="http://192.168.1.10:8443", username="amp_username", password="amp_password")
 
-    .. note::
-        AMP 3 sessions are Bearer tokens. A login lasts 8 hours, or 28 days with `remember_me`. Each login is its own
-        session; ending one leaves the others alone.
+        # Leaving the block logs the `Session` out and closes it
+        async with Panel(session=session) as panel:
+            shards: list[Shard] = await panel.get_shards()
 
-    .. note::
-        Any call that needs a session logs in first when it has to, so it can raise :exc:`AMPAPILoginError`,
-        :exc:`AMPAPIPasskeyRequiredError` or :exc:`AMPAPIPasswordChangeRequiredError` from that login.
+    The `Session` looks after the login for every call made through it:
+
+    - Logs in on the first call that needs a session. A call that needs a session can raise :exc:`AMPAPILoginError`,
+      :exc:`AMPAPIPasskeyRequiredError` or :exc:`AMPAPIPasswordChangeRequiredError` from the login.
+    - Renews the token before the token runs out.
+    - Logs in again when AMP ends the session, eg. a logout elsewhere or an admin's force logout.
+    - Sends a request again while AMP's database or message bus is down, after 1, 2 and 4 seconds, then 8 seconds twice,
+      the way the web panel does. AMP reports the outage as a 503 with ``"session.storeUnavailable"`` or
+      ``"common.error.busUnavailable"``.
+    - Shares one login between calls made at the same time. When AMP refuses the shared login, every waiting call raises
+      the login's error, and the login isn't sent again.
 
     .. warning::
-        A login finished with :meth:`second_factor` can't be made again on its own, as each recovery code works once.
-        Once AMP ends that session, or it runs out, the next call raises :exc:`AMPAPIPasskeyRequiredError`. Catch it and
-        call :meth:`second_factor` with a new code. With `remember_me` a login lasts 28 days.
+        The library can't repeat a login finished with :meth:`second_factor` or :meth:`complete_passkey_login`. Once AMP
+        ends that session, or the session runs out, the next call that needs a session logs in by password. When the
+        account needs a recovery code or a passkey, that password login raises :exc:`AMPAPIPasskeyRequiredError`.
+        Catch :exc:`AMPAPIPasskeyRequiredError`, then call :meth:`second_factor` with a new recovery code, or run the
+        passkey login again.
 
     .. versionadded:: 6.0.0
 
@@ -180,26 +185,31 @@ class Session:
         The panel's URL, eg. ``"http://192.168.1.10:8443"``.
     username : :class:`str`
         The AMP username to log in as.
-        Before :meth:`accept_invite` it can be anything, eg. ``""``, as the invite's username replaces it.
+        - Before :meth:`accept_invite` the username can be anything, eg. ``""``, as the invite's username replaces it.
+        - For :meth:`SetupModule.create_admin`, the username the panel's first admin gets.
     password : :class:`str`
         The password for `username`.
+        - For :meth:`SetupModule.create_admin`, the password the panel's first admin gets. The password has to pass
+        :meth:`get_password_policy`.
     remember_me : :class:`bool`, optional
-        If the login should ask for the long (28 day) token or not, by default False.
+        If a login asks for a 28 day token instead of an 8 hour token or not, by default False.
     session : Union[:class:`ClientSession`, None], optional
-        An aiohttp session to send requests through, by default None.
-        Without one we make our own, and :meth:`clean_up` closes it. :meth:`clean_up` logs out either way.
+        An aiohttp `ClientSession` to send requests through, by default None.
+        - Without a `ClientSession` the `Session` makes its own `ClientSession`, which :meth:`clean_up` closes.
+        :meth:`clean_up` logs out either way.
     capture_dir : Union[:class:`Path`, None], optional
         A folder to save every request and AMP's reply in, redacted, for the whole run, by default None.
-        See :meth:`capture` for what each file holds, and for capturing only part of a run.
+        - See :meth:`capture` for what each file holds, and for capturing only part of a run.
 
     Attributes
     ----------
     url : :class:`str`
         The panel's URL, without a trailing ``/``.
     username : :class:`str`
-        The AMP username we log in as. :meth:`accept_invite` sets it to the invite's.
+        The AMP username the `Session` logs in as.
+        - The function :meth:`accept_invite` sets it to the invite's username.
     remember_me : :class:`bool`
-        If a login asks for the long (28 day) token or not.
+        If a login asks for a 28 day token instead of an 8 hour token or not.
 
     """
 
@@ -273,9 +283,10 @@ class Session:
 
     @property
     def enrolment_only(self) -> bool:
-        """If this session may only add a passkey (the token's ``amp:scope`` claim is ``"enrol"``).
+        """If the current session may only add a passkey (the token's ``amp:scope`` claim is ``"enrol"``).
 
-        AMP hands these out when the passkey policy is ``"Required"`` and the account has no passkey yet.
+        AMP hands out an enrolment-only session when the passkey policy is ``"Required"`` and the account has no passkey
+        yet.
         """
         return self._claims.get("amp:scope") == "enrol"
 
@@ -286,12 +297,12 @@ class Session:
 
     @property
     def logged_in(self) -> bool:
-        """If we hold a token that has not run out yet."""
+        """If the `Session` holds a token that hasn't run out yet."""
         return self._expiration is not None and datetime.now(tz=UTC) < self._expiration
 
     @property
     def session_id(self) -> Optional[str]:
-        """AMP's ID for this login (the token's `sid` claim); it stays the same across renewals."""
+        """AMP's ID for the current session (the token's `sid` claim), which stays the same across renewals."""
         return self._claims.get("sid")
 
     @property
@@ -379,15 +390,19 @@ class Session:
         parameters: Optional[QueryParameters] = None,
         raw_bytes: bool = False,
         use_token: bool = True,
+        setup_code: Optional[str] = None,
     ) -> tuple[int, str, Any]:
         """Send a request and decode the reply. Raises nothing for an error status, the caller decides.
 
         `data` is sent as JSON, or as it is with ``Content-Type: application/octet-stream`` when it's bytes. `files` is
-        sent as the web panel's upload form instead, a `files` part and a `paths` part for each one.
+        sent as the web panel's upload form instead, a `files` part and a `paths` part for each file.
+        `setup_code` is sent as the ``X-Setup-Token`` header the first-run setup calls need, with the whitespace around
+        the code removed.
 
         Every request goes through here, logins and renewals too. A 503 whose `code` says AMP's database
         (``"session.storeUnavailable"``) or message bus (``"common.error.busUnavailable"``) is down is sent again after
-        1, 2 and 4 seconds, then 8 seconds twice, the way the web panel does.
+        1, 2 and 4 seconds, then 8 seconds twice, the way the web panel does. A request with `setup_code` isn't sent
+        again, so a setup code never counts twice toward AMP's lockout.
         While :meth:`capture` or `capture_dir` has capturing on, each reply is saved by `_write_capture`.
 
         Returns
@@ -397,6 +412,11 @@ class Session:
             `None` for an empty one, or the text of a body that isn't JSON, eg. a proxy's error page.
             With `raw_bytes` a successful reply is the bytes as they came.
 
+        Raises
+        ------
+        ValueError
+            If `setup_code` is empty or only whitespace. Nothing is sent.
+
         """
         if self._session is None:
             self._session = ClientSession()
@@ -404,6 +424,13 @@ class Session:
         headers: dict[str, str] = {"Accept": "*/*" if raw_bytes is True else "application/json"}
         if use_token is True and self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
+
+        # The setup code file ends in a newline, which a header can't carry
+        if setup_code is not None:
+            if not setup_code.strip():
+                err = "The setup code is empty."
+                raise ValueError(err)
+            headers["X-Setup-Token"] = setup_code.strip()
 
         # aiohttp refuses a `bool` in the query string, so we write it the way AMP reads one (#3-51.4j)
         query: Optional[dict[str, Union[str, int, Sequence[str]]]] = None
@@ -477,6 +504,12 @@ class Session:
             code: Optional[str] = body.get("code") if _is_json_object(value=body) else None
             if status != 503 or code not in self._outage_codes or retries == len(self._outage_delays):
                 return status, authenticate_header, body
+
+            # A setup code is never sent twice: 10 wrong codes lock the caller's IP address out, and an outage reply
+            # doesn't say if AMP checked the code first, so a setup call raises the 503 and the caller decides
+            if setup_code is not None:
+                return status, authenticate_header, body
+
             delay: int = self._outage_delays[retries]
             retries += 1
             LOGGER.warning(
@@ -531,7 +564,8 @@ class Session:
     async def _login_result(self, data: LoginResponse) -> TokenResponse:
         """Keep the token from a login-like call, or raise for the follow-up step AMP asked for instead.
 
-        A token we already hold is logged out before the new one replaces it, so its session isn't left open on AMP.
+        A token we already hold is logged out before the new token replaces it, so the old token's session isn't left
+        open on AMP.
         A failed logout is logged, not raised.
         """
         if "passwordChangeRequired" in data:
@@ -552,7 +586,7 @@ class Session:
         return self._store_token(data=data)
 
     async def _ensure_login(self, used_token: Optional[str] = None) -> None:
-        """Log in, or renew, when needed. Calls made at the same time wait for one login.
+        """Log in, or renew, when needed. Calls made at the same time wait for a single shared login.
 
         A call that waited through a login that failed raises that login's error, rather than sending the same login
         again. A renew AMP refuses for anything but an ended session (eg. a 503) is logged, and we keep the token
@@ -562,7 +596,7 @@ class Session:
         ----------
         used_token : Union[:class:`str`, None], optional
             The token a request was refused with, by default None.
-            If we already hold a different one, another call has logged in again since, so we don't.
+            - If we already hold a different token, another call has logged in again since, so we don't log in again.
 
         """
         login_attempt: int = self._login_attempts
@@ -621,11 +655,13 @@ class Session:
         parameters: Optional[QueryParameters] = None,
         raw_bytes: bool = False,
         use_token: bool = True,
+        setup_code: Optional[str] = None,
     ) -> tuple[int, Any]:
         """Send a request, logging in first when it needs a session and we have to. Raises nothing for an error status.
 
         A 401 for a token AMP no longer accepts gets one new login and a second try. With `use_token` set to `False`
         we send no token and never log in, for the calls that need no session. The rest go to `_send` as they are.
+        The first-run setup calls send `setup_code` with `use_token` set to `False`, so they never reach the second try.
 
         Returns
         -------
@@ -636,13 +672,13 @@ class Session:
         Raises
         ------
         AMPAPILoginError
-            If a login this needed was refused, as :meth:`login` raises it.
+            If a login the request needed was refused, as :meth:`login` raises it.
         AMPAPIPasskeyRequiredError
-            If a login this needed asks for a second factor.
+            If a login the request needed asks for a second factor.
         AMPAPIPasswordChangeRequiredError
-            If a login this needed asks for a new password first.
+            If a login the request needed asks for a new password first.
         AMPAPIRequestError
-            If a login this needed got any other error status.
+            If a login the request needed got any other error status.
 
         """
         if use_token is True:
@@ -657,6 +693,7 @@ class Session:
             parameters=parameters,
             raw_bytes=raw_bytes,
             use_token=use_token,
+            setup_code=setup_code,
         )
 
         # AMP only says `invalid_token` when we sent one, so a call without a session never gets here.
@@ -684,10 +721,12 @@ class Session:
         parameters: Optional[QueryParameters] = None,
         raw_bytes: bool = False,
         use_token: bool = True,
+        setup_code: Optional[str] = None,
     ) -> Any:
         """Send a request with `_send_with_login`, raising for an error status.
 
-        Our own calls and every module's, through `Base._request`, go this way. The parameters are `Base._request`'s.
+        The `Session`'s own calls, and every module's calls through `Base._request`, go this way. The parameters are
+        `Base._request`'s. Only :class:`SetupModule`'s calls send `setup_code` (see `_send`).
 
         Returns
         -------
@@ -700,11 +739,13 @@ class Session:
         AMPAPIRequestError
             If AMP answers with an error status, or is still down after the last outage delay.
         AMPAPILoginError
-            If a login this needed was refused.
+            If a login the request needed was refused.
         AMPAPIPasskeyRequiredError
-            If a login this needed asks for a second factor.
+            If a login the request needed asks for a second factor.
         AMPAPIPasswordChangeRequiredError
-            If a login this needed asks for a new password first.
+            If a login the request needed asks for a new password first.
+        ValueError
+            If `setup_code` is empty or only whitespace. Nothing is sent.
 
         """
         status, body = await self._send_with_login(
@@ -715,6 +756,7 @@ class Session:
             parameters=parameters,
             raw_bytes=raw_bytes,
             use_token=use_token,
+            setup_code=setup_code,
         )
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method=method, path=path, data=body)
@@ -729,17 +771,18 @@ class Session:
         display_name: Optional[str] = None,
         locale: str = "en",
     ) -> InviteAcceptedResponse:
-        """Make the account an invite was for, which logs this session in as it.
+        """Make the account an invite was for, which logs the `Session` in as the new account.
 
         |coro|
 
         Endpoints: ``POST /api/invites/preview`` for the invite's username, then ``POST /api/invites/accept``
 
-        This one needs no session, and no :class:`Panel`. Make a :class:`Session` with the password the new account
-        should have, and any `username`, eg. ``""``, then call this. The account's username is the one the invite was
-        made with (see :meth:`preview_invite`), so we read it from the invite first and keep it as `username`.
-        From then on the session renews and logs in again as the new account, like any other login.
-        A session this one already held is logged out once the account exists. A failed logout is logged, not raised.
+        This call needs no login, and no :class:`Panel`. Make a :class:`Session` with the password the new account should
+        have and any `username`, eg. ``""``, then call :meth:`accept_invite`.
+
+        - The `Session`'s `username` becomes the username the invite was made with, see :meth:`preview_invite`.
+        - From then on the `Session` renews and logs in again as the new account, like any other login.
+        - If the `Session` was already logged in, the earlier session is logged out once the new account exists.
 
         Parameters
         ----------
@@ -755,18 +798,19 @@ class Session:
         Returns
         -------
         :class:`InviteAcceptedResponse`
-            The new account's session token, which this session keeps.
+            The new account's session token, which the `Session` keeps.
 
         Raises
         ------
         AMPAPIRequestError
-            **400** - If the session's password is too weak for :meth:`get_password_policy`.\n
+            **400** - If the `Session`'s password doesn't pass :meth:`get_password_policy`.\n
             **404** - If the invite code is wrong, used, revoked or out of date `invalid_or_expired`. The 404 comes from
             reading the invite first, so nothing is made.\n
             **410** - If another account took the invite's username since the invite was made, from AMP's docs and not
             seen live.
 
         """
+        # AMP gives the account the invite's username, so we read it from the invite first and keep it as `username`
         preview: InvitePreviewResponse = await self.preview_invite(token=token)
         data: InviteAcceptRequest = {
             "token": token,
@@ -789,10 +833,14 @@ class Session:
 
         Endpoint: ``POST /api/auth/passkey/begin``
 
-        This call needs no session. AMP takes no username: the options allow any passkey the authenticator holds for
-        the panel. The library holds no passkeys, so hand `options` to a WebAuthn authenticator, eg. a
-        browser's ``navigator.credentials.get``, then send its answer to :meth:`complete_passkey_login` with `flowId`.
-        Call :meth:`abandon_passkey_login` for a flow the authenticator gave up on.
+        This call needs no login. AMP takes no username: the options allow any passkey the authenticator holds for the
+        panel.
+
+        - The library holds no passkeys, so hand `options` to a WebAuthn authenticator, eg. a browser's
+          ``navigator.credentials.get``.
+        - Send the authenticator's answer and `flowId` to :meth:`complete_passkey_login` to log in, or to
+          :meth:`reauth_with_passkey` for a passkey proof.
+        - Call :meth:`abandon_passkey_login` for a flow the authenticator gave up on.
 
         .. note::
             Passkeys only work through the panel's public HTTPS address, so the `Session`'s `url` has to be that address.
@@ -821,14 +869,16 @@ class Session:
 
         Endpoint: ``POST /api/auth/passkey/complete``
 
-        The `Session` keeps the new token and logs out of the session it held before. With `remember_me` the new session
-        lasts 28 days. AMP takes no username here, so `username` stays as it was.
+        The `Session` keeps the new token. If the `Session` was already logged in, the earlier session is logged out.
+        AMP takes no username here, so the `Session`'s `username` stays as it was.
 
         .. warning::
-            The new session renews like any other, but the library can't repeat a passkey login. Once AMP ends the
-            session, or the session runs out, the next call that needs a session logs in by password with `username`
-            and `password`. Under the passkey policy ``"Required"`` that password login raises
-            :exc:`AMPAPIPasskeyRequiredError`.
+            The library can't repeat a passkey login.
+
+            - The new session renews like any other.
+            - Once AMP ends the session, or the session runs out, the next call that needs a session logs in by password
+              with the `Session`'s `username` and password.
+            - Under the passkey policy ``"Required"`` that password login raises :exc:`AMPAPIPasskeyRequiredError`.
 
         Parameters
         ----------
@@ -868,8 +918,10 @@ class Session:
 
         Endpoint: ``POST /api/auth/passkey/abandon``
 
-        This call needs no session. AMP answers the same whether or not the flow exists. An open flow counts against
-        the caller's IP address until the flow runs out, so abandoning the flow frees the slot sooner.
+        This call needs no login. AMP answers the same whether or not the flow exists.
+
+        AMP limits how many passkey flows the caller's IP address can have open. An open flow counts toward that limit
+        until the flow runs out, so abandoning the flow frees its place sooner.
 
         Parameters
         ----------
@@ -881,10 +933,10 @@ class Session:
 
     @contextmanager
     def capture(self, path: Path, *, redact: bool = True) -> Generator[None]:
-        """Save every request this session sends, and AMP's reply, as a JSON file in `path` while the block runs.
+        """Save every request the `Session` sends, and AMP's reply, as a JSON file in `path` while the block runs.
 
-        Every call through this session is captured, logins, renewals and error replies included, from any task that
-        uses the session while the block runs.
+        Every call through the `Session` is captured, logins, renewals and error replies included, from any task that
+        uses the `Session` while the block runs.
 
         - Each file holds the request: method, path, query parameters, headers and body.
         - Each file holds the reply: status, the headers worth keeping and body.
@@ -894,17 +946,19 @@ class Session:
           time order, and a file already in `path` is never written over.
 
         A capture that fails to write is logged as a warning, and the call carries on. While the block runs, the
-        `capture_dir` the session was made with, and any block this block is inside, still get every reply too.
+        `capture_dir` the `Session` was made with, and any outer :meth:`capture` block, still get every reply too.
 
         .. versionadded:: 6.0.0
 
         Parameters
         ----------
         path : :class:`Path`
-            The folder to save the captures in. The folder is made when missing.
+            The folder to save the captures in.
+            - The folder is made when missing.
         redact : :class:`bool`, optional
             If secrets and public IP addresses are hidden in the captures or not, by default True.
-            See :func:`redact` for what is hidden. With `False` the files hold your password and tokens as sent.
+            - See :func:`redact` for what is hidden.
+            - With `False` the files hold your password and tokens as sent.
 
         Yields
         ------
@@ -920,19 +974,19 @@ class Session:
             self._capture_blocks.remove(block)
 
     async def change_expired_password(self, new_password: str) -> TokenResponse:
-        """Change the password AMP asked for at login, which logs in.
+        """Change the password when AMP asks for a new password at login, which logs the `Session` in.
 
         |coro|
 
         Endpoint: ``POST /api/auth/change-expired-password``
 
-        Call this after :meth:`login` raised :exc:`AMPAPIPasswordChangeRequiredError`. On success the new password is
-        kept for later logins.
+        Call :meth:`change_expired_password` after :meth:`login` raised :exc:`AMPAPIPasswordChangeRequiredError`. On
+        success the `Session` keeps the new password for later logins.
 
         Parameters
         ----------
         new_password : :class:`str`
-            The new password; it has to pass :meth:`get_password_policy`.
+            The new password, which has to pass :meth:`get_password_policy`.
 
         Returns
         -------
@@ -942,7 +996,8 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If AMP refuses the new password, or the account doesn't need a change.
+            If AMP refuses the new password.\n
+            If the account doesn't need a password change.
         AMPAPIPasskeyRequiredError
             If the account also needs a second factor.
 
@@ -953,14 +1008,14 @@ class Session:
         return await self._login_result(data=body)
 
     async def clean_up(self) -> None:
-        """Log out, then close the aiohttp session if we made it.
+        """Log out, then close the aiohttp `ClientSession` if the `Session` made it.
 
         |coro|
 
         Endpoint: ``POST /api/auth/logout``
 
-        Logging out here keeps a finished script from leaving its session open on AMP for the rest of its 8 hours.
-        A failed logout, a timeout included, is logged and the aiohttp session still closes, whatever the logout raised.
+        Logging out keeps a finished script from leaving its session open on AMP until the session runs out.
+        A failed logout, a timeout included, is logged, not raised. The `ClientSession` closes either way.
 
         """
         try:
@@ -978,6 +1033,8 @@ class Session:
         |coro|
 
         Endpoint: ``GET /api/auth/capabilities``
+
+        This call needs no login.
 
         Returns
         -------
@@ -997,7 +1054,7 @@ class Session:
         Returns
         -------
         :class:`HubTokenResponse`
-            The hub token; it lasts about 60 seconds.
+            The hub token, which lasts about 60 seconds.
 
         """
         return await self._request(method="POST", path="/api/auth/hub-token", data={})
@@ -1009,6 +1066,8 @@ class Session:
 
         Endpoint: ``GET /api/auth/password-policy``
 
+        This call needs no login.
+
         Returns
         -------
         :class:`PasswordPolicyResponse`
@@ -1018,15 +1077,14 @@ class Session:
         return await self._request(method="GET", path="/api/auth/password-policy", use_token=False)
 
     async def login(self) -> TokenResponse:
-        """Log in with the username and password this session was made with.
+        """Log in with the username and password the `Session` was made with.
 
         |coro|
 
         Endpoint: ``POST /api/auth/login``
 
-        You don't usually need this, any call that needs a session logs in first.
-        When this session is already logged in, its old session is logged out once AMP hands over the new token.
-        A failed logout is logged, not raised.
+        You don't usually need :meth:`login`, as any call that needs a session logs in first.
+        If the `Session` was already logged in, the earlier session is logged out once AMP hands over the new token.
 
         Returns
         -------
@@ -1059,14 +1117,14 @@ class Session:
         return await self._login_result(data=body)
 
     async def renew(self) -> TokenResponse:
-        """Swap the current token for a fresh one in the same session.
+        """Swap the current token for a fresh token in the same session.
 
         |coro|
 
         Endpoint: ``POST /api/auth/renew``
 
-        Calls renew on their own once 75% of a token's lifetime has passed. The old token keeps working until the
-        session ends.
+        You don't usually need :meth:`renew`, as a call renews the token on its own once 75% of the token's lifetime
+        has passed. The old token keeps working until the session ends.
 
         Returns
         -------
@@ -1087,7 +1145,7 @@ class Session:
         return self._store_token(data=body)
 
     async def logout(self) -> None:
-        """End this session; every token it was given stops working.
+        """End the current session on AMP, so every token of that session stops working.
 
         |coro|
 
@@ -1099,7 +1157,7 @@ class Session:
         Raises
         ------
         AMPAPIRequestError
-            If AMP answers with an error other than 401. The token is forgotten either way.
+            If AMP answers with an error other than 401. The `Session` forgets the token either way.
 
         """
         if self._token is None:
@@ -1121,7 +1179,7 @@ class Session:
 
         Endpoint: ``POST /api/invites/preview``
 
-        Reading an invite needs no session.
+        This call needs no login.
 
         Parameters
         ----------
@@ -1152,7 +1210,7 @@ class Session:
         ----------
         password : Union[:class:`str`, None], optional
             The password to confirm with, by default None.
-            Without one we use the password this session logged in with.
+            - Without a password, the password the `Session` logs in with is used.
 
         Raises
         ------
@@ -1170,8 +1228,8 @@ class Session:
 
         Endpoint: ``POST /api/auth/passkey/reauth``
 
-        Start the flow with :meth:`begin_passkey_login`, then send the authenticator's answer here instead of to
-        :meth:`complete_passkey_login`.
+        Start the flow with :meth:`begin_passkey_login`, then send the authenticator's answer to
+        :meth:`reauth_with_passkey` instead of to :meth:`complete_passkey_login`.
 
         Parameters
         ----------
@@ -1198,14 +1256,18 @@ class Session:
 
         Endpoint: ``POST /api/auth/login/second-factor``
 
-        Call this after :meth:`login` raised :exc:`AMPAPIPasskeyRequiredError`. Each code works once; see
-        :meth:`AccountModule.generate_recovery_codes`.
+        Call :meth:`second_factor` after :meth:`login` raised :exc:`AMPAPIPasskeyRequiredError`. Each recovery code works
+        once, see :meth:`AccountModule.generate_recovery_codes`.
 
         .. warning::
-            The session renews like any other, but it can't log in again on its own. Once AMP ends it (a logout, an
-            admin's force logout), or it runs out because no call renewed it in time, the next call that needs a
-            session logs in by password and raises :exc:`AMPAPIPasskeyRequiredError`. Catch it and call this again with
-            a new code. With `remember_me` a login lasts 28 days instead of 8 hours.
+            The library can't repeat a login made with a recovery code.
+
+            - The new session renews like any other.
+            - Once AMP ends the session, eg. a logout or an admin's force logout, or the session runs out because no call
+              renewed the session in time, the next call that needs a session logs in by password and raises
+              :exc:`AMPAPIPasskeyRequiredError`. Catch :exc:`AMPAPIPasskeyRequiredError`, then call :meth:`second_factor`
+              again with a new recovery code.
+            - With `remember_me` the session lasts 28 days instead of 8 hours.
 
         Parameters
         ----------

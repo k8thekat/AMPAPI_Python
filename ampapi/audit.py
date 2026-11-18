@@ -79,13 +79,13 @@ class AuditModule(Base):
             Only events by this user's ID, and the events inside a flow the user started, by default None.
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
-            See :meth:`get_audit_facets` for the actions logged so far.
+            - See :meth:`get_audit_facets` for the actions logged so far.
         origin : Union[:class:`AuditOriginName`, None], optional
             ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-            An event's `origin` holds the matching :class:`AuditOrigin` number.
+            - An event's `origin` holds the matching :class:`AuditOrigin` number.
         min_severity : Union[:class:`AuditSeverityName`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, for events of that severity or higher, by default None.
-            An event's `severity` holds the matching :class:`AuditSeverity` number.
+            - An event's `severity` holds the matching :class:`AuditSeverity` number.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional
@@ -180,13 +180,13 @@ class AuditModule(Base):
             Only flows this user's ID started, by default None.
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
-            See :meth:`get_audit_facets` for the actions logged so far.
+            - See :meth:`get_audit_facets` for the actions logged so far.
         origin : Union[:class:`AuditOriginName`, None], optional
             ``"System"``, ``"User"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-            A flow never starts with a ``"UserFlow"`` event, so ``"UserFlow"`` finds no flows.
+            - A flow never starts with a ``"UserFlow"`` event, so ``"UserFlow"`` finds no flows.
         min_severity : Union[:class:`AuditSeverityName`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
-            A flow is listed when any event in the flow reached that severity or higher.
+            - A flow is listed when any event in the flow reached that severity or higher.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional

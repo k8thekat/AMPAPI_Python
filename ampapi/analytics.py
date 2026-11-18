@@ -75,7 +75,7 @@ class AnalyticsModule(Base):
             The player's key.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -106,7 +106,7 @@ class AnalyticsModule(Base):
             whole /64 network.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -135,7 +135,7 @@ class AnalyticsModule(Base):
             The address to look for, IPv4 or IPv6, a whole address only.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -193,7 +193,7 @@ class AnalyticsModule(Base):
             The shard the player is on.
         user : :class:`str`
             The player's `id` as :meth:`ShardModule.get_shard_users` gives it.
-            AMP's docs say the `id` is the player's name for an app that reports no other ID.
+            - AMP's docs say the `id` is the player's name for an app that reports no other ID.
 
         Returns
         -------
@@ -224,7 +224,7 @@ class AnalyticsModule(Base):
             The players' keys, up to 100.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -259,14 +259,14 @@ class AnalyticsModule(Base):
         ----------
         from_time : Union[:class:`str`, None], optional
             The start of the window, ISO 8601 like ``"2026-11-01T00:00:00Z"``, by default None.
-            Without `from_time` the window starts 30 days before `to_time`.
+            - Without `from_time` the window starts 30 days before `to_time`.
         to_time : Union[:class:`str`, None], optional
             The end of the window, ISO 8601, by default None for now.
         shard_ids : Union[list[:class:`str`], None], optional
             Only these shards, by default None.
         country : Union[:class:`str`, None], optional
             Only players from this country, by default None.
-            AMP's codes are lower-case ISO 3166-1 alpha-2, eg. ``"us"``.
+            - AMP's codes are lower-case ISO 3166-1 alpha-2, eg. ``"us"``.
         user : Union[:class:`str`, None], optional
             Only the player with this key, by default None.
         bounce_seconds : Union[:class:`int`, None], optional
@@ -275,7 +275,7 @@ class AnalyticsModule(Base):
             How many top players to list, by default None for AMP's 10.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -338,7 +338,7 @@ class AnalyticsModule(Base):
             The player's key.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -377,7 +377,7 @@ class AnalyticsModule(Base):
             Only these shards, by default None.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -406,13 +406,14 @@ class AnalyticsModule(Base):
         ----------
         search : Union[:class:`str`, None], optional
             What to look for, at least two characters, by default None.
-            Text anywhere in a player's name matches. A player's ID, eg. a Steam ID, or the short code the web panel
-            shows for a player with no name, matches only from the start of the ID or the code.
+            - Text anywhere in a player's name matches.
+            - A player's ID, eg. a Steam ID, or the short code the web panel shows for a player with no name, matches
+              only from the start of the ID or the code.
         limit : Union[:class:`int`, None], optional
             The most players to get, by default None for AMP's 20. The web panel asks for 12.
         demo : :class:`bool`, optional
             If AMP should answer from its made-up demo data or not, by default False.
-            Only a debug build of AMP honours `demo`.
+            - Only a debug build of AMP honours `demo`.
 
         Returns
         -------

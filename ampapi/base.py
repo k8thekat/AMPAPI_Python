@@ -75,6 +75,7 @@ class Base:
         parameters: Optional[QueryParameters] = None,
         raw_bytes: bool = False,
         use_token: bool = True,
+        setup_code: Optional[str] = None,
     ) -> Any:
         """Send a call through our :class:`Session`, raising for an error status.
 
@@ -89,19 +90,24 @@ class Base:
         path : :class:`str`
             The path, eg. ``"/api/licence"``.
         data : Union[Mapping[:class:`str`, Any], list[Any], :class:`bytes`, None], optional
-            The JSON body, by default None. A few calls take a list.
-            Bytes are sent as they are, with ``Content-Type: application/octet-stream``.
+            The JSON body, by default None.
+            - A few calls take a list.
+            - Bytes are sent as they are, with ``Content-Type: application/octet-stream``.
         files : Union[Mapping[:class:`str`, :class:`bytes`], None], optional
             Files to send as the web panel's upload form, each relative path to its content, by default None.
         parameters : Union[:class:`QueryParameters`, None], optional
             The query string, by default None.
-            A list value repeats its key, eg. ``{"shard": ["a", "b"]}`` is sent as ``shard=a&shard=b``.
+            - A list value repeats its key, eg. ``{"shard": ["a", "b"]}`` is sent as ``shard=a&shard=b``.
         raw_bytes : :class:`bool`, optional
             If a successful reply should come back as bytes rather than JSON or not, by default False.
-            Downloads need it. An error is still read as JSON, or kept as text when it isn't JSON.
+            - Downloads need `raw_bytes`.
+            - An error is still read as JSON, or kept as text when the error isn't JSON.
         use_token : :class:`bool`, optional
             If the call needs a session or not, by default True.
-            Without one we don't log in or send a token, eg. for ``GET /api/health/status``.
+            - Without a session we don't log in or send a token, eg. for ``GET /api/health/status``.
+        setup_code : Union[:class:`str`, None], optional
+            The first-run setup's code, sent as the ``X-Setup-Token`` header, by default None.
+            - Only :class:`SetupModule`'s calls send a setup code.
 
         Returns
         -------
@@ -119,6 +125,8 @@ class Base:
             If a login this call needed asks for a second factor.
         AMPAPIPasswordChangeRequiredError
             If a login this call needed asks for a new password first.
+        ValueError
+            If `setup_code` is empty or only whitespace. Nothing is sent.
 
         """
         return await self.session._request(  # pyright: ignore[reportPrivateUsage]
@@ -129,4 +137,5 @@ class Base:
             parameters=parameters,
             raw_bytes=raw_bytes,
             use_token=use_token,
+            setup_code=setup_code,
         )

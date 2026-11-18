@@ -127,6 +127,7 @@ __all__: tuple[str, ...] = (
     "MessageBusStatsResponse",
     "MessageErrorResponse",
     "MonitoringThresholdsResponse",
+    "NetworkProbe",
     "PasskeyFlowResponse",
     "PasskeyLoginRequest",
     "PasskeyRegisterRequest",
@@ -188,6 +189,9 @@ __all__: tuple[str, ...] = (
     "SettingValues",
     "SettingsManifestResponse",
     "SettingsSaveResponse",
+    "SetupAdminRequest",
+    "SetupNetworkResponse",
+    "SetupProvisionStatusResponse",
     "ShardAddress",
     "ShardAgentResponse",
     "ShardAppConfig",
@@ -1353,6 +1357,7 @@ class HealthStatusResponse(TypedDict):
     """``GET /api/health/status``, which needs no session.
 
     `phase` runs through the first-run setup (``"setup-database"``, ``"setup-admin"``, ``"preview-licence"``) to ``"ready"``.
+    Right after AMP has set up its own message bus, `phase` reads ``"starting"`` for a few seconds before ``"setup-admin"``.
     A panel with no licence reads ``"preview-licence"`` again.
     A machine joining as a spire reads ``"starting"`` until its enrolment is approved.
     """
@@ -1707,6 +1712,18 @@ class MonitoringThresholdsResponse(TypedDict):
     diskHigh: str
     diskWarningShare: int
     diskHighShare: int
+
+
+class NetworkProbe(TypedDict):
+    """How the panel's machine reaches the internet, from `SetupNetworkResponse.probe`."""
+
+    type: str
+    """``"Unknown"``, ``"Direct"``, ``"Nat"`` or ``"Cgnat"``. AMP's docs say game servers behind ``"Nat"`` need a port
+    forward, and game servers behind ``"Cgnat"`` need a tunnel."""
+    internalIp: Optional[str]
+    "The machine's network address, `None` when AMP couldn't work the address out."
+    externalIp: Optional[str]
+    "The machine's public address, `None` when AMP couldn't work the address out."
 
 
 class PasskeyFlowResponse(TypedDict):
@@ -2466,6 +2483,41 @@ class SettingsSaveResponse(TypedDict):
     # AMP's docs say one comes back when exposure is turned off and the agent refuses to remove ports 80 and 443.
     notices: list[CodedErrorResponse]
     "What followed from the change and couldn't be done, each still to put right; the change itself stands."
+
+
+class SetupAdminRequest(TypedDict):
+    """The body of ``POST /api/auth/setup/admin``, the panel's first admin."""
+
+    username: str
+    email: str
+    password: str
+
+
+class SetupNetworkResponse(TypedDict):
+    """``GET /api/auth/setup/network``, what the first-run setup's network step shows."""
+
+    probe: NetworkProbe
+    busExpandable: bool
+    "If AMP runs the message bus, so `SetupModule.expand_setup_network` can open the message bus to other machines."
+    busPublic: bool
+    "If other machines can reach the message bus already."
+
+
+class SetupProvisionStatusResponse(TypedDict):
+    """``GET /api/auth/setup/database/provision/status``, how far AMP has got setting up its own message bus."""
+
+    step: str
+    """``"idle"``, ``"downloading"``, ``"configuring"``, ``"testing"``, ``"done"`` or ``"error"``.
+    Only ``"idle"``, ``"downloading"`` and ``"done"`` were seen live. AMP went from ``"downloading"`` to ``"done"``
+    within 5 seconds."""
+    percent: int
+    """0 to 100, eg. 0 while ``"downloading"`` and 100 at ``"done"``."""
+    # TODO: Check `error` and type `failure` once a capture shows a provisioning that failed (#3-56.9).
+    # Both were `None` in every capture. The web panel shows `failure` as a coded error, else `error` as text.
+    error: Optional[str]
+    """Why the provisioning failed as text, when `step` is ``"error"``, else `None`."""
+    failure: Any
+    """Why the provisioning failed as a coded error, when `step` is ``"error"``, else `None`."""
 
 
 class ShardAddress(TypedDict):

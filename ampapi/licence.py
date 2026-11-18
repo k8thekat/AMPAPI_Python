@@ -109,7 +109,8 @@ class LicenceModule(Base):
             The licence key.
         terms : Union[:class:`LicenceTermsAcceptance`, None], optional
             The licence terms acceptance, by default None.
-            Only a key whose `LicenceQueryResponse.termsRequired` is `True` needs one, see :meth:`query_licence`.
+            - Only a key whose `LicenceQueryResponse.termsRequired` is `True` needs a terms acceptance, see
+              :meth:`query_licence`.
 
         Returns
         -------
@@ -162,11 +163,11 @@ class LicenceModule(Base):
         Parameters
         ----------
         version : :class:`int`
-            The terms version, a licence's `requiredTermsVersion`. An unknown one gets 404
-            (``"licence.error.termsUnknownVersion"``).
+            The terms version, a licence's `requiredTermsVersion`.
+            - An unknown terms version gets a 404 `licence.error.termsUnknownVersion`.
         language : Union[:class:`str`, None], optional
-            The language to read them in, eg. ``"fr"``, by default None.
-            AMP sends English when it has no copy in that language.
+            The language to read the terms in, eg. ``"fr"``, by default None.
+            - AMP sends English when it has no copy in that language.
 
         Returns
         -------

@@ -48,6 +48,7 @@ from .objects import *
 from .panel import *
 from .platform import *
 from .session import *
+from .setup import *
 from .shards import *
 from .spires import *
 from .tasks import *
