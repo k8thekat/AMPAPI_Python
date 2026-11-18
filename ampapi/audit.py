@@ -26,7 +26,14 @@ from typing import TYPE_CHECKING, Optional, Union
 from .base import Base
 
 if TYPE_CHECKING:
-    from ._types import AuditFacetsResponse, AuditOrigin, AuditPageResponse, AuditRootsPageResponse, AuditSeverity, AuditTreeResponse
+    from ._types import (
+        AuditFacetsResponse,
+        AuditOriginName,
+        AuditPageResponse,
+        AuditRootsPageResponse,
+        AuditSeverityName,
+        AuditTreeResponse,
+    )
 
 __all__ = ("AuditModule",)
 
@@ -45,10 +52,11 @@ class AuditModule(Base):
         *,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        origin: Optional[AuditOrigin] = None,
-        min_severity: Optional[AuditSeverity] = None,
+        origin: Optional[AuditOriginName] = None,
+        min_severity: Optional[AuditSeverityName] = None,
         target_type: Optional[str] = None,
         target_id: Optional[str] = None,
+        correlation_id: Optional[str] = None,
         search: Optional[str] = None,
         from_time: Optional[str] = None,
         to_time: Optional[str] = None,
@@ -68,18 +76,24 @@ class AuditModule(Base):
         Parameters
         ----------
         user_id : Union[:class:`str`, None], optional
-            Only events by this user's ID, by default None.
+            Only events by this user's ID, and the events inside a flow the user started, by default None.
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
             See :meth:`get_audit_facets` for the actions logged so far.
-        origin : Union[:class:`AuditOrigin`, None], optional
+        origin : Union[:class:`AuditOriginName`, None], optional
             ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-        min_severity : Union[:class:`AuditSeverity`, None], optional
-            ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
+            An event's `origin` holds the matching :class:`AuditOrigin` number.
+        min_severity : Union[:class:`AuditSeverityName`, None], optional
+            ``"Info"``, ``"Warning"`` or ``"Security"``, for events of that severity or higher, by default None.
+            An event's `severity` holds the matching :class:`AuditSeverity` number.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional
             Only events about the target with this ID, by default None.
+        correlation_id : Union[:class:`str`, None], optional
+            Only the events of one flow, by default None. Use the flow's `correlationId` from :meth:`get_audit_roots`,
+            or an event's `correlationId["value"]`, as an event wraps the ID. The same events as
+            :meth:`get_audit_tree`, as a flat page.
         search : Union[:class:`str`, None], optional
             Text to look for, by default None.
         from_time : Union[:class:`str`, None], optional
@@ -106,6 +120,7 @@ class AuditModule(Base):
             "minSeverity": min_severity,
             "targetType": target_type,
             "targetId": target_id,
+            "correlationId": correlation_id,
             "search": search,
             "from": from_time,
             "to": to_time,
@@ -139,8 +154,8 @@ class AuditModule(Base):
         *,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        origin: Optional[AuditOrigin] = None,
-        min_severity: Optional[AuditSeverity] = None,
+        origin: Optional[AuditOriginName] = None,
+        min_severity: Optional[AuditSeverityName] = None,
         target_type: Optional[str] = None,
         target_id: Optional[str] = None,
         search: Optional[str] = None,
@@ -156,19 +171,22 @@ class AuditModule(Base):
 
         Endpoint: ``GET /api/audit/roots``
 
-        The filters are the same as :meth:`get_audit_events`.
+        The filters are :meth:`get_audit_events`' filters without `correlation_id`. Each filter but `min_severity` is
+        matched against the flow's first event.
 
         Parameters
         ----------
         user_id : Union[:class:`str`, None], optional
-            Only events by this user's ID, by default None.
+            Only flows this user's ID started, by default None.
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
             See :meth:`get_audit_facets` for the actions logged so far.
-        origin : Union[:class:`AuditOrigin`, None], optional
-            ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-        min_severity : Union[:class:`AuditSeverity`, None], optional
+        origin : Union[:class:`AuditOriginName`, None], optional
+            ``"System"``, ``"User"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
+            A flow never starts with a ``"UserFlow"`` event, so ``"UserFlow"`` finds no flows.
+        min_severity : Union[:class:`AuditSeverityName`, None], optional
             ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
+            A flow is listed when any event in the flow reached that severity or higher.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional

@@ -48,7 +48,11 @@ class AnalyticsModule(Base):
 
     Players are keyed by a `userKey` (see :meth:`get_analytics_users`). A shard only keeps names, countries, addresses
     and profiles for its players with its `userSpecificData` setting on; without it a player has a key and sessions
-    only. Most calls take `demo`, which the web panel uses for a demo mode. The audit log is :class:`AuditModule`.
+    only. The audit log is :class:`AuditModule`.
+
+    .. note::
+        Most calls take `demo`, the web panel's developer switch for made-up demo data. Only a debug build of AMP
+        honours `demo`. A release build answers with the real data, and so does AMP's Development environment.
 
     .. versionadded:: 6.0.0
 
@@ -61,15 +65,17 @@ class AnalyticsModule(Base):
 
         Endpoint: ``DELETE /api/analytics/sessions/users/{user_key}``
 
-        The player's own record reads empty straight after, but :meth:`get_analytics_sessions`' summary still listed
-        them about 11 minutes later on AMP 3.0.0.6.
+        The player's record reads empty straight after the erase. AMP rebuilds the totals behind :meth:`get_analytics_sessions`'
+        summary in the background, so the summary still listed the player about 11 minutes later on AMP 3.0.0.6.
+        The logged in user needs `analytics.users` on every shard the player was seen on.
 
         Parameters
         ----------
         user_key : :class:`str`
             The player's key.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -91,12 +97,16 @@ class AnalyticsModule(Base):
 
         Endpoint: ``GET /api/analytics/addresses/users``
 
+        AMP keeps addresses for 90 days unless its settings say otherwise.
+
         Parameters
         ----------
         address : :class:`str`
-            A whole IP address, eg. ``"192.0.2.1"``.
+            A whole IP address, with or without a port, eg. ``"192.0.2.1"``. An IPv6 address matches the address's
+            whole /64 network.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -124,7 +134,8 @@ class AnalyticsModule(Base):
         search : :class:`str`
             The address to look for, IPv4 or IPv6, a whole address only.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -181,7 +192,8 @@ class AnalyticsModule(Base):
         shard_id : :class:`str`
             The shard the player is on.
         user : :class:`str`
-            The player's `id` as :meth:`ShardModule.get_shard_users` gives it. Their name isn't taken.
+            The player's `id` as :meth:`ShardModule.get_shard_users` gives it.
+            AMP's docs say the `id` is the player's name for an app that reports no other ID.
 
         Returns
         -------
@@ -204,12 +216,15 @@ class AnalyticsModule(Base):
 
         Endpoint: ``GET /api/analytics/profiles``
 
+        Profiles need AMP Professional Edition or above. AMP keeps a profile it looked up for a day.
+
         Parameters
         ----------
         user_keys : list[:class:`str`]
-            The players' keys.
+            The players' keys, up to 100.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -227,6 +242,7 @@ class AnalyticsModule(Base):
         shard_ids: Optional[list[str]] = None,
         country: Optional[str] = None,
         user: Optional[str] = None,
+        bounce_seconds: Optional[int] = None,
         top_users: Optional[int] = None,
         demo: bool = False,
     ) -> AnalyticsSessionsResponse:
@@ -236,23 +252,30 @@ class AnalyticsModule(Base):
 
         Endpoint: ``GET /api/analytics/sessions``
 
+        The summary covers only the shards the logged in user holds `analytics.read` on. AMP compares the window with
+        the window of the same length just before it.
+
         Parameters
         ----------
         from_time : Union[:class:`str`, None], optional
             The start of the window, ISO 8601 like ``"2026-11-01T00:00:00Z"``, by default None.
-            Without `from_time` and `to_time` it's the last 30 days.
+            Without `from_time` the window starts 30 days before `to_time`.
         to_time : Union[:class:`str`, None], optional
-            The end of the window, ISO 8601, by default None.
+            The end of the window, ISO 8601, by default None for now.
         shard_ids : Union[list[:class:`str`], None], optional
             Only these shards, by default None.
         country : Union[:class:`str`, None], optional
-            Only players from this country code, eg. ``"US"``, by default None.
+            Only players from this country, by default None.
+            AMP's codes are lower-case ISO 3166-1 alpha-2, eg. ``"us"``.
         user : Union[:class:`str`, None], optional
-            Only this player, by default None.
+            Only the player with this key, by default None.
+        bounce_seconds : Union[:class:`int`, None], optional
+            A session shorter than this many seconds counts as a bounce, by default None for AMP's 60 seconds.
         top_users : Union[:class:`int`, None], optional
-            How many top players to list, by default None.
+            How many top players to list, by default None for AMP's 10.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -266,6 +289,7 @@ class AnalyticsModule(Base):
             "shard": shard_ids,
             "country": country,
             "user": user,
+            "bounceSeconds": bounce_seconds,
             "topUsers": top_users,
             "demo": demo,
         }
@@ -313,7 +337,8 @@ class AnalyticsModule(Base):
         user_key : :class:`str`
             The player's key.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -329,13 +354,16 @@ class AnalyticsModule(Base):
         *,
         from_time: Optional[str] = None,
         to_time: Optional[str] = None,
+        shard_ids: Optional[list[str]] = None,
         demo: bool = False,
     ) -> AnalyticsUserSessionsResponse:
-        """Get one player's history. An unknown player gets an empty one, not an error.
+        """Get one player's history. An unknown player gets an empty history, not an error.
 
         |coro|
 
         Endpoint: ``GET /api/analytics/sessions/users/{user_key}``
+
+        The history covers only the shards the logged in user holds `analytics.users` on.
 
         Parameters
         ----------
@@ -345,8 +373,11 @@ class AnalyticsModule(Base):
             The start of the window, ISO 8601, by default None.
         to_time : Union[:class:`str`, None], optional
             The end of the window, ISO 8601, by default None.
+        shard_ids : Union[list[:class:`str`], None], optional
+            Only these shards, by default None.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------
@@ -354,8 +385,8 @@ class AnalyticsModule(Base):
             The player's totals and sessions.
 
         """
-        filters: dict[str, Optional[Union[bool, str]]] = {"from": from_time, "to": to_time, "demo": demo}
-        parameters: dict[str, Union[bool, str]] = self._without_none(mapping=filters)
+        filters: dict[str, Optional[Union[bool, str, list[str]]]] = {"from": from_time, "to": to_time, "shard": shard_ids, "demo": demo}
+        parameters: dict[str, Union[bool, str, list[str]]] = self._without_none(mapping=filters)
         return await self._request(method="GET", path=f"/api/analytics/sessions/users/{user_key}", parameters=parameters)
 
     async def get_analytics_users(
@@ -374,11 +405,14 @@ class AnalyticsModule(Base):
         Parameters
         ----------
         search : Union[:class:`str`, None], optional
-            Part of a player's name, by default None.
+            What to look for, at least two characters, by default None.
+            Text anywhere in a player's name matches. A player's ID, eg. a Steam ID, or the short code the web panel
+            shows for a player with no name, matches only from the start of the ID or the code.
         limit : Union[:class:`int`, None], optional
-            The most players to get, by default None. The web panel asks for 12.
+            The most players to get, by default None for AMP's 20. The web panel asks for 12.
         demo : :class:`bool`, optional
-            If the call is for the demo data or not, by default False.
+            If AMP should answer from its made-up demo data or not, by default False.
+            Only a debug build of AMP honours `demo`.
 
         Returns
         -------

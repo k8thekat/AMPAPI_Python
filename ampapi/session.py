@@ -55,6 +55,8 @@ if TYPE_CHECKING:
         InvitePreviewResponse,
         LoginRequest,
         LoginResponse,
+        PasskeyFlowResponse,
+        PasskeyLoginRequest,
         PasswordPolicyResponse,
         QueryParameters,
         SecondFactorRequest,
@@ -760,7 +762,9 @@ class Session:
         AMPAPIRequestError
             **400** - If the session's password is too weak for :meth:`get_password_policy`.\n
             **404** - If the invite code is wrong, used, revoked or out of date `invalid_or_expired`. The 404 comes from
-            reading the invite first, so nothing is made.
+            reading the invite first, so nothing is made.\n
+            **410** - If another account took the invite's username since the invite was made, from AMP's docs and not
+            seen live.
 
         """
         preview: InvitePreviewResponse = await self.preview_invite(token=token)
@@ -777,6 +781,103 @@ class Session:
         self.username = preview["userName"]
         await self._login_result(data=result)
         return result
+
+    async def begin_passkey_login(self) -> PasskeyFlowResponse:
+        """Start a login with a passkey, or a passkey proof for :meth:`reauth_with_passkey`.
+
+        |coro|
+
+        Endpoint: ``POST /api/auth/passkey/begin``
+
+        This call needs no session. AMP takes no username: the options allow any passkey the authenticator holds for
+        the panel. The library holds no passkeys, so hand `options` to a WebAuthn authenticator, eg. a
+        browser's ``navigator.credentials.get``, then send its answer to :meth:`complete_passkey_login` with `flowId`.
+        Call :meth:`abandon_passkey_login` for a flow the authenticator gave up on.
+
+        .. note::
+            Passkeys only work through the panel's public HTTPS address, so the `Session`'s `url` has to be that address.
+            :meth:`get_capabilities` reads ``"Eligible"`` in `passkeyStatus` there.
+
+        Returns
+        -------
+        :class:`PasskeyFlowResponse`
+            The flow's ID and the WebAuthn request options.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If passkeys don't work at the panel's public address. The error's `code` says why. From AMP's
+            docs and not seen live.\n
+            **429** - If AMP throttled the caller's IP address after failed logins `auth.login.errorThrottled`.\n
+            **429** - If the caller's IP address has too many passkey flows open, from AMP's docs and not seen live.
+
+        """
+        return await self._request(method="POST", path="/api/auth/passkey/begin", data={}, use_token=False)
+
+    async def complete_passkey_login(self, flow_id: str, response: Mapping[str, Any]) -> TokenResponse:
+        """Finish a passkey login with the authenticator's answer to :meth:`begin_passkey_login`, which logs in.
+
+        |coro|
+
+        Endpoint: ``POST /api/auth/passkey/complete``
+
+        The `Session` keeps the new token and logs out of the session it held before. With `remember_me` the new session
+        lasts 28 days. AMP takes no username here, so `username` stays as it was.
+
+        .. warning::
+            The new session renews like any other, but the library can't repeat a passkey login. Once AMP ends the
+            session, or the session runs out, the next call that needs a session logs in by password with `username`
+            and `password`. Under the passkey policy ``"Required"`` that password login raises
+            :exc:`AMPAPIPasskeyRequiredError`.
+
+        Parameters
+        ----------
+        flow_id : :class:`str`
+            The `flowId` from :meth:`begin_passkey_login`.
+        response : Mapping[:class:`str`, Any]
+            The authenticator's answer, the WebAuthn `PublicKeyCredential` as JSON with base64url values:
+            `id`, `rawId`, `type`, `extensions` and `response` (`authenticatorData`, `clientDataJSON`, `signature`,
+            `userHandle`). The `clientDataJSON` has to name the panel's public address as its origin.
+
+        Returns
+        -------
+        :class:`TokenResponse`
+            The new session's token.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If AMP can't read the answer, from AMP's docs and not seen live.\n
+            **401** - If AMP refuses the answer, eg. the wrong origin, the wrong rpId, no user verification, a bad
+            signature or another flow's answer `passkeys.error.assertionRejected`.\n
+            **401** - If the flow is over, eg. already used or abandoned `passkeys.error.ceremonyExpired`.\n
+            **401** - If AMP has no passkey with the answer's credential ID `passkeys.error.unknownCredential`.\n
+            **401** - If the passkey's signature counter went backwards `passkeys.error.cloneDetected`. AMP deletes
+            that passkey.\n
+            **429** - If AMP throttled the caller's IP address after failed logins `auth.login.errorThrottled`.
+
+        """
+        data: PasskeyLoginRequest = {"flowId": flow_id, "response": response, "rememberMe": self.remember_me}
+        body: TokenResponse = await self._request(method="POST", path="/api/auth/passkey/complete", data=data, use_token=False)
+        return await self._login_result(data=body)
+
+    async def abandon_passkey_login(self, flow_id: str) -> None:
+        """End a passkey flow from :meth:`begin_passkey_login` that won't be finished.
+
+        |coro|
+
+        Endpoint: ``POST /api/auth/passkey/abandon``
+
+        This call needs no session. AMP answers the same whether or not the flow exists. An open flow counts against
+        the caller's IP address until the flow runs out, so abandoning the flow frees the slot sooner.
+
+        Parameters
+        ----------
+        flow_id : :class:`str`
+            The `flowId` from :meth:`begin_passkey_login`.
+
+        """
+        await self._request(method="POST", path="/api/auth/passkey/abandon", data={"flowId": flow_id}, use_token=False)
 
     @contextmanager
     def capture(self, path: Path, *, redact: bool = True) -> Generator[None]:
@@ -935,12 +1036,14 @@ class Session:
         Raises
         ------
         AMPAPILoginError
-            If AMP refuses the username or password.
+            If AMP refuses the username or password.\n
+            If the account is suspended. The error's `reason` reads "This account has been suspended."
         AMPAPIPasswordChangeRequiredError
             If the account has to change its password first, see :meth:`change_expired_password`.
         AMPAPIPasskeyRequiredError
             If the account needs a second factor, see :meth:`second_factor`.
         AMPAPIRequestError
+            **429** - If AMP throttled the caller's IP address after failed logins `auth.login.errorThrottled`.\n
             If AMP answers with any other error status.
 
         """
@@ -1059,6 +1162,34 @@ class Session:
         """
         confirm_password: str = password if password is not None else self._password
         await self._request(method="POST", path="/api/auth/reauth", data={"password": confirm_password})
+
+    async def reauth_with_passkey(self, flow_id: str, response: Mapping[str, Any]) -> None:
+        """Confirm the logged in user with a passkey instead of the password, as :meth:`reauth` does.
+
+        |coro|
+
+        Endpoint: ``POST /api/auth/passkey/reauth``
+
+        Start the flow with :meth:`begin_passkey_login`, then send the authenticator's answer here instead of to
+        :meth:`complete_passkey_login`.
+
+        Parameters
+        ----------
+        flow_id : :class:`str`
+            The `flowId` from :meth:`begin_passkey_login`.
+        response : Mapping[:class:`str`, Any]
+            The authenticator's answer, as :meth:`complete_passkey_login` takes it. The passkey has to be one of the
+            logged in user's passkeys.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If AMP can't read the answer, from AMP's docs and not seen live.\n
+            **401** - If AMP refuses the answer, from AMP's docs and not seen live.\n
+            **401** - If the passkey belongs to another account, from AMP's docs and not seen live.
+
+        """
+        await self._request(method="POST", path="/api/auth/passkey/reauth", data={"flowId": flow_id, "response": response})
 
     async def second_factor(self, code: str) -> TokenResponse:
         """Finish a login that needs a second factor, using one of the account's recovery codes.

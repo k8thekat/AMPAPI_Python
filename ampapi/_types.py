@@ -25,18 +25,27 @@ from typing import Any, Literal, NotRequired, Optional, TypedDict, Union
 
 # Typed, as pyright stops inferring a tuple's items past 256 of them
 __all__: tuple[str, ...] = (
+    "AnalyticsAddressGroup",
     "AnalyticsAddressSearchResponse",
     "AnalyticsAddressSummary",
+    "AnalyticsAddressUser",
     "AnalyticsAddressUsersResponse",
     "AnalyticsConnectedResponse",
     "AnalyticsConnectedUser",
+    "AnalyticsCountryUsage",
     "AnalyticsForgetResponse",
+    "AnalyticsGameUsage",
     "AnalyticsMinecraftProfile",
     "AnalyticsPeriod",
     "AnalyticsProfilesResponse",
     "AnalyticsRule",
     "AnalyticsServerInfo",
+    "AnalyticsServerUsage",
+    "AnalyticsSession",
     "AnalyticsSessionsResponse",
+    "AnalyticsSteamBans",
+    "AnalyticsSteamProfile",
+    "AnalyticsTopUser",
     "AnalyticsTotals",
     "AnalyticsUserAddress",
     "AnalyticsUserAddressesResponse",
@@ -46,12 +55,12 @@ __all__: tuple[str, ...] = (
     "AuditActionCount",
     "AuditEvent",
     "AuditFacetsResponse",
-    "AuditOrigin",
     "AuditOriginCount",
+    "AuditOriginName",
     "AuditPageResponse",
     "AuditRoot",
     "AuditRootsPageResponse",
-    "AuditSeverity",
+    "AuditSeverityName",
     "AuditTreeNode",
     "AuditTreeResponse",
     "AuditUserCount",
@@ -119,6 +128,8 @@ __all__: tuple[str, ...] = (
     "MessageErrorResponse",
     "MonitoringThresholdsResponse",
     "PasskeyFlowResponse",
+    "PasskeyLoginRequest",
+    "PasskeyRegisterRequest",
     "PasskeyRegisteredResponse",
     "PasskeyRequiredResponse",
     "PasskeyResponse",
@@ -150,6 +161,7 @@ __all__: tuple[str, ...] = (
     "RevokedSessionsResponse",
     "RoleRequest",
     "RoleResponse",
+    "RoleUpdateRequest",
     "SSHKeyRequest",
     "SSHKeyResponse",
     "ScheduleCatalogResponse",
@@ -298,20 +310,34 @@ __all__: tuple[str, ...] = (
 )
 
 
+# TODO: Check against a live capture; typed from AMP's OpenAPI `AddressGroup` alone (#3-56.3af).
+# Every address search so far found no address, and AMP 3.0.0.6 answers a range search with a 500.
+class AnalyticsAddressGroup(TypedDict):
+    """One address an address search found and the players seen at it, from `AnalyticsAddressSearchResponse.addresses`."""
+
+    address: str
+    network: str
+    kind: str
+    """``"Public"``, ``"Tunnel"``, ``"Shared"`` (carrier-grade NAT), ``"Private"`` or ``"Loopback"``."""
+    recovered: bool
+    "If AMP followed every session at the address back through its own relays or not."
+    users: list[AnalyticsAddressUser]
+
+
 class AnalyticsAddressSearchResponse(TypedDict):
     """``GET /api/analytics/addresses``, the addresses matching one address searched for, and their players."""
 
     range: str
     "What AMP searched, eg. the address as given."
     kind: str
-    """eg. ``"Private"`` or ``"Public"``."""
+    """``"Public"``, ``"Tunnel"``, ``"Shared"`` (carrier-grade NAT), ``"Private"`` or ``"Loopback"``."""
     users: int
+    "How many players were seen across every address found."
     serverInfo: dict[str, AnalyticsServerInfo]
     "A shard ID to the shard's name and game."
     isDemo: bool
-    # TODO: Type the items once a capture shows one (#3-54).
-    # Every search so far found no address; AMP's docs call each an address and the players seen at it.
-    addresses: list[Any]
+    addresses: list[AnalyticsAddressGroup]
+    "The addresses found, the most recently used address first."
 
 
 class AnalyticsAddressSummary(TypedDict):
@@ -319,22 +345,37 @@ class AnalyticsAddressSummary(TypedDict):
 
     range: str
     kind: str
-    """eg. ``"Private"`` or ``"Public"``."""
+    """``"Public"``, ``"Tunnel"``, ``"Shared"`` (carrier-grade NAT), ``"Private"`` or ``"Loopback"``."""
     addresses: int
     users: int
 
 
-class AnalyticsAddressUsersResponse(TypedDict):
-    """``GET /api/analytics/addresses/users``, the players seen at one address.
+# TODO: Check against a live capture; typed from AMP's OpenAPI `AddressUser` alone (#3-56.3af).
+# Every address read so far listed no players.
+class AnalyticsAddressUser(TypedDict):
+    """One player seen at an address, from `AnalyticsAddressUsersResponse.users` and `AnalyticsAddressGroup.users`."""
 
-    The shape of a user isn't known yet.
-    """
+    userKey: str
+    "The key the other analytics calls take."
+    displayName: Optional[str]
+    "`None` unless the logged in user may see names on the player's shards."
+    firstSeen: str
+    lastSeen: str
+    sessions: int
+    shards: list[str]
+    "The shard IDs the player was seen on from the address."
+
+
+class AnalyticsAddressUsersResponse(TypedDict):
+    """``GET /api/analytics/addresses/users``, the players seen at one address."""
 
     address: str
     network: str
+    "What AMP matched on: the address itself, or an IPv6 address's /64 network."
     kind: str
-    """eg. ``"Public"``."""
-    users: list[Any]
+    """``"Public"``, ``"Tunnel"``, ``"Shared"`` (carrier-grade NAT), ``"Private"`` or ``"Loopback"``."""
+    users: list[AnalyticsAddressUser]
+    "The players, the most recently seen player first."
     serverInfo: dict[str, AnalyticsServerInfo]
     "A shard ID to the shard's name and game."
     isDemo: bool
@@ -347,16 +388,24 @@ class AnalyticsConnectedResponse(TypedDict):
     minecraft: Optional[AnalyticsMinecraftProfile]
     "`None` for a player who isn't on Minecraft."
     profileState: str
-    analyticsKey: str
-    userKey: str
-    "The key the other analytics calls take."
-    addressKind: str
-    """eg. ``"Private"`` or ``"Public"``."""
-    # TODO: Type these once a capture shows them filled in (#3-54).
+    """How far the profile lookups got, as `AnalyticsProfilesResponse.state`, or ``"none"`` for a player with no ID
+    AMP can look up."""
+    analyticsKey: Optional[str]
+    "`None` unless analytics has seen the player and the logged in user may see who the shard's players are."
+    userKey: Optional[str]
+    "The key the other analytics calls take, `None` unless the logged in user may see addresses."
+    addressKind: Optional[str]
+    """``"Public"``, ``"Tunnel"``, ``"Shared"`` (carrier-grade NAT), ``"Private"`` or ``"Loopback"``. `None` when AMP
+    doesn't know the address, or the logged in user may not see addresses."""
+    # TODO: Check these three against a live capture; typed from AMP's OpenAPI `ConnectedProfile` alone (#3-56.3af).
     # A Minecraft player alone at a LAN address left them `None`.
-    steam: Optional[Any]
-    othersAtAddress: Optional[Any]
-    recoveredAddress: Optional[Any]
+    steam: Optional[AnalyticsSteamProfile]
+    "The player's Steam profile, `None` unless the player has a Steam ID that AMP could look up."
+    othersAtAddress: Optional[int]
+    """How many other players connected from the player's address. `None` unless the logged in user holds
+    `analytics.addresses` on the shard and the address is a kind where the count means something."""
+    recoveredAddress: Optional[str]
+    "The address the player really connected from, when the shard saw a relay's address and AMP followed the relay back."
 
 
 class AnalyticsConnectedUser(TypedDict):
@@ -365,11 +414,24 @@ class AnalyticsConnectedUser(TypedDict):
     name: str
     id: str
     sessionId: str
-    endpoint: str
-    "The address and port the player connected from."
+    endpoint: Optional[str]
+    "The address and port the player connected from, `None` when the app doesn't report an address."
     joinedAt: str
     idKind: str
     """eg. ``"minecraft-uuid"``."""
+
+
+class AnalyticsCountryUsage(TypedDict):
+    """One country the players came from, from `AnalyticsSessionsResponse.countries`."""
+
+    country: str
+    """A lower-case ISO 3166-1 alpha-2 code, eg. ``"us"``. A player on a LAN address was counted as ``"xx"``."""
+    sessions: int
+    sessionsPercent: float
+    minutes: float
+    minutesPercent: float
+    users: Optional[int]
+    "How many players the country sent, `None` when AMP answered from its precomputed totals."
 
 
 class AnalyticsForgetResponse(TypedDict):
@@ -379,13 +441,28 @@ class AnalyticsForgetResponse(TypedDict):
     days: int
 
 
+class AnalyticsGameUsage(TypedDict):
+    """One game the players played, across every shard running the game, from `AnalyticsSessionsResponse.games`."""
+
+    game: str
+    """The template slug, eg. ``"minecraft-java"``."""
+    sessions: int
+    sessionsPercent: float
+    minutes: float
+    minutesPercent: float
+    users: int
+    "How many players, counting a player on two shards of the game once."
+    servers: int
+    "How many of the game's shards had a player on them."
+
+
 class AnalyticsMinecraftProfile(TypedDict):
     """A player's Minecraft profile, from `AnalyticsProfilesResponse.minecraft` and `AnalyticsConnectedResponse`."""
 
     uuid: str
     name: str
-    skinHash: str
-    "What `AnalyticsModule.get_analytics_skin` takes."
+    skinHash: Optional[str]
+    "What `AnalyticsModule.get_analytics_skin` takes, `None` for a default skin."
     slim: bool
     "If the skin uses the slim arms model or not."
     hasCape: bool
@@ -405,12 +482,20 @@ class AnalyticsProfilesResponse(TypedDict):
     A shard only keeps profiles with its `userSpecificData` setting on.
     """
 
-    # TODO: Type a Steam profile once a capture shows one (#3-54).
-    # Only a Minecraft player has been seen. By AMP's docs it holds the hash `AnalyticsModule.get_analytics_avatar` takes.
-    steam: dict[str, Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ProfilesAnswer` and `SteamProfile` alone (#3-56.3af).
+    # Only a Minecraft player has been seen, so every capture has `steam` empty.
+    steam: dict[str, AnalyticsSteamProfile]
     minecraft: dict[str, AnalyticsMinecraftProfile]
     state: str
-    """eg. ``"complete"``."""
+    """How far the profile lookups got.
+
+    - ``"complete"``.
+    - ``"pending"``: some players are still to be looked up, a few at a time.
+    - ``"keyRejected"``: Steam refused the Web API key, so AMP read the slower community profile instead.
+    - ``"unreachable"``.
+    - ``"off"``: the lookups are turned off in the settings.
+    - ``"notLicensed"``: the licence doesn't include profiles, which need AMP Professional Edition or above.
+    """
     isDemo: bool
 
 
@@ -432,30 +517,125 @@ class AnalyticsServerInfo(TypedDict):
     """eg. ``"steam:380840"``."""
 
 
-class AnalyticsSessionsResponse(TypedDict):
-    """``GET /api/analytics/sessions``, the player summary for the analytics page.
+class AnalyticsServerUsage(TypedDict):
+    """How busy one shard was, from `AnalyticsSessionsResponse.servers` and `AnalyticsUserSessionsResponse.servers`."""
 
-    The shape of the list items isn't known yet.
-    """
+    shardId: str
+    sessions: int
+    sessionsPercent: float
+    minutes: float
+    minutesPercent: float
+    users: int
+    "How many players were on the shard."
+
+
+class AnalyticsSession(TypedDict):
+    """One player's time on one shard, from `AnalyticsUserSessionsResponse.sessions`."""
+
+    sessionRef: str
+    shardId: str
+    userKey: str
+    idKind: str
+    """What the player's ID is, eg. ``"minecraft-uuid"``."""
+    country: str
+    """A lower-case ISO 3166-1 alpha-2 code, eg. ``"us"``. A player on a LAN address was counted as ``"xx"``."""
+    startedAt: str
+    endedAt: str
+    running: bool
+    "If the session was still open when AMP read the records or not."
+    displayName: Optional[str]
+    "`None` when the shard stores no user-specific data."
+
+
+class AnalyticsSessionsResponse(TypedDict):
+    """``GET /api/analytics/sessions``, the player summary for the analytics page."""
 
     window: dict[str, str]
     """``"from"`` and ``"to"``, ISO 8601; the last 30 days unless asked."""
     current: AnalyticsTotals
     previous: AnalyticsTotals
     change: dict[str, Optional[float]]
-    "The `AnalyticsTotals` keys."
+    "The `AnalyticsTotals` keys, each the percentage change; `None` where the previous window had nothing to compare."
     activity: list[AnalyticsPeriod]
     "One a day."
-    countries: list[Any]
-    topUsers: list[Any]
+    countries: list[AnalyticsCountryUsage]
+    topUsers: list[AnalyticsTopUser]
     busiest: AnalyticsPeriod
     quietest: AnalyticsPeriod
-    servers: list[Any]
-    games: list[Any]
+    servers: list[AnalyticsServerUsage]
+    "The busiest shard first."
+    games: list[AnalyticsGameUsage]
+    "The busiest game first."
     isDemo: bool
+    """`True` when the numbers are made up: the licence doesn't include analytics, or a debug build of AMP was asked
+    for its demo data."""
     serverInfo: dict[str, AnalyticsServerInfo]
     "A shard ID to the shard's name and game."
     rule: AnalyticsRule
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `SteamBans` alone (#3-56.3af).
+# No Steam player has been seen.
+class AnalyticsSteamBans(TypedDict):
+    """What Steam says about a player's bans, from `AnalyticsSteamProfile.bans`. Bans are public on a private profile too."""
+
+    vacBanned: bool
+    vacBans: Optional[int]
+    "How many VAC bans, `None` when AMP read the community profile, which only says if there's a ban."
+    gameBans: Optional[int]
+    "How many bans the games' own developers gave, `None` when not known."
+    daysSinceLastBan: Optional[int]
+    "`None` when not known, or when there's no ban."
+    communityBanned: Optional[bool]
+    "`None` when not known."
+    tradeBanned: bool
+    any: bool
+    "If there's a ban of any kind on record or not."
+
+
+# TODO: Check against a live capture; typed from AMP's OpenAPI `SteamProfile` alone (#3-56.3af).
+# No Steam player has been seen.
+class AnalyticsSteamProfile(TypedDict):
+    """A player's Steam profile, from `AnalyticsProfilesResponse.steam` and `AnalyticsConnectedResponse.steam`."""
+
+    steamId: str
+    "The Steam64 ID."
+    personaName: Optional[str]
+    "The name the player goes by on Steam now."
+    avatarHash: Optional[str]
+    "What `AnalyticsModule.get_analytics_avatar` takes, `None` for Steam's default avatar."
+    visibility: str
+    """Who may see the profile's details: ``"Unknown"``, ``"Private"``, ``"FriendsOnly"`` or ``"Public"``."""
+    createdAt: Optional[str]
+    "When the Steam account was made, `None` unless the profile is public."
+    countryCode: Optional[str]
+    "The lower-case ISO 3166-1 code on the profile, `None` unless the profile is public and has a country set."
+    bans: Optional[AnalyticsSteamBans]
+    "`None` when Steam didn't answer."
+    limited: Optional[bool]
+    """If the account never spent money on Steam or not. Only the community profile says, so a profile read from the
+    Steam Web API holds `None`."""
+    source: str
+    "Where AMP read the profile from, the Steam Web API or the community profile page."
+    profileUrl: Optional[str]
+    "The profile page by Steam64 ID, so the link survives a rename."
+
+
+class AnalyticsTopUser(TypedDict):
+    """A player who spent the most time on the shards, from `AnalyticsSessionsResponse.topUsers`."""
+
+    userKey: str
+    "The key the other analytics calls take."
+    displayName: Optional[str]
+    "`None` when the shard stores no user-specific data."
+    sessions: int
+    minutes: float
+    percent: float
+    servers: int
+    """How many shards the time was spent on. AMP only counts several shards for an ID that names the same player
+    on every shard, eg. a Steam ID. A player's name is only matched within a single shard."""
+    online: bool
+    "If the player is connected right now or not."
 
 
 class AnalyticsTotals(TypedDict):
@@ -488,9 +668,11 @@ class AnalyticsUserAddress(TypedDict):
     shards: list[str]
     "The shard IDs the player was seen on from it."
     recovered: bool
-    # TODO: Type this once a capture shows it filled in (#3-54).
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `AddressUse` alone (#3-56.3af).
     # A player alone at an address left it `None`.
-    otherUsers: Optional[Any]
+    otherUsers: Optional[int]
+    """How many other players the logged in user can see connected from the address, `None` where AMP doesn't match
+    players by the address."""
 
 
 class AnalyticsUserAddressesResponse(TypedDict):
@@ -513,8 +695,10 @@ class AnalyticsUserSessionsResponse(TypedDict):
     userKey: str
     displayName: Optional[str]
     totals: AnalyticsTotals
-    servers: list[Any]
-    sessions: list[Any]
+    servers: list[AnalyticsServerUsage]
+    "The shards the player spent the window on, the busiest shard first."
+    sessions: list[AnalyticsSession]
+    "The player's sessions in the window, the newest session first."
     firstSeen: Optional[str]
     lastSeen: Optional[str]
     isActive: bool
@@ -522,6 +706,7 @@ class AnalyticsUserSessionsResponse(TypedDict):
     rule: AnalyticsRule
     serverInfo: dict[str, AnalyticsServerInfo]
     isDemo: bool
+    """`True` for a made-up player from a debug build of AMP's demo data."""
 
 
 class AnalyticsUserMatch(TypedDict):
@@ -563,7 +748,8 @@ class AuditEvent(TypedDict):
     tenantId: str
     timestamp: str
     severity: int
-    """One of 0, 1 or 2, which the `min_severity` filter takes as the names ``"Info"``, ``"Warning"`` and ``"Security"``."""
+    """An `AuditSeverity` number: 0 ``"Info"``, 1 ``"Warning"`` or 2 ``"Security"``, the names the `min_severity` filter
+    takes."""
     principal: Principal
     "Who or what did it."
     action: str
@@ -572,17 +758,24 @@ class AuditEvent(TypedDict):
     """eg. ``"Shard"``, ``"User"`` or ``"Setting"``."""
     targetId: str
     taskId: Optional[str]
-    correlationId: WrappedID
-    "Shared by every event in one flow, see `AuditModule.get_audit_tree`."
-    actionId: WrappedID
+    correlationId: Optional[WrappedID]
+    """Shared by every event in one flow, see `AuditModule.get_audit_tree`. `None` only for an event written before
+    AMP kept flows."""
+    actionId: Optional[WrappedID]
+    "`None` only for an event written before AMP kept actions."
     causationActionId: Optional[WrappedID]
+    "The action that led to this event's action, `None` for the event that started the flow."
     origin: int
-    """eg. 0, 1 or 2, which the `origin` filter takes as ``"System"``, ``"User"`` and ``"UserFlow"``."""
-    rootPrincipal: Principal
+    """An `AuditOrigin` number: 0 ``"System"``, 1 ``"User"``, 2 ``"UserFlow"``, 3 ``"Scheduled"`` or 4
+    ``"Impersonation"``, the names the `origin` filter takes."""
+    rootPrincipal: Optional[Principal]
+    "Who started the flow. `None` only for an event written before AMP kept flows, where `principal` stands in."
     details: Optional[str]
     "More about the event, as JSON in a string."
     originIp: Optional[str]
-    originSpireId: str
+    "The address of the request behind the event, `None` for an event AMP raised by itself."
+    originSpireId: Optional[str]
+    "The spire that raised the event, `None` only for an event written before AMP kept the spire."
     originNode: str
     "The spire's host name."
 
@@ -600,6 +793,7 @@ class AuditOriginCount(TypedDict):
     """One origin and how often it was logged, from `AuditFacetsResponse.origins`."""
 
     origin: int
+    """An `AuditOrigin` number, eg. 1 for ``"User"``."""
     count: int
 
 
@@ -612,6 +806,7 @@ class AuditPageResponse(TypedDict):
     pageSize: int
     "50 unless asked; AMP caps it at 200."
     caughtUp: bool
+    "`False` while AMP is still loading the audit log into its index, so the page may be missing events."
     items: list[AuditEvent]
 
 
@@ -626,7 +821,9 @@ class AuditRoot(TypedDict):
     startedAt: str
     endedAt: str
     maxSeverity: int
+    "The highest `AuditSeverity` number of any event in the flow."
     rootMissing: bool
+    """`True` when AMP's index no longer holds the flow's first events, so the earliest event it holds is `root`."""
 
 
 class AuditRootsPageResponse(TypedDict):
@@ -636,6 +833,7 @@ class AuditRootsPageResponse(TypedDict):
     page: int
     pageSize: int
     caughtUp: bool
+    "`False` while AMP is still loading the audit log into its index, so the page may be missing flows."
     items: list[AuditRoot]
 
 
@@ -715,8 +913,9 @@ class CapabilitiesResponse(TypedDict):
     passkeysAvailable: bool
     "If passkeys work for this request; it depends on the address the request came in on."
     passkeyStatus: str
-    """``"NotConfigured"`` (no public address set), ``"OriginMismatch"`` (not asked at that address) or ``"Eligible"``."""
-    passkeyMessageKey: Optional[str]
+    """eg. ``"NotConfigured"`` (no public address set), ``"OriginMismatch"`` (not asked at that address),
+    ``"IpAddressHost"`` (the public address is an IP address) or ``"Eligible"``."""
+    passkeyMessageKey: str
     """A translation key for the status, eg. ``"passkeys.origin.notConfigured"``, not a message."""
     rpId: Optional[str]
     "The WebAuthn relying party ID, the public address's host name; `None` until one is set."
@@ -809,7 +1008,10 @@ class DatastoreUsage(TypedDict):
 class DeletedUserResponse(TypedDict):
     """``DELETE /api/users/{id}``, which answers 200 with a body where other deletes answer 204."""
 
-    warnings: list[Any]
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `UserDeletedDto` and `ApiError` alone (#3-56.3ab).
+    # Every delete so far had no warnings; a warning needs a cleanup step to fail.
+    warnings: list[CodedErrorResponse]
+    "The parts of the user's data AMP couldn't remove. The user is deleted either way."
 
 
 class DiagnosticsResponse(TypedDict):
@@ -1257,10 +1459,9 @@ class InviteAcceptedResponse(TypedDict):
 
     token: str
     expiration: str
-    # TODO: Drop the field doc once AMP lists the roles it drops (U5).
-    # AMP 3.0.0.6 keeps it empty when one of the invite's roles was deleted.
-    droppedRoles: list[Any]
-    "Empty even when one of the invite's roles had been deleted."
+    droppedRoles: list[str]
+    """The names of the invite's roles the new user didn't get, as the inviting admin no longer holds every permission
+    in the role. A role deleted since the invite was made is left out without being listed."""
 
 
 class InviteAcceptRequest(TypedDict):
@@ -1297,13 +1498,14 @@ class InviteResponse(TypedDict):
     "The username the new account gets."
     displayName: Optional[str]
     roleIds: list[str]
-    createdByName: str
+    createdByName: Optional[str]
+    "The name of the admin who made or last rearmed the invite, `None` when AMP didn't record the admin."
     createdAt: str
     expiresAt: str
     accepted: bool
     acceptedAt: Optional[str]
     status: str
-    """eg. ``"pending"`` or ``"accepted"``. A revoked invite leaves the list."""
+    """``"pending"``, ``"expired"`` or ``"accepted"``. A revoked invite leaves the list."""
 
 
 class InviteTokenResponse(TypedDict):
@@ -1516,12 +1718,30 @@ class PasskeyFlowResponse(TypedDict):
     "The WebAuthn options, base64url encoded, for ``navigator.credentials.get`` or ``navigator.credentials.create``."
 
 
+class PasskeyLoginRequest(TypedDict):
+    """The body of ``POST /api/auth/passkey/complete``."""
+
+    flowId: str
+    response: Mapping[str, Any]
+    "The WebAuthn assertion, as the browser's `PublicKeyCredential` JSON."
+    rememberMe: bool
+
+
 class PasskeyRegisteredResponse(TypedDict):
     """``POST /api/profile/passkeys/register/complete``."""
 
     passkey: PasskeyResponse
     session: Optional[TokenResponse]
-    "`None` from a full session."
+    "A full session in place of an enrolment-only session, `None` from a full session."
+
+
+class PasskeyRegisterRequest(TypedDict):
+    """The body of ``POST /api/profile/passkeys/register/complete``."""
+
+    flowId: str
+    response: Mapping[str, Any]
+    "The WebAuthn attestation, as the browser's `PublicKeyCredential` JSON."
+    name: str
 
 
 class PasskeyRequiredResponse(TypedDict):
@@ -1669,7 +1889,9 @@ class PreferencesResponse(TypedDict):
     hideUnroutedShards: Optional[bool]
     hidePrivatePorts: Optional[bool]
     fileDetailsWidth: Optional[int]
+    "`None` for the web panel's default width."
     ampExperience: Optional[str]
+    """``"New"``, ``"UsedPreviousVersions"`` or ``"Experienced"``."""
     showTutorials: Optional[bool]
     tutorialPromptDismissed: Optional[bool]
     tutorialsCompleted: list[str]
@@ -1679,6 +1901,7 @@ class PreferencesResponse(TypedDict):
     analyticsEnabled: Optional[bool]
     streamerMode: Optional[bool]
     timeFormat: Optional[str]
+    """``"System"``, ``"Hours12"`` or ``"Hours24"``."""
 
 
 class PreviewStatus(TypedDict):
@@ -1743,8 +1966,8 @@ class ProfileResponse(TypedDict):
     id: str
     userName: str
     displayName: Optional[str]
-    email: str
-    "AMP doesn't check it's an email address."
+    email: Optional[str]
+    "`None` when the account has no email address. AMP doesn't check that the value is an email address."
     emailConfirmed: bool
 
 
@@ -1857,7 +2080,7 @@ class RevokedSessionsResponse(TypedDict):
 
 
 class RoleRequest(TypedDict):
-    """The body of ``POST /api/roles`` and ``PUT /api/roles/{id}``."""
+    """The body of ``POST /api/roles``."""
 
     name: str
     description: str
@@ -1865,18 +2088,28 @@ class RoleRequest(TypedDict):
 
 
 class RoleResponse(TypedDict):
-    """One role from ``GET /api/roles``; creating or updating one answers with it too."""
+    """One role from ``GET /api/roles`` or ``GET /api/roles/{id}``. Creating or updating a role answers with the role too."""
 
     id: str
     name: str
-    description: str
+    description: Optional[str]
+    "`None` for a role made with no description."
     permissions: list[str]
     """Permission strings, eg. ``"users.read"`` or ``"spire.*.shard.*.view"``; a leading ``-`` denies.
 
     AMP stores them as given, without checking they exist.
     """
-    ownerUserId: str
+    ownerUserId: Optional[str]
+    "The ID of the user who made the role, `None` when AMP didn't record the role's creator."
     createdAt: str
+
+
+class RoleUpdateRequest(TypedDict):
+    """The body of ``PUT /api/roles/{id}``. A `None` field is left out, so AMP keeps the role's value."""
+
+    name: Optional[str]
+    description: Optional[str]
+    permissions: Optional[list[str]]
 
 
 class ScheduleCatalogResponse(TypedDict):
@@ -3428,7 +3661,7 @@ class SSHKeyRequest(TypedDict):
     """The body of ``POST /api/profile/sshkeys``."""
 
     key: str
-    label: str
+    label: Optional[str]
     expiresAt: Optional[str]
 
 
@@ -4031,7 +4264,7 @@ class UserCreateRequest(TypedDict):
     userName: str
     password: str
     displayName: Optional[str]
-    email: str
+    email: Optional[str]
     roleIds: list[str]
     passwordExpires: bool
     requirePasswordChange: bool
@@ -4043,15 +4276,16 @@ class UserResponse(TypedDict):
     id: str
     userName: str
     displayName: Optional[str]
-    email: str
-    "AMP doesn't check it's an email address."
+    email: Optional[str]
+    "`None` when the user has no email address. AMP doesn't check that the value is an email address."
     roleIds: list[str]
     "A deleted role's ID stays here."
     isAdmin: bool
     suspended: bool
     passwordExpires: bool
     requirePasswordChange: bool
-    createdAt: str
+    createdAt: Optional[str]
+    "`None` when AMP didn't record when the user was made."
     lastLoginAt: Optional[str]
 
 
@@ -4078,10 +4312,10 @@ class WrappedID(TypedDict):
     value: str
 
 
-# The `origin` the audit calls filter on.
-AuditOrigin = Literal["System", "User", "UserFlow", "Scheduled", "Impersonation"]
-# The `min_severity` the audit calls filter on.
-AuditSeverity = Literal["Info", "Warning", "Security"]
+# The `origin` the audit calls filter on, the names of the `AuditOrigin` numbers.
+AuditOriginName = Literal["System", "User", "UserFlow", "Scheduled", "Impersonation"]
+# The `min_severity` the audit calls filter on, the names of the `AuditSeverity` numbers.
+AuditSeverityName = Literal["Info", "Warning", "Security"]
 # A credential's `kind`.
 CredentialKind = Literal["SteamCmd", "Smtp", "DiscordWebhook", "ApiKey"]
 # Who may use a credential.

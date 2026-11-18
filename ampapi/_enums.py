@@ -23,6 +23,8 @@ from __future__ import annotations
 from enum import IntEnum, IntFlag, StrEnum
 
 __all__ = (
+    "AuditOrigin",
+    "AuditSeverity",
     "CloneContent",
     "GatewayState",
     "LifecycleKind",
@@ -35,6 +37,42 @@ __all__ = (
     "SnapshotState",
     "TaskState",
 )
+
+
+class AuditOrigin(IntEnum):
+    """How an audit event came about, named as the web panel names it. AMP sends the number.
+
+    An audit event's `origin` and an origin count's `origin` hold the number. The `origin` filter of
+    :meth:`AuditModule.get_audit_events` takes the name instead, eg. ``"UserFlow"`` (see `AuditOriginName`).
+
+    - `system`: AMP acted by itself. An event written before AMP kept an origin reads `system` too.
+    - `user`: a user acted directly, eg. through a click in the web panel.
+    - `user_flow`: AMP acted inside a flow that a user's request started, eg. the steps of an update.
+    - `scheduled`: a schedule acted.
+    - `impersonation`: a user acted as another user.
+
+    .. versionadded:: 6.0.0
+    """
+
+    system = 0
+    user = 1
+    user_flow = 2
+    scheduled = 3
+    impersonation = 4
+
+
+class AuditSeverity(IntEnum):
+    """How much an audit event matters, named as the web panel names it. AMP sends the number.
+
+    An audit event's `severity` and a flow's `maxSeverity` hold the number. The `min_severity` filter of
+    :meth:`AuditModule.get_audit_events` takes the name instead, eg. ``"Warning"`` (see `AuditSeverityName`).
+
+    .. versionadded:: 6.0.0
+    """
+
+    info = 0
+    warning = 1
+    security = 2
 
 
 class CloneContent(IntFlag):

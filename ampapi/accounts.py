@@ -21,16 +21,21 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from .base import Base
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from ._types import (
         DeletedUserResponse,
         InviteRequest,
         InviteResponse,
         InviteTokenResponse,
+        PasskeyFlowResponse,
+        PasskeyRegisteredResponse,
+        PasskeyRegisterRequest,
         PasskeyResponse,
         PasswordChangeRequest,
         PermissionsResponse,
@@ -44,6 +49,7 @@ if TYPE_CHECKING:
         RevokedSessionsResponse,
         RoleRequest,
         RoleResponse,
+        RoleUpdateRequest,
         SSHKeyRequest,
         SSHKeyResponse,
         UserCreateRequest,
@@ -72,7 +78,8 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/users/me/preferences/favourites/{template_slug}``
 
-        Adding a favourite that's already there changes nothing. AMP doesn't check the slug is a template.
+        AMP puts the new favourite at the front of the list. Adding a favourite that's already there changes nothing.
+        AMP doesn't check that the slug names a template.
 
         Parameters
         ----------
@@ -87,7 +94,7 @@ class AccountModule(Base):
         """
         return await self._request(method="POST", path=f"/api/users/me/preferences/favourites/{template_slug}")
 
-    async def add_ssh_key(self, key: str, label: str, *, expires_at: Optional[str] = None) -> SSHKeyResponse:
+    async def add_ssh_key(self, key: str, label: Optional[str] = None, *, expires_at: Optional[str] = None) -> SSHKeyResponse:
         """Add an SSH key to the logged in user's account, for SFTP.
 
         |coro|
@@ -98,8 +105,10 @@ class AccountModule(Base):
         ----------
         key : :class:`str`
             The public key line, eg. ``"ssh-ed25519 AAAA... laptop"``.
-        label : :class:`str`
-            A name for the key.
+        label : Union[:class:`str`, None], optional
+            A name for the key, by default None.
+            Without a label AMP names the key after the key line's comment, eg. ``"laptop"``. A key line with no
+            comment is named after its key type, eg. ``"ssh-ed25519"``.
         expires_at : Union[:class:`str`, None], optional
             When the key stops working, ISO 8601 like ``"2027-01-01T00:00:00Z"``, by default None.
             Without an expiry the key never runs out.
@@ -112,13 +121,97 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **409** - If the key is already added `sshKeys.error.alreadyRegistered`.\n
-            **400** - If AMP doesn't support `sshKeys.error.unsupported`
-
+            **400** - If AMP doesn't support the key `sshKeys.error.unsupported`.\n
+            **400** - If an RSA key is smaller than AMP's minimum size, from AMP's docs and not seen live.\n
+            **409** - If the key is already on this account or another account `sshKeys.error.alreadyRegistered`.
 
         """
         data: SSHKeyRequest = {"key": key, "label": label, "expiresAt": expires_at}
         return await self._request(method="POST", path="/api/profile/sshkeys", data=data)
+
+    async def begin_passkey_registration(self) -> PasskeyFlowResponse:
+        """Start adding a passkey to the logged in user's account.
+
+        |coro|
+
+        Endpoint: ``POST /api/profile/passkeys/register/begin``
+
+        The library holds no passkeys. Hand `options` to a WebAuthn authenticator, eg. a browser's
+        ``navigator.credentials.create``, then send its answer to :meth:`complete_passkey_registration` with `flowId`.
+
+        .. note::
+            Passkeys only work through the panel's public HTTPS address, so the session's `url` has to be that address.
+            :meth:`Session.get_capabilities` reads ``"Eligible"`` in `passkeyStatus` there.
+
+        Returns
+        -------
+        :class:`PasskeyFlowResponse`
+            The flow's ID and the WebAuthn creation options.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the session hasn't proved the password or a passkey recently, see :meth:`Session.reauth`. From
+            AMP's docs and not seen live.\n
+            **409** - If passkeys don't work at the panel's public address. The error's `code` says why. From AMP's
+            docs and not seen live.\n
+            **429** - If the caller's IP address has too many passkey flows open, from AMP's docs and not seen live.
+
+        """
+        return await self._request(method="POST", path="/api/profile/passkeys/register/begin", data={})
+
+    async def complete_passkey_registration(
+        self,
+        flow_id: str,
+        response: Mapping[str, Any],
+        *,
+        name: str = "",
+    ) -> PasskeyRegisteredResponse:
+        """Finish adding a passkey with the authenticator's answer to :meth:`begin_passkey_registration`.
+
+        |coro|
+
+        Endpoint: ``POST /api/profile/passkeys/register/complete``
+
+        When the `Session` holds an enrolment-only session (see :attr:`Session.enrolment_only`), AMP ends that session and
+        hands over a full session in its place. The `Session` keeps the full session's token.
+
+        .. warning::
+            AMP 3.0.0.6 refuses an answer without `transports` in `response["response"]`, and a browser can leave
+            `transports` out. Add ``"transports": []`` when the authenticator gives none.
+
+        Parameters
+        ----------
+        flow_id : :class:`str`
+            The `flowId` from :meth:`begin_passkey_registration`.
+        response : Mapping[:class:`str`, Any]
+            The authenticator's answer, the WebAuthn `PublicKeyCredential` as JSON with base64url values:
+            `id`, `rawId`, `type`, `extensions` and `response` (`attestationObject`, `clientDataJSON`, `transports`).
+        name : :class:`str`, optional
+            A name for the passkey, by default "".
+
+        Returns
+        -------
+        :class:`PasskeyRegisteredResponse`
+            The new passkey, and the full session's token when the `Session` held an enrolment-only session.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If `response` has no `transports`. AMP answers with a ProblemDetails naming
+            ``Response.Response.Transports``.\n
+            **400** - If AMP refuses the attestation. The error's `code` says why. From AMP's docs and not seen live.\n
+            **403** - If the session hasn't proved the password or a passkey recently, see :meth:`Session.reauth`. From
+            AMP's docs and not seen live.
+
+        """
+        data: PasskeyRegisterRequest = {"flowId": flow_id, "response": response, "name": name}
+        result: PasskeyRegisteredResponse = await self._request(method="POST", path="/api/profile/passkeys/register/complete", data=data)
+
+        # AMP swaps an enrolment-only session for a full session here, so we keep the new token
+        if result["session"] is not None:
+            self.session._store_token(data=result["session"])  # pyright: ignore[reportPrivateUsage]
+        return result
 
     async def change_password(self, current_password: str, new_password: str) -> None:
         """Change the logged in user's password.
@@ -129,6 +222,10 @@ class AccountModule(Base):
 
         AMP ends every other session of the logged in user and keeps the current session. The new password is kept for later
         logins.
+
+        - AMP also ends the logged in user's SFTP connections to this spire.
+        - A forced password change on the account is cleared.
+        - The password's age starts again, for `passwordExpires`.
 
         Parameters
         ----------
@@ -170,7 +267,7 @@ class AccountModule(Base):
         role_ids : list[:class:`str`]
             The roles the new account gets; AMP wants at least one role that exists.
         expires_in_hours : :class:`int`
-            How long the invite code works for. AMP turns 0 into 1.
+            How long the invite code works for. AMP keeps the value between 1 and 720, so 0 becomes 1.
         display_name : Union[:class:`str`, None], optional
             The new account's display name, by default None.
 
@@ -183,7 +280,10 @@ class AccountModule(Base):
         ------
         AMPAPIRequestError
             **400** - If no ID in `role_ids` matches a role `access.error.inviteRoleRequired`.\n
-            **409** - If a user already has `user_name`.
+            **403** - If a role in `role_ids` carries a permission the logged in user doesn't hold, from AMP's docs and
+            not seen live.\n
+            **409** - If a user already has `user_name`.\n
+            **409** - If an invite for `user_name` is still pending, from AMP's docs and not seen live.
 
         """
         data: InviteRequest = {"userName": user_name, "displayName": display_name, "roleIds": role_ids, "expiresInHours": expires_in_hours}
@@ -211,6 +311,13 @@ class AccountModule(Base):
         :class:`RoleResponse`
             The new role.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If a role already has `name`. The error's `errors` names the role.\n
+            **403** - If `permissions` grants a permission the logged in user doesn't hold, from AMP's docs and not seen
+            live.
+
         """
         data: RoleRequest = {"name": name, "description": description, "permissions": permissions}
         return await self._request(method="POST", path="/api/roles", data=data)
@@ -219,8 +326,8 @@ class AccountModule(Base):
         self,
         user_name: str,
         password: str,
-        email: str,
         *,
+        email: Optional[str] = None,
         display_name: Optional[str] = None,
         role_ids: Optional[list[str]] = None,
         password_expires: bool = False,
@@ -238,13 +345,13 @@ class AccountModule(Base):
             The new user's username.
         password : :class:`str`
             The new user's password; it has to pass :meth:`Session.get_password_policy`.
-        email : :class:`str`
-            The new user's email address.
+        email : Union[:class:`str`, None], optional
+            The new user's email address, by default None for a user without an email address.
         display_name : Union[:class:`str`, None], optional
             The new user's display name, by default None.
         role_ids : Union[list[:class:`str`], None], optional
             The roles to give the new user, by default None.
-            - A user can have no roles, and AMP drops an ID that isn't a role.
+            - A user can have no roles, and AMP drops an ID that matches no role without an error.
         password_expires : :class:`bool`, optional
             If the password runs out after the platform's maximum age or not, by default False.
         require_password_change : :class:`bool`, optional
@@ -341,6 +448,13 @@ class AccountModule(Base):
         passkey_id : :class:`str`
             The passkey's `id` from :meth:`get_passkeys`.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If the passkey is the only passkey while the passkey policy is ``"Required"``, from AMP's docs and
+            not seen live.\n
+            **409** - If the passkey is the only way into an account with no password, from AMP's docs and not seen live.
+
         """
         await self._request(method="DELETE", path=f"/api/profile/passkeys/{passkey_id}")
 
@@ -374,6 +488,14 @@ class AccountModule(Base):
         role_id : :class:`str`
             The role's ID.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the role carries a permission the logged in user doesn't hold, from AMP's docs and not seen live.\n
+            **404** - If there's no role with that ID.\n
+            **409** - If deleting the role would take permissions away from the logged in user, from AMP's docs and not
+            seen live.
+
         """
         await self._request(method="DELETE", path=f"/api/roles/{role_id}")
 
@@ -383,6 +505,8 @@ class AccountModule(Base):
         |coro|
 
         Endpoint: ``DELETE /api/profile/sshkeys/{ssh_key_id}``
+
+        AMP ends any SFTP session the key opened.
 
         Parameters
         ----------
@@ -399,6 +523,12 @@ class AccountModule(Base):
 
         Endpoint: ``DELETE /api/users/{user_id}``
 
+        AMP also deletes:
+
+        - The user's passkeys.
+        - The user's preferences.
+        - Every schedule that runs as the user.
+
         Parameters
         ----------
         user_id : :class:`str`
@@ -407,7 +537,13 @@ class AccountModule(Base):
         Returns
         -------
         :class:`DeletedUserResponse`
-            Any warnings AMP had about the delete.
+            The parts of the clean up that failed, if any. The user is deleted either way.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If `user_id` is the logged in user's ID, from AMP's docs and not seen live.\n
+            **404** - If there's no user with that ID.
 
         """
         return await self._request(method="DELETE", path=f"/api/users/{user_id}")
@@ -538,6 +674,32 @@ class AccountModule(Base):
         """
         return await self._request(method="GET", path="/api/profile/recovery-codes")
 
+    async def get_role(self, role_id: str) -> RoleResponse:
+        """Get one role.
+
+        |coro|
+
+        Endpoint: ``GET /api/roles/{role_id}``
+
+        Parameters
+        ----------
+        role_id : :class:`str`
+            The role's ID.
+
+        Returns
+        -------
+        :class:`RoleResponse`
+            The role.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If there's no role with that ID.\n
+            **404** - If the ID names the hidden role AMP keeps for each user, from AMP's docs and not seen live.
+
+        """
+        return await self._request(method="GET", path=f"/api/roles/{role_id}")
+
     async def get_roles(self) -> list[RoleResponse]:
         """Get the roles. A fresh panel has no roles.
 
@@ -548,7 +710,7 @@ class AccountModule(Base):
         Returns
         -------
         list[:class:`RoleResponse`]
-            The roles.
+            The roles by name, ignoring case. The hidden role AMP keeps for each user isn't listed.
 
         """
         return await self._request(method="GET", path="/api/roles")
@@ -598,7 +760,7 @@ class AccountModule(Base):
         Returns
         -------
         list[:class:`UserResponse`]
-            The users.
+            The users by username.
 
         """
         return await self._request(method="GET", path="/api/users")
@@ -611,6 +773,7 @@ class AccountModule(Base):
         Endpoint: ``POST /api/users/{user_id}/logout``
 
         Ending the logged in user's sessions ends this session too; the next call logs in again.
+        The user can log straight back in.
 
         Parameters
         ----------
@@ -620,19 +783,22 @@ class AccountModule(Base):
         """
         await self._request(method="POST", path=f"/api/users/{user_id}/logout", data={})
 
-    async def rearm_invite(self, invite_id: str, expires_in_hours: int) -> InviteTokenResponse:
+    async def rearm_invite(self, invite_id: str, expires_in_hours: Optional[int] = None) -> InviteTokenResponse:
         """Give an invite a new code, which stops the old code from working.
 
         |coro|
 
         Endpoint: ``POST /api/invites/{invite_id}/rearm``
 
+        The logged in user becomes the invite's creator.
+
         Parameters
         ----------
         invite_id : :class:`str`
             The invite's ID.
-        expires_in_hours : :class:`int`
-            How long the new code works for.
+        expires_in_hours : Union[:class:`int`, None], optional
+            How long the new code works for, by default None for AMP's 72 hours.
+            AMP keeps the value between 1 and 720.
 
         Returns
         -------
@@ -642,10 +808,14 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
+            **400** - If none of the invite's roles exist any more, from AMP's docs and not seen live.\n
+            **404** - If there's no invite with that ID.\n
             **409** - If the invite was already accepted.
 
         """
-        return await self._request(method="POST", path=f"/api/invites/{invite_id}/rearm", data={"expiresInHours": expires_in_hours})
+        # With no body AMP uses its own default lifetime
+        data: Optional[dict[str, int]] = None if expires_in_hours is None else {"expiresInHours": expires_in_hours}
+        return await self._request(method="POST", path=f"/api/invites/{invite_id}/rearm", data=data)
 
     async def reset_user_password(self, user_id: str, new_password: str) -> None:
         """Set a user's password, which ends every session they have.
@@ -655,6 +825,9 @@ class AccountModule(Base):
         Endpoint: ``POST /api/users/{user_id}/reset-password``
 
         Resetting the logged in user's password keeps the new password for later logins.
+
+        - AMP also ends the user's SFTP connections.
+        - A forced password change on the account stays in place, so the new password can be a temporary password.
 
         Parameters
         ----------
@@ -737,6 +910,11 @@ class AccountModule(Base):
         :class:`ProfileResponse`
             The logged in user's account.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If another account already has `email`, from AMP's docs and not seen live.
+
         """
         if display_name is None:
             display_name = (await self.get_profile())["displayName"]
@@ -747,8 +925,15 @@ class AccountModule(Base):
 
         return await self._request(method="PUT", path="/api/profile", data=data)
 
-    async def update_role(self, role_id: str, name: str, permissions: list[str], *, description: str = "") -> RoleResponse:
-        """Change a role's name, description and permissions.
+    async def update_role(
+        self,
+        role_id: str,
+        name: Optional[str] = None,
+        permissions: Optional[list[str]] = None,
+        *,
+        description: Optional[str] = None,
+    ) -> RoleResponse:
+        """Change a role's name, description and permissions. Anything left as `None` stays as it is.
 
         |coro|
 
@@ -758,21 +943,33 @@ class AccountModule(Base):
         ----------
         role_id : :class:`str`
             The role's ID.
-        name : :class:`str`
-            The role's name.
-        permissions : list[:class:`str`]
-            The permission strings, which replace the role's old permissions; a leading ``-`` denies that permission.
-        description : :class:`str`, optional
-            A description of the role, by default "".
+        name : Union[:class:`str`, None], optional
+            The role's new name, by default None.
+        permissions : Union[list[:class:`str`], None], optional
+            The permission strings, which replace the role's old permissions, by default None.
+            A leading ``-`` denies that permission. An empty list removes every permission.
+        description : Union[:class:`str`, None], optional
+            The role's new description, ``""`` to clear it, by default None.
 
         Returns
         -------
         :class:`RoleResponse`
-            The role.
+            The changed role.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the change adds or removes a permission the logged in user doesn't hold, from AMP's docs and
+            not seen live.\n
+            **404** - If there's no role with that ID.\n
+            **409** - If the change would take permissions away from the logged in user, from AMP's docs and not seen
+            live.
 
         """
-        data: RoleRequest = {"name": name, "description": description, "permissions": permissions}
-        return await self._request(method="PUT", path=f"/api/roles/{role_id}", data=data)
+        data: RoleUpdateRequest = {"name": name, "description": description, "permissions": permissions}
+
+        # We only send what changes. AMP keeps a value that's left out.
+        return await self._request(method="PUT", path=f"/api/roles/{role_id}", data=self._without_none(mapping=data))
 
     async def update_user(
         self,
@@ -809,11 +1006,19 @@ class AccountModule(Base):
             If the password runs out after the platform's maximum age or not, by default None.
         require_password_change : Union[:class:`bool`, None], optional
             If the user has to change their password at their next login or not, by default None.
+            Turning it on ends the user's sessions, SFTP included, the same way suspending does.
 
         Returns
         -------
         :class:`UserResponse`
             The changed user.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If there's no user with that ID.\n
+            **409** - If the change would take permissions away from the logged in user, from AMP's docs and not seen
+            live.
 
         """
         data: UserUpdateRequest = {
@@ -825,5 +1030,5 @@ class AccountModule(Base):
             "requirePasswordChange": require_password_change,
         }
 
-        # We only send what changes, AMP keeps a value that's left out.
+        # We only send what changes. AMP keeps a value that's left out.
         return await self._request(method="PUT", path=f"/api/users/{user_id}", data=self._without_none(mapping=data))
