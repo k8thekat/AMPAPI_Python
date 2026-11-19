@@ -2885,7 +2885,7 @@ class ShardInfraResponse(TypedDict):
     """``GET /api/shards/{id}/infra``, how a shard runs and what its spire allows."""
 
     settings: ShardInfraSettings
-    "What `ShardModule.set_shard_infra` takes back, whole."
+    "What `ShardModule.update_shard_infra` takes back, whole or in part."
     spireName: str
     spireIsLinux: bool
     containerPolicy: int
@@ -2898,10 +2898,7 @@ class ShardInfraResponse(TypedDict):
 
 
 class ShardInfraSettings(TypedDict):
-    """How a shard runs: container, limits, boot and analytics. `ShardInfraResponse.settings` holds it.
-
-    `ShardModule.set_shard_infra` sends all of it, as AMP resets any field it leaves out.
-    """
+    """How a shard runs: container, limits, boot and analytics. `ShardInfraResponse.settings` holds it."""
 
     shardId: str
     tenantId: str

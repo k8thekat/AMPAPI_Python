@@ -77,7 +77,7 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   firewall), `PlatformModule`, `ShardModule` (with `Shard`), `SpireModule` (with `Spire`, in `spires.py` to avoid a
   circular import), `TaskModule` and `TemplateModule` (#3-50).
 - `Panel` holds the calls that make a shard and hand back a `Shard`: `create_shard` and `clone_shard` (#3-51.1g), so
-  every module works on its own with a `Session`. `ShardModule` keeps its own lock per shard for `update_shard_infra`.
+  every module works on its own with a `Session`.
 - AMP's own OpenAPI document (#3-56) is served at `/openapi/v1.json` and Scalar at `/scalar/v1` when the panel runs
   `ASPNETCORE_ENVIRONMENT=Development`; the same document ships beside the binary as `webapi.json`. A type taken from
   it alone carries a `# TODO:` until a capture confirms it (Kat, 2026-11-12). Its `required` lists only C# `required`
@@ -145,13 +145,19 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - Downloads come back as `bytes` (`_request(raw_bytes=True)`); they need the Bearer header, as AMP takes no other
   credential, and are held whole in memory. Uploads send the web panel's form (`files`) or, for a big file, the
   chunked upload in 8 MiB chunks.
-- `set_shard_infra` refuses settings with a field missing before sending, as AMP resets any field a `PATCH /infra`
-  leaves out (U13); `update_shard_infra` reads the settings first and sends them back whole with the changes.
+- `PATCH /infra` (#3-64c, Kat 2026-11-19): AMP 3.0.1 changes only the top-level fields it is sent, where 3.0.0 reset
+  every field the body left out (U13, fixed). It still ignores a `settings` wrapper, fields and all.
+    - `update_shard_infra` sends only `changes` in one PATCH. Until 3.0.1 it read the settings first, sent them back
+      whole, and held a lock per shard so two calls in one program didn't undo each other; the read and the lock are
+      gone.
+    - `update_shard_infra` takes the settings whole or in part. It leaves out AMP's own `shardId`, `tenantId`,
+      `updatedAt` and `updatedByUserId`, which AMP ignores in the PATCH anyway (#3-51.7), so `get_shard_infra`'s inner
+      `settings` goes back whole. A `settings` key (the whole reply) or any other unknown name is refused before
+      sending.
+    - `set_shard_infra` and `Shard.set_infra` were removed (Kat, 2026-11-19, while 6.0.0 is a beta): on 3.0.1 they sent
+      the same PATCH as `update_shard_infra`.
 - Writes that replace a whole record, and how the library keeps what the caller didn't name (#3-51.7, checked live on
   vm4 2026-11-09):
-    - `set_shard_infra` checks only the fields a user can set: AMP ignores its own `shardId`, `tenantId`, `updatedAt`
-      and `updatedByUserId` in the PATCH. `update_shard_infra` holds a lock per shard on the panel, so two calls in
-      one program don't undo each other.
     - A schedule PUT replaces everything it's sent (a `timeout` of `null` goes back to 30 minutes) and ignores
       `retryPolicy` / `misfirePolicy`; `update_shard_schedule` reads the schedule first, so `None` keeps.
     - `PUT /api/profile` clears the display name whenever it's left out, so `update_profile` reads it first; `""`

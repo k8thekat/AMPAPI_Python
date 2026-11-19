@@ -20,9 +20,8 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Self
+from typing import TYPE_CHECKING, Any, Optional, Self, Union
 
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
 from ._types import ShardInfraChanges, ShardInfraSettings
@@ -934,14 +933,6 @@ class Shard:
         """
         await self._module.set_shard_file_ignored(shard_id=self.id, paths=paths, ignored=ignored)
 
-    async def set_infra(self, settings: ShardInfraSettings) -> ShardInfraUpdateResponse:
-        """Replace how this shard runs with the whole of `settings`, see :meth:`ShardModule.set_shard_infra`.
-
-        |coro|
-
-        """
-        return await self._module.set_shard_infra(shard_id=self.id, settings=settings)
-
     async def set_port_access(self, port_reference: str, public: bool) -> list[ShardPortResponse]:
         """Make one of this shard's ports public or private, see :meth:`ShardModule.set_shard_port_access`.
 
@@ -1083,7 +1074,7 @@ class Shard:
         """
         return await self._module.update_shard(shard_id=self.id)
 
-    async def update_infra(self, changes: ShardInfraChanges) -> ShardInfraUpdateResponse:
+    async def update_infra(self, changes: Union[ShardInfraSettings, ShardInfraChanges]) -> ShardInfraUpdateResponse:
         """Change a few of this shard's infra settings, keeping the rest, see :meth:`ShardModule.update_shard_infra`.
 
         |coro|
@@ -1167,13 +1158,6 @@ class ShardModule(Base):
     .. versionadded:: 6.0.0
 
     """
-
-    # A lock per shard ID, so `update_shard_infra` reads and writes one shard at a time (#3-51.2c)
-    _infra_locks: dict[str, asyncio.Lock]
-
-    def __init__(self, session: Session) -> None:  # noqa: D107
-        super().__init__(session=session)
-        self._infra_locks = {}
 
     async def accept_shard_eula(self, shard_id: str) -> None:
         """Accept the game's licence for a shard, eg. Minecraft's EULA, which the shard needs before it can start.
@@ -2177,7 +2161,7 @@ class ShardModule(Base):
         Returns
         -------
         :class:`ShardInfraResponse`
-            The settings, which :meth:`set_shard_infra` takes back whole, and the spire's limits.
+            `ShardInfraResponse.settings`, which :meth:`update_shard_infra` takes back whole, and the spire's limits.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/infra")
@@ -3068,50 +3052,6 @@ class ShardModule(Base):
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/ignore", data={"paths": paths, "ignored": ignored})
 
-    # TODO: Loosen the whole-settings check once AMP's PATCH leaves the fields it isn't sent alone (U13).
-    # AMP 3.0.0 resets every infra field a PATCH body leaves out, `containerMode` to Native among them.
-    async def set_shard_infra(self, shard_id: str, settings: ShardInfraSettings) -> ShardInfraUpdateResponse:
-        """Replace how a shard runs with the whole of `settings`: container, limits, boot and analytics.
-
-        |coro|
-
-        Endpoint: ``PATCH /api/shards/{shard_id}/infra``
-
-        .. warning::
-            AMP reads only the body's top-level fields, ignores keys it doesn't know (a `settings` wrapper among them),
-            and resets every field the body doesn't name at the top level, so a partial body changes the rest too. We
-            refuse `settings` with any field missing, which also catches :meth:`get_shard_infra`'s wrapped reply. Take
-            them from its inner `settings`, or use :meth:`update_shard_infra` to change a few. A change takes effect
-            when the shard next starts.
-
-        Parameters
-        ----------
-        shard_id : :class:`str`
-            The shard's ID.
-        settings : :class:`ShardInfraSettings`
-            Every infra setting a user can set (the keys of `ShardInfraChanges`). AMP's own `shardId`, `tenantId`,
-            `updatedAt` and `updatedByUserId` may be left out, as AMP ignores them. AMP doesn't check the values, eg. a
-            negative memory limit.
-
-        Returns
-        -------
-        :class:`ShardInfraUpdateResponse`
-            The settings as AMP saved them.
-
-        Raises
-        ------
-        ValueError
-            If `settings` is missing a field a user can set, before anything is sent.
-
-        """
-        missing: list[str] = sorted(ShardInfraChanges.__optional_keys__ - settings.keys())
-
-        if missing:
-            msg = f"The infra settings are missing {', '.join(missing)}, which AMP would reset. Start from get_shard_infra's settings."
-            raise ValueError(msg)
-
-        return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data={**settings})
-
     async def set_shard_port_access(self, shard_id: str, port_reference: str, public: bool) -> list[ShardPortResponse]:
         """Make one of a shard's ports public or private.
 
@@ -3523,26 +3463,32 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/update")
 
-    # TODO: Send only the changes once AMP's PATCH leaves the fields it isn't sent alone (U13).
-    # AMP 3.0.0 resets every infra field a PATCH body leaves out.
-    async def update_shard_infra(self, shard_id: str, changes: ShardInfraChanges) -> ShardInfraUpdateResponse:
-        """Change any available settings for how a shard runs, keeping the rest: we read the settings from AMP, replace the
-        omitted settings with the results and then submit as a whole.
+    async def update_shard_infra(
+        self,
+        shard_id: str,
+        changes: Union[ShardInfraSettings, ShardInfraChanges],
+    ) -> ShardInfraUpdateResponse:
+        """Change any available settings for how a shard runs, keeping the rest.
 
         |coro|
 
-        Endpoints: ``GET /api/shards/{shard_id}/infra``, then ``PATCH /api/shards/{shard_id}/infra``
+        Endpoint: ``PATCH /api/shards/{shard_id}/infra``
 
-        It sends the reply's inner `settings` at the top level, as AMP ignores a `settings` wrapper and resets every
-        field the body doesn't name there. Calls on one shard through one panel wait for each other, so none undoes
-        another; a second program changing the same shard at the same moment still can.
+        AMP changes only the fields `changes` names. A change takes effect when the shard next starts.
+
+        .. warning::
+            AMP reads only the body's top-level fields and ignores a `settings` wrapper without an error. Unwrap
+            :meth:`get_shard_infra`'s reply and pass its inner `settings`.
 
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        changes : :class:`ShardInfraChanges`
+        changes : Union[:class:`ShardInfraSettings`, :class:`ShardInfraChanges`]
             The settings to change, eg. ``{"startOnBoot": True}``.
+            - A whole `ShardInfraSettings` works too, eg. :meth:`get_shard_infra`'s inner `settings`. Its `shardId`,
+              `tenantId`, `updatedAt` and `updatedByUserId` are left out, as AMP sets them itself.
+            - AMP doesn't check the values, eg. a negative memory limit.
 
         Returns
         -------
@@ -3552,25 +3498,25 @@ class ShardModule(Base):
         Raises
         ------
         ValueError
-            If a name in `changes` isn't an infra setting a user can change, before anything is sent.
+            If `changes` has a `settings` key, eg. :meth:`get_shard_infra`'s whole reply. Nothing is sent.\n
+            If a name in `changes` isn't an infra setting a user can change. Nothing is sent.
 
         """
-        unknown: list[str] = sorted(changes.keys() - ShardInfraChanges.__optional_keys__)
+        # AMP answers a wrapped body with 200 and applies none of it, so we refuse it before sending
+        if "settings" in changes:
+            msg = "The infra changes hold a settings key, whose fields AMP ignores. Pass get_shard_infra's inner settings."
+            raise ValueError(msg)
+
+        # AMP stamps its own fields of a whole `ShardInfraSettings` itself, so we leave them out
+        stamps: set[str] = {"shardId", "tenantId", "updatedAt", "updatedByUserId"}
+        body: dict[str, Any] = {name: value for name, value in changes.items() if name not in stamps}
+        unknown: list[str] = sorted(body.keys() - ShardInfraChanges.__optional_keys__)
 
         if unknown:
             msg = f"{', '.join(unknown)} aren't infra settings a user can change; see ShardInfraChanges for the names."
             raise ValueError(msg)
 
-        # One read and write at a time per shard, or a second call reads the old settings and undoes the first (#3-51.2c)
-        lock: Optional[asyncio.Lock] = self._infra_locks.get(shard_id)
-        if lock is None:
-            lock = asyncio.Lock()
-            self._infra_locks[shard_id] = lock
-
-        async with lock:
-            current: ShardInfraResponse = await self.get_shard_infra(shard_id=shard_id)
-            settings: ShardInfraSettings = {**current["settings"], **changes}
-            return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=settings)
+        return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=body)
 
     async def update_shard_schedule(
         self,
