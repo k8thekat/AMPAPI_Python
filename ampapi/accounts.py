@@ -176,11 +176,6 @@ class AccountModule(Base):
         When the `Session` holds an enrolment-only session (see :attr:`Session.enrolment_only`), AMP ends that session and
         hands over a full session in its place. The `Session` keeps the full session's token.
 
-        .. warning::
-            AMP 3.0.0 refuses an answer without `transports` in `response["response"]`, and a browser can leave
-            `transports` out. Add ``"transports": []`` when the authenticator gives none. AMP 3.0.1 accepts the answer
-            either way.
-
         Parameters
         ----------
         flow_id : :class:`str`
@@ -199,9 +194,8 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If `response` has no `transports`. AMP answers with a ProblemDetails naming
-            ``Response.Response.Transports``.\n
-            **400** - If AMP refuses the attestation. The error's `code` says why. From AMP's docs and not seen live.\n
+            **400** - If AMP refuses the attestation, eg. a passkey the account already has
+            `passkeys.error.registrationRejected`.\n
             **403** - If the session hasn't proved the password or a passkey recently, see :meth:`Session.reauth`. From
             AMP's docs and not seen live.
 
@@ -280,6 +274,7 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
+            **400** - If `role_ids` is empty `access.error.inviteRoleRequired`.\n
             **400** - If no ID in `role_ids` matches a role `access.error.inviteRoleRequired`.\n
             **403** - If a role in `role_ids` carries a permission the logged in user doesn't hold, from AMP's docs and
             not seen live.\n
@@ -367,7 +362,8 @@ class AccountModule(Base):
         ------
         AMPAPIRequestError
             **400** - If the username is taken.\n
-            **400** - If the password is too weak. The error's `errors` holds every rule the password fails.
+            **400** - If the password is shorter than the password policy allows `users.error.passwordTooShort`. The
+            error's `params` holds the shortest length allowed as `min`, a string.
 
         """
         data: UserCreateRequest = {

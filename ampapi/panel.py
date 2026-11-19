@@ -229,7 +229,7 @@ class Panel(
             raise
 
     # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
-    # AMP 3.0.0 answers the start with 202, then the start fails after pulling its container.
+    # AMP 3.0.0 and 3.0.1 answer the start with 202, then the start fails after pulling its container.
     async def create_shard(
         self,
         template_slug: str,

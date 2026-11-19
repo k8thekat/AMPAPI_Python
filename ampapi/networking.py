@@ -56,7 +56,7 @@ class NetworkModule(Base):
     """
 
     # TODO: Trim the note once AMP fixes the gateway status gaps (U26b, U26e).
-    # AMP 3.0.0 routes a running shard only after it restarts, and reads `Fault` while a new tunnel connects.
+    # AMP 3.0.0 and 3.0.1 route a running shard only after it restarts, and read `Fault` while a new tunnel connects.
     async def create_gateway(self, shard_id: str, front_spire_id: str) -> GatewayResponse:
         """Route a shard through a front spire, so players reach it at that spire's address.
 
@@ -104,7 +104,8 @@ class NetworkModule(Base):
         return await self._request(method="POST", path="/api/networking/gateways", data=data)
 
     # TODO: Drop the note once AMP stops reading `TunnelFault` while a first tunnel is set up (U26a).
-    # AMP 3.0.0 reads `TunnelFault` for about a minute, then the publication's `state` reads `Active` by itself.
+    # AMP 3.0.0 and 3.0.1 read `TunnelFault` for about a minute.
+    # Then the publication's `state` reads `Active` by itself.
     async def create_publication(
         self,
         front_spire_id: str,
@@ -317,7 +318,7 @@ class NetworkModule(Base):
         return await self._request(method="GET", path="/api/networking/tunnels")
 
     # TODO: Trim the warning once AMP's preflight checks what the create checks (U20b, U20c).
-    # AMP 3.0.0 passes an empty body, a gateway on the shard's own spire and a front spire with no public host.
+    # AMP 3.0.0 and 3.0.1 pass an empty body, a gateway on the shard's own spire and a front spire with no public host.
     async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> GatewayPreflightResponse:
         """Check a gateway can be made, before :meth:`create_gateway`.
 
@@ -384,7 +385,7 @@ class NetworkModule(Base):
         return await self._request(method="PUT", path=f"/api/networking/gateways/{gateway_id}/egress", data=data)
 
     # TODO: Drop the old status sentence once AMP answers with the new one (U26c).
-    # AMP 3.0.0 answers a publication turned off with its old `Active` status.
+    # AMP 3.0.0 and 3.0.1 answer a publication turned off with its old `Active` status.
     async def update_publication(
         self,
         publication_id: str,

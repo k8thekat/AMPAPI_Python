@@ -561,7 +561,7 @@ class Shard:
         return await self._module.get_shard_file_ignores(shard_id=self.id, path=path)
 
     async def get_file_info(self, path: str) -> ShardFileResponse:
-        """Get one file's details from this shard, see :meth:`ShardModule.get_shard_file_info`.
+        """Get one file's or folder's details from this shard, see :meth:`ShardModule.get_shard_file_info`.
 
         |coro|
 
@@ -1300,6 +1300,12 @@ class ShardModule(Base):
         session_id : :class:`str`
             The upload's `sessionId` from :meth:`start_shard_file_upload`.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If AMP holds fewer bytes than the `size` the upload started with `files.error.uploadIncomplete`.
+            The error's `params` holds the `expected` and `received` byte counts as strings.
+
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-commit", parameters={"session": session_id})
 
@@ -1402,7 +1408,8 @@ class ShardModule(Base):
         AMPAPIRequestError
             **403** - If the logged in user may not read the file, from AMP's docs and not seen live.\n
             **403** - If the panel's file type rules block the download, from AMP's docs and not seen live.\n
-            **404** - If the path isn't a file `files.error.notFound`, from AMP's docs and not seen live.
+            **404** - If there's no file at the path `files.error.notFound`.\n
+            **404** - If the path is a folder `files.error.notFound`, from AMP's docs and not seen live.
 
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/download-ticket", data={"path": path})
@@ -1425,7 +1432,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/folder", data={"path": path})
 
     # TODO: Drop the 500 from Raises once AMP answers a step with no `type` with a 400 (U16).
-    # AMP 3.0.0 answers 500 to a schedule step that has no `type` key.
+    # AMP 3.0.0 and 3.0.1 answer 500 to a schedule step that has no `type` key.
     async def create_shard_schedule(
         self,
         shard_id: str,
@@ -1619,7 +1626,7 @@ class ShardModule(Base):
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
     # TODO: Reword Raises once AMP refuses an early dismissal cleanly (U22a).
-    # AMP 3.0.0 answers 500 to a dismissal while the move is starting or copying.
+    # AMP 3.0.0 and 3.0.1 answer 500 to a dismissal while the move is starting or copying.
     async def delete_shard_migration(self, shard_id: str) -> None:
         """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has no move to show.
 
@@ -1686,6 +1693,8 @@ class ShardModule(Base):
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}")
 
+    # TODO: Reword Raises once AMP refuses a folder's download with its own error (U17).
+    # AMP 3.0.1 answers a folder's download with 404 "files.error.notFound", saying the folder no longer exists.
     async def download_shard_file(self, shard_id: str, path: str) -> bytes:
         """Download a file from a shard.
 
@@ -1708,7 +1717,9 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If the path is missing or a folder `files.error.notFound`.
+            **404** - If there's no file at the path `files.error.notFound`.\n
+            **404** - If the path is a folder `files.error.notFound`. AMP's message says the folder no longer exists,
+            though the folder is there.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/download", parameters={"path": path}, raw_bytes=True)
@@ -1720,14 +1731,11 @@ class ShardModule(Base):
 
         Endpoints: ``POST /api/shards/{shard_id}/files/zip-ticket``, then ``GET /api/shards/{shard_id}/files/zip``
 
-        AMP 3.0.1 zips through a ticket. This call asks for a ticket that names the paths, then sends the ticket as the
-        zip request's `ticket` query parameter at once, as a ticket works only once and only for 60 seconds.
+        AMP zips through a ticket. This call asks for a ticket that names the paths, then sends the ticket as the zip
+        request's `ticket` query parameter at once, as a ticket works only once and only for 60 seconds.
 
         - The zip skips any path the logged in user may not read.
         - Entry names in the zip are relative to the folder that holds the first path.
-
-        .. warning::
-            AMP 3.0.0 has no ``zip-ticket`` route, so this call can't zip from a panel on AMP 3.0.0.
 
         Parameters
         ----------
@@ -2022,7 +2030,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If the file isn't there `files.error.notFound`.
+            **404** - If there's no file at the path `files.error.notFound`.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/content", parameters={"path": path})
@@ -2050,7 +2058,7 @@ class ShardModule(Base):
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/ignore", parameters={"path": path})
 
     async def get_shard_file_info(self, shard_id: str, path: str) -> ShardFileResponse:
-        """Get one file's details from a shard.
+        """Get one file's or folder's details from a shard.
 
         |coro|
 
@@ -2061,12 +2069,17 @@ class ShardModule(Base):
         shard_id : :class:`str`
             The shard's ID.
         path : :class:`str`
-            The file's path. A folder gets 404, so list its parent with :meth:`get_shard_files` instead.
+            The file's or folder's path.
 
         Returns
         -------
         :class:`ShardFileResponse`
-            The file's size and when it changed.
+            The file's size and when it changed. A folder's `isDirectory` is `True`.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If there's no file at the path `files.error.notFound`.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/stat", parameters={"path": path})
@@ -2123,7 +2136,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **403** - If the path leaves the shard's folder, eg. ``"../.."``.
+            **400** - If the path leaves the shard's folder, eg. ``"../.."`` `files.error.pathInvalid`. The error's
+            `params` holds the `reason` ``"shards.error.pathEscapesShard"``.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
@@ -2618,9 +2632,8 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/config/import", data={"path": path, "content": content})
 
-    # TODO: Trim the move notes once AMP fixes the gaps in U22b, U22e and U32.
-    # AMP 3.0.0 answers 409 to another spire's datastore, has failed the move of a stopped shard that was never updated,
-    # and fails the move of a running shard it stopped for `stop_if_running`.
+    # TODO: Trim the move notes once AMP refuses another spire's datastore with its own error (U22b).
+    # AMP 3.0.0 and 3.0.1 answer 409 to another spire's datastore.
     async def migrate_shard_to_spire(
         self,
         shard_id: str,
@@ -2647,12 +2660,6 @@ class ShardModule(Base):
 
         The shard's ports become free ports on the target spire. A shard that moves back keeps those new ports. A failed
         move's task stays in :meth:`TaskModule.get_running_tasks` for about 30 minutes, unless the task is dismissed.
-
-        .. warning::
-            On AMP 3.0.0 a move of a running shard with `stop_if_running` has failed after AMP stopped the shard for
-            the move ("Stop the server before moving it to another spire"), leaving the shard stopped on its old spire.
-            The failure was seen with games whose stop ends in a kill, while a ``"minecraft-java"`` shard moved fine
-            that way. Stop the shard with :meth:`stop_shard` first.
 
         Parameters
         ----------
@@ -2683,11 +2690,6 @@ class ShardModule(Base):
             **409** - If the shard is running and `stop_if_running` is `False` `shards.error.moveNeedsStop`.\n
             **409** - If the shard didn't stop in time `shards.error.moveStopTimedOut`.\n
             **409** - If the datastore belongs to another spire `spire.error.internal`.
-
-        .. note::
-            A shard that was never updated, its `installedAt` `None` (eg. a fresh clone), has failed its move in the
-            ``"tasks.migration.stage.preparing"`` stage with "Stop the server before moving it to another spire",
-            though the shard was stopped. Run :meth:`update_shard` on the shard first.
 
         """
         data: ShardMigrationRequest = {
@@ -2908,6 +2910,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
+            **404** - If the upload is over, eg. already committed `files.error.uploadSessionGone`.\n
             **409** - If the chunk takes the upload past its declared size and the shard past its disk budget
             `files.error.uploadExceedsBudget`, from AMP's docs and not seen live. AMP drops the upload.
 
@@ -2978,7 +2981,8 @@ class ShardModule(Base):
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=self._without_none(mapping=data))
 
     # TODO: Reword the warning and Raises once AMP lets a deny be undone and answers a bad `state` with a 400 (U24a, U24b).
-    # AMP 3.0.0 answers both with 403 "files.acl.error.notYoursToGrant".
+    # AMP 3.0.0 and 3.0.1 answer the undo of a deny with 403 "files.acl.error.notYoursToGrant".
+    # AMP 3.0.1 answers a bad `state` with 200 and ignores it, on a path where no deny is in the way.
     async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may read, write and delete a path inside a shard.
 
@@ -2987,9 +2991,11 @@ class ShardModule(Base):
         Endpoint: ``PUT /api/shards/{shard_id}/files/acl``
 
         .. warning::
-            A user who denies themself a verb can't undo the deny: sending ``"inherit"`` or ``"allow"`` back answers 403
-            ``"files.acl.error.notYoursToGrant"``, even for the admin, and the deny stays until the shard is deleted.
-            The deny itself takes effect, eg. writing the file then gets 403.
+            - A user who denies themself a verb can't undo the deny: sending ``"inherit"`` or ``"allow"`` back answers
+              403 ``"files.acl.error.notYoursToGrant"``, even for the admin, and the deny stays until the shard is
+              deleted. The deny itself takes effect, eg. writing the file then gets 403.
+            - AMP answers a `state` other than ``"allow"``, ``"deny"`` or ``"inherit"`` with 200 and ignores the
+              change, so the path's rules stay as they were. Check the rules in the reply.
 
         Parameters
         ----------
@@ -3009,8 +3015,6 @@ class ShardModule(Base):
         ------
         AMPAPIRequestError
             **403** - If the change needs access the logged in user doesn't hold `files.acl.error.notYoursToGrant`.\n
-            **403** - If a `state` isn't ``"allow"``, ``"deny"`` or ``"inherit"`` `files.acl.error.notYoursToGrant`.
-            AMP sends the same 403 here, not a 400.\n
             **409** - If the change takes away the logged in user's read of the path.
 
         """
@@ -3248,6 +3252,8 @@ class ShardModule(Base):
 
         return await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/settings", data=data)
 
+    # TODO: Reword the docstring once a running shard's state says if the shard can sleep (U18b).
+    # AMP 3.0.1 sends the state's `sleep` as `None`, and answers the sleep with 202 for a shard that can't sleep.
     async def sleep_shard(self, shard_id: str) -> None:
         """Put a shard to sleep, so it wakes when a player connects.
 
@@ -3255,8 +3261,12 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/sleep``
 
-        `ShardStatus.sleep` says if the shard can sleep; a shard whose template names a sleep port that doesn't exist
-        can't sleep.
+        A shard whose template names a sleep port that doesn't exist can't sleep.
+
+        - With sleep mode on, AMP answers 202 for a shard that can't sleep. The shard's console then says the server
+          can't be put to sleep.
+        - `ShardStatus.sleep` doesn't tell beforehand if the shard can sleep, as AMP 3.0.1 sends `None` for a running
+          shard.
 
         Parameters
         ----------
@@ -3273,7 +3283,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/sleep")
 
     # TODO: Remove the second sentence once AMP refuses to start a shard that was never updated (U15).
-    # AMP 3.0.0 answers the start with 202, then the start fails after pulling its container.
+    # AMP 3.0.0 and 3.0.1 answer the start with 202, then the start fails after pulling its container.
     async def start_shard(self, shard_id: str) -> None:
         """Start a shard's game.
 
@@ -3293,7 +3303,9 @@ class ShardModule(Base):
         ------
         AMPAPIRequestError
             **400** - If the shard is suspended `shards.error.suspended`.\n
-            **409** - If the game's licence isn't accepted `shards.error.eulaRequired`. See :meth:`accept_shard_eula`.\n
+            **409** - If the game's licence isn't accepted `shards.error.eulaRequired`. See :meth:`accept_shard_eula`.
+            The error's `params` holds the game's name as `app`, the licence's `url` and the shard `setting` that keeps
+            the acceptance, eg. ``"eula"``.\n
             **409** - If a setting the game needs is empty `shards.error.settingRequiredBeforeStart`.\n
             **409** - If the shard is already running.
 
@@ -3341,7 +3353,7 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
     # TODO: Reword Raises once AMP refuses a bad target datastore with its own error (U22b).
-    # AMP 3.0.0 answers 409 "spire.error.internal" to the shard's own datastore or an unknown one.
+    # AMP 3.0.0 and 3.0.1 answer 409 "spire.error.internal" to the shard's own datastore or an unknown one.
     async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> None:
         """Move a shard to another datastore on its spire.
 
@@ -3381,8 +3393,8 @@ class ShardModule(Base):
         updating, it aborts the update (``"Update aborted"``); it is the only call that does, as
         :meth:`TaskModule.cancel_task` doesn't.
 
-        AMP 3.0.0 has no call that kills a game at once. A schedule step of the task ``"power.kill"`` does, run with
-        :meth:`run_shard_schedule` (``"shards.msg.forciblyKilled"``).
+        AMP 3.0.0 and 3.0.1 have no call that kills a game at once. A schedule step of the task ``"power.kill"`` does,
+        run with :meth:`run_shard_schedule` (``"shards.msg.forciblyKilled"``).
 
         Parameters
         ----------
@@ -3670,7 +3682,8 @@ class ShardModule(Base):
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/meta", data=data)
 
     # TODO: Drop the warning once AMP keeps the old file until the commit (U30a).
-    # AMP 3.0.0 on a remote spire resizes the file at `upload-start`, so a failed upload leaves it padded with zeros.
+    # AMP 3.0.0 and 3.0.1 on a remote spire resize the file at `upload-start`.
+    # A failed upload then leaves the file padded with zeros.
     async def upload_shard_file(
         self,
         shard_id: str,

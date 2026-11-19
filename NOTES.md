@@ -4,8 +4,9 @@ Developer context for the AMP 3 (6.0.0 beta) branch. AMP 2 support stays on `Ref
 
 ## Test panel (vm3)
 
-- `vm3` (`amp3-beta`) runs AMP `3.0.0` from the `preview` channel, installed 2026-11-06 with `getamp3.sh -y`
-  (rootless Podman, panel on `:8443`, no HTTPS). Its login is `[VM_AMP3]` in `local.ini`, its licence `[LICENSE] amp3`.
+- `vm3` (`amp3-beta`) runs AMP `3.0.1` from the `preview` channel. AMP `3.0.0` was installed 2026-11-06 with
+  `getamp3.sh -y` (rootless Podman, panel on `:8443`, no HTTPS) and updated to `3.0.1` through the panel on
+  2026-11-14. Its login is `[VM_AMP3]` in `local.ini`, its licence `[LICENSE] amp3`.
 - The licence is the "Beta Preview" grade, 50 Instances, valid to 2027-02-04. The preview build itself runs out
   2026-12-07 (`HealthStatusResponse.preview`).
 - HTTPS for passkeys (2026-11-06): Caddy on vm3 serves `https://amp3-beta.anime` with its own local CA
@@ -81,10 +82,10 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   `ASPNETCORE_ENVIRONMENT=Development`; the same document ships beside the binary as `webapi.json`. A type taken from
   it alone carries a `# TODO:` until a capture confirms it (Kat, 2026-11-12). Its `required` lists only C# `required`
   members, so it isn't evidence that AMP leaves a field out.
-- There is no kill and no update abort in AMP 3.0.0 (#3-56.4c): neither route is in its OpenAPI, `stop_shard` kills a
-  game that outlasts its template's `exitTimeout`, and a schedule's `power.kill` step kills at once. The Tasks cancel
-  (`cancel_task`) answers 202 for an update and is ignored (upstream U33); a failed task leaves the running list after
-  about 30 minutes.
+- There is no kill and no update abort in AMP 3.0.0 and 3.0.1 (#3-56.4c, #3-64): neither route is in their OpenAPI,
+  `stop_shard` kills a game that outlasts its template's `exitTimeout`, and a schedule's `power.kill` step kills at
+  once. The Tasks cancel (`cancel_task`) answers 202 for an update and is ignored (upstream U33); a failed task leaves
+  the running list after about 30 minutes.
 - Writes that replace a whole record (#3-56.4b, #3-56.7): a datastore POST carrying an `id` resets every field it
   isn't sent (`softLimitMb` 0, `tags` [], `enabled` true), and an unknown `id` creates one, so
   `update_spire_datastore` reads first and refuses an ID the spire doesn't list. AMP adds the storage medium it detects
@@ -93,7 +94,9 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   session for any start on the same path (vm3, whatever the size), AMP keeps it 24 hours, and no call cancels it, so
   `upload_shard_file` refuses to carry on an upload AMP holds part of unless `resume=True`. On a remote spire
   (`via: "agent"`) the file at the path is resized as the upload starts, and a failed upload leaves it padded with
-  zeros; on the panel's own spire it is untouched until the commit. A move onto an existing file is refused.
+  zeros; on the panel's own spire it is untouched until the commit. A move onto an existing file is refused. AMP 3.0.1
+  still does all of this (#3-64), and codes two refusals: a short commit is 400 `files.error.uploadIncomplete`
+  (`params` `{expected, received}`), and a chunk to a finished upload is 404 `files.error.uploadSessionGone`.
 - A failed call that leaves something behind says so: `AMPAPIUploadError` carries the upload's session and bytes
   held, and an `AMPAPIRequestError` mid-upload or in `clone_shard`'s read-back gains a note (`add_note`) naming the
   session or the copy's ID.
@@ -267,7 +270,8 @@ body, enum and reply, which settled several of these before any call.
 - `ShardPortOutcome.reason` is always 0 from `POST /api/shards`, which silently drops unknown keys such as
   `preferredPorts`; AMP's docs name 0 to 4.
 - Only `minecraft-java` claims sleep among 248 templates, and AMP refused it on the VMs for starting slower than its
-  25 second limit, so `wake`'s success is unseen.
+  25 second limit, so `wake`'s success is unseen. On 3.0.1 (#3-64) a running shard's state has `sleep: null` where 3.0.0
+  gave the reason, and a sleep with sleep mode on answers 202 while the console says the server can't sleep (U18b).
 
 ## AMP 3 API shape
 
@@ -297,8 +301,9 @@ body, enum and reply, which settled several of these before any call.
 - `POST /api/auth/reauth` with `{password}` answers 204; AMP asks for it ("reproof") before sensitive changes.
 - `POST /api/auth/hub-token` gives a 60 second token for the SignalR hub (WebSockets), which is where live events
   come from.
-- A wrong password and an unknown user get the same 401 `{message: "Invalid username or password."}`.
-  One wrong attempt of each did not lock the admin out; lockout wasn't tested further.
+- A wrong password and an unknown user get the same 401 `{code: "auth.login.errorInvalid", params: null, message:
+  "Invalid username or password."}` on AMP 3.0.1; AMP 3.0.0 sent the `message` alone. One wrong attempt of each did
+  not lock the admin out; lockout wasn't tested further.
 
 How `Session` handles them (#3-51.5, 2026-11-08):
 - Calls queued on a login that fails raise that login's error rather than each sending it again, as a busy program
@@ -321,8 +326,8 @@ Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py
   verification is `required`.
 - Register: `POST /api/profile/passkeys/register/begin` gives `{flowId, options}`, then
   `POST /api/profile/passkeys/register/complete {flowId, response, name}` gives `{passkey, session}`.
-  **It refuses an answer with no `response.transports` (400), and the web panel never sends one**, so `[]` has to be
-  added (upstream report 01). AMP 3.0.1 accepts the answer with or without the key (vm3, 2026-11-19, a new key for
+  AMP 3.0.0 answered 400 to an answer with no `response.transports`, and the web panel never sends one, so `[]` had to
+  be added (upstream report 01). AMP 3.0.1 accepts the answer with or without the key (vm3, 2026-11-19, a new key for
   each; AMP refuses the same key twice with 400 `passkeys.error.registrationRejected`). Captures beside each other in
   `_responses/3.0.0/auth/` and `_responses/3.0.1/auth/`.
 - Sign in: `POST /api/auth/passkey/begin` then `POST /api/auth/passkey/complete {flowId, response, rememberMe}`
@@ -350,8 +355,10 @@ Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py
 AMP 3 answers errors in six shapes, so `AMPAPIRequestError` reads whichever keys are there:
 - `{code, params, message}`, AMP's own: `code` is a dotted translation key, eg. `auth.error.reproofRejected`.
 - `{message, reason}`, only for a refused recovery code; `reason` holds the dotted key.
-- `{errors: [str]}`, eg. a password the policy refuses.
-- `{message}`, only for a refused login.
+- `{errors: [str]}`, eg. a password the policy refuses at setup. AMP 3.0.0 used it for `POST /api/users` too, where
+  AMP 3.0.1 answers 400 `users.error.passwordTooShort` in AMP's own shape (#3-64; setup wasn't rechecked).
+- `{message}`, only for a refused login on AMP 3.0.0. AMP 3.0.1 answers it in AMP's own shape,
+  `auth.login.errorInvalid`.
 - ASP.NET ProblemDetails `{type, title, status, errors: {Field: [str]}, traceId}` for a malformed body.
 - No body at all: 401 (with `WWW-Authenticate`) and 403 (no permission).
 

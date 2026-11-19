@@ -586,7 +586,8 @@ class SpireModule(Base):
         await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters={"force": force})
 
     # TODO: Reword the warning once AMP refuses a datastore that still holds an orphan folder (U23).
-    # AMP 3.0.0 accepts it, and the folder drops out of the API's sight.
+    # AMP 3.0.0 and 3.0.1 accept the delete, and the folder drops out of the API's sight.
+    # AMP 3.0.1 still lists the deleted datastore and its orphan in the spire's usage until a rescan.
     async def delete_spire_datastore(self, spire_id: str, datastore_id: str) -> list[DatastoreResponse]:
         """Remove a datastore from a spire.
 
@@ -598,6 +599,10 @@ class SpireModule(Base):
             AMP accepts it while the datastore still holds an orphan folder. The folder stays on disk, and with
             the datastore gone the API can't reach it to purge it; adding a datastore at the same path again lists it
             once more. Purge the orphans first, see :meth:`purge_spire_orphan_directory`.
+
+        .. note::
+            :meth:`get_spire_usage` still lists the deleted datastore and its orphans until the next scan, eg.
+            :meth:`rescan_spire_usage`.
 
         Parameters
         ----------

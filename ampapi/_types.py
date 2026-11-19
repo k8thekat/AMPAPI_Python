@@ -1318,7 +1318,7 @@ class GatewayPreflightResponse(TypedDict):
     """``POST /api/networking/gateways/preflight``, what stands in the way of a gateway."""
 
     # TODO: Drop the field doc once AMP's preflight checks what the create checks (U20b, U20c).
-    # AMP 3.0.0 sends no conflicts for gateways the create refuses.
+    # AMP 3.0.0 and 3.0.1 send no conflicts for gateways the create refuses.
     conflicts: list[GatewayConflict]
     """The shard's ports a publication on the front spire already holds; a shard's own port there isn't one. Empty even
     for a gateway `NetworkModule.create_gateway` refuses, see `NetworkModule.preflight_gateway`."""
@@ -1350,7 +1350,7 @@ class GatewayResponse(TypedDict):
     status: Optional[GatewayStatus]
     "`None` when it's new; the list fills it in once AMP has set the route up."
     # TODO: Reword the field doc once a running shard routes without a restart (U26e).
-    # AMP 3.0.0 routes a shard that was running only after it restarts.
+    # AMP 3.0.0 and 3.0.1 route a shard that was running only after it restarts.
     runningWithoutRoute: bool
     "If the shard was running before the route existed; it routes only once it restarts."
 
@@ -2053,7 +2053,7 @@ class PublicationResponse(TypedDict):
     enabled: bool
     createdAt: str
     # TODO: Drop the last sentence once AMP answers a change with the new status (U26c).
-    # AMP 3.0.0 answers a publication turned off with its old `Active` status.
+    # AMP 3.0.0 and 3.0.1 answer a publication turned off with its old `Active` status.
     status: Optional[PublicationStatus]
     """`None` when it's new; the list fills it in once AMP has checked the forward. A change's reply can carry the
     old one."""
@@ -2572,7 +2572,7 @@ class ShardAddress(TypedDict):
     "The front spire, on a published or gateway address."
     viaSpireName: Optional[str]
     # TODO: Drop the disabled publication sentence once AMP stops reading `Fault` on a disabled endpoint (U26d).
-    # AMP 3.0.0 reads `Fault` on a disabled publication's endpoint though its tunnel is up.
+    # AMP 3.0.0 and 3.0.1 read `Fault` on a disabled publication's endpoint though its tunnel is up.
     tunnelState: Optional[str]
     """eg. ``"Connecting"``, ``"Fault"`` or ``"Ok"`` on a published or gateway address. A disabled publication's
     reads ``"Fault"`` though its tunnel is up."""
@@ -3409,7 +3409,7 @@ class SpireImportItem(TypedDict):
 
 
 # TODO: Check against a live capture; typed from AMP's OpenAPI `LivenessEvidence` alone (#3-53, #3-56.2ar).
-# A running server still left `liveness` empty on AMP 3.0.0.
+# A running server left `liveness` empty on AMP 3.0.0, and so did a stand-in listening on the game's port on 3.0.1.
 class SpireImportLiveness(TypedDict):
     """A sign a found server is still running, from `SpireImportReadyItem.liveness`."""
 
@@ -3454,7 +3454,7 @@ class SpireImportReadyItem(TypedDict):
     size: SpireImportSize
     exists: bool
     # TODO: Check these against a live capture; typed from AMP's OpenAPI `PreflightCandidate` alone (#3-53, #3-56.2ar).
-    # A running server, and a folder imported before, both still left them empty on AMP 3.0.0.
+    # A running server, and a folder imported before, both still left them empty on AMP 3.0.0 and 3.0.1.
     liveness: list[SpireImportLiveness]
     "Signs the server is still running, empty when AMP found no such signs."
     unavailableReason: Optional[str]
@@ -3965,8 +3965,11 @@ class TemplateLifecycle(TypedDict):
     exitString: str
     """The console command that stops the game, eg. ``"stop"``."""
     exitFile: str
+    # TODO: Drop the update sentence once AMP quiesces the game before an update's stop (U14).
+    # AMP 3.0.1 stopped a running `minecraft-java` shard for an update with no `save-off` or `save-all flush`.
     quiescenceCommand: str
-    """Commands sent before a stop or snapshot, split by ``;``, eg. ``"save-off;save-all flush"``."""
+    """Commands sent before a stop or snapshot, split by ``;``, eg. ``"save-off;save-all flush"``.
+    - AMP 3.0.1 doesn't send them when an update stops the game, so only the game's own stop command saves its data."""
     dequiescenceCommand: str
     quiesceAckRegex: str
     quiesceSettleDelayMilliseconds: int

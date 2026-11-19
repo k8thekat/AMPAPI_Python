@@ -64,7 +64,7 @@ class HTTPSModule(Base):
         return await self._request(method="POST", path="/api/https/check", data={"hostName": host_name})
 
     # TODO: Drop the note once AMP's reads follow the change at once (U19a).
-    # AMP 3.0.0 still shows the proxy in `GET /api/https` and the passkey capabilities for a few seconds.
+    # AMP 3.0.0 and 3.0.1 still show the proxy in `GET /api/https` and the passkey capabilities for a few seconds.
     async def delete_own_proxy(self) -> HTTPSStateResponse:
         """Stop trusting the reverse proxy :meth:`set_own_proxy` set.
 
