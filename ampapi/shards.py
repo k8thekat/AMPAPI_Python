@@ -1425,7 +1425,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/folder", data={"path": path})
 
     # TODO: Drop the 500 from Raises once AMP answers a step with no `type` with a 400 (U16).
-    # AMP 3.0.0.6 answers 500 to a schedule step that has no `type` key.
+    # AMP 3.0.0 answers 500 to a schedule step that has no `type` key.
     async def create_shard_schedule(
         self,
         shard_id: str,
@@ -1619,7 +1619,7 @@ class ShardModule(Base):
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
     # TODO: Reword Raises once AMP refuses an early dismissal cleanly (U22a).
-    # AMP 3.0.0.6 answers 500 to a dismissal while the move is starting or copying.
+    # AMP 3.0.0 answers 500 to a dismissal while the move is starting or copying.
     async def delete_shard_migration(self, shard_id: str) -> None:
         """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has no move to show.
 
@@ -2619,7 +2619,7 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/config/import", data={"path": path, "content": content})
 
     # TODO: Trim the move notes once AMP fixes the gaps in U22b, U22e and U32.
-    # AMP 3.0.0.6 answers 409 to another spire's datastore, has failed the move of a stopped shard that was never updated,
+    # AMP 3.0.0 answers 409 to another spire's datastore, has failed the move of a stopped shard that was never updated,
     # and fails the move of a running shard it stopped for `stop_if_running`.
     async def migrate_shard_to_spire(
         self,
@@ -2649,7 +2649,7 @@ class ShardModule(Base):
         move's task stays in :meth:`TaskModule.get_running_tasks` for about 30 minutes, unless the task is dismissed.
 
         .. warning::
-            On AMP 3.0.0.6 a move of a running shard with `stop_if_running` has failed after AMP stopped the shard for
+            On AMP 3.0.0 a move of a running shard with `stop_if_running` has failed after AMP stopped the shard for
             the move ("Stop the server before moving it to another spire"), leaving the shard stopped on its old spire.
             The failure was seen with games whose stop ends in a kill, while a ``"minecraft-java"`` shard moved fine
             that way. Stop the shard with :meth:`stop_shard` first.
@@ -2978,7 +2978,7 @@ class ShardModule(Base):
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=self._without_none(mapping=data))
 
     # TODO: Reword the warning and Raises once AMP lets a deny be undone and answers a bad `state` with a 400 (U24a, U24b).
-    # AMP 3.0.0.6 answers both with 403 "files.acl.error.notYoursToGrant".
+    # AMP 3.0.0 answers both with 403 "files.acl.error.notYoursToGrant".
     async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may read, write and delete a path inside a shard.
 
@@ -3065,7 +3065,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/ignore", data={"paths": paths, "ignored": ignored})
 
     # TODO: Loosen the whole-settings check once AMP's PATCH leaves the fields it isn't sent alone (U13).
-    # AMP 3.0.0.6 resets every infra field a PATCH body leaves out, `containerMode` to Native among them.
+    # AMP 3.0.0 resets every infra field a PATCH body leaves out, `containerMode` to Native among them.
     async def set_shard_infra(self, shard_id: str, settings: ShardInfraSettings) -> ShardInfraUpdateResponse:
         """Replace how a shard runs with the whole of `settings`: container, limits, boot and analytics.
 
@@ -3273,7 +3273,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/sleep")
 
     # TODO: Remove the second sentence once AMP refuses to start a shard that was never updated (U15).
-    # AMP 3.0.0.6 answers the start with 202, then the start fails after pulling its container.
+    # AMP 3.0.0 answers the start with 202, then the start fails after pulling its container.
     async def start_shard(self, shard_id: str) -> None:
         """Start a shard's game.
 
@@ -3341,7 +3341,7 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
     # TODO: Reword Raises once AMP refuses a bad target datastore with its own error (U22b).
-    # AMP 3.0.0.6 answers 409 "spire.error.internal" to the shard's own datastore or an unknown one.
+    # AMP 3.0.0 answers 409 "spire.error.internal" to the shard's own datastore or an unknown one.
     async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> None:
         """Move a shard to another datastore on its spire.
 
@@ -3512,7 +3512,7 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/update")
 
     # TODO: Send only the changes once AMP's PATCH leaves the fields it isn't sent alone (U13).
-    # AMP 3.0.0.6 resets every infra field a PATCH body leaves out.
+    # AMP 3.0.0 resets every infra field a PATCH body leaves out.
     async def update_shard_infra(self, shard_id: str, changes: ShardInfraChanges) -> ShardInfraUpdateResponse:
         """Change any available settings for how a shard runs, keeping the rest: we read the settings from AMP, replace the
         omitted settings with the results and then submit as a whole.
@@ -3670,7 +3670,7 @@ class ShardModule(Base):
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/meta", data=data)
 
     # TODO: Drop the warning once AMP keeps the old file until the commit (U30a).
-    # AMP 3.0.0.6 on a remote spire resizes the file at `upload-start`, so a failed upload leaves it padded with zeros.
+    # AMP 3.0.0 on a remote spire resizes the file at `upload-start`, so a failed upload leaves it padded with zeros.
     async def upload_shard_file(
         self,
         shard_id: str,

@@ -44,7 +44,7 @@ class TaskModule(Base):
     # TODO: A `Task` object, once the tasks hub gives live progress (#3-47.2).
 
     # TODO: Remove the warning once AMP honours a clone's cancel (U25).
-    # AMP 3.0.0.6 answers it with 202, and the clone carries on copying.
+    # AMP 3.0.0 answers it with 202, and the clone carries on copying.
     async def cancel_running_task(self, task_id: str) -> None:
         """Ask AMP to stop a running task.
 
@@ -75,7 +75,7 @@ class TaskModule(Base):
         await self._request(method="POST", path=f"/api/running-tasks/{task_id}/cancel", data={})
 
     # TODO: Reword the warning once AMP's update honours the cancel (U33).
-    # AMP 3.0.0.6 answers 202 and records the cancel, and the update carries on as if it hadn't been sent.
+    # AMP 3.0.0 answers 202 and records the cancel, and the update carries on as if it hadn't been sent.
     async def cancel_task(self, task_id: str, *, tenant_id: str = "_root") -> None:
         """Ask AMP to stop a task, through the task's own record.
 
@@ -88,8 +88,8 @@ class TaskModule(Base):
         is answered 202 too.
 
         .. warning::
-            AMP 3.0.0.6's shard update ignores the cancel: the task's record reads status 4 (cancel asked for) while the
-            update carries on, whether the update was downloading, between steps or starting its container.
+            AMP 3.0.0's shard update ignores the cancel. The task's `TaskResponse.status` reads 4 (cancel asked for)
+            while the update carries on, whether the update was downloading, between steps or starting its container.
             :meth:`ShardModule.stop_shard` is what ends an update.
 
         Parameters

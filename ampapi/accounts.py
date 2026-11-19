@@ -177,8 +177,9 @@ class AccountModule(Base):
         hands over a full session in its place. The `Session` keeps the full session's token.
 
         .. warning::
-            AMP 3.0.0.6 refuses an answer without `transports` in `response["response"]`, and a browser can leave
-            `transports` out. Add ``"transports": []`` when the authenticator gives none.
+            AMP 3.0.0 refuses an answer without `transports` in `response["response"]`, and a browser can leave
+            `transports` out. Add ``"transports": []`` when the authenticator gives none. AMP 3.0.1 accepts the answer
+            either way.
 
         Parameters
         ----------

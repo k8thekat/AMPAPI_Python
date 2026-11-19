@@ -254,10 +254,14 @@ body, enum and reply, which settled several of these before any call.
   `connected` route takes the player's `id`, not their name (404).
 - The analytics avatar and skin routes take a Steam avatar hash and a Mojang texture hash, and `connected` is
   `connected/{shard_id}?user=<id>`; the library had all three keyed by the player's key until #3-54.
-- Every analytics range search (CIDR, prefix, wildcard) answers 500 on AMP 3.0.0.6 (a NATS consumer error in its
-  address service); a whole address works. Erasing a player left them in the sessions summary for at least 11 minutes.
+- Every analytics range search (CIDR, prefix, wildcard) answers 500 on AMP 3.0.0 (a NATS consumer error in its
+  address service), and still on 3.0.1 (`common.error.unexpected`, vm3, 2026-11-19); a whole address works. Erasing
+  a player left them in the sessions summary for at least 11 minutes.
 - A platform warning is raised by conditions such as a spire whose IPv6 goes nowhere (`ipv6BlackHoled`), not by an
   offline spire. A warning that needs action can't be acknowledged (400 `platform.error.warningNotDismissable`).
+- `uptimeSeconds` in `GET /api/support/diagnostics` isn't the panel's uptime (U11). AMP 3.0.0 sent 0. On 3.0.1
+  (vm3, 2026-11-19) it counted up with the clock, but read 5 about 5 seconds after the first diagnostics request in a
+  long while, on a panel whose services had run for 4.7 days.
 - A shard waiting on a user (status 110): a `hytale` shard's update waits for a device sign-in, and the sign-in code
   shows in the running task's `message`. `stop` aborts the update; `update/abort` and `kill` still answer 404 (U12).
 - `ShardPortOutcome.reason` is always 0 from `POST /api/shards`, which silently drops unknown keys such as
@@ -318,7 +322,9 @@ Tested 2026-11-06 with a software authenticator (`.scripts/amp3/passkey_check.py
 - Register: `POST /api/profile/passkeys/register/begin` gives `{flowId, options}`, then
   `POST /api/profile/passkeys/register/complete {flowId, response, name}` gives `{passkey, session}`.
   **It refuses an answer with no `response.transports` (400), and the web panel never sends one**, so `[]` has to be
-  added (upstream report 01).
+  added (upstream report 01). AMP 3.0.1 accepts the answer with or without the key (vm3, 2026-11-19, a new key for
+  each; AMP refuses the same key twice with 400 `passkeys.error.registrationRejected`). Captures beside each other in
+  `_responses/3.0.0/auth/` and `_responses/3.0.1/auth/`.
 - Sign in: `POST /api/auth/passkey/begin` then `POST /api/auth/passkey/complete {flowId, response, rememberMe}`
   gives a normal `{token, expiration}`. `POST /api/auth/passkey/reauth {flowId, response}` (204) proves a session like
   a password `reauth`. `POST /api/auth/passkey/abandon {flowId}` (204) ends a flow.

@@ -586,7 +586,7 @@ class SpireModule(Base):
         await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters={"force": force})
 
     # TODO: Reword the warning once AMP refuses a datastore that still holds an orphan folder (U23).
-    # AMP 3.0.0.6 accepts it, and the folder drops out of the API's sight.
+    # AMP 3.0.0 accepts it, and the folder drops out of the API's sight.
     async def delete_spire_datastore(self, spire_id: str, datastore_id: str) -> list[DatastoreResponse]:
         """Remove a datastore from a spire.
 
@@ -1006,7 +1006,7 @@ class SpireModule(Base):
             With `automatic`, AMP only looks in its own fixed list of other panels' folders (Pterodactyl, Pelican,
             PufferPanel, Crafty, Multicraft, GameAP, Docker volumes), not LinuxGSM's. Any other folder must be listed in
             `AllowedImportRoots` in the spire's ``/etc/amp3/sysagent.conf``, or it comes back in `unreadable`. AMP
-            3.0.0.6's agent can't see under ``/home`` at all, even when it's allowed.
+            3.0.0's agent can't see under ``/home`` at all, even when it's allowed.
 
         Parameters
         ----------

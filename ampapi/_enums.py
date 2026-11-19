@@ -89,7 +89,7 @@ class CloneContent(IntFlag):
 
 
 # TODO: Drop `fault` from the order once a connecting gateway's `state` reads `Connecting` rather than `Fault` (U26b).
-# AMP 3.0.0.6 reads `Fault` while a new gateway's tunnel still connects.
+# AMP 3.0.0 reads `Fault` while a new gateway's tunnel still connects.
 class GatewayState(StrEnum):
     """A gateway's `state`, named as the web panel names it. AMP sends the name, which each member equals.
 
@@ -151,7 +151,7 @@ class MigrationStatus(IntEnum):
 
 
 # TODO: Drop the first publication sentence once AMP stops reading `TunnelFault` while the tunnel is set up (U26a).
-# AMP 3.0.0.6 reads `TunnelFault` "The file does not exist." for about a minute on a first publication.
+# AMP 3.0.0 reads `TunnelFault` "The file does not exist." for about a minute on a first publication.
 class PublicationState(StrEnum):
     """A port forward's `state`, named as the web panel names it. AMP sends the name, which each member equals.
 
@@ -247,7 +247,7 @@ class SnapshotState(IntEnum):
 
 
 # TODO: Drop the cancelled clone sentence once AMP honours a clone's cancel (U25).
-# AMP 3.0.0.6 answers the cancel with 202, and the clone carries on copying.
+# AMP 3.0.0 answers the cancel with 202, and the clone carries on copying.
 class TaskState(IntEnum):
     """A running task's `state`, named as the web panel names it.
 

@@ -318,7 +318,7 @@ __all__: tuple[str, ...] = (
 
 
 # TODO: Check against a live capture; typed from AMP's OpenAPI `AddressGroup` alone (#3-56.3af).
-# Every address search so far found no address, and AMP 3.0.0.6 answers a range search with a 500.
+# Every address search so far found no address, and AMP 3.0.0 and 3.0.1 answer a range search with a 500.
 class AnalyticsAddressGroup(TypedDict):
     """One address an address search found and the players seen at it, from `AnalyticsAddressSearchResponse.addresses`."""
 
@@ -1042,9 +1042,11 @@ class DiagnosticsResponse(TypedDict):
     natsStatus: str
     """The message bus, ``"Connected"`` or ``"Disconnected"``."""
     # TODO: Drop the field doc once AMP reports its uptime (U11).
-    # AMP 3.0.0.6 sends 0 however long the panel has run.
+    # AMP 3.0.0 sends 0. AMP 3.0.1 counted from about the first diagnostics request on a panel up for days.
     uptimeSeconds: int
-    "Always 0 in AMP 3.0.0.6."
+    """Not the panel's uptime.
+    - AMP 3.0.0 sends 0 however long the panel has run.
+    - AMP 3.0.1 counts up, but not from when the panel started."""
     auditOrphanWrites: int
     auditRelaunchCarriedWrites: int
     ipv6: str
@@ -1316,7 +1318,7 @@ class GatewayPreflightResponse(TypedDict):
     """``POST /api/networking/gateways/preflight``, what stands in the way of a gateway."""
 
     # TODO: Drop the field doc once AMP's preflight checks what the create checks (U20b, U20c).
-    # AMP 3.0.0.6 sends no conflicts for gateways the create refuses.
+    # AMP 3.0.0 sends no conflicts for gateways the create refuses.
     conflicts: list[GatewayConflict]
     """The shard's ports a publication on the front spire already holds; a shard's own port there isn't one. Empty even
     for a gateway `NetworkModule.create_gateway` refuses, see `NetworkModule.preflight_gateway`."""
@@ -1348,7 +1350,7 @@ class GatewayResponse(TypedDict):
     status: Optional[GatewayStatus]
     "`None` when it's new; the list fills it in once AMP has set the route up."
     # TODO: Reword the field doc once a running shard routes without a restart (U26e).
-    # AMP 3.0.0.6 routes a shard that was running only after it restarts.
+    # AMP 3.0.0 routes a shard that was running only after it restarts.
     runningWithoutRoute: bool
     "If the shard was running before the route existed; it routes only once it restarts."
 
@@ -2051,7 +2053,7 @@ class PublicationResponse(TypedDict):
     enabled: bool
     createdAt: str
     # TODO: Drop the last sentence once AMP answers a change with the new status (U26c).
-    # AMP 3.0.0.6 answers a publication turned off with its old `Active` status.
+    # AMP 3.0.0 answers a publication turned off with its old `Active` status.
     status: Optional[PublicationStatus]
     """`None` when it's new; the list fills it in once AMP has checked the forward. A change's reply can carry the
     old one."""
@@ -2570,7 +2572,7 @@ class ShardAddress(TypedDict):
     "The front spire, on a published or gateway address."
     viaSpireName: Optional[str]
     # TODO: Drop the disabled publication sentence once AMP stops reading `Fault` on a disabled endpoint (U26d).
-    # AMP 3.0.0.6 reads `Fault` on a disabled publication's endpoint though its tunnel is up.
+    # AMP 3.0.0 reads `Fault` on a disabled publication's endpoint though its tunnel is up.
     tunnelState: Optional[str]
     """eg. ``"Connecting"``, ``"Fault"`` or ``"Ok"`` on a published or gateway address. A disabled publication's
     reads ``"Fault"`` though its tunnel is up."""
@@ -3407,7 +3409,7 @@ class SpireImportItem(TypedDict):
 
 
 # TODO: Check against a live capture; typed from AMP's OpenAPI `LivenessEvidence` alone (#3-53, #3-56.2ar).
-# A running server still left `liveness` empty on AMP 3.0.0.6.
+# A running server still left `liveness` empty on AMP 3.0.0.
 class SpireImportLiveness(TypedDict):
     """A sign a found server is still running, from `SpireImportReadyItem.liveness`."""
 
@@ -3452,7 +3454,7 @@ class SpireImportReadyItem(TypedDict):
     size: SpireImportSize
     exists: bool
     # TODO: Check these against a live capture; typed from AMP's OpenAPI `PreflightCandidate` alone (#3-53, #3-56.2ar).
-    # A running server, and a folder imported before, both still left them empty on AMP 3.0.0.6.
+    # A running server, and a folder imported before, both still left them empty on AMP 3.0.0.
     liveness: list[SpireImportLiveness]
     "Signs the server is still running, empty when AMP found no such signs."
     unavailableReason: Optional[str]
@@ -3531,7 +3533,7 @@ class SpireImportScanServer(TypedDict):
     listingTruncated: bool
     links: int
     # TODO: Check these against a live capture; typed from AMP's OpenAPI `DiscoveredServer` alone (#3-53, #3-56.2ar).
-    # A folder imported before still left them empty on AMP 3.0.0.6.
+    # A folder imported before still left them empty on AMP 3.0.0.
     unmatchedSteamAppIds: list[str]
     "Steam apps found that no template covers."
     alreadyImportedShardId: Optional[str]
