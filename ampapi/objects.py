@@ -547,6 +547,14 @@ class ShardStatus(AMPObject):
     sleep: Optional[ShardSleepStatus]
     is_running: bool
     is_stopped: bool
+    awaits_licence: bool
+    """If the shard is held waiting on its game's licence or not.
+
+    - A start no person was waiting on, eg. a scheduled start, is held before anything launches.
+    - While the shard is held, its `status` reads `ShardState.awaiting_user_action`.
+    - `ShardModule.accept_shard_eula` or `ShardModule.decline_shard_eula` sets `status` back to `ShardState.stopped`.
+      Accepting doesn't start the shard.
+    """
     accepts_traffic: bool
     is_busy: bool
 

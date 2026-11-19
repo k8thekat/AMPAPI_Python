@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from ._types import (
+        DownloadTicketResponse,
         FileACLChange,
         GatewayPreflightResponse,
         GatewayResponse,
@@ -64,6 +65,7 @@ if TYPE_CHECKING:
         ShardFileContentResponse,
         ShardFileIgnoresResponse,
         ShardFileResponse,
+        ShardFileStartResponse,
         ShardImportResponse,
         ShardInfraResponse,
         ShardInfraUpdateResponse,
@@ -246,6 +248,14 @@ class Shard:
         """
         await self._module.accept_shard_eula(shard_id=self.id)
 
+    async def decline_eula(self) -> None:
+        """Decline the game's licence for this shard, see :meth:`ShardModule.decline_shard_eula`.
+
+        |coro|
+
+        """
+        await self._module.decline_shard_eula(shard_id=self.id)
+
     async def acknowledge_disk_warning(self) -> ShardResponse:
         """Dismiss this shard's disk warning, see :meth:`ShardModule.acknowledge_shard_disk_warning`.
 
@@ -310,6 +320,14 @@ class Shard:
         """
         return await self._module.create_shard_custom_port(shard_id=self.id, name=name, protocol=protocol, port=port)
 
+    async def create_file_download_ticket(self, path: str) -> DownloadTicketResponse:
+        """Get a browser's download ticket for a file in this shard, see :meth:`ShardModule.create_shard_file_download_ticket`.
+
+        |coro|
+
+        """
+        return await self._module.create_shard_file_download_ticket(shard_id=self.id, path=path)
+
     async def create_folder(self, path: str) -> None:
         """Make a folder in this shard, see :meth:`ShardModule.create_shard_folder`.
 
@@ -371,6 +389,14 @@ class Shard:
             run_timeout=run_timeout,
             enabled=enabled,
         )
+
+    async def create_snapshot_download_ticket(self, snapshot_id: str) -> DownloadTicketResponse:
+        """Get a browser's download ticket for a snapshot of this shard, see :meth:`ShardModule.create_shard_snapshot_download_ticket`.
+
+        |coro|
+
+        """
+        return await self._module.create_shard_snapshot_download_ticket(shard_id=self.id, snapshot_id=snapshot_id)
 
     async def delete(self) -> ShardResponse:
         """Delete this shard, which it can come back from until it's purged, see :meth:`ShardModule.delete_shard`.
@@ -541,6 +567,14 @@ class Shard:
 
         """
         return await self._module.get_shard_file_info(shard_id=self.id, path=path)
+
+    async def get_file_start(self) -> ShardFileStartResponse:
+        """Get the folder in this shard the web panel's file manager opens at, see :meth:`ShardModule.get_shard_file_start`.
+
+        |coro|
+
+        """
+        return await self._module.get_shard_file_start(shard_id=self.id)
 
     async def get_files(self, path: str = "") -> list[ShardFileResponse]:
         """Get the files and folders in one of this shard's folders, see :meth:`ShardModule.get_shard_files`.
@@ -816,7 +850,7 @@ class Shard:
         return result
 
     async def restore_snapshot(self, snapshot_id: str) -> Snapshot:
-        """Put this shard back to one of its snapshots, see :meth:`ShardModule.restore_shard_snapshot`.
+        """Restore this shard to one of its snapshots, see :meth:`ShardModule.restore_shard_snapshot`.
 
         |coro|
 
@@ -1142,11 +1176,17 @@ class ShardModule(Base):
         self._infra_locks = {}
 
     async def accept_shard_eula(self, shard_id: str) -> None:
-        """Accept the game's licence for a shard, eg. Minecraft's EULA, which it needs before it starts.
+        """Accept the game's licence for a shard, eg. Minecraft's EULA, which the shard needs before it can start.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/eula/accept``
+
+        - AMP records the acceptance in the game's own settings, eg. Minecraft's ``eula.txt``, and in the audit log.
+        - A shard held waiting on its licence (see :meth:`decline_shard_eula`) has its `ShardStatus.status` set back to
+          `ShardState.stopped`, from AMP's docs and not seen live. Accepting doesn't start the shard, so call
+          :meth:`start_shard` after.
+        - For a game with no licence, the call changes nothing, from AMP's docs and not seen live.
 
         Parameters
         ----------
@@ -1155,6 +1195,29 @@ class ShardModule(Base):
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/eula/accept")
+
+    async def decline_shard_eula(self, shard_id: str) -> None:
+        """Decline the game's licence for a shard that's waiting on the licence.
+
+        |coro|
+
+        Endpoint: ``POST /api/shards/{shard_id}/eula/decline``
+
+        A start no person was waiting on, eg. a scheduled start or a start on boot, holds a shard whose licence isn't
+        accepted. While the shard is held, its `ShardStatus.status` reads `ShardState.awaiting_user_action` and its
+        `ShardStatus.awaits_licence` is `True`.
+
+        - Declining sets the shard's `ShardStatus.status` back to `ShardState.stopped`. Nothing is accepted.
+        - The next start asks for the licence again.
+        - A shard that isn't waiting on its licence is left as it is, with no error.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+
+        """
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/eula/decline")
 
     async def acknowledge_shard_disk_warning(self, shard_id: str) -> ShardResponse:
         """Dismiss a shard's disk warning.
@@ -1307,6 +1370,43 @@ class ShardModule(Base):
         data: ShardCustomPortRequest = {"name": name, "protocol": protocol, "port": port}
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/ports/custom", data=data)
 
+    async def create_shard_file_download_ticket(self, shard_id: str, path: str) -> DownloadTicketResponse:
+        """Get a download ticket for a file in a shard, for a browser link to the file.
+
+        |coro|
+
+        Endpoint: ``POST /api/shards/{shard_id}/files/download-ticket``
+
+        A browser follows a link with no `Authorization` header, so the web panel puts a ticket in the link instead:
+        ``GET /api/shards/{shard_id}/files/download?path=...&ticket=...``. Hand a ticket to a person's browser, eg. from
+        a bot. :meth:`download_shard_file` needs no ticket.
+
+        - AMP takes the ticket once, within 60 seconds.
+        - The ticket works only for the logged in user's session, this shard and this `path`.
+        - AMP runs the download's checks when it makes the ticket, and again when the ticket is used.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+        path : :class:`str`
+            The file's path.
+
+        Returns
+        -------
+        :class:`DownloadTicketResponse`
+            The ticket and when it runs out.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the logged in user may not read the file, from AMP's docs and not seen live.\n
+            **403** - If the panel's file type rules block the download, from AMP's docs and not seen live.\n
+            **404** - If the path isn't a file `files.error.notFound`, from AMP's docs and not seen live.
+
+        """
+        return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/download-ticket", data={"path": path})
+
     async def create_shard_folder(self, shard_id: str, path: str) -> None:
         """Make a folder inside a shard. A folder that's already there is fine.
 
@@ -1344,6 +1444,9 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/schedules``
 
         The user who makes it is the one its runs act as, its `runAsUserId`.
+
+        An enabled ``"interval"`` schedule runs once within seconds of being made, for the time slot just past. Eg. an
+        hourly schedule made at 07:07 runs straight away for the 07:00 slot (its `canonicalFireTime`), then at 08:00.
 
         Parameters
         ----------
@@ -1385,6 +1488,44 @@ class ShardModule(Base):
         }
 
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/schedules", data=data)
+
+    async def create_shard_snapshot_download_ticket(self, shard_id: str, snapshot_id: str) -> DownloadTicketResponse:
+        """Get a download ticket for one of a shard's snapshots, for a browser link to the snapshot's zip.
+
+        |coro|
+
+        Endpoint: ``POST /api/shards/{shard_id}/snapshots/{snapshot_id}/download-ticket``
+
+        A browser follows a link with no `Authorization` header, so the web panel puts a ticket in the link instead:
+        ``GET /api/shards/{shard_id}/snapshots/{snapshot_id}/download?ticket=...``. Hand a ticket to a person's
+        browser, eg. from a bot. :meth:`download_shard_snapshot` needs no ticket.
+
+        - AMP takes the ticket once, within 60 seconds.
+        - The ticket works only for the logged in user's session, this shard and this snapshot.
+        - AMP runs the download's checks when it makes the ticket, and again when the ticket is used.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+        snapshot_id : :class:`str`
+            The snapshot's ID.
+
+        Returns
+        -------
+        :class:`DownloadTicketResponse`
+            The ticket and when it runs out.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If there's no snapshot with that ID, from AMP's docs and not seen live.\n
+            **404** - If the snapshot's zip is missing, from AMP's docs and not seen live.\n
+            **409** - If the snapshot is stored on another spire, from AMP's docs and not seen live.
+
+        """
+        path: str = f"/api/shards/{shard_id}/snapshots/{snapshot_id}/download-ticket"
+        return await self._request(method="POST", path=path)
 
     async def delete_shard(self, shard_id: str) -> ShardResponse:
         """Delete a shard. It stays, marked deleted, until :meth:`purge_shard`; :meth:`restore_shard` brings it back.
@@ -1538,7 +1679,9 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If other snapshots build on the snapshot `snapshots.error.hasDependents`.
+            **400** - If other snapshots build on the snapshot `snapshots.error.hasDependents`.\n
+            **409** - If the shard's spire refuses the delete, from AMP's docs and not seen live.\n
+            **503** - If the shard's spire doesn't answer, from AMP's docs and not seen live.
 
         """
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}")
@@ -1575,7 +1718,16 @@ class ShardModule(Base):
 
         |coro|
 
-        Endpoint: ``POST /api/shards/{shard_id}/files/zip``
+        Endpoints: ``POST /api/shards/{shard_id}/files/zip-ticket``, then ``GET /api/shards/{shard_id}/files/zip``
+
+        AMP 3.0.1 zips through a ticket. This call asks for a ticket that names the paths, then sends the ticket as the
+        zip request's `ticket` query parameter at once, as a ticket works only once and only for 60 seconds.
+
+        - The zip skips any path the logged in user may not read.
+        - Entry names in the zip are relative to the folder that holds the first path.
+
+        .. warning::
+            AMP 3.0.0 has no ``zip-ticket`` route, so this call can't zip from a panel on AMP 3.0.0.
 
         Parameters
         ----------
@@ -1589,8 +1741,23 @@ class ShardModule(Base):
         :class:`bytes`
             The zip as it came, all of it in memory.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If `paths` is empty `files.error.nothingSelected`.\n
+            **400** - If `paths` holds more than a ticket takes `files.error.tooManySelected`, from AMP's docs and not
+            seen live.\n
+            **403** - If the logged in user may not read the first path, from AMP's docs and not seen live.\n
+            **404** - If there's no shard with that ID, from AMP's docs and not seen live.
+
         """
-        return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/zip", data={"paths": paths}, raw_bytes=True)
+        ticket: DownloadTicketResponse = await self._request(
+            method="POST",
+            path=f"/api/shards/{shard_id}/files/zip-ticket",
+            data={"paths": paths},
+        )
+        path: str = f"/api/shards/{shard_id}/files/zip"
+        return await self._request(method="GET", path=path, parameters={"ticket": ticket["ticket"]}, raw_bytes=True)
 
     async def download_shard_snapshot(self, shard_id: str, snapshot_id: str) -> bytes:
         """Download one of a shard's snapshots as a zip.
@@ -1610,6 +1777,11 @@ class ShardModule(Base):
         -------
         :class:`bytes`
             The zip as it came, all of it in memory.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If the snapshot is stored on another spire, from AMP's docs and not seen live.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/download", raw_bytes=True)
@@ -1898,6 +2070,35 @@ class ShardModule(Base):
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/stat", parameters={"path": path})
+
+    async def get_shard_file_start(self, shard_id: str) -> ShardFileStartResponse:
+        """Get the folder in a shard the web panel's file manager opens at for the logged in user.
+
+        |coro|
+
+        Endpoint: ``GET /api/shards/{shard_id}/files/start``
+
+        AMP answers the shard's own folder when the logged in user may read that folder. Otherwise AMP walks down from
+        the shard's folder toward the paths the logged in user was granted, and stops at the first folder the logged in
+        user may read or where the grants branch.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+
+        Returns
+        -------
+        :class:`ShardFileStartResponse`
+            The folder, its `path` empty for the shard's own folder.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **403** - If the logged in user may read no path in the shard, from AMP's docs and not seen live.
+
+        """
+        return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/start")
 
     async def get_shard_files(self, shard_id: str, path: str = "") -> list[ShardFileResponse]:
         """Get the files and folders in one of a shard's folders.
@@ -2607,7 +2808,7 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/restore")
 
     async def restore_shard_snapshot(self, shard_id: str, snapshot_id: str) -> Snapshot:
-        """Put a shard back to one of its snapshots. It works on a running shard too.
+        """Restore a shard to one of its snapshots. A running shard can be restored too.
 
         |coro|
 
@@ -2626,6 +2827,12 @@ class ShardModule(Base):
         -------
         :class:`Snapshot`
             The snapshot being restored; follow the restore with :meth:`get_shard_snapshots`.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If the shard's spire refuses the restore, from AMP's docs and not seen live.\n
+            **503** - If the shard's spire doesn't answer, from AMP's docs and not seen live.
 
         """
         path: str = f"/api/shards/{shard_id}/snapshots/{snapshot_id}/restore"
@@ -2697,6 +2904,12 @@ class ShardModule(Base):
         -------
         :class:`ShardUploadChunkResponse`
             How many bytes AMP holds now.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If the chunk takes the upload past its declared size and the shard past its disk budget
+            `files.error.uploadExceedsBudget`, from AMP's docs and not seen live. AMP drops the upload.
 
         """
         path: str = f"/api/shards/{shard_id}/files/upload-chunk"
@@ -3114,6 +3327,16 @@ class ShardModule(Base):
         :class:`ShardUploadSessionResponse`
             The upload's ID and how many bytes AMP already holds.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If `path` is inside an archive, from AMP's docs and not seen live.\n
+            **409** - If `path` is a file AMP writes itself, from AMP's docs and not seen live.\n
+            **409** - If `size` would take the shard past its disk budget `files.error.uploadExceedsBudget`. This is from
+            AMP's docs and not seen live.\n
+            **409** - If no scan has measured the shard yet and `size` alone is over the disk budget
+            `files.error.uploadExceedsBudgetUnmeasured`, from AMP's docs and not seen live.
+
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
@@ -3226,6 +3449,12 @@ class ShardModule(Base):
         -------
         :class:`Snapshot`
             The snapshot, still running; follow it with :meth:`get_shard_snapshots`.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If the shard's spire refuses the snapshot, from AMP's docs and not seen live.\n
+            **503** - If the shard's spire doesn't answer, from AMP's docs and not seen live.
 
         """
         data: SnapshotRequest = {"kind": kind, "content": content, "name": name, "description": description, "sticky": sticky}
@@ -3357,6 +3586,9 @@ class ShardModule(Base):
 
         A webhook step's `url` or `body` sent back as ``"[withheld]"`` keeps what AMP holds, so a user who can't read
         them can still save the schedule.
+
+        An ``"interval"`` schedule this update enables runs once within seconds, for the time slot just past, the same
+        way a new enabled schedule does (see :meth:`create_shard_schedule`).
 
         .. note::
             AMP ignores a schedule's `retryPolicy` and `misfirePolicy` here, so they keep what AMP gave them.
@@ -3559,6 +3791,13 @@ class ShardModule(Base):
             The folder they go in, empty for the shard's own.
         files : Mapping[:class:`str`, :class:`bytes`]
             Each file's path within `folder` to its content, eg. ``{"notes.txt": b"hello"}``.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If a file's path is a file AMP writes itself, from AMP's docs and not seen live.\n
+            **409** - If the files together would take the shard past its disk budget `files.error.uploadExceedsBudget`,
+            from AMP's docs and not seen live. Nothing is written.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload", files=files, parameters={"path": folder})

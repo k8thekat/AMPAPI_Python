@@ -88,13 +88,14 @@ class CloneContent(IntFlag):
     both = 3
 
 
-# TODO: Drop `fault` from the order once AMP reads a connecting tunnel as connecting (U26b).
+# TODO: Drop `fault` from the order once a connecting gateway's `state` reads `Connecting` rather than `Fault` (U26b).
 # AMP 3.0.0.6 reads `Fault` while a new gateway's tunnel still connects.
 class GatewayState(StrEnum):
     """A gateway's `state`, named as the web panel names it. AMP sends the name, which each member equals.
 
-    A new gateway reads `provisioning`, `fault` while its tunnel connects, `awaiting_shard` until a shard that was
-    running restarts, then `connecting` and `active`. The web panel's code also has `disabled`.
+    A new gateway's `state` reads `provisioning`, then `fault` while the gateway's tunnel connects, then
+    `awaiting_shard` until a shard that was running restarts, then `connecting` and `active`. The web panel's code also
+    has `disabled`.
 
     .. versionadded:: 6.0.0
     """
@@ -130,10 +131,13 @@ class LifecycleKind(IntEnum):
 class MigrationStatus(IntEnum):
     """A shard move's `status`, named as the web panel's `ShardMigrationStatus` names it. AMP sends the number.
 
-    A move reads 0 while copying, 2 once it is done, and 3 once it has failed or :meth:`ShardModule.cancel_shard_migration`
-    stopped it (a cancelled move's `error` reads ``"Cancelled."``). A move can be done within
-    one round trip. The record stays until :meth:`ShardModule.delete_shard_migration`. The rest are from the web
-    panel's code.
+    - A move's `status` reads `copying` while the shard's files copy.
+    - The `status` reads `awaiting_cleanup` once the move is done. A move can be done within one round trip.
+    - The `status` reads `failed` once the move has failed, or once :meth:`ShardModule.cancel_shard_migration` stopped
+      the move. A cancelled move's `error` reads ``"Cancelled."``.
+    - The record stays until :meth:`ShardModule.delete_shard_migration`.
+
+    The other members are from the web panel's code.
 
     .. versionadded:: 6.0.0
     """
@@ -151,8 +155,8 @@ class MigrationStatus(IntEnum):
 class PublicationState(StrEnum):
     """A port forward's `state`, named as the web panel names it. AMP sends the name, which each member equals.
 
-    AMP sends `tunnel_provisioning`, `active`, `disabled` and `shard_stopped`, and a first publication reads
-    `tunnel_fault` for about a minute before it turns active. The rest are from the web panel's code.
+    AMP sends `tunnel_provisioning`, `active`, `disabled` and `shard_stopped`. A first publication's `state` reads
+    `tunnel_fault` for about a minute, then `active`. The other members are from the web panel's code.
 
     .. versionadded:: 6.0.0
     """
@@ -247,8 +251,10 @@ class SnapshotState(IntEnum):
 class TaskState(IntEnum):
     """A running task's `state`, named as the web panel names it.
 
-    A task reads 1 while an update downloads, 0 while a clone or move copies, 3 when finished, 4 for a failed move or
-    update and 6 for a cancelled move. A cancelled clone reads 5, then goes back to 0 and finishes anyway.
+    - A task's `state` reads `waiting` while an update downloads, and `running` while a clone or a move copies.
+    - The `state` reads `succeeded` when the task is finished, `failed` for a failed move or update, and `cancelled`
+      for a cancelled move.
+    - A cancelled clone's `state` reads `cancelling`, then `running` again, and the clone finishes anyway.
 
     .. versionadded:: 6.0.0
     """

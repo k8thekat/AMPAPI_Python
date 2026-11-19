@@ -21,7 +21,7 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from .base import Base
 
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
         HealthStatusResponse,
         MessageBusStatsResponse,
         MonitoringThresholdsResponse,
+        PanelUpdateResponse,
         PlatformWarningResponse,
         SettingActionResponse,
         SettingsManifestResponse,
@@ -86,23 +87,28 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
 
-    # TODO: Type the reply once AMP is seen answering it live (#3-47.10, #3-56.2an).
-    # Only the refusal for no newer version is known. AMP's OpenAPI says the body carries the running task's ID, with no shape.
-    async def apply_panel_update(self) -> Any:
+    # The update's task can't be read through the Tasks API (upstream U34), seen updating vm3 from 3.0.0 to 3.0.1
+    async def apply_panel_update(self) -> PanelUpdateResponse:
         """Update the panel's AMP to the latest version on its stream; the panel restarts.
 
         |coro|
 
         Endpoint: ``POST /api/updates/apply``
 
-        AMP tells every other spire to follow, and names the ones that couldn't in the update's running task, see
-        :meth:`TaskModule.get_running_tasks`. Shards keep running. The web panel then watches :meth:`get_health_status`
-        and :meth:`get_update_status` while the panel restarts.
+        AMP tells every other spire to follow. Shards keep running.
+
+        The reply's `taskId` can't be followed, as :meth:`TaskModule.get_task` answers 404 for the task before and after
+        the restart. Watch :meth:`get_health_status` and :meth:`get_update_status` instead, as the web panel does.
+        On an update from AMP 3.0.0 to 3.0.1:
+
+        - The panel answered nothing for about 8 seconds.
+        - :meth:`get_health_status` read ``"starting"`` on the new version 13 seconds after the call.
+        - :meth:`get_health_status` read ``"ready"`` 23 seconds after the call.
 
         Returns
         -------
-        Any
-            AMP's reply as it came, `None` for an empty one.
+        :class:`PanelUpdateResponse`
+            The update's task ID.
 
         Raises
         ------

@@ -104,7 +104,7 @@ class NetworkModule(Base):
         return await self._request(method="POST", path="/api/networking/gateways", data=data)
 
     # TODO: Drop the note once AMP stops reading `TunnelFault` while a first tunnel is set up (U26a).
-    # AMP 3.0.0.6 reads it for about a minute, then the publication turns active by itself.
+    # AMP 3.0.0.6 reads `TunnelFault` for about a minute, then the publication's `state` reads `Active` by itself.
     async def create_publication(
         self,
         front_spire_id: str,
@@ -125,9 +125,9 @@ class NetworkModule(Base):
         always the shard port's own protocol.
 
         .. note::
-            A first publication through another spire can read `PublicationState.tunnel_fault` with
-            ``"The file does not exist."`` for about a minute, while the tunnel's agent is put in place, then turns
-            active by itself.
+            A first publication's `state` through another spire can read `PublicationState.tunnel_fault` with
+            ``"The file does not exist."`` for about a minute, while the tunnel's agent is put in place. The `state`
+            then reads `PublicationState.active` by itself.
 
         Parameters
         ----------

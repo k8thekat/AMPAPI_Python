@@ -79,6 +79,7 @@ __all__: tuple[str, ...] = (
     "DatastoreUsage",
     "DeletedUserResponse",
     "DiagnosticsResponse",
+    "DownloadTicketResponse",
     "ExpiredPasswordRequest",
     "FileACLChange",
     "FilePrincipal",
@@ -128,6 +129,7 @@ __all__: tuple[str, ...] = (
     "MessageErrorResponse",
     "MonitoringThresholdsResponse",
     "NetworkProbe",
+    "PanelUpdateResponse",
     "PasskeyFlowResponse",
     "PasskeyLoginRequest",
     "PasskeyRegisterRequest",
@@ -215,6 +217,7 @@ __all__: tuple[str, ...] = (
     "ShardFileContentResponse",
     "ShardFileIgnoresResponse",
     "ShardFileResponse",
+    "ShardFileStartResponse",
     "ShardImportResponse",
     "ShardImportSkippedFile",
     "ShardInfraChanges",
@@ -1058,6 +1061,15 @@ class DiagnosticsResponse(TypedDict):
     "The coded reason behind `containerRuntimeVerdict`, when AMP gives a reason."
 
 
+class DownloadTicketResponse(TypedDict):
+    """A download ticket, from ``POST /api/shards/{id}/files/download-ticket`` and the other ``download-ticket`` routes."""
+
+    ticket: str
+    """Sent as the download's `ticket` query parameter. AMP takes a ticket once, from the session that asked for it."""
+    expiresAt: str
+    """When AMP stops taking the ticket, 60 seconds after it was made."""
+
+
 class ExpiredPasswordRequest(TypedDict):
     """The body of ``POST /api/auth/change-expired-password``."""
 
@@ -1217,6 +1229,9 @@ class FirewallStatus(TypedDict):
     error: Optional[str]
     updatedAt: str
     agentVersion: str
+    # TODO: Check against a live capture; typed from AMP 3.0.1's OpenAPI `NetworkStatus` alone (#3-60).
+    # AMP's docs give it no description.
+    launchContract: int
 
 
 class FirewallWireGuardInterface(TypedDict):
@@ -1724,6 +1739,14 @@ class NetworkProbe(TypedDict):
     "The machine's network address, `None` when AMP couldn't work the address out."
     externalIp: Optional[str]
     "The machine's public address, `None` when AMP couldn't work the address out."
+
+
+class PanelUpdateResponse(TypedDict):
+    """``POST /api/updates/apply``, the panel's update to a newer AMP."""
+
+    taskId: str
+    """The update's task, which can't be followed: `TaskModule.get_task` answers 404 for the task, before the panel
+    restarts and after. Watch `PlatformModule.get_health_status` instead."""
 
 
 class PasskeyFlowResponse(TypedDict):
@@ -2254,8 +2277,8 @@ class ScheduleStatus(TypedDict):
     # TODO: Check these two against a live capture; typed from AMP's OpenAPI `ScheduleStatus` alone (#3-56.1z).
     # Every capture has them `None`: AMP hasn't turned a schedule off or refused a step on the test VMs.
     turnedOff: Optional[CodedErrorResponse]
-    """Why AMP turned the schedule off, `None` while it hasn't. It stays off until someone who can manage the shard's
-    schedules turns it back on."""
+    """Why AMP turned the schedule off, `None` while AMP hasn't.
+    - The schedule stays off until someone who can manage the shard's schedules turns the schedule back on."""
     refusal: Optional[ScheduleRefusal]
     "A step AMP refused and skipped on the latest run, `None` when it refused none."
     refusalAudited: bool
@@ -2375,6 +2398,9 @@ class SettingAction(TypedDict):
     """eg. ``"smtp.test"`` or ``"templates.sync"``."""
     category: str
     "The `SettingSpec.category` it sits under."
+    # TODO: Check against a live capture; typed from AMP 3.0.1's OpenAPI `SettingsActionInfo` alone (#3-60).
+    subcategory: str
+    "The `SettingSpec.subcategory` the button sits at the end of, empty when the button follows the whole `category`."
 
 
 class SettingActionResponse(TypedDict):
@@ -2508,8 +2534,10 @@ class SetupProvisionStatusResponse(TypedDict):
 
     step: str
     """``"idle"``, ``"downloading"``, ``"configuring"``, ``"testing"``, ``"done"`` or ``"error"``.
-    Only ``"idle"``, ``"downloading"`` and ``"done"`` were seen live. AMP went from ``"downloading"`` to ``"done"``
-    within 5 seconds."""
+    Only ``"idle"``, ``"downloading"``, ``"testing"`` and ``"done"`` were seen live.
+    - AMP 3.0.1 reads ``"testing"`` (`percent` 100) between ``"downloading"`` and ``"done"``; AMP 3.0.0 went straight
+      to ``"done"``.
+    - Provisioning took about 5 seconds."""
     percent: int
     """0 to 100, eg. 0 while ``"downloading"`` and 100 at ``"done"``."""
     # TODO: Check `error` and type `failure` once a capture shows a provisioning that failed (#3-56.9).
@@ -2541,7 +2569,7 @@ class ShardAddress(TypedDict):
     viaSpireId: Optional[str]
     "The front spire, on a published or gateway address."
     viaSpireName: Optional[str]
-    # TODO: Drop the disabled publication sentence once AMP reads it as paused (U26d).
+    # TODO: Drop the disabled publication sentence once AMP stops reading `Fault` on a disabled endpoint (U26d).
     # AMP 3.0.0.6 reads `Fault` on a disabled publication's endpoint though its tunnel is up.
     tunnelState: Optional[str]
     """eg. ``"Connecting"``, ``"Fault"`` or ``"Ok"`` on a published or gateway address. A disabled publication's
@@ -2776,6 +2804,13 @@ class ShardFileResponse(TypedDict):
     size: int
     "In bytes."
     modified: str
+
+
+class ShardFileStartResponse(TypedDict):
+    """``GET /api/shards/{id}/files/start``, the folder the web panel's file manager opens at."""
+
+    path: str
+    "Relative to the shard's folder, empty for the shard's folder itself."
 
 
 class ShardImportResponse(TypedDict):

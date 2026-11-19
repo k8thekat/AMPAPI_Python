@@ -68,14 +68,15 @@ __all__ = ("Session", "redact")
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-# The rules below are the project's own capture tool's (`.scripts/amp3/capture.py`), so both redact alike.
+# The project's own capture tool (`.scripts/amp3/capture.py`) imports `redact`, so both redact alike.
 # Matched on the key's ending, so `code` / `errorCode` stay readable and `licenceKey` / `refreshToken` do not.
 # `passkeyMessageKey` (a translation key) and a setting's `effectiveKey` (its config name) are not secrets, so kept.
 # An analytics `userKey` / `analyticsKey` is kept too, as it means nothing outside this installation.
 # `authorization` and `cookie` cover the request and reply headers that carry a session.
+# `ticket` covers a download ticket, in the `download-ticket` / `zip-ticket` reply and in the download's query (#3-60b).
 SECRET_KEYS = re.compile(
     r"(token|password|secret|jwt|(?<!message)(?<!effective)(?<!user)(?<!analytics)key|credentials|recoverycodes|codes|cacert|blob"
-    r"|externalip|externaladdress|authorization|cookie)$",
+    r"|externalip|externaladdress|authorization|cookie|ticket)$",
     re.IGNORECASE,
 )
 # A game's device sign-in code, wherever it sits in a string: a hytale update put "Authorization code: <code>" in its
@@ -108,8 +109,8 @@ def _blank_public_ip(match: re.Match[str]) -> str:
 def redact(value: Any, key: str = "") -> Any:
     """Hide the secrets in a request or a reply, at any depth.
 
-    A string under a secret-looking key (a token, password, key, secret, recovery code, or the `Authorization`
-    header) becomes ``"<redacted str len=N>"``. A game's sign-in code is blanked wherever it sits in a string, and a
+    A string under a secret-looking key (a token, password, key, secret, recovery code, download ticket, or the
+    `Authorization` header) becomes ``"<redacted str len=N>"``. A game's sign-in code is blanked wherever it sits in a string, and a
     public IP address under an address-like key (`host`, `address`, `url`, ...) becomes ``"<public ip>"``.
     Private addresses are left as they are. Running `redact` again over a redacted copy changes nothing.
 

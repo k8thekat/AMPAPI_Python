@@ -228,6 +228,14 @@ Seen live on 2026-11-09, vm5 against vm4 (`.local_data/plans/spire_lifecycle/fin
 - `POST /api/updates/spires/{id}` answers 400 `updates.error.spireCurrent` for a spire on the panel's version. No older
   AMP 3 release exists to install (the installer has no version option, the apt preview suite holds only 3.0.0), so
   the success reply is unseen.
+- A panel update from 3.0.0 to 3.0.1 was watched on vm3 on 2026-11-14, polled every 2 seconds
+  (`_responses/3.0.0/platform_writes/update_301_vm3/`):
+    - `POST /api/updates/apply` answers 200 `{"taskId": ...}`, the same reply vm4's update gave.
+    - The panel answers nothing for about 8 seconds. Health reads `starting` on the new version 13 seconds after the
+      call, and `ready` 23 seconds after the call.
+    - The `taskId` can't be followed: `GET /api/tasks/{tenant_id}/{task_id}` is a 404 with no AMP code before and
+      after the restart, and the running tasks list is empty minutes later (upstream U34). Watch health and the update status instead, as the
+      web panel does.
 - Import: the automatic scan looks only in other panels' fixed folders, not LinuxGSM's. Any other folder must be in
   `AllowedImportRoots` in the spire's `/etc/amp3/sysagent.conf`, and the agent runs with `ProtectHome=yes`, so it can't
   see `/home` at all. The import itself answers 202 `{taskId}` and works in a `ServerImport` running task.
@@ -262,6 +270,8 @@ body, enum and reply, which settled several of these before any call.
 - REST under `/api/`, JSON bodies, camelCase keys. AMP 2's `POST /API/Module/Method` is gone.
 - An Instance is a **shard** (`/api/shards/{id}/...`) and an ADS/Target is a **spire** (`/api/spires/{id}/...`).
 - AMP's routes ignore case; the library sends every route in lower case (checked live 2026-11-07).
+- AMP 3.0.1 removed `POST /api/shards/{id}/files/zip`, which now answers 404. `download_shard_files` uses the 3.0.1
+  zip ticket instead: `POST .../files/zip-ticket` with the paths, then `GET .../files/zip?ticket=...` at once (#3-60a).
 
 ## Sessions (#3-47)
 
