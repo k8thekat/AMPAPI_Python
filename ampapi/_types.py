@@ -23,6 +23,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal, NotRequired, Optional, TypedDict, Union
 
+# Only the `*Changes` keyword argument types use these. Imported normally, so `typing.get_type_hints` still resolves them.
+
 # Typed, as pyright stops inferring a tuple's items past 256 of them
 __all__: tuple[str, ...] = (
     "AnalyticsAddressGroup",
@@ -145,7 +147,6 @@ __all__: tuple[str, ...] = (
     "PortClaimResponse",
     "PortProtocol",
     "PreferencesChanges",
-    "PreferencesResponse",
     "PreviewStatus",
     "PreviewUpdate",
     "Principal",
@@ -221,9 +222,7 @@ __all__: tuple[str, ...] = (
     "ShardImportResponse",
     "ShardImportSkippedFile",
     "ShardInfraChanges",
-    "ShardInfraResponse",
-    "ShardInfraSettings",
-    "ShardInfraUpdateResponse",
+    "ShardInfraSettingsResponse",
     "ShardManagedFileResponse",
     "ShardMigrationRequest",
     "ShardMigrationTargetResponse",
@@ -1888,62 +1887,30 @@ class PortClaimResponse(TypedDict):
 
 
 class PreferencesChanges(TypedDict, total=False):
-    """The body of ``PATCH /api/users/me/preferences``: any of `PreferencesResponse`'s fields. AMP ignores other names."""
+    """The preferences `AccountModule.update_preferences` takes as keyword arguments, each described there."""
 
-    theme: Optional[str]
-    locale: Optional[str]
-    favouriteAppSlugs: list[str]
-    pinnedShardIds: list[str]
-    notifyOnStateChange: Optional[bool]
-    notifyOnUpdateAvailable: Optional[bool]
-    compactShardHeader: Optional[bool]
-    hideUnroutedShards: Optional[bool]
-    hidePrivatePorts: Optional[bool]
-    fileDetailsWidth: Optional[int]
-    ampExperience: Optional[str]
-    showTutorials: Optional[bool]
-    tutorialPromptDismissed: Optional[bool]
-    tutorialsCompleted: list[str]
-    accessibilityHintsEnabled: Optional[bool]
-    onboardingCompleted: Optional[bool]
-    reducedMotion: Optional[bool]
-    analyticsEnabled: Optional[bool]
-    streamerMode: Optional[bool]
-    timeFormat: Optional[str]
-
-
-class PreferencesResponse(TypedDict):
-    """``GET /api/users/me/preferences``, the logged in user's web panel preferences.
-
-    Changing them (``PATCH /api/users/me/preferences``) and adding or removing a favourite answer with all of them too.
-    A preference never set is `None`.
-    """
-
-    theme: Optional[str]
-    """eg. ``"dark"``."""
-    locale: Optional[str]
-    favouriteAppSlugs: list[str]
-    "Template slugs; AMP doesn't check them against the templates."
-    pinnedShardIds: list[str]
-    notifyOnStateChange: Optional[bool]
-    notifyOnUpdateAvailable: Optional[bool]
-    compactShardHeader: Optional[bool]
-    hideUnroutedShards: Optional[bool]
-    hidePrivatePorts: Optional[bool]
-    fileDetailsWidth: Optional[int]
-    "`None` for the web panel's default width."
-    ampExperience: Optional[str]
-    """``"New"``, ``"UsedPreviousVersions"`` or ``"Experienced"``."""
-    showTutorials: Optional[bool]
-    tutorialPromptDismissed: Optional[bool]
-    tutorialsCompleted: list[str]
-    accessibilityHintsEnabled: Optional[bool]
-    onboardingCompleted: Optional[bool]
-    reducedMotion: Optional[bool]
-    analyticsEnabled: Optional[bool]
-    streamerMode: Optional[bool]
-    timeFormat: Optional[str]
-    """``"System"``, ``"Hours12"`` or ``"Hours24"``."""
+    theme: str
+    locale: str
+    favourite_app_slugs: list[str]
+    pinned_shard_ids: list[str]
+    notify_on_state_change: bool
+    notify_on_update_available: bool
+    compact_shard_header: bool
+    hide_unrouted_shards: bool
+    hide_private_ports: bool
+    file_details_width: int
+    amp_experience: str
+    "A `UserExperienceLevel` member or its value."
+    show_tutorials: bool
+    tutorial_prompt_dismissed: bool
+    tutorials_completed: list[str]
+    accessibility_hints_enabled: bool
+    onboarding_completed: bool
+    reduced_motion: bool
+    analytics_enabled: bool
+    streamer_mode: bool
+    time_format: str
+    "A `TimeFormat` member or its value."
 
 
 class PreviewStatus(TypedDict):
@@ -2561,9 +2528,9 @@ class ShardAddress(TypedDict):
     display: str
     """The address as the web panel shows it, eg. ``"192.0.2.1:25565"``."""
     source: str
-    """``"Advertised"`` (the shard's infra `advertisedAddress`), ``"Published"`` (a publication through another
-    spire), ``"Gateway"`` (the shard's gateway), ``"SpirePublicHost"``, ``"SpireAddress"``, ``"ExternalProbe"`` or
-    ``"LocalAddress"``."""
+    """``"Advertised"`` (the shard's `ShardInfraSettings.advertised_address`), ``"Published"`` (a publication through
+    another spire), ``"Gateway"`` (the shard's gateway), ``"SpirePublicHost"``, ``"SpireAddress"``, ``"ExternalProbe"``
+    or ``"LocalAddress"``."""
     uri: Optional[str]
     notes: list[str]
     """Each of ``"NeedsForward"``, ``"Cgnat"``, ``"NoHairpin"``, ``"ViaFront"`` (served by another spire),
@@ -2670,7 +2637,8 @@ class ShardCreatedResponse(TypedDict):
     """``POST /api/shards`` (201), the new shard with its first settings and ports."""
 
     shard: ShardResponse
-    infraSettings: ShardInfraSettings
+    infraSettings: ShardInfraSettingsResponse
+    "How the shard runs, read as a `ShardInfraSettings` through `Shard.infra_settings`."
     appConfig: ShardAppConfig
     ports: ShardPortAssignments
     portOutcomes: list[ShardPortOutcome]
@@ -2852,79 +2820,57 @@ class ShardImportSkippedFile(TypedDict):
 
 
 class ShardInfraChanges(TypedDict, total=False):
-    """The `ShardInfraSettings` fields a user can set, for ``PATCH /api/shards/{id}/infra`` through `ShardModule.update_shard_infra`."""
+    """The settings `ShardModule.update_shard_infra` takes as keyword arguments, each described there."""
 
-    startOnBoot: bool
-    autoRestartOnCrash: bool
-    startupOrder: int
-    sleepMode: bool
-    advertisedAddress: str
-    advertisedAddressIncludesPort: bool
-    containerMode: str
-    containerImageOverride: Optional[str]
-    memoryLimitMb: int
-    memoryReservationMb: int
-    memorySwapMb: int
-    cpuLimit: float
-    maxUsersCap: int
-    enableAnalytics: bool
-    userSpecificData: bool
-    minimumSessionTimeForRetention: int
-    enableGeoFiltering: bool
-    blockedCountries: list[str]
-    allowedCountries: list[str]
-    blockUnknownCountries: bool
-    geoFilterKickMessage: str
-    geoFilterKickCommand: str
-    diskLimitMb: int
-    importConfigFilesFromSftp: bool
-    extraEnvironment: dict[str, str]
-
-
-class ShardInfraResponse(TypedDict):
-    """``GET /api/shards/{id}/infra``, how a shard runs and what its spire allows."""
-
-    settings: ShardInfraSettings
-    "What `ShardModule.update_shard_infra` takes back, whole or in part."
-    spireName: str
-    spireIsLinux: bool
-    containerPolicy: int
-    logicalCores: int
-    templateOs: int
-    "The systems the template runs on, as flags: 1 Windows, 2 Linux."
-    supportsSleep: bool
-    tracksUsers: bool
-    reportsAddresses: bool
+    start_on_boot: bool
+    auto_restart_on_crash: bool
+    startup_order: int
+    sleep_mode: bool
+    advertised_address: str
+    advertised_address_includes_port: bool
+    container_mode: str
+    "A `ShardContainerMode` member or its value."
+    container_image_override: str
+    memory_limit_mb: int
+    memory_reservation_mb: int
+    memory_swap_mb: int
+    cpu_limit: float
+    max_users_cap: int
+    enable_analytics: bool
+    user_specific_data: bool
+    minimum_session_time_for_retention: int
+    enable_geo_filtering: bool
+    blocked_countries: list[str]
+    allowed_countries: list[str]
+    block_unknown_countries: bool
+    geo_filter_kick_message: str
+    geo_filter_kick_command: str
+    disk_limit_mb: int
+    import_config_files_from_sftp: bool
+    extra_environment: dict[str, str]
 
 
-class ShardInfraSettings(TypedDict):
-    """How a shard runs: container, limits, boot and analytics. `ShardInfraResponse.settings` holds it."""
+class ShardInfraSettingsResponse(TypedDict):
+    """A shard's settings for how it runs, as AMP sends them in `ShardCreatedResponse.infraSettings`.
+
+    `Shard.infra_settings` reads them as a `ShardInfraSettings`, which describes each setting.
+    """
 
     shardId: str
     tenantId: str
     startOnBoot: bool
     autoRestartOnCrash: bool
-    "Restarts a game that exits on its own, once it has run for at least 5 minutes."
     startupOrder: int
-    "The order shards start in when their spire boots, lowest first and equal ones together; 100 by default."
     sleepMode: bool
-    "Takes effect when the shard next starts."
     advertisedAddress: str
     advertisedAddressIncludesPort: bool
     containerMode: str
-    """``"Native"``, ``"Docker"``, ``"Podman"`` or ``"WslContainers"``."""
     containerImageOverride: Optional[str]
     memoryLimitMb: int
-    "0 for no limit. AMP stores a negative number without complaint."
     memoryReservationMb: int
-    "A soft limit, 0 for none; at most `memoryLimitMb` when both are set."
     memorySwapMb: int
-    "Memory and swap together: -1 for no limit, 0 for the container's default (about twice `memoryLimitMb`)."
     cpuLimit: float
-    "In cores, eg. 1.5; 0 for no limit."
     maxUsersCap: int
-    """The most players AMP lets in, whatever the game's `$MaxUsers` says; 0 for none. A lower cap lowers `$MaxUsers`
-    at once."""
     enableAnalytics: bool
     userSpecificData: bool
     minimumSessionTimeForRetention: int
@@ -2935,21 +2881,10 @@ class ShardInfraSettings(TypedDict):
     geoFilterKickMessage: str
     geoFilterKickCommand: str
     diskLimitMb: int
-    "0 for no limit; AMP checks it at the spire's next disk scan."
     importConfigFilesFromSftp: bool
     extraEnvironment: dict[str, str]
     updatedAt: str
     updatedByUserId: str
-
-
-class ShardInfraUpdateResponse(ShardInfraSettings):
-    """``PATCH /api/shards/{id}/infra``, the settings as AMP saved them."""
-
-    # TODO: Check against a live capture; typed from AMP's OpenAPI `ShardInfraSaveResult` alone (#3-56.1z).
-    # Every capture has it `None`; it needs a game that refuses to lower its `$MaxUsers`.
-    clampRefused: Optional[CodedErrorResponse]
-    """Why the game's `$MaxUsers` wasn't lowered to a new `maxUsersCap`, eg. ``"shards.error.maxUsersClampRefused"``;
-    `None` when it was, or didn't need to be. The cap is saved either way."""
 
 
 class ShardManagedFileResponse(TypedDict):
@@ -3187,7 +3122,8 @@ class ShardUsage(TypedDict):
     deletedAt: Optional[str]
     displayName: str
     limitMb: int
-    "The shard's disk limit, its infra `diskLimitMb`; 0 for none, and 0 too until the next measure after one is set."
+    """The shard's disk limit, its `ShardInfraSettings.disk_limit_mb`; 0 for none, and 0 too until the next measure after
+    one is set."""
     limitLevel: str
     """``"None"``, ``"Warning"``, ``"Critical"`` or ``"Exceeded"``, against `limitMb` once the disk use is measured."""
 

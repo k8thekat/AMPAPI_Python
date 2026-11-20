@@ -65,6 +65,9 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - Calls return TypedDicts, except where a reply has the same shape as a hub event: then it's the event's object
   (`objects.py`, an `AMPObject` with snake_case attributes and the raw dict on `.data`), eg. `get_shard_state` gives
   a `ShardStatus` (Kat, 2026-11-07). `Shard` and `Spire` are classes too. There is no `format_data`.
+    - Settings a user reads and then changes are `AMPObject`s too, changed through keyword arguments or passed back
+      whole (#3-66, Kat 2026-11-19, discord.py's `Guild` / `guild.edit(...)` split): `ShardInfra`,
+      `ShardInfraSettings`, `ShardInfraSaveResult` and `Preferences`.
 - `Session._send` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
   4, 8, 8 seconds, as the web panel does), so logins, renewals and the session's own calls get it too, and every
   module call goes through `Session`'s single relogin on a dead session; `Base._request` only hands the call over
@@ -105,6 +108,9 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   with a field doc naming its enum, eg. a gateway's `status.state` is ``"Active"``, and `GatewayState(state)` gives the
   member (a `StrEnum` compares equal to its string). Request bodies take the enum's value; the method parameters keep
   the enum types. Converting into enums is the `AMPObject`s' job, from their hints.
+    - `ShardInfraChanges` and `PreferencesChanges` (#3-66c) type keyword arguments, but keep the rule too (Kat,
+      2026-11-19, #3-66e): `container_mode`, `amp_experience` and `time_format` are a plain `str`, and an enum
+      member passes as its value. The objects still read them as enums.
 - A `bool` in a query is sent as `"true"` / `"false"` by `Session._send`, as yarl (aiohttp's query builder) refuses a
   `bool` (#3-51.4j). Calls send their flags every time, eg. `demo=false`, where they used to leave a `False` one out.
 - `Session` holds `accept_invite` and `preview_invite`, as the invitee has no account yet (#3-50.7). `accept_invite`
@@ -131,6 +137,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   `create_shard` didn't make. `port_outcomes` and `over_licence_limit` exist only in that reply; the other three are a
   snapshot from creation, kept when the panel hands the object out again (`get_infra` / `get_settings` / `get_ports`
   give current values). Live on vm4, `infra_settings` equals `get_infra()["settings"]` straight after creation.
+  `infra_settings` is a `ShardInfraSettings` built from the reply since #3-66. `ShardCreatedResponse.infraSettings`
+  is the raw `ShardInfraSettingsResponse` (Kat's #3-66d), as `_types.py` imports nothing from `objects.py`.
 - `Shard` and `Spire` are equal and hash the same by ID, and sort by `display_name` (#3-50.10, Kat 2026-11-08). The
   registry stays a dict, as a set can't hand back the object it holds without a scan. discord.py pairs a dict
   registry with equal-by-ID objects the same way. The check is `isinstance(other, Shard)`, not `self.__class__`, so the panel's `shard_class` subclass and a
@@ -147,15 +155,39 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   chunked upload in 8 MiB chunks.
 - `PATCH /infra` (#3-64c, Kat 2026-11-19): AMP 3.0.1 changes only the top-level fields it is sent, where 3.0.0 reset
   every field the body left out (U13, fixed). It still ignores a `settings` wrapper, fields and all.
-    - `update_shard_infra` sends only `changes` in one PATCH. Until 3.0.1 it read the settings first, sent them back
+    - `update_shard_infra` sends only the changes in one PATCH. Until 3.0.1 it read the settings first, sent them back
       whole, and held a lock per shard so two calls in one program didn't undo each other; the read and the lock are
       gone.
-    - `update_shard_infra` takes the settings whole or in part. It leaves out AMP's own `shardId`, `tenantId`,
-      `updatedAt` and `updatedByUserId`, which AMP ignores in the PATCH anyway (#3-51.7), so `get_shard_infra`'s inner
-      `settings` goes back whole. A `settings` key (the whole reply) or any other unknown name is refused before
-      sending.
     - `set_shard_infra` and `Shard.set_infra` were removed (Kat, 2026-11-19, while 6.0.0 is a beta): on 3.0.1 they sent
       the same PATCH as `update_shard_infra`.
+    - Keyword arguments and an optional object since #3-66 (Kat, 2026-11-19, a breaking change while 6.0.0 is a beta):
+      `update_shard_infra(shard_id, settings=None, **changes)`, `Shard.update_infra(settings=None, **changes)` and
+      `update_preferences(preferences=None, **changes)` replace the `changes` / `values` TypedDict.
+        - `changes` is typed `Unpack[ShardInfraChanges]` / `Unpack[PreferencesChanges]`, snake_case keys (#3-66c).
+        - A name that isn't a setting is a `TypeError` before sending, worded as Python's own.
+        - The object is sent whole from its attributes, so an edited attribute goes too. AMP's `shardId`, `tenantId`,
+          `updatedAt`, `updatedByUserId` and a save's `clampRefused` aren't settings, so they stay out.
+        - An object's `container_image_override` of `None` is sent as `""`, as AMP reads `null` as "keep". A
+          `Preferences` attribute of `None` is left out.
+        - The keyword arguments win over the object's values, field by field.
+        - `None` keeps a value, as AMP's own PATCH contract says for both routes (OpenAPI `ShardInfraPatch` and
+          `PatchPreferencesRequest`). `Base._key_name` turns each name back into AMP's camelCase.
+    - `ShardInfraSettings` (the TypedDict), `ShardInfraResponse`, `ShardInfraUpdateResponse` and `PreferencesResponse`
+      were removed. `ShardInfraChanges` and `PreferencesChanges` came back with snake_case keys for the keyword
+      arguments. The PATCH bodies are built from them, so `ShardInfraUpdateRequest` and `PreferencesUpdateRequest`
+      went too.
+    - Checked live on vm3 (3.0.1) 2026-11-19: a `{}` PATCH answers 200 on both routes and changes nothing, but the infra
+      one still stamps `updatedAt` and `updatedByUserId`. Kat chose a `ValueError` before sending for an update with
+      no arguments (#3-66b), on both routes.
+    - Also live on vm3:
+        - Each of the 25 infra fields changes alone.
+        - `containerImageOverride` sent as `""` reads back `None`.
+        - `extraEnvironment` and the country lists replace the stored ones.
+        - A `null` field keeps its value on both routes, so a preference can't go back to `None`.
+        - A preference list replaces the stored list, and `add_favourite` puts the new slug first.
+    - What each infra field does on a running game is in `.local_data/plans/settings_objects/findings/infra_fields.md`
+      (#3-66 Phase 2). On vm3 a Podman shard's memory and CPU limits aren't enforced, as rootless Podman falls back to
+      cgroupfs without a systemd user session for `amp`; that's the host's setup, so the docs say only what AMP sets.
 - Writes that replace a whole record, and how the library keeps what the caller didn't name (#3-51.7, checked live on
   vm4 2026-11-09):
     - A schedule PUT replaces everything it's sent (a `timeout` of `null` goes back to 30 minutes) and ignores

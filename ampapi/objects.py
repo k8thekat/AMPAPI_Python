@@ -32,14 +32,18 @@ from typing import Any, ClassVar, Optional, Union, get_args, get_origin, get_typ
 from ._enums import (  # noqa: TC001
     LifecycleKind,
     MigrationStatus,
+    ShardContainerMode,
     ShardState,
     SnapshotContent,
     SnapshotKind,
     SnapshotStage,
     SnapshotState,
     TaskState,
+    TimeFormat,
+    UserExperienceLevel,
 )
 from ._types import (  # noqa: TC001
+    CodedErrorResponse,
     Principal,
     ScheduleStepOutcome,
     ShardSleepStatus,
@@ -57,8 +61,12 @@ __all__ = (
     "ConsoleLine",
     "LifecycleEvent",
     "NetworkStatus",
+    "Preferences",
     "RunningTask",
     "ScheduleExecution",
+    "ShardInfra",
+    "ShardInfraSaveResult",
+    "ShardInfraSettings",
     "ShardMetrics",
     "ShardMigration",
     "ShardPlayer",
@@ -298,6 +306,75 @@ class NetworkStatus(AMPObject):
     """eg. ``"The file does not exist."`` while a first tunnel's agent is set up."""
 
 
+class Preferences(AMPObject):
+    """The logged in user's web panel preferences, from ``GET /api/users/me/preferences``.
+
+    - :meth:`AccountModule.update_preferences`, :meth:`AccountModule.add_favourite` and
+      :meth:`AccountModule.delete_favourite` answer with all of the preferences too.
+    - A preference never set is `None`, which means the web panel's default.
+
+    .. versionadded:: 6.0.0
+    """
+
+    theme: Optional[str]
+    """The web panel's theme, eg. ``"dark"``."""
+    locale: Optional[str]
+    """The language code, eg. ``"en-GB"``."""
+    favourite_app_slugs: list[str]
+    """The slugs of the logged in user's favourite templates, newest first, eg. ``["teeworlds"]``.
+    - The web panel lists the favourites first among the templates.
+    - AMP doesn't check the slugs against the templates."""
+    pinned_shard_ids: list[str]
+    "The IDs of the shards pinned to the web panel's overview, in the order they were pinned."
+    notify_on_state_change: Optional[bool]
+    "If the web panel notifies the logged in user when a shard's state changes or not."
+    notify_on_update_available: Optional[bool]
+    "If the web panel notifies the logged in user when an update is available or not."
+    compact_shard_header: Optional[bool]
+    "If a shard's page shows a compact header without the live graph or not."
+    hide_unrouted_shards: Optional[bool]
+    """If the networking page hides shards that have no route or not.
+    - `None` means off."""
+    hide_private_ports: Optional[bool]
+    """If the networking page hides the ports a game doesn't expose publicly or not.
+    - `None` means on, as a private port can't be published."""
+    file_details_width: Optional[int]
+    """The width in pixels of the file manager's details pane, `None` for the default width.
+    - The web panel keeps the width in range as it reads it, so any number is safe."""
+    amp_experience: Optional[Union[UserExperienceLevel, str]]
+    """How familiar the logged in user said they are with AMP at their first login, `None` if never asked.
+    - A name the library doesn't know stays a plain str."""
+    show_tutorials: Optional[bool]
+    """If the web panel offers its guided tutorials or not.
+    - AMP sets it at the first login from `amp_experience`: on for new and returning users, off for experienced ones."""
+    tutorial_prompt_dismissed: Optional[bool]
+    """If the logged in user turned down the getting started tutorial for good, or finished it.
+    - It stops only the automatic offer. `show_tutorials` still governs each page's tutorial button.
+    - `None` or `False` means the web panel still offers the tutorial."""
+    tutorials_completed: list[str]
+    "The IDs of the tutorials the logged in user ran to the end."
+    accessibility_hints_enabled: Optional[bool]
+    """If the web panel shows extra accessibility hints or not, eg. how to work its confirm slider by keyboard.
+    - `None` if never asked."""
+    onboarding_completed: Optional[bool]
+    """If the logged in user finished the first login's onboarding or not.
+    - `None` or `False` shows the onboarding at the next login."""
+    reduced_motion: Optional[bool]
+    """If the web panel cuts animation that isn't needed or not.
+    - It adds to the browser's own reduced motion setting, and either one turns it on.
+    - `None` or `False` follows the browser's setting alone."""
+    analytics_enabled: Optional[bool]
+    """If the logged in user agreed to anonymous product analytics or not.
+    - `None` or `False` means no analytics."""
+    streamer_mode: Optional[bool]
+    """If the web panel blurs each IP address it shows or not, for streaming or recording the screen.
+    - Console and log text is shown as it is."""
+    time_format: Optional[Union[TimeFormat, str]]
+    """How the web panel writes clock times, 12 or 24 hour.
+    - `None` reads as `TimeFormat.system`, which follows the logged in user's language.
+    - A name the library doesn't know stays a plain str."""
+
+
 class RunningTask(AMPObject):
     """One long job, such as a shard update: the tasks hub's `TaskUpsert` event, and each of ``GET /api/running-tasks``.
 
@@ -386,6 +463,179 @@ class ScheduleExecution(AMPObject):
     step_outcomes: list[ScheduleStepOutcome]
     duration: Optional[str]
     "`None` while it runs."
+
+
+class ShardInfra(AMPObject):
+    """How a shard runs and what its spire and template allow, from ``GET /api/shards/{id}/infra``.
+
+    :meth:`ShardModule.update_shard_infra` changes the `settings`.
+
+    .. versionadded:: 6.0.0
+    """
+
+    settings: ShardInfraSettings
+    spire_name: str
+    "The name of the spire the shard runs on."
+    spire_is_linux: bool
+    "If the shard's spire runs Linux or not."
+    container_policy: int
+    """The template's container support and preference for each system, as flags, eg. 6.
+    - It only recommends a `ShardInfraSettings.container_mode`."""
+    logical_cores: int
+    "The number of logical CPU cores on the shard's spire."
+    template_os: int
+    "The systems the template runs on, as flags: 1 Windows, 2 Linux."
+    supports_sleep: bool
+    """If the shard's template can sleep or not.
+    - `ShardInfraSettings.sleep_mode` does nothing on a template that can't sleep."""
+    tracks_users: bool
+    """If the game reports players connecting or not.
+    - Analytics and geo filtering do nothing on a game that doesn't report players."""
+    reports_addresses: bool
+    """If the game also reports the address a player connected from or not.
+    - Geo filtering and the analytics country breakdown need the address."""
+
+
+class ShardInfraSettings(AMPObject):
+    """A shard's settings for how it runs: container, limits, start up, analytics and geo filtering.
+
+    - `ShardInfra.settings` holds them, from :meth:`ShardModule.get_shard_infra`.
+    - :attr:`Shard.infra_settings` holds the settings a shard was made with.
+    - :meth:`ShardModule.update_shard_infra` changes them.
+
+    .. versionadded:: 6.0.0
+    """
+
+    shard_id: str
+    tenant_id: str
+    start_on_boot: bool
+    """If the shard starts when its spire's machine starts or not.
+    - With it on, the shard starts whether it was running or stopped when the machine went down.
+    - With it off, the shard stays stopped, even if it was running when the machine went down.
+    - A restart of AMP alone starts no shard."""
+    auto_restart_on_crash: bool
+    """If AMP restarts the game when it exits without a stop being asked for or not.
+    - Only a game that was ready and ran for at least 5 minutes is restarted."""
+    startup_order: int
+    """The order shards start in when their spire's machine starts, lowest first, 100 by default.
+    - It orders only the shards with `start_on_boot` on.
+    - The shards start one at a time, each once the shard before it is running.
+    - Shards with the same order start by name."""
+    sleep_mode: bool
+    """If the shard sleeps while no player is connected or not.
+    - While asleep, AMP stops the game and holds its ports, so the shard still shows online.
+    - AMP starts the game again when a player tries to connect.
+    - It does nothing unless the template can sleep, see `ShardInfra.supports_sleep`.
+    - A change takes effect when the shard next starts."""
+    advertised_address: str
+    """The address players are given for the shard, eg. ``"play.example.com"`` or ``"play.example.com:25565"``.
+    - ``""`` lets AMP work out the address itself.
+    - AMP hands the address out as it's given, eg. for a domain, an SRV record or a proxy in front of the shard."""
+    advertised_address_includes_port: bool
+    """If AMP adds the shard's port to `advertised_address` or not.
+    - `False` suits an SRV record or a proxy, where players connect to the host alone.
+    - AMP ignores it when `advertised_address` already has a port."""
+    container_mode: Union[ShardContainerMode, str]
+    """How the shard runs, straight on its spire or in a container.
+    - `ShardContainerMode` says what each mode does.
+    - A name the library doesn't know stays a plain str."""
+    container_image_override: Optional[str]
+    """The container image to run instead of the template's, `None` for the template's image.
+    - An image from AMP's own repository, ``cubecoders/amp3base``, has to name a tag AMP builds, eg.
+      ``"docker.io/cubecoders/amp3base:java-25"``.
+    - An image from AMP's own repository that AMP doesn't build, eg. a retired tag or a digest, is stored, but the shard
+      fails at its next start.
+    - AMP pulls an image from any other repository and runs it as given.
+    - An image that isn't built for AMP, eg. ``"docker.io/library/debian:trixie-slim"``, fails to start."""
+    memory_limit_mb: int
+    """The shard's memory limit in MiB, 0 for no limit.
+    - AMP sets the limit on the container, or on a native shard's systemd unit.
+    - AMP stores a negative number without complaint.
+    - A container with a negative memory limit runs with no memory limit."""
+    memory_reservation_mb: int
+    """The container's soft memory limit in MiB, 0 for none.
+    - AMP refuses a reservation above `memory_limit_mb`.
+    - A native shard has no soft memory limit."""
+    memory_swap_mb: int
+    """The container's memory and swap together in MiB.
+    - -1 for no limit.
+    - 0 for the container runtime's default, about twice `memory_limit_mb`.
+    - AMP refuses any other number below `memory_limit_mb`.
+    - AMP ignores the swap while `memory_limit_mb` is 0.
+    - A native shard has no swap limit."""
+    cpu_limit: float
+    """The shard's CPU limit in cores, eg. 1.5, 0 for no limit.
+    - AMP sets the limit on the container, or on a native shard's systemd unit."""
+    max_users_cap: int
+    """The most players AMP lets in at once, whatever the shard's `$MaxUsers` setting says, 0 for no cap.
+    - A cap below `$MaxUsers` lowers `$MaxUsers` at once, with the shard running or stopped.
+    - A running game's config file keeps the old number, eg. ``max-players`` in a Minecraft ``server.properties``.
+    - A cap above `$MaxUsers` leaves `$MaxUsers` as it is.
+    - AMP refuses a `$MaxUsers` above the cap, see :meth:`ShardModule.set_shard_settings`.
+    - A cap suits hosting that sells a set number of player slots."""
+    enable_analytics: bool
+    """If AMP collects analytics on the players who join or not, where the game reports them.
+    - With it off, the shard adds no sessions to analytics."""
+    user_specific_data: bool
+    """If analytics keeps data on each player or not, eg. who plays the most.
+    - The players have to be told that analytics is in use.
+    - With it off, AMP doesn't look up a player's address, so each session has an unknown country.
+    - With it off, player names and IDs are left out too.
+    - Turning it on doesn't change the sessions already recorded."""
+    minimum_session_time_for_retention: int
+    "The shortest session in seconds that analytics keeps, to leave out very short sessions."
+    enable_geo_filtering: bool
+    """If AMP blocks players from certain countries or not.
+    - AMP sends `geo_filter_kick_command` to the game's console for a player from a country the shard doesn't accept.
+    - It needs a game that logs connections with an address and takes a kick command."""
+    blocked_countries: list[str]
+    """The countries to block, as ISO 3166-1 alpha-2 codes, eg. ``["US"]``."""
+    allowed_countries: list[str]
+    """The countries to allow, as ISO 3166-1 alpha-2 codes.
+    - An empty list allows every country that isn't in `blocked_countries`."""
+    block_unknown_countries: bool
+    """If AMP also blocks players whose country can't be worked out or not.
+    - That includes every player who comes through a published port without a gateway, as the game sees the tunnel's
+      address."""
+    geo_filter_kick_message: str
+    """The message a player blocked by geo filtering gets.
+    - ``{CountryCode}`` and ``{CountryName}`` are replaced with the player's country."""
+    geo_filter_kick_command: str
+    """The console command that disconnects a player blocked by geo filtering, eg. ``'kick "{UserName}" "{Reason}"'``.
+    - ``{UserName}``, ``{UserID}``, ``{Reason}``, ``{CountryCode}`` and ``{CountryName}`` are replaced.
+    - ``{Reason}`` is `geo_filter_kick_message`."""
+    disk_limit_mb: int
+    """The disk limit in MB for the shard's folder, 0 for no limit.
+    - It holds for a shard in a container and a native shard alike.
+    - AMP checks the limit at the spire's disk scans, so the shard can go over it between scans.
+    - Near the limit, the shard's `limitLevel` reads ``"Critical"`` in :meth:`ShardModule.get_shard_disk` and
+      :meth:`SpireModule.get_spire_usage`.
+    - AMP gives no other warning, neither a platform warning nor an entry in :meth:`Panel.get_shards_awaiting_action`.
+    - AMP stops the shard at the first disk scan that finds it over the limit."""
+    import_config_files_from_sftp: bool
+    """If AMP reads a config file it manages back into the shard's settings when the file is written over SFTP or not.
+    - With it off, AMP overwrites the file's change the next time it writes the file."""
+    extra_environment: dict[str, str]
+    """Extra environment variables for the game's process or container, by name.
+    - They're added to the template's variables, and these win where both have a name."""
+    updated_at: str
+    "When the settings last changed, an ISO 8601 time."
+    updated_by_user_id: str
+    "The ID of the user who last changed the settings."
+
+
+class ShardInfraSaveResult(ShardInfraSettings):
+    """A shard's settings for how it runs as AMP saved them, from ``PATCH /api/shards/{id}/infra``.
+
+    .. versionadded:: 6.0.0
+    """
+
+    # TODO: Check against a live capture; typed from AMP's OpenAPI `ShardInfraSaveResult` alone (#3-56.1z).
+    # Every capture has it `None`; it needs a game that refuses to lower its `$MaxUsers`.
+    clamp_refused: Optional[CodedErrorResponse]
+    """Why the game's `$MaxUsers` wasn't lowered to a new `max_users_cap`, eg. ``"shards.error.maxUsersClampRefused"``.
+    - `None` when `$MaxUsers` was lowered, or didn't need to be.
+    - AMP saves the cap either way."""
 
 
 class ShardMetrics(AMPObject):

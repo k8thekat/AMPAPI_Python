@@ -21,9 +21,12 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Optional, Unpack
 
+from ._types import PreferencesChanges
 from .base import Base
+from .objects import Preferences
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -39,8 +42,6 @@ if TYPE_CHECKING:
         PasskeyResponse,
         PasswordChangeRequest,
         PermissionsResponse,
-        PreferencesChanges,
-        PreferencesResponse,
         ProfileRequest,
         ProfileResponse,
         ProfileSessionResponse,
@@ -71,7 +72,7 @@ class AccountModule(Base):
 
     """
 
-    async def add_favourite(self, template_slug: str) -> PreferencesResponse:
+    async def add_favourite(self, template_slug: str) -> Preferences:
         """Add a template to the logged in user's favourites.
 
         |coro|
@@ -88,11 +89,12 @@ class AccountModule(Base):
 
         Returns
         -------
-        :class:`PreferencesResponse`
+        :class:`Preferences`
             All of the logged in user's preferences.
 
         """
-        return await self._request(method="POST", path=f"/api/users/me/preferences/favourites/{template_slug}")
+        result: dict[str, Any] = await self._request(method="POST", path=f"/api/users/me/preferences/favourites/{template_slug}")
+        return Preferences(data=result)
 
     async def add_ssh_key(self, key: str, label: Optional[str] = None, *, expires_at: Optional[str] = None) -> SSHKeyResponse:
         """Add an SSH key to the logged in user's account, for SFTP.
@@ -378,7 +380,7 @@ class AccountModule(Base):
 
         return await self._request(method="POST", path="/api/users", data=data)
 
-    async def delete_favourite(self, template_slug: str) -> PreferencesResponse:
+    async def delete_favourite(self, template_slug: str) -> Preferences:
         """Take a template out of the logged in user's favourites.
 
         |coro|
@@ -394,11 +396,12 @@ class AccountModule(Base):
 
         Returns
         -------
-        :class:`PreferencesResponse`
+        :class:`Preferences`
             All of the logged in user's preferences.
 
         """
-        return await self._request(method="DELETE", path=f"/api/users/me/preferences/favourites/{template_slug}")
+        result: dict[str, Any] = await self._request(method="DELETE", path=f"/api/users/me/preferences/favourites/{template_slug}")
+        return Preferences(data=result)
 
     async def delete_invite(self, invite_id: str) -> None:
         """Revoke an invite, so its code stops working.
@@ -611,7 +614,7 @@ class AccountModule(Base):
         """
         return await self._request(method="GET", path="/api/me/permissions")
 
-    async def get_preferences(self) -> PreferencesResponse:
+    async def get_preferences(self) -> Preferences:
         """Get the logged in user's web panel preferences.
 
         |coro|
@@ -620,11 +623,12 @@ class AccountModule(Base):
 
         Returns
         -------
-        :class:`PreferencesResponse`
-            The preferences; a preference never set is `None`.
+        :class:`Preferences`
+            The preferences. A preference never set is `None`.
 
         """
-        return await self._request(method="GET", path="/api/users/me/preferences")
+        result: dict[str, Any] = await self._request(method="GET", path="/api/users/me/preferences")
+        return Preferences(data=result)
 
     async def get_profile(self) -> ProfileResponse:
         """Get the logged in user's account.
@@ -861,29 +865,106 @@ class AccountModule(Base):
         """
         await self._request(method="PATCH", path=f"/api/profile/passkeys/{passkey_id}", data={"name": name})
 
-    async def update_preferences(self, values: PreferencesChanges) -> PreferencesResponse:
-        """Change some of the logged in user's web panel preferences.
+    async def update_preferences(self, preferences: Optional[Preferences] = None, **changes: Unpack[PreferencesChanges]) -> Preferences:
+        """Change some of the logged in user's web panel preferences. A preference left out stays as it is.
 
         |coro|
 
         Endpoint: ``PATCH /api/users/me/preferences``
 
         .. note::
-            AMP ignores a preference name it doesn't know.
+            A preference can't be set back to `None` (the web panel's default) through this call, as AMP reads `None`
+            as "leave unchanged".
 
         Parameters
         ----------
-        values : :class:`PreferencesChanges`
-            The preferences to change, named as in :class:`PreferencesResponse`, eg. ``{"theme": "dark"}``.
-
+        preferences : Union[:class:`Preferences`, None], optional
+            The logged in user's preferences to send whole, eg. :meth:`get_preferences`'s reply with an attribute changed,
+            by default None.
+            - Each preference is sent from the object's attributes, so an attribute changed on the object is sent too.
+            - A preference that is `None` on the object stays as it is.
+            - A keyword argument wins over the object's value for the same preference.
+            - The object overwrites any change made to the preferences since the object was read.
+        theme : :class:`str`, optional
+            The web panel's theme, eg. ``"dark"``.
+        locale : :class:`str`, optional
+            The language code, eg. ``"en-GB"``.
+        favourite_app_slugs : list[:class:`str`], optional
+            The slugs of the logged in user's favourite templates.
+            - The list replaces the stored list.
+            - :meth:`add_favourite` and :meth:`delete_favourite` change one favourite at a time.
+        pinned_shard_ids : list[:class:`str`], optional
+            The IDs of the shards pinned to the web panel's overview, in pin order.
+            - The list replaces the stored list.
+        notify_on_state_change : :class:`bool`, optional
+            If the web panel notifies the logged in user when a shard's state changes or not.
+        notify_on_update_available : :class:`bool`, optional
+            If the web panel notifies the logged in user when an update is available or not.
+        compact_shard_header : :class:`bool`, optional
+            If a shard's page shows a compact header without the live graph or not.
+        hide_unrouted_shards : :class:`bool`, optional
+            If the networking page hides shards that have no route or not.
+        hide_private_ports : :class:`bool`, optional
+            If the networking page hides the ports a game doesn't expose publicly or not.
+        file_details_width : :class:`int`, optional
+            The width in pixels of the file manager's details pane.
+        amp_experience : :class:`UserExperienceLevel`, optional
+            How familiar the logged in user is with AMP.
+        show_tutorials : :class:`bool`, optional
+            If the web panel offers its guided tutorials or not.
+        tutorial_prompt_dismissed : :class:`bool`, optional
+            If the web panel stops offering the getting started tutorial by itself or not.
+        tutorials_completed : list[:class:`str`], optional
+            The IDs of the tutorials the logged in user ran to the end.
+            - The list replaces the stored list.
+        accessibility_hints_enabled : :class:`bool`, optional
+            If the web panel shows extra accessibility hints or not.
+        onboarding_completed : :class:`bool`, optional
+            If the logged in user finished the first login's onboarding or not.
+            - `False` shows the onboarding at the next login.
+        reduced_motion : :class:`bool`, optional
+            If the web panel cuts animation that isn't needed or not.
+        analytics_enabled : :class:`bool`, optional
+            If the logged in user agrees to anonymous product analytics or not.
+        streamer_mode : :class:`bool`, optional
+            If the web panel blurs each IP address it shows or not.
+        time_format : :class:`TimeFormat`, optional
+            How the web panel writes clock times.
 
         Returns
         -------
-        :class:`PreferencesResponse`
+        :class:`Preferences`
             All of the logged in user's preferences.
 
+        Raises
+        ------
+        TypeError
+            If a keyword argument isn't a preference. Nothing is sent.
+        ValueError
+            If neither `preferences` nor a preference is given. Nothing is sent.
+
         """
-        return await self._request(method="PATCH", path="/api/users/me/preferences", data=values)
+        # The same refusal Python gives a keyword argument the signature doesn't have, before anything is sent
+        for name in changes:
+            if name not in PreferencesChanges.__optional_keys__:
+                msg = f"AccountModule.update_preferences() got an unexpected keyword argument '{name}'"
+                raise TypeError(msg)
+
+        values: dict[str, Any] = {}
+        if preferences is not None:
+            # We send every preference from the object's attributes, as they may have been changed since the read
+            values = {name: getattr(preferences, name) for name in PreferencesChanges.__optional_keys__ if hasattr(preferences, name)}
+        values.update(changes)
+        # A `None` is left out, so AMP keeps that preference
+        body: dict[str, Any] = {
+            self._key_name(name=name): value.value if isinstance(value, Enum) else value
+            for name, value in self._without_none(mapping=values).items()
+        }
+        if not body:
+            msg = "At least one preference must be given."
+            raise ValueError(msg)
+        result: dict[str, Any] = await self._request(method="PATCH", path="/api/users/me/preferences", data=body)
+        return Preferences(data=result)
 
     async def update_profile(self, display_name: Optional[str] = None, *, email: Optional[str] = None) -> ProfileResponse:
         """Change the logged in user's display name and email. Anything left as `None` stays as it is.

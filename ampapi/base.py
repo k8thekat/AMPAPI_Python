@@ -65,6 +65,16 @@ class Base:
         """`mapping` without its `None` values, for a body or query where AMP keeps whatever is left out."""
         return {key: value for key, value in mapping.items() if value is not None}
 
+    @staticmethod
+    def _key_name(name: str) -> str:
+        """The camelCase key AMP reads for a snake_case name, eg. ``"memory_limit_mb"`` becomes ``"memoryLimitMb"``.
+
+        It turns `AMPObject`'s attribute names back, where each word after the first starts with a capital, as in every
+        infra setting and preference key.
+        """
+        words: list[str] = name.removesuffix("_").split("_")
+        return words[0] + "".join(word.capitalize() for word in words[1:])
+
     async def _request(
         self,
         method: str,

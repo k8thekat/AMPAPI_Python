@@ -21,15 +21,28 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Self, Union
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Optional, Self, Unpack
 
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
-from ._types import ShardInfraChanges, ShardInfraSettings
+from ._types import ShardInfraChanges
 from .base import Base
 from .errors import AMPAPIRequestError, AMPAPIUploadError
 
 # from .hubs import PanelHub, ShardHub
-from .objects import ConsoleHistory, ScheduleExecution, ShardMetrics, ShardMigration, ShardPlayer, ShardSnapshots, ShardStatus, Snapshot
+from .objects import (
+    ConsoleHistory,
+    ScheduleExecution,
+    ShardInfra,
+    ShardInfraSaveResult,
+    ShardInfraSettings,
+    ShardMetrics,
+    ShardMigration,
+    ShardPlayer,
+    ShardSnapshots,
+    ShardStatus,
+    Snapshot,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -66,8 +79,6 @@ if TYPE_CHECKING:
         ShardFileResponse,
         ShardFileStartResponse,
         ShardImportResponse,
-        ShardInfraResponse,
-        ShardInfraUpdateResponse,
         ShardManagedFileResponse,
         ShardMigrationRequest,
         ShardMigrationTargetResponse,
@@ -186,9 +197,9 @@ class Shard:
     def infra_settings(self) -> Optional[ShardInfraSettings]:
         """How the shard ran when :meth:`Panel.create_shard` made it, or `None` for any other shard.
 
-        :meth:`get_infra` gives the current settings, under ``"settings"``.
+        :meth:`get_infra` gives the current settings, as its `ShardInfra.settings`.
         """
-        return self._created["infraSettings"] if self._created is not None else None
+        return ShardInfraSettings(data=self._created["infraSettings"]) if self._created is not None else None
 
     @property
     def over_licence_limit(self) -> Optional[bool]:
@@ -591,7 +602,7 @@ class Shard:
         """
         return await self._module.get_shard_import(shard_id=self.id)
 
-    async def get_infra(self) -> ShardInfraResponse:
+    async def get_infra(self) -> ShardInfra:
         """Get how this shard runs, see :meth:`ShardModule.get_shard_infra`.
 
         |coro|
@@ -1074,13 +1085,17 @@ class Shard:
         """
         return await self._module.update_shard(shard_id=self.id)
 
-    async def update_infra(self, changes: Union[ShardInfraSettings, ShardInfraChanges]) -> ShardInfraUpdateResponse:
-        """Change a few of this shard's infra settings, keeping the rest, see :meth:`ShardModule.update_shard_infra`.
+    async def update_infra(
+        self,
+        settings: Optional[ShardInfraSettings] = None,
+        **changes: Unpack[ShardInfraChanges],
+    ) -> ShardInfraSaveResult:
+        """Change any available settings for how this shard runs, keeping the rest, see :meth:`ShardModule.update_shard_infra`.
 
         |coro|
 
         """
-        return await self._module.update_shard_infra(shard_id=self.id, changes=changes)
+        return await self._module.update_shard_infra(shard_id=self.id, settings=settings, **changes)
 
     async def update_schedule(
         self,
@@ -1930,10 +1945,10 @@ class ShardModule(Base):
 
         Endpoint: ``GET /api/shards/{shard_id}/disk``
 
-        AMP only answers it for a shard with a disk limit, its `diskLimitMb` in :meth:`get_shard_infra`; for any other
+        AMP only answers it for a shard with a disk limit, its `ShardInfraSettings.disk_limit_mb`; for any other
         it is a 204, running or stopped and even after :meth:`SpireModule.rescan_spire_usage`. It is the spire's last
         disk scan, not measured on the call. An exceeded limit doesn't list the shard in
-        :meth:`Panel.get_shards_awaiting_action`.
+        :meth:`Panel.get_shards_awaiting_action`. AMP stops the shard at the first disk scan that finds it over the limit.
 
         Parameters
         ----------
@@ -1943,9 +1958,9 @@ class ShardModule(Base):
         Returns
         -------
         Union[:class:`ShardUsage`, None]
-            The shard's entry from :meth:`SpireModule.get_spire_usage`, its `limitLevel` ``"Exceeded"`` once the use
-            passes the limit; `None` (a 204) with no disk limit, before a scan has covered the shard or when the scan
-            didn't find its folder. Read `None` as unknown, never as under the limit.
+            The shard's entry from :meth:`SpireModule.get_spire_usage`, its `limitLevel` ``"Critical"`` near the limit and
+            ``"Exceeded"`` once the use passes the limit; `None` (a 204) with no disk limit, before a scan has covered the
+            shard or when the scan didn't find its folder. Read `None` as unknown, never as under the limit.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/disk")
@@ -2146,8 +2161,8 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/import")
 
-    async def get_shard_infra(self, shard_id: str) -> ShardInfraResponse:
-        """Get how a shard runs: container, limits, boot and analytics, and what its spire allows.
+    async def get_shard_infra(self, shard_id: str) -> ShardInfra:
+        """Get how a shard runs, and what its spire and template allow.
 
         |coro|
 
@@ -2160,11 +2175,13 @@ class ShardModule(Base):
 
         Returns
         -------
-        :class:`ShardInfraResponse`
-            `ShardInfraResponse.settings`, which :meth:`update_shard_infra` takes back whole, and the spire's limits.
+        :class:`ShardInfra`
+            The shard's `ShardInfra.settings`, which :meth:`update_shard_infra` changes, and what its spire and template
+            allow.
 
         """
-        return await self._request(method="GET", path=f"/api/shards/{shard_id}/infra")
+        result: dict[str, Any] = await self._request(method="GET", path=f"/api/shards/{shard_id}/infra")
+        return ShardInfra(data=result)
 
     async def get_shard_ip_options(self, shard_id: str) -> list[SpireIPOptionResponse]:
         """Get the addresses a shard can bind to.
@@ -3149,7 +3166,8 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If the setting doesn't allow an enum value `shards.error.valueNotAllowed`.
+            **400** - If the setting doesn't allow an enum value `shards.error.valueNotAllowed`.\n
+            **400** - If `$MaxUsers` is above the shard's `ShardInfraSettings.max_users_cap` `shards.error.maxUsersAboveCap`.
 
         """
         await self._request(method="PATCH", path=f"/api/shards/{shard_id}/settings", data=values)
@@ -3466,57 +3484,153 @@ class ShardModule(Base):
     async def update_shard_infra(
         self,
         shard_id: str,
-        changes: Union[ShardInfraSettings, ShardInfraChanges],
-    ) -> ShardInfraUpdateResponse:
+        settings: Optional[ShardInfraSettings] = None,
+        **changes: Unpack[ShardInfraChanges],
+    ) -> ShardInfraSaveResult:
         """Change any available settings for how a shard runs, keeping the rest.
 
         |coro|
 
         Endpoint: ``PATCH /api/shards/{shard_id}/infra``
 
-        AMP changes only the fields `changes` names. A change takes effect when the shard next starts.
+        - A setting left out stays as it is.
+        - Most changes take effect when the shard next starts.
+        - A lower `max_users_cap` lowers the shard's `$MaxUsers` setting at once.
 
-        .. warning::
-            AMP reads only the body's top-level fields and ignores a `settings` wrapper without an error. Unwrap
-            :meth:`get_shard_infra`'s reply and pass its inner `settings`.
+        :meth:`get_shard_infra` reads the settings, and :class:`ShardInfraSettings` describes each setting further.
 
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        changes : Union[:class:`ShardInfraSettings`, :class:`ShardInfraChanges`]
-            The settings to change, eg. ``{"startOnBoot": True}``.
-            - A whole `ShardInfraSettings` works too, eg. :meth:`get_shard_infra`'s inner `settings`. Its `shardId`,
-              `tenantId`, `updatedAt` and `updatedByUserId` are left out, as AMP sets them itself.
-            - AMP doesn't check the values, eg. a negative memory limit.
+        settings : Union[:class:`ShardInfraSettings`, None], optional
+            The shard's settings to send whole, eg. :meth:`get_shard_infra`'s `ShardInfra.settings` with an attribute
+            changed, by default None.
+            - Each setting is sent from the object's attributes, so an attribute changed on the object is sent too.
+            - A keyword argument wins over the object's value for the same setting.
+            - The object overwrites any change made to the shard's settings since the object was read.
+            - A :class:`ShardInfraSaveResult` works too.
+        start_on_boot : :class:`bool`, optional
+            If the shard starts when its spire's machine starts or not.
+        auto_restart_on_crash : :class:`bool`, optional
+            If AMP restarts the game when it exits without a stop being asked for or not.
+            - Only a game that was ready and ran for at least 5 minutes is restarted.
+        startup_order : :class:`int`, optional
+            The order the shard starts in when its spire's machine starts, lowest first.
+            - AMP gives a new shard 100.
+        sleep_mode : :class:`bool`, optional
+            If the shard sleeps while no player is connected or not.
+            - It does nothing unless the template can sleep, see `ShardInfra.supports_sleep`.
+        advertised_address : :class:`str`, optional
+            The address players are given for the shard, eg. ``"play.example.com"``.
+            - ``""`` lets AMP work out the address itself.
+        advertised_address_includes_port : :class:`bool`, optional
+            If AMP adds the shard's port to the advertised address or not.
+        container_mode : :class:`ShardContainerMode`, optional
+            How the shard runs, straight on its spire or in a container.
+            - `ShardContainerMode` says what each mode does.
+        container_image_override : :class:`str`, optional
+            The container image to run instead of the template's.
+            - ``""`` goes back to the template's image.
+            - An image from AMP's own repository that AMP doesn't build is stored, but the shard fails at its next start.
+        memory_limit_mb : :class:`int`, optional
+            The shard's memory limit in MiB, 0 for no limit.
+            - A native shard takes the limit too.
+            - AMP stores a negative number without complaint.
+        memory_reservation_mb : :class:`int`, optional
+            The container's soft memory limit in MiB, 0 for none.
+            - It can't be above the shard's memory limit.
+        memory_swap_mb : :class:`int`, optional
+            The container's memory and swap together in MiB.
+            - -1 for no limit.
+            - 0 for the container runtime's default, about twice the memory limit.
+            - Any other number can't be below the shard's memory limit.
+        cpu_limit : :class:`float`, optional
+            The shard's CPU limit in cores, eg. 1.5, 0 for no limit.
+            - A native shard takes the limit too.
+        max_users_cap : :class:`int`, optional
+            The most players AMP lets in at once, whatever the shard's `$MaxUsers` setting says, 0 for no cap.
+            - A lower cap lowers `$MaxUsers` at once, see `ShardInfraSaveResult.clamp_refused`.
+            - A running game's config file keeps the old number.
+        enable_analytics : :class:`bool`, optional
+            If AMP collects analytics on the players who join or not.
+        user_specific_data : :class:`bool`, optional
+            If analytics keeps data on each player or not, eg. who plays the most.
+            - The players have to be told that analytics is in use.
+        minimum_session_time_for_retention : :class:`int`, optional
+            The shortest session in seconds that analytics keeps.
+        enable_geo_filtering : :class:`bool`, optional
+            If AMP blocks players from certain countries or not.
+        blocked_countries : list[:class:`str`], optional
+            The countries to block, as ISO 3166-1 alpha-2 codes, eg. ``["US"]``.
+            - The list replaces the stored list.
+        allowed_countries : list[:class:`str`], optional
+            The countries to allow, as ISO 3166-1 alpha-2 codes.
+            - The list replaces the stored list.
+            - An empty list allows every country that isn't blocked.
+        block_unknown_countries : :class:`bool`, optional
+            If AMP also blocks players whose country can't be worked out or not.
+        geo_filter_kick_message : :class:`str`, optional
+            The message a player blocked by geo filtering gets.
+            - ``{CountryCode}`` and ``{CountryName}`` are replaced with the player's country.
+        geo_filter_kick_command : :class:`str`, optional
+            The console command that disconnects a player blocked by geo filtering.
+            - ``{UserName}``, ``{UserID}``, ``{Reason}``, ``{CountryCode}`` and ``{CountryName}`` are replaced.
+        disk_limit_mb : :class:`int`, optional
+            The disk limit in MB for the shard's folder, 0 for no limit.
+            - AMP checks the limit at the spire's disk scans.
+            - AMP stops the shard at the first disk scan that finds it over the limit.
+        import_config_files_from_sftp : :class:`bool`, optional
+            If AMP reads a config file it manages back into the shard's settings when the file is written over SFTP or
+            not.
+        extra_environment : dict[:class:`str`, :class:`str`], optional
+            Extra environment variables for the game's process or container, by name.
+            - The dict replaces the stored variables, and ``{}`` removes them all.
 
         Returns
         -------
-        :class:`ShardInfraUpdateResponse`
+        :class:`ShardInfraSaveResult`
             The settings as AMP saved them.
 
         Raises
         ------
+        AMPAPIRequestError
+            **400** - If `container_mode` isn't a mode AMP knows.\n
+            **400** - If the memory reservation is above the shard's memory limit
+            `shards.error.memoryReservationExceedsLimit`.\n
+            **400** - If the memory and swap limit is below the shard's memory limit `shards.error.memorySwapLessThanLimit`.
+        TypeError
+            If a keyword argument isn't a setting. Nothing is sent.
         ValueError
-            If `changes` has a `settings` key, eg. :meth:`get_shard_infra`'s whole reply. Nothing is sent.\n
-            If a name in `changes` isn't an infra setting a user can change. Nothing is sent.
+            If neither `settings` nor a setting is given. Nothing is sent.
 
         """
-        # AMP answers a wrapped body with 200 and applies none of it, so we refuse it before sending
-        if "settings" in changes:
-            msg = "The infra changes hold a settings key, whose fields AMP ignores. Pass get_shard_infra's inner settings."
+        # The same refusal Python gives a keyword argument the signature doesn't have, before anything is sent
+        for name in changes:
+            if name not in ShardInfraChanges.__optional_keys__:
+                msg = f"ShardModule.update_shard_infra() got an unexpected keyword argument '{name}'"
+                raise TypeError(msg)
+
+        values: dict[str, Any] = {}
+        if settings is not None:
+            # We send every setting from the object's attributes, as they may have been changed since the read.
+            # AMP's own `shard_id`, `tenant_id`, `updated_*` and a save's `clamp_refused` aren't settings, so they stay out.
+            values = {name: getattr(settings, name) for name in ShardInfraChanges.__optional_keys__ if hasattr(settings, name)}
+            # The object's `None` means the template's image, and AMP reads `None` as "keep", so we send `""`
+            if "container_image_override" in values and values["container_image_override"] is None:
+                values["container_image_override"] = ""
+
+        values.update(changes)
+        # A `None` is left out, so AMP keeps that setting
+        body: dict[str, Any] = {
+            self._key_name(name=name): value.value if isinstance(value, Enum) else value
+            for name, value in self._without_none(mapping=values).items()
+        }
+        if not body:
+            msg = "At least one infra setting must be given."
             raise ValueError(msg)
-
-        # AMP stamps its own fields of a whole `ShardInfraSettings` itself, so we leave them out
-        stamps: set[str] = {"shardId", "tenantId", "updatedAt", "updatedByUserId"}
-        body: dict[str, Any] = {name: value for name, value in changes.items() if name not in stamps}
-        unknown: list[str] = sorted(body.keys() - ShardInfraChanges.__optional_keys__)
-
-        if unknown:
-            msg = f"{', '.join(unknown)} aren't infra settings a user can change; see ShardInfraChanges for the names."
-            raise ValueError(msg)
-
-        return await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=body)
+        result: dict[str, Any] = await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=body)
+        return ShardInfraSaveResult(data=result)
 
     async def update_shard_schedule(
         self,

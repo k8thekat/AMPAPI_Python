@@ -30,12 +30,15 @@ __all__ = (
     "LifecycleKind",
     "MigrationStatus",
     "PublicationState",
+    "ShardContainerMode",
     "ShardState",
     "SnapshotContent",
     "SnapshotKind",
     "SnapshotStage",
     "SnapshotState",
     "TaskState",
+    "TimeFormat",
+    "UserExperienceLevel",
 )
 
 
@@ -176,6 +179,27 @@ class PublicationState(StrEnum):
     tunnel_unavailable = "TunnelUnavailable"
 
 
+class ShardContainerMode(StrEnum):
+    """A shard's `ShardInfraSettings.container_mode`, named as AMP names it. AMP sends the name, which each member equals.
+
+    - `native` runs the game straight on its spire, without a container.
+    - A `native` shard's game runs as a system user AMP makes for the shard, under a systemd unit for the shard.
+    - `podman` runs the game in a Podman container.
+    - `docker` runs the game in a Docker container.
+    - On a spire without Docker, AMP runs a `docker` shard under Podman, without a warning.
+    - On a Linux spire, AMP runs a `wsl_containers` shard under Podman, without a warning.
+    - Each shard has a mode set, as AMP has no automatic mode.
+    - The template's container policy, `ShardInfra.container_policy`, is only a recommendation.
+
+    .. versionadded:: 6.0.0
+    """
+
+    docker = "Docker"
+    native = "Native"
+    podman = "Podman"
+    wsl_containers = "WslContainers"
+
+
 class ShardState(IntEnum):
     """A shard's `status`, named as the web panel names it. AMP sends the number.
 
@@ -266,3 +290,34 @@ class TaskState(IntEnum):
     failed = 4
     cancelling = 5
     cancelled = 6
+
+
+class TimeFormat(StrEnum):
+    """The logged in user's `Preferences.time_format`, named as AMP names it. AMP sends the name, which each member equals.
+
+    - `hours_12` and `hours_24` set how the web panel writes clock times.
+    - `system` follows the logged in user's language. A `time_format` of `None` reads the same way.
+
+    .. versionadded:: 6.0.0
+    """
+
+    hours_12 = "Hours12"
+    hours_24 = "Hours24"
+    system = "System"
+
+
+class UserExperienceLevel(StrEnum):
+    """The logged in user's `Preferences.amp_experience`, named as AMP names it. AMP sends the name, which each member equals.
+
+    The web panel asks how familiar the logged in user is with AMP at their first login.
+
+    - `new`: the logged in user is new to AMP.
+    - `used_previous_versions`: the logged in user has used an earlier AMP.
+    - `experienced`: the logged in user knows AMP well.
+
+    .. versionadded:: 6.0.0
+    """
+
+    experienced = "Experienced"
+    new = "New"
+    used_previous_versions = "UsedPreviousVersions"
