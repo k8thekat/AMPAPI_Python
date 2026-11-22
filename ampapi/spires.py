@@ -462,7 +462,7 @@ class SpireModule(Base):
     """
 
     # TODO: Check the reply against a live capture; AMP's OpenAPI alone says the reply is `UpdateStatusDto` (#3-47.8, #3-56.2ai).
-    # Only the refusal for a current spire has been seen: on the 3.0.1 update (2026-11-13) vm5 followed its panel by itself.
+    # Only the refusal for a current spire has been seen: on an update, vm5 followed its panel by itself.
     async def apply_spire_update(self, spire_id: str) -> UpdateStatusResponse:
         """Update a spire's AMP to the panel's version.
 
@@ -586,8 +586,8 @@ class SpireModule(Base):
         await self._request(method="DELETE", path=f"/api/spires/{spire_id}", parameters={"force": force})
 
     # TODO: Reword the warning once AMP refuses a datastore that still holds an orphan folder (U23).
-    # AMP 3.0.0 and 3.0.1 accept the delete, and the folder drops out of the API's sight.
-    # AMP 3.0.1 still lists the deleted datastore and its orphan in the spire's usage until a rescan.
+    # As of AMP 3.0.1 the delete is still accepted, and the folder drops out of the API's sight.
+    # The spire's usage lists the deleted datastore and its orphan until a rescan.
     async def delete_spire_datastore(self, spire_id: str, datastore_id: str) -> list[DatastoreResponse]:
         """Remove a datastore from a spire.
 
@@ -1010,8 +1010,8 @@ class SpireModule(Base):
         .. note::
             With `automatic`, AMP only looks in its own fixed list of other panels' folders (Pterodactyl, Pelican,
             PufferPanel, Crafty, Multicraft, GameAP, Docker volumes), not LinuxGSM's. Any other folder must be listed in
-            `AllowedImportRoots` in the spire's ``/etc/amp3/sysagent.conf``, or it comes back in `unreadable`. AMP
-            3.0.0's agent can't see under ``/home`` at all, even when it's allowed.
+            `AllowedImportRoots` in the spire's ``/etc/amp3/sysagent.conf``, or it comes back in `unreadable`. As of
+            AMP 3.0.0 the agent can't see under ``/home`` at all, even when it's allowed.
 
         Parameters
         ----------

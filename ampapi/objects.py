@@ -823,11 +823,10 @@ class ShardStatus(AMPObject):
     status_params: Optional[dict[str, str]]
     started_at: Optional[str]
     # TODO: Reword the field doc once a running shard's state says if the shard can sleep (U18b).
-    # AMP 3.0.0 sent `available` False and the reason.
-    # AMP 3.0.1 sends `None` on a running `minecraft-java` shard.
+    # As of AMP 3.0.1 it reads `None` on a running `minecraft-java` shard.
     sleep: Optional[ShardSleepStatus]
     """If the shard can sleep, and why not.
-    - `None` doesn't mean the shard can sleep, as AMP 3.0.1 sends `None` for a running shard that can't."""
+    - `None` doesn't mean the shard can sleep, as AMP sends `None` for a running shard that can't."""
     is_running: bool
     is_stopped: bool
     awaits_licence: bool

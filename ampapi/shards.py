@@ -1476,7 +1476,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/files/folder", data={"path": path})
 
     # TODO: Drop the 500 from Raises once AMP answers a step with no `type` with a 400 (U16).
-    # AMP 3.0.0 and 3.0.1 answer 500 to a schedule step that has no `type` key.
+    # As of AMP 3.0.1 a schedule step that has no `type` key is still answered 500.
     async def create_shard_schedule(
         self,
         shard_id: str,
@@ -1738,7 +1738,7 @@ class ShardModule(Base):
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}")
 
     # TODO: Reword Raises once AMP refuses a folder's download with its own error (U17).
-    # AMP 3.0.1 answers a folder's download with 404 "files.error.notFound", saying the folder no longer exists.
+    # As of AMP 3.0.1 a folder's download is answered 404 "files.error.notFound", saying the folder no longer exists.
     async def download_shard_file(self, shard_id: str, path: str) -> bytes:
         """Download a file from a shard.
 
@@ -3330,7 +3330,7 @@ class ShardModule(Base):
         return await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/settings", data=data)
 
     # TODO: Reword the docstring once a running shard's state says if the shard can sleep (U18b).
-    # AMP 3.0.1 sends the state's `sleep` as `None`, and answers the sleep with 202 for a shard that can't sleep.
+    # As of AMP 3.0.1 the state's `sleep` reads `None`, and the sleep is answered 202 for a shard that can't sleep.
     async def sleep_shard(self, shard_id: str) -> None:
         """Put a shard to sleep, so it wakes when a player connects.
 
@@ -3342,8 +3342,7 @@ class ShardModule(Base):
 
         - With sleep mode on, AMP answers 202 for a shard that can't sleep. The shard's console then says the server
           can't be put to sleep.
-        - `ShardStatus.sleep` doesn't tell beforehand if the shard can sleep, as AMP 3.0.1 sends `None` for a running
-          shard.
+        - `ShardStatus.sleep` doesn't tell beforehand if the shard can sleep, as AMP sends `None` for a running shard.
 
         Parameters
         ----------
@@ -3875,7 +3874,7 @@ class ShardModule(Base):
         await self._request(method="PUT", path=f"/api/shards/{shard_id}/snapshots/{snapshot_id}/meta", data=data)
 
     # TODO: Drop the warning once AMP keeps the old file until the commit (U30a).
-    # AMP 3.0.0 and 3.0.1 on a remote spire resize the file at `upload-start`.
+    # As of AMP 3.0.1 a remote spire still resizes the file at `upload-start`.
     # A failed upload then leaves the file padded with zeros.
     async def upload_shard_file(
         self,

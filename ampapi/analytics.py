@@ -66,7 +66,7 @@ class AnalyticsModule(Base):
         Endpoint: ``DELETE /api/analytics/sessions/users/{user_key}``
 
         The player's record reads empty straight after the erase. AMP rebuilds the totals behind :meth:`get_analytics_sessions`'
-        summary in the background, so the summary still listed the player about 11 minutes later on AMP 3.0.0.
+        summary in the background, so the summary still listed the player about 11 minutes later.
         The logged in user needs `analytics.users` on every shard the player was seen on.
 
         Parameters
@@ -117,7 +117,7 @@ class AnalyticsModule(Base):
         return await self._request(method="GET", path="/api/analytics/addresses/users", parameters={"address": address, "demo": demo})
 
     # TODO: Reword the warning once AMP answers a range search (#3-54).
-    # AMP 3.0.0 and 3.0.1 answer 500 for every range, from an error in the address service.
+    # As of AMP 3.0.1 every range is still answered 500, from an error in the address service.
     async def get_analytics_addresses(self, search: str, *, demo: bool = False) -> AnalyticsAddressSearchResponse:
         """Search the addresses players were seen at.
 
@@ -126,7 +126,7 @@ class AnalyticsModule(Base):
         Endpoint: ``GET /api/analytics/addresses``
 
         .. warning::
-            AMP 3.0.0 and 3.0.1 answer a range (eg. ``"203.0.113.0/24"``, ``"203.0.113."`` or ``"198.51.*"``) with a
+            As of AMP 3.0.1 AMP answers a range (eg. ``"203.0.113.0/24"``, ``"203.0.113."`` or ``"198.51.*"``) with a
             500, so only a whole address works for now.
 
         Parameters

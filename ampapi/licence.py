@@ -86,7 +86,7 @@ class LicenceModule(Base):
         await self._request(method="POST", path=f"/api/licence/{spire_id}/{grade_id}/terms", data=data)
 
     # TODO: Drop the note once AMP answers with the whole licence (U19b).
-    # AMP 3.0.0 answers before the licence service does, with the limit, totals, issue date and terms all `None`.
+    # As of AMP 3.0.0 AMP answers before the licence service does, with the limit, totals, issue date and terms all `None`.
     async def activate_licence(self, key: str, *, terms: Optional[LicenceTermsAcceptance] = None) -> LicenceResponse:
         """Activate a licence key on this panel.
 

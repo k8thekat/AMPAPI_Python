@@ -109,7 +109,7 @@ class NetworkModule(Base):
         return await self._request(method="POST", path="/api/networking/gateways", data=data)
 
     # TODO: Drop the note once AMP stops reading `TunnelFault` while a first tunnel is set up (U26a).
-    # AMP 3.0.0 and 3.0.1 read `TunnelFault` for about a minute.
+    # As of AMP 3.0.1 it still reads `TunnelFault` for about a minute.
     # Then the publication's `state` reads `Active` by itself.
     async def create_publication(
         self,
@@ -323,7 +323,7 @@ class NetworkModule(Base):
         return await self._request(method="GET", path="/api/networking/tunnels")
 
     # TODO: Trim the warning once AMP's preflight checks what the create checks (U20b, U20c).
-    # AMP 3.0.0 and 3.0.1 pass an empty body, a gateway on the shard's own spire and a front spire with no public host.
+    # As of AMP 3.0.1 it still passes an empty body, a gateway on the shard's own spire and a front spire with no public host.
     async def preflight_gateway(self, shard_id: str, front_spire_id: str) -> GatewayPreflightResponse:
         """Check a gateway can be made, before :meth:`create_gateway`.
 
@@ -390,7 +390,7 @@ class NetworkModule(Base):
         return await self._request(method="PUT", path=f"/api/networking/gateways/{gateway_id}/egress", data=data)
 
     # TODO: Drop the old status sentence once AMP answers with the new one (U26c).
-    # AMP 3.0.0 and 3.0.1 answer a publication turned off with its old `Active` status.
+    # As of AMP 3.0.1 a publication turned off is still answered with its old `Active` status.
     async def update_publication(
         self,
         publication_id: str,

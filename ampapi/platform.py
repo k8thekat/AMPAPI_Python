@@ -58,7 +58,7 @@ class PlatformModule(Base):
     """
 
     # TODO: Reword the docstring once AMP refuses an unknown warning ID (U20a).
-    # AMP 3.0.0 and 3.0.1 answer 200 with the warnings as they are.
+    # As of AMP 3.0.1 an unknown ID is still answered 200 with the warnings as they are.
     async def acknowledge_platform_warning(self, warning_id: str) -> list[PlatformWarningResponse]:
         """Dismiss one of the panel's warnings.
 

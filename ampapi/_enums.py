@@ -154,7 +154,7 @@ class MigrationStatus(IntEnum):
 
 
 # TODO: Drop the first publication sentence once AMP stops reading `TunnelFault` while the tunnel is set up (U26a).
-# AMP 3.0.0 and 3.0.1 read `TunnelFault` "The file does not exist." for about a minute on a first publication.
+# As of AMP 3.0.1 a first publication still reads `TunnelFault` "The file does not exist." for about a minute.
 class PublicationState(StrEnum):
     """A port forward's `state`, named as the web panel names it. AMP sends the name, which each member equals.
 
