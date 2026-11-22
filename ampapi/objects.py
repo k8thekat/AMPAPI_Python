@@ -459,7 +459,10 @@ class ScheduleExecution(AMPObject):
     attempt_number: int
     worker_node: Optional[str]
     "The spire that ran it."
-    error_message: Optional[str]
+    # TODO: Check a failed run's `error` against a live capture; typed from AMP 3.0.2's OpenAPI `JobExecution` alone (#3-65).
+    # The one run read succeeded, with `error` `None`.
+    error: Optional[CodedErrorResponse]
+    "Why the run failed, as its first error that no step handled; `None` for a run without such an error."
     step_outcomes: list[ScheduleStepOutcome]
     duration: Optional[str]
     "`None` while it runs."
@@ -494,6 +497,12 @@ class ShardInfra(AMPObject):
     reports_addresses: bool
     """If the game also reports the address a player connected from or not.
     - Geo filtering and the analytics country breakdown need the address."""
+    disk_enforce_percent: int
+    """How far into `ShardInfraSettings.disk_limit_mb` a disk scan counts the shard as over its limit, in percent,
+    eg. 105.
+    - Past it, AMP also refuses an upload to the shard, from AMP's docs and not seen live."""
+    max_minimum_session_seconds: int
+    "The most `ShardInfraSettings.minimum_session_time_for_retention` can be set to, in seconds, eg. 6000."
 
 
 class ShardInfraSettings(AMPObject):
@@ -547,6 +556,19 @@ class ShardInfraSettings(AMPObject):
       fails at its next start.
     - AMP pulls an image from any other repository and runs it as given.
     - An image that isn't built for AMP, eg. ``"docker.io/library/debian:trixie-slim"``, fails to start."""
+    allow_lan_access: bool
+    """If the shard's container can reach the spire's local network or not, `False` by default.
+    - With it off, a Podman container on a Linux spire reaches only the internet, AMP's bus and the spire's DNS
+      resolvers. AMP refuses the private, carrier-grade NAT and link-local address ranges, and the spire's own IPv6
+      networks.
+    - With it on, the container can reach the other machines on the spire's local network, eg. for a game that needs a
+      service there.
+    - A change takes effect when the shard's container is made again, at a start after a stop. A restart keeps the
+      container, so it keeps the old setting.
+    - With it off, AMP applies the filter before anything runs in the container, with the `nft` of the shard's image
+      when it's one of AMP's, and of AMP's default image otherwise. If that fails, the update or start is refused with
+      `shards.error.containerLanFilterFailed` and the shard isn't started.
+    - A native shard isn't filtered, from AMP's docs and not seen live."""
     memory_limit_mb: int
     """The shard's memory limit in MiB, 0 for no limit.
     - AMP sets the limit on the container, or on a native shard's systemd unit.
@@ -611,10 +633,12 @@ class ShardInfraSettings(AMPObject):
     - Near the limit, the shard's `limitLevel` reads ``"Critical"`` in :meth:`ShardModule.get_shard_disk` and
       :meth:`SpireModule.get_spire_usage`.
     - AMP gives no other warning, neither a platform warning nor an entry in :meth:`Panel.get_shards_awaiting_action`.
-    - AMP stops the shard at the first disk scan that finds it over the limit."""
+    - AMP stops the shard at the first disk scan that finds it over the limit.
+    - A scan counts the shard as over the limit at `ShardInfra.disk_enforce_percent` of it, from AMP's docs."""
     import_config_files_from_sftp: bool
     """If AMP reads a config file it manages back into the shard's settings when the file is written over SFTP or not.
-    - With it off, AMP overwrites the file's change the next time it writes the file."""
+    - With it on, the change shows in the shard's settings within seconds.
+    - With it off, AMP writes the shard's settings over the file's change at the shard's next start."""
     extra_environment: dict[str, str]
     """Extra environment variables for the game's process or container, by name.
     - They're added to the template's variables, and these win where both have a name."""
@@ -789,6 +813,10 @@ class ShardStatus(AMPObject):
     last_error_code: Optional[str]
     """eg. ``"agent.msg.executableNotFound"``."""
     last_error_params: Optional[dict[str, str]]
+    sign_in_url: Optional[str]
+    """The https address a game's sign-in prompt asks a person to visit, while the shard waits on the sign-in.
+    - AMP sets it only for an address on a host the template names for its sign-in, eg. a ``"hytale"`` shard's update.
+    - `None` once the shard stops waiting, and for any other prompt."""
     status_message: Optional[str]
     status_code: Optional[str]
     """eg. ``"shards.msg.launchStage.container"``."""
@@ -806,10 +834,25 @@ class ShardStatus(AMPObject):
     """If the shard is held waiting on its game's licence or not.
 
     - A start no person was waiting on, eg. a scheduled start, is held before anything launches.
+    - A restart of the stopped shard is held too, though AMP answers the restart with 409.
+    - A person's start is refused with 409 and isn't held, so the shard stays stopped.
     - While the shard is held, its `status` reads `ShardState.awaiting_user_action`.
     - `ShardModule.accept_shard_eula` or `ShardModule.decline_shard_eula` sets `status` back to `ShardState.stopped`.
       Accepting doesn't start the shard.
     """
+    awaits_settings: bool
+    """If the shard is held waiting for its required settings to be given a value or not.
+    - A start no person was waiting on, eg. a scheduled start, is held before anything launches.
+    - A person's start and a restart are refused with 409 and aren't held, so the shard stays stopped.
+    - While the shard is held, its `status` reads `ShardState.awaiting_user_action`, and its `last_error_code` reads
+      ``"shards.error.settingRequiredBeforeStart"`` with the settings in `last_error_params`.
+    - `ShardModule.set_shard_settings` giving each required setting a value sets `status` back to
+      `ShardState.stopped`. It doesn't start the shard."""
+    awaits_person: bool
+    """If the shard is held waiting on a person or not, for its licence (`awaits_licence`) or its required settings
+    (`awaits_settings`).
+    - A held shard is listed by `Panel.get_shards_awaiting_action`.
+    - It stays `False` while a game's sign-in prompt waits, see `sign_in_url`."""
     accepts_traffic: bool
     is_busy: bool
 
@@ -833,7 +876,10 @@ class Snapshot(AMPObject):
     """AMP fills an empty one, eg. ``"Partial backup of app configuration."``."""
     sticky: bool
     "Doesn't stop a delete."
-    failure_reason: str
+    # TODO: Check a failed snapshot's `failure` against a live capture; typed from AMP 3.0.2's OpenAPI `ShardSnapshot` alone (#3-65).
+    # Every snapshot captured succeeded, with `failure` `None`.
+    failure: Optional[CodedErrorResponse]
+    "Why the snapshot failed, when its `status` is `SnapshotState.failed`; `None` for a snapshot that didn't fail."
     skipped_files: list[str]
     skipped_count: int
     archive_missing: bool
@@ -868,6 +914,8 @@ class SpirePresence(AMPObject):
     behind: bool
     "If the spire runs an older AMP than the panel."
     installation_version: str
+    last_seen_age_seconds: Optional[float]
+    "How many whole seconds ago the spire was last seen, by the panel's clock; `None` if it never was."
 
 
 class SpireStatus(AMPObject):
@@ -891,3 +939,9 @@ class SpireStatus(AMPObject):
     disk_active_percent: Optional[float]
     bus_latency_ms: float
     platform: Optional[SpirePlatform]
+    report_age_seconds: Optional[float]
+    """How many seconds ago the panel that answered received the spire's full report, which these figures come from,
+    by that panel's clock; `None` before the panel has received a report."""
+    report_stale: bool
+    """If the spire's latest full report is older than the panel allows or not.
+    - With it `True`, the figures and `platform` may be out of date."""

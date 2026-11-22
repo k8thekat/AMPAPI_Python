@@ -55,8 +55,9 @@ class NetworkModule(Base):
 
     """
 
-    # TODO: Trim the note once AMP fixes the gateway status gaps (U26b, U26e).
-    # AMP 3.0.0 and 3.0.1 route a running shard only after it restarts, and read `Fault` while a new tunnel connects.
+    # TODO: Trim the note and the warning once AMP fixes the gateway status gaps and keeps the publications (U26b, U26e, U31).
+    # As of AMP 3.0.2 a running shard still routes only after it restarts, and a new tunnel reads `Fault` while it connects.
+    # As of AMP 3.0.2 making the gateway still deletes the shard's publications.
     async def create_gateway(self, shard_id: str, front_spire_id: str) -> GatewayResponse:
         """Route a shard through a front spire, so players reach it at that spire's address.
 
@@ -74,9 +75,13 @@ class NetworkModule(Base):
             carries all of the shard's ports, and the reply doesn't say so.
 
         .. note::
-            A shard that was running before the gateway only routes once the shard restarts. Until then the gateway reads
-            `GatewayState.awaiting_shard` with `runningWithoutRoute`, though the shard's endpoint already lists the
-            front spire's address. A new gateway also reads `GatewayState.fault` while its tunnel connects.
+            - A shard that was running before the gateway only routes once the shard restarts. Until then the gateway
+              reads `GatewayState.awaiting_shard` with `runningWithoutRoute`, though the shard's endpoint already lists
+              the front spire's address.
+            - A new gateway also reads `GatewayState.fault` while its tunnel connects.
+            - A start or restart of the shard with the gateway in place waits for the route. Meanwhile the shard's
+              `ShardStatus.status` reads `ShardState.pre_start` and its `ShardStatus.status_code` reads
+              ``"agent.msg.gatewayConnecting"``. The shard then runs with the gateway `GatewayState.active`.
 
         Parameters
         ----------

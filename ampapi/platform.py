@@ -87,7 +87,7 @@ class PlatformModule(Base):
         """
         return await self._request(method="POST", path="/api/monitoring/platform-warnings/acknowledge", data={"id": warning_id})
 
-    # The update's task can't be read through the Tasks API (upstream U34), seen updating vm3 from 3.0.0 to 3.0.1
+    # As of AMP 3.0.2 the update's task still can't be read through the Tasks API (upstream U34).
     async def apply_panel_update(self) -> PanelUpdateResponse:
         """Update the panel's AMP to the latest version on its stream; the panel restarts.
 
@@ -99,11 +99,11 @@ class PlatformModule(Base):
 
         The reply's `taskId` can't be followed, as :meth:`TaskModule.get_task` answers 404 for the task before and after
         the restart. Watch :meth:`get_health_status` and :meth:`get_update_status` instead, as the web panel does.
-        On an update from AMP 3.0.0 to 3.0.1:
 
-        - The panel answered nothing for about 8 seconds.
-        - :meth:`get_health_status` read ``"starting"`` on the new version 13 seconds after the call.
-        - :meth:`get_health_status` read ``"ready"`` 23 seconds after the call.
+        - :meth:`get_health_status` can still read ``"ready"`` on the old version at once, then the panel answers nothing
+          for about 10 seconds.
+        - :meth:`get_health_status` reads ``"starting"`` on the new version about 15 seconds after the call, and
+          ``"ready"`` about 20 seconds after it.
 
         Returns
         -------

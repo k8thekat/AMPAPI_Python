@@ -92,7 +92,7 @@ class CloneContent(IntFlag):
 
 
 # TODO: Drop `fault` from the order once a connecting gateway's `state` reads `Connecting` rather than `Fault` (U26b).
-# AMP 3.0.0 and 3.0.1 read `Fault` while a new gateway's tunnel still connects.
+# As of AMP 3.0.2 a new gateway still reads `Fault` while its tunnel connects.
 class GatewayState(StrEnum):
     """A gateway's `state`, named as the web panel names it. AMP sends the name, which each member equals.
 
@@ -205,6 +205,10 @@ class ShardState(IntEnum):
 
     ``GET /api/shards/{id}/state`` sends eg. 0, 3, 20, 25 and 30, and the console's markers eg. 15 and 100.
 
+    - `pre_start` is also a start waiting for its gateway's route, with the `status_code` ``"agent.msg.gatewayConnecting"``.
+    - `starting` is also a restart waiting for the old run's ports, with the `status_code`
+      ``"agent.msg.portReleaseWaiting"``.
+
     .. versionadded:: 6.0.0
     """
 
@@ -270,15 +274,16 @@ class SnapshotState(IntEnum):
     failed = 3
 
 
-# TODO: Drop the cancelled clone sentence once AMP honours a clone's cancel (U25).
-# AMP 3.0.0 and 3.0.1 answer the cancel with 202, and the clone carries on copying.
+# TODO: Drop the sentence on a clone to another spire once AMP honours that clone's cancel (U25).
+# As of AMP 3.0.2 that cancel is still answered 202, and the clone carries on copying.
 class TaskState(IntEnum):
     """A running task's `state`, named as the web panel names it.
 
     - A task's `state` reads `waiting` while an update downloads, and `running` while a clone or a move copies.
     - The `state` reads `succeeded` when the task is finished, `failed` for a failed move or update, and `cancelled`
-      for a cancelled move.
-    - A cancelled clone's `state` reads `cancelling`, then `running` again, and the clone finishes anyway.
+      for a cancelled move or a cancelled clone on the same spire.
+    - A cancelled clone to another spire has its `state` read `cancelling`, then `running` again, and the clone
+      finishes anyway.
 
     .. versionadded:: 6.0.0
     """

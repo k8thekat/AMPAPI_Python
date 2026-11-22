@@ -4,9 +4,11 @@ Developer context for the AMP 3 (6.0.0 beta) branch. AMP 2 support stays on `Ref
 
 ## Test panel (vm3)
 
-- `vm3` (`amp3-beta`) runs AMP `3.0.1` from the `preview` channel. AMP `3.0.0` was installed 2026-11-06 with
-  `getamp3.sh -y` (rootless Podman, panel on `:8443`, no HTTPS) and updated to `3.0.1` through the panel on
-  2026-11-14. Its login is `[VM_AMP3]` in `local.ini`, its licence `[LICENSE] amp3`.
+- `vm3` (`amp3-beta`) runs AMP `3.0.2` from the `preview` channel. AMP `3.0.0` was installed 2026-11-06 with
+  `getamp3.sh -y` (rootless Podman, panel on `:8443`, no HTTPS), updated to `3.0.1` through the panel on
+  2026-11-14 and to `3.0.2` on 2026-11-20 (#3-65). Its login is `[VM_AMP3]` in `local.ini`, its licence `[LICENSE] amp3`.
+- Later on 2026-11-20 AMP was wiped and installed fresh on `3.0.2` (#3-65s), on the same VM, address and Caddy. Its
+  spire ID, SFTP host key and shard IDs are new: the test shard "API Test MC" is `35313623-...`.
 - The licence is the "Beta Preview" grade, 50 Instances, valid to 2027-02-04. The preview build itself runs out
   2026-12-07 (`HealthStatusResponse.preview`).
 - HTTPS for passkeys (2026-11-06): Caddy on vm3 serves `https://amp3-beta.anime` with its own local CA
@@ -24,7 +26,7 @@ Developer context for the AMP 3 (6.0.0 beta) branch. AMP 2 support stays on `Ref
   API too, with vm4's admin login.
 - A panel restarted once on its first licensing (`phase: "starting"`); a setting checked before it reads `ready` can
   look unapplied. Activating again after `DELETE /api/licence` (vm4, 2026-11-07) stayed `ready` with no restart.
-- Captures live in `_responses/3.0.0/auth/` (gitignored), one file per call: the request (secrets redacted), status,
+- Captures live in `_responses/<AMP version>/<kind>/` (gitignored), one file per call: the request (secrets redacted), status,
   kept headers and body.
 
 ## Tooling in this worktree
@@ -48,6 +50,8 @@ The worktree carries its own copies, all gitignored, so nothing reaches back int
   (clones and moves between vm4's and vm5's spires) and `datastore_check.py` (a move between datastores on vm4),
   `passkey_check.py` (a software passkey), `build_vm.py` (a whole AMP3 VM), `join_spire.py` (a new VM joining a panel
   as a spire) and `hook_check.py` (pyright as the end-of-turn hook runs it). `AMP3_VM=vm3|vm4|vm5` picks the panel for all of them.
+    - `spec_diff.py OLD.json NEW.json [--json OUT.json]` compares two of AMP's OpenAPI documents, eg. 3.0.1's and
+      3.0.2's in `.local_data/amp3/openapi/` (#3-65n). It talks to no panel.
 - `.local_data/amp3/`: their private files (per-VM tokens, setup codes and Caddy root CAs, the passkey test state,
   the vetted `getamp3.sh`) and the upstream report drafts for CubeCoders (`upstream_issues/`).
 - `.local_data/plans/todo_index.md`: the AMP3 TODO index.
@@ -88,7 +92,7 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - There is no kill and no update abort in AMP 3.0.0 and 3.0.1 (#3-56.4c, #3-64): neither route is in their OpenAPI,
   `stop_shard` kills a game that outlasts its template's `exitTimeout`, and a schedule's `power.kill` step kills at
   once. The Tasks cancel (`cancel_task`) answers 202 for an update and is ignored (upstream U33); a failed task leaves
-  the running list after about 30 minutes.
+  the running list after about 30 minutes. AMP 3.0.2 adds both routes, as `kill_shard` and `abort_shard_update` (#3-65a).
 - Writes that replace a whole record (#3-56.4b, #3-56.7): a datastore POST carrying an `id` resets every field it
   isn't sent (`softLimitMb` 0, `tags` [], `enabled` true), and an unknown `id` creates one, so
   `update_spire_datastore` reads first and refuses an ID the spire doesn't list. AMP adds the storage medium it detects
@@ -145,8 +149,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   plain `Shard` agree both ways.
 - A reply never seen live gets a `# TODO:` above its method naming the index entry, and the method returns `Any`; a
   list only ever seen empty is `list[Any]` (Kat, 2026-11-07: a TODO, not a docstring warning). A `.. warning::` is
-  kept for behaviour a user must know, eg. `kill_shard` answering 404 (U12) or a call that changes how the panel is
-  reached. Each one is typed properly once a capture shows it.
+  kept for behaviour a user must know, eg. a file ACL deny that can't be undone (U24a) or a call that changes how the
+  panel is reached. Each one is typed properly once a capture shows it.
 - Numbers AMP sends for states are the web panel's own enums in `_enums.py` (`ShardState`, `SnapshotKind`,
   `TaskState`, ...). `Base._to_enum` converts them where they're returned and keeps a number it doesn't know as a
   plain `int`, so a new AMP state can't break a read; the fields are typed `Union[Enum, int]`.
@@ -200,6 +204,46 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - `.scripts/amp3/session_check.py`, `panel_check.py`, `shard_check.py`, `move_check.py`, `datastore_check.py` and
   `hub_check.py` are the live checks; each removes what it makes. `hub_check.py` waits for the hubs (#3-50.1), and
   no check covers the invite calls yet: #3-50.7 was checked live with a one-off script.
+
+## AMP 3.0.2 "Neptune" (#3-65)
+
+The findings are `.local_data/plans/amp302/findings/spec_302_diff.md` and `recheck_302.md`. The library follows the
+latest AMP, so a field AMP 3.0.2 added is typed as always sent, and a 3.0.1 panel's reply lacks it.
+- Breaking while 6.0.0 is a beta (Kat's #3-65o, follow AMP's names), told here as this branch has no
+  `docs/upgrading.rst`:
+    - `Snapshot.failure_reason` (a `str`) is now `Snapshot.failure`, and `ScheduleExecution.error_message` is now
+      `ScheduleExecution.error`. Each is AMP's `ApiError` (`code`, `params`, `message`) as a `CodedErrorResponse`, or
+      `None`.
+    - `ScheduleStepOutcome.detail` and `ScheduleStatus.lastError` are a `CodedErrorResponse` too, where they were a string.
+    - `SpireImportReadyItem.unavailableReason` is now `unavailable`, and its `liveness` a list of `CodedErrorResponse`.
+      `SpireImportBlockedItem.detail` is a `CodedErrorResponse`. `SpireImportLiveness` is gone, as AMP 3.0.2 dropped
+      `LivenessEvidence` for `ApiError`.
+    - `TemplateMetadata.arch` and `HTTPSCheck.detail` are gone, as AMP 3.0.2 dropped both.
+- `kill_shard` / `Shard.kill` and `abort_shard_update` / `Shard.abort_update` are new (U12, fixed in 3.0.2). Both answer
+  202 when there's nothing to kill or abort, and 404 `shards.error.notFound` for an unknown shard.
+- `allow_lan_access` (AMP's `allowLanAccess`) is in `ShardInfraChanges`, `ShardInfraSettings` and
+  `ShardInfraSettingsResponse`.
+    - Before it, `update_shard_infra(allow_lan_access=...)` raised the library's `TypeError`, and an object read on
+      3.0.2 was sent without it, so AMP kept the stored value.
+    - Off by default. Off, a Podman container on vm3 reached 1.1.1.1:443 and the router's DNS but not dotHack's SSH
+      port. On, dotHack answered after a stop and a start; a restart reuses the container and kept it closed.
+- The analytics `steam` and `minecraft` keys (`AnalyticsProfilesResponse`, `AnalyticsConnectedResponse`) stay, with a
+  `# TODO:`. AMP 3.0.2's OpenAPI dropped them, but `GET /api/analytics/profiles` still sends both.
+- Seen on 3.0.2 and still open: U14 (an update's stop sends no quiesce), U15 (a never-updated shard starts and fails),
+  U22a and U22b (moves), U24a and U24b (file ACL), U26b and U26e (gateway states), U31 (a gateway deletes the
+  publications), U34 (the panel update's task reads 404). Their comments name 3.0.2 now.
+- Fixed in 3.0.2: a start waits for its gateway's route (#3-65f, `pre_start` with `agent.msg.gatewayConnecting`), moves
+  and clones keep config files between spires (U22), and U32 (moving a running shard). U25 is fixed for a clone on one
+  spire only; a clone to another spire still ignores its cancel, and the docs say so.
+- U37, new on 3.0.2 (#3-65p, draft in `.local_data/amp3/upstream_issues/`): on a panel updated from 3.0.1 that holds
+  schedule runs 3.0.1 stored, every schedule history read is 500 and a purge answers 202 but leaves the record deleted.
+  vm3 had it until its fresh install; vm4, also updated from 3.0.1, doesn't. `get_shard_schedule_history`
+  and the purge calls carry a warning.
+- U39 (not sent): the `amp3base:debian` and `java-lts` builds published on the morning of 2026-11-20 had no `nft`, so
+  AMP refused every container shard with `allowLanAccess` off (`shards.error.containerLanFilterFailed`). AMP runs the
+  filter in a helper container from the shard's image. CubeCoders rebuilt both with `nft` that evening. A spire keeps
+  the image it pulled, so one holding a broken build needs a `podman pull` as AMP's `amp` user. `allow_lan_access`'s
+  docs say what the refusal is.
 
 ## Live events (#3-47.2)
 

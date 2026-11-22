@@ -259,7 +259,6 @@ __all__: tuple[str, ...] = (
     "SpireImportDiscoveredPort",
     "SpireImportEvidence",
     "SpireImportItem",
-    "SpireImportLiveness",
     "SpireImportMatch",
     "SpireImportPreflightResponse",
     "SpireImportReadyItem",
@@ -308,6 +307,7 @@ __all__: tuple[str, ...] = (
     "UpdateRolledBack",
     "UpdateSpireBehind",
     "UpdateStatusResponse",
+    "UpdateSystemAgentHold",
     "UserCreateRequest",
     "UserResponse",
     "UserUpdateRequest",
@@ -391,6 +391,8 @@ class AnalyticsConnectedResponse(TypedDict):
     """``GET /api/analytics/connected/{shard_id}``, what a shard knows about one player connected to it now."""
 
     user: AnalyticsConnectedUser
+    # TODO: Recheck `minecraft` and `steam` with a real player, as AMP's OpenAPI `ConnectedProfile` doesn't list them (#3-65).
+    # As of AMP 3.0.2 AMP still sends both in the analytics profiles reply, so we keep them here too.
     minecraft: Optional[AnalyticsMinecraftProfile]
     "`None` for a player who isn't on Minecraft."
     profileState: str
@@ -490,6 +492,8 @@ class AnalyticsProfilesResponse(TypedDict):
 
     # TODO: Check against a live capture; typed from AMP's OpenAPI `ProfilesAnswer` and `SteamProfile` alone (#3-56.3af).
     # Only a Minecraft player has been seen, so every capture has `steam` empty.
+    # TODO: Recheck `steam` and `minecraft` with a real player, as AMP's OpenAPI `ProfilesAnswer` doesn't list them (#3-65).
+    # As of AMP 3.0.2 AMP still sends both, empty for the demo players, so we keep them.
     steam: dict[str, AnalyticsSteamProfile]
     minecraft: dict[str, AnalyticsMinecraftProfile]
     state: str
@@ -931,7 +935,11 @@ class CapabilitiesResponse(TypedDict):
 
 
 class CodedErrorResponse(TypedDict):
-    """The error body AMP builds itself, eg. a wrong `reauth` password or a missing setup code."""
+    """An error AMP builds itself, AMP's `ApiError`.
+
+    - The body of a refusal, eg. a wrong `reauth` password or a missing setup code.
+    - A field in a reply, eg. `Snapshot.failure`.
+    """
 
     code: str
     "A dotted translation key, eg. ``auth.error.reproofRejected``."
@@ -1009,6 +1017,10 @@ class DatastoreUsage(TypedDict):
     driveFreeMb: int
     driveTotalMb: int
     shards: list[ShardUsage]
+    # TODO: Check against a live capture; typed from AMP 3.0.2's OpenAPI `DatastoreUsage` alone (#3-65).
+    # Every capture has it `None`: no system agent has refused a datastore on the test VMs.
+    agentRefusal: Optional[str]
+    """Why the spire's system agent refuses the datastore, as a code; `None` while the agent doesn't refuse it."""
 
 
 class DeletedUserResponse(TypedDict):
@@ -1229,6 +1241,9 @@ class FirewallStatus(TypedDict):
     advisories: list[str]
     error: Optional[str]
     updatedAt: str
+    # TODO: Check against a live capture; typed from AMP 3.0.2's OpenAPI `NetworkStatus` alone (#3-65).
+    # AMP's docs give it no description, and every capture has it `False`.
+    stopped: bool
     agentVersion: str
     # TODO: Check against a live capture; typed from AMP 3.0.1's OpenAPI `NetworkStatus` alone (#3-60).
     # AMP's docs give it no description.
@@ -1269,7 +1284,8 @@ class FirewallWithheldRule(TypedDict):
     """
 
     shardId: str
-    shardName: str
+    shardName: Optional[str]
+    "`None` when the panel has no record of the shard."
     source: str
     """What asked for the rule: ``"Shard"``, ``"Publication"`` or ``"Gateway"``."""
     port: int
@@ -1349,7 +1365,7 @@ class GatewayResponse(TypedDict):
     status: Optional[GatewayStatus]
     "`None` when it's new; the list fills it in once AMP has set the route up."
     # TODO: Reword the field doc once a running shard routes without a restart (U26e).
-    # AMP 3.0.0 and 3.0.1 route a shard that was running only after it restarts.
+    # As of AMP 3.0.2 a shard that was running still routes only after it restarts.
     runningWithoutRoute: bool
     "If the shard was running before the route existed; it routes only once it restarts."
 
@@ -1401,7 +1417,6 @@ class HTTPSCheck(TypedDict):
     """A translation key for the result, eg. ``"https.check.resolved"`` or ``"https.check.addressMismatch"``."""
     params: Optional[dict[str, str]]
     "Values for the `code` translation, eg. `host`, `expected` and `found` on an address mismatch."
-    detail: Optional[str]
 
 
 class HTTPSCheckResponse(TypedDict):
@@ -2240,7 +2255,10 @@ class ScheduleStatus(TypedDict):
     lastRunStatus: str
     """``"Queued"``, ``"Running"``, ``"Succeeded"``, ``"CompletedWithErrors"``, ``"Failed"``, ``"TimedOut"`` or
     ``"Skipped"``."""
-    lastError: Optional[str]
+    # TODO: Check against a live capture; typed from AMP 3.0.2's OpenAPI `ScheduleStatus` alone (#3-65).
+    # Every capture has it `None`, as each run captured succeeded.
+    lastError: Optional[CodedErrorResponse]
+    "Why the last run failed, `None` when it didn't."
     lastExecutionId: str
     consecutiveFailures: int
     # TODO: Check these two against a live capture; typed from AMP's OpenAPI `ScheduleStatus` alone (#3-56.1z).
@@ -2297,8 +2315,10 @@ class ScheduleStepOutcome(TypedDict):
     """eg. ``"main"``, or ``"bg:<step id>"`` for the steps an un-awaited task runs after it."""
     status: str
     """``"Succeeded"``, ``"Failed"``, ``"Skipped"`` or ``"NotReached"``."""
-    detail: str
-    """eg. ``"Sent: say hello"``."""
+    detail: Optional[CodedErrorResponse]
+    """What the step did, as a code, eg. ``"schedule.journal.killed"`` for a ``"power.kill"`` step.
+    - A ``"task"`` step's outcome, or its error.
+    - The branch or case an ``"if"`` or ``"switch"`` step took."""
     startedAt: str
     duration: str
 
@@ -2323,6 +2343,12 @@ class ScheduleTaskParameter(TypedDict):
     inputType: str
     """eg. ``"template"`` (text that can use the trigger's values) or ``"number"``."""
     required: bool
+    min: Optional[float]
+    """The smallest value AMP saves for a number, eg. 1 for ``"flow.wait"``'s ``"seconds"``; `None` for no lower
+    limit."""
+    max: Optional[float]
+    """The largest value AMP saves for a number, eg. 600 for ``"flow.wait"``'s ``"seconds"``; `None` for no upper
+    limit."""
 
 
 class ScheduleTrigger(TypedDict):
@@ -2591,12 +2617,13 @@ class ShardArchiveRequest(TypedDict):
 
 
 class ShardAttentionResponse(TypedDict):
-    """A shard waiting on a user, from ``GET /api/shards/attention``, eg. a game's update waiting for a sign-in."""
+    """A shard waiting on a person, from ``GET /api/shards/attention``, eg. a game's update waiting for a sign-in."""
 
     shardId: str
     name: str
     message: str
-    "What it waits for, as AMP shows it, eg. a sign-in URL."
+    """What the shard waits for, as AMP shows it, eg. a sign-in URL or ``"This application's licence must be accepted
+    before it can start."``."""
 
 
 class ShardCloneRequest(TypedDict):
@@ -2831,6 +2858,7 @@ class ShardInfraChanges(TypedDict, total=False):
     container_mode: str
     "A `ShardContainerMode` member or its value."
     container_image_override: str
+    allow_lan_access: bool
     memory_limit_mb: int
     memory_reservation_mb: int
     memory_swap_mb: int
@@ -2866,6 +2894,7 @@ class ShardInfraSettingsResponse(TypedDict):
     advertisedAddressIncludesPort: bool
     containerMode: str
     containerImageOverride: Optional[str]
+    allowLanAccess: bool
     memoryLimitMb: int
     memoryReservationMb: int
     memorySwapMb: int
@@ -3301,7 +3330,10 @@ class SpireImportBlockedItem(TypedDict):
     candidatePath: str
     reason: int
     "Why, as a number; 1 was seen for a folder outside every import root."
-    detail: str
+    # TODO: Check against a live capture; typed from AMP 3.0.2's OpenAPI `PreflightBlock` alone (#3-65).
+    # A preflight needs the system agent's import roots opened first.
+    detail: CodedErrorResponse
+    "What AMP found that blocks the server, as a code with its English text."
 
 
 # TODO: Check against a live capture; typed from AMP's OpenAPI `DiscoveredPort` alone (#3-53, #3-56.2i).
@@ -3341,17 +3373,6 @@ class SpireImportItem(TypedDict):
     network setup, so 7 is all of it."""
 
 
-# TODO: Check against a live capture; typed from AMP's OpenAPI `LivenessEvidence` alone (#3-53, #3-56.2ar).
-# A running server left `liveness` empty on AMP 3.0.0, and so did a stand-in listening on the game's port on 3.0.1.
-class SpireImportLiveness(TypedDict):
-    """A sign a found server is still running, from `SpireImportReadyItem.liveness`."""
-
-    code: str
-    "A translation key for the reason."
-    message: str
-    "The English text, naming what was found."
-
-
 class SpireImportMatch(TypedDict):
     """A template a found server could be imported as, from `SpireImportScanServer.matches`."""
 
@@ -3386,12 +3407,14 @@ class SpireImportReadyItem(TypedDict):
     candidatePath: str
     size: SpireImportSize
     exists: bool
-    # TODO: Check these against a live capture; typed from AMP's OpenAPI `PreflightCandidate` alone (#3-53, #3-56.2ar).
+    # TODO: Check these against a live capture; typed from AMP 3.0.2's OpenAPI `PreflightCandidate` alone (#3-53, #3-65).
     # A running server, and a folder imported before, both still left them empty on AMP 3.0.0 and 3.0.1.
-    liveness: list[SpireImportLiveness]
-    "Signs the server is still running, empty when AMP found no such signs."
-    unavailableReason: Optional[str]
-    "Why the folder couldn't be read at all, in the words of what read it; `None` when it could."
+    liveness: list[CodedErrorResponse]
+    """Signs the server is still running, each a code with its English text naming what was found; empty when AMP
+    found no such signs."""
+    unavailable: Optional[CodedErrorResponse]
+    """Why AMP couldn't read the folder at all, eg. the system agent that reads it declined or didn't answer; `None`
+    when AMP could read it."""
     alreadyImportedAs: Optional[str]
     "The name of the shard already made from this folder, `None` when there's none."
 
@@ -3535,6 +3558,13 @@ class SpireJavaRuntime(TypedDict):
     "If it's the Java the machine's PATH finds."
     isSystemDefault: bool
     """If it's the ``"$PATH/java"`` entry rather than a fixed install."""
+    # TODO: Check against a live capture; typed from AMP 3.0.2's OpenAPI `JavaRuntime` alone (#3-65).
+    # The spire captured lists no Java.
+    inUsualDirectory: bool
+    """If the Java is in one of the folders AMP searches on every machine, eg. ``/usr/lib/jvm``, not only found
+    through the machine's `JAVA_HOME` or `PATH`.
+    - A shard's agent searches the same folders, so only such a Java is sure to be found when a shard picks a Java by
+      its major version."""
 
 
 class SpirePlatform(TypedDict):
@@ -3632,6 +3662,9 @@ class SpireResponse(TypedDict):
     isPubliclyRoutable: bool
     isPublicEntryNode: bool
     canHostShards: bool
+    runsSftp: bool
+    """If the spire runs its SFTP server, holds its port and opens the port in its firewall.
+    - It's `True` when `sftpEnabled` is set and the spire can host shards, as SFTP serves only shard files."""
     acceptsNewShards: bool
 
 
@@ -3714,6 +3747,12 @@ class SystemBusResponse(TypedDict):
     # Every capture is of a bus AMP runs, which leaves it empty.
     servers: list[str]
     "The bus's addresses, on a bus AMP doesn't run (`managed` False)."
+    entryNodeBootstrapPort: int
+    "The TCP port a public entry node serves its bootstrap on, which the entry node's firewall has to open, eg. 8444."
+    tunnelPortFirst: int
+    "The first UDP port a tunnel's front may listen on, eg. 51820."
+    tunnelPortLast: int
+    "The last UDP port a tunnel's front may listen on, eg. 52075."
 
 
 class TaskResponse(TypedDict):
@@ -3899,10 +3938,11 @@ class TemplateLifecycle(TypedDict):
     """The console command that stops the game, eg. ``"stop"``."""
     exitFile: str
     # TODO: Drop the update sentence once AMP quiesces the game before an update's stop (U14).
-    # AMP 3.0.1 stopped a running `minecraft-java` shard for an update with no `save-off` or `save-all flush`.
+    # As of AMP 3.0.2 an update still stops a running `minecraft-java` shard with no `save-off` or `save-all flush`.
     quiescenceCommand: str
     """Commands sent before a stop or snapshot, split by ``;``, eg. ``"save-off;save-all flush"``.
-    - AMP 3.0.1 doesn't send them when an update stops the game, so only the game's own stop command saves its data."""
+    - As of AMP 3.0.2 they aren't sent when an update stops the game, so only the game's own stop command saves its
+      data."""
     dequiescenceCommand: str
     quiesceAckRegex: str
     quiesceSettleDelayMilliseconds: int
@@ -3947,7 +3987,6 @@ class TemplateMetadata(TypedDict):
     os: int
     "eg. 3."
     aarchSupport: int
-    arch: int
     author: str
     url: str
     displayImageSource: str
@@ -4034,6 +4073,11 @@ class TemplateResponse(TypedDict):
     """Paths a snapshot leaves out, eg. ``"logs/"``."""
     locale: dict[str, dict[str, str]]
     "A language to its translation keys and text; often empty."
+    steamLoginPlatforms: int
+    """The systems whose first update needs a Steam login, as flags where 1 is Windows and 2 is Linux.
+    - eg. 0 for no system, and 7 for the Call of Duty templates.
+    - AMP works it out from the template's SteamCMD update steps, where anonymous login is off.
+    - A shard on such a system needs a Steam credential, see `ShardModule.set_shard_credential`."""
     containerRuntimeAvailable: bool
 
 
@@ -4281,6 +4325,25 @@ class UpdateStatusResponse(TypedDict):
     # Every capture has it `None`.
     rolledBack: Optional[UpdateRolledBack]
     "The update this machine last took back, `None` when there's none."
+    systemAgentHold: Optional[UpdateSystemAgentHold]
+    """The offered version, when AMP holds it back until the machine's system agent is updated; `None` when no version
+    is held back.
+    - Its `installerUrl` is the version's installer, which updates the system agent."""
+
+
+# TODO: Check against a live capture; typed from AMP 3.0.2's OpenAPI `SystemAgentHoldDto` alone (#3-65).
+# Every capture has `systemAgentHold` `None`, as no update was held back on the test VMs.
+class UpdateSystemAgentHold(TypedDict):
+    """A version AMP holds back until the system agent is updated, from `UpdateStatusResponse.systemAgentHold`."""
+
+    version: str
+    "The version held back."
+    requiredContract: int
+    "The system agent's launch contract the version needs."
+    reportedContract: int
+    "The launch contract the machine's system agent reports, see `FirewallStatus.launchContract`."
+    installerUrl: Optional[str]
+    "Where to download the version's installer for the machine's system, `None` when the release lists no installer."
 
 
 class UserCreateRequest(TypedDict):

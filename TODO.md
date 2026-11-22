@@ -26,7 +26,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 - (#3-48) A structure pass: lower-case routes and an Endpoint line on every call, docstrings without test-run context, request TypedDicts, body spacing. *DONE*
 - (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`): group A, the `Session` paths, *DONE*; group B (stale objects, the registry) *DONE* (#3-51.6); group C (writes that lose data) *DONE* (#3-51.7); group G (structure) *DONE* (#3-51.8); group D (uncatchable errors) *DONE* (#3-51.9); groups E (names), F (types) and H (docs) open.
 - (#3-56) Match the library to AMP's own OpenAPI document (`.local_data/plans/openapi_compare/plan.md`): the shards area *DONE* (#3-56.6); spires and platform *DONE* (#3-56.7); accounts and session (#3-56.8) and first-run setup (#3-56.9) open.
-- (#3-65) Bring the library up to AMP 3.0.2 "Neptune": diff its OpenAPI against 3.0.1's, recheck the U reports its release notes touch, and reword the docs that still name 3.0.1.
+- (#3-65) Bring the library up to AMP 3.0.2 "Neptune": diff its OpenAPI against 3.0.1's, recheck the U reports its release notes touch, and reword the docs that still name 3.0.1. *DONE*
 
 ## ampapi/panel.py
 
@@ -58,7 +58,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 
 ---
 
-- (#3-47.7) Type the shard replies still marked `# TODO:`: users (need players), wake (needs a template that can sleep: `minecraft-java` is the only one that claims it and was refused for its slow start, then U18b), kill and abort (U12, still 404). The shards awaiting action are `Panel.get_shards_awaiting_action`, under `ampapi/panel.py`.
+- (#3-47.7) Type the shard replies still marked `# TODO:`: users (need players), wake (needs a template that can sleep: `minecraft-java` is the only one that claims it and was refused for its slow start, then U18b). The shards awaiting action are `Panel.get_shards_awaiting_action`, under `ampapi/panel.py`.
 
 ## ampapi/enrollments.py
 
@@ -71,7 +71,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 ---
 
 - (#3-47.8) Type a spire's import, import preflight, update and delete replies. *DONE* live on vm4 + vm5 (#3-53), except the update's success: no older AMP 3 release exists to put a spire behind the panel.
-- (#3-53) Type the import fields only ever seen empty: `liveness`, `unavailableReason`, `alreadyImportedAs`, `truncatedRoots`, `unreadableDirectories`, and the import record's lists.
+- (#3-53) Type the import fields only ever seen empty: `liveness`, `unavailable`, `alreadyImportedAs`, `truncatedRoots`, `unreadableDirectories`, and the import record's lists.
 
 ## Test VMs
 

@@ -43,8 +43,8 @@ class TaskModule(Base):
 
     # TODO: A `Task` object, once the tasks hub gives live progress (#3-47.2).
 
-    # TODO: Remove the warning once AMP honours a clone's cancel (U25).
-    # AMP 3.0.0 and 3.0.1 answer a clone's cancel with 202, and the clone carries on copying.
+    # TODO: Remove the warning once AMP honours the cancel of a clone to another spire (U25).
+    # As of AMP 3.0.2 that cancel is still answered 202, and the clone carries on copying.
     async def cancel_running_task(self, task_id: str) -> None:
         """Ask AMP to stop a running task.
 
@@ -53,12 +53,13 @@ class TaskModule(Base):
         Endpoint: ``POST /api/running-tasks/{task_id}/cancel``
 
         Clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have `isCancellable` set and an update task
-        doesn't, so cancelling an update is refused; :meth:`ShardModule.stop_shard` ends an update. To stop a shard
-        move, use :meth:`ShardModule.cancel_shard_migration`.
+        doesn't, so cancelling an update is refused; :meth:`ShardModule.abort_shard_update` ends an update. To stop a
+        shard move, use :meth:`ShardModule.cancel_shard_migration`.
 
         .. warning::
-            Cancelling a clone is answered 202 and the clone's task reads `TaskState.cancelling`, then the clone carries
-            on copying and completes.
+            Cancelling a clone to another spire is answered 202 and the clone's task reads `TaskState.cancelling`, then
+            the clone carries on copying and completes. A clone on the same spire is cancelled, and its task reads
+            `TaskState.cancelled`.
 
         Parameters
         ----------
@@ -91,7 +92,7 @@ class TaskModule(Base):
             The shard update of AMP 3.0.0 and 3.0.1 ignores the cancel. The task's `TaskResponse.status` reads 4
             (cancel asked for) while the update carries on, whether the update was downloading, between steps or
             starting its container.
-            :meth:`ShardModule.stop_shard` is what ends an update.
+            :meth:`ShardModule.abort_shard_update` is what ends an update.
 
         Parameters
         ----------

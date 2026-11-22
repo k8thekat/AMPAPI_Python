@@ -250,6 +250,14 @@ class Shard:
         self.data = data
         self.display_name = data["displayName"]
 
+    async def abort_update(self) -> None:
+        """Abort this shard's running update, see :meth:`ShardModule.abort_shard_update`.
+
+        |coro|
+
+        """
+        await self._module.abort_shard_update(shard_id=self.id)
+
     async def accept_eula(self) -> None:
         """Accept the game's licence for this shard, see :meth:`ShardModule.accept_shard_eula`.
 
@@ -762,6 +770,14 @@ class Shard:
         """
         return await self._module.import_shard_config(shard_id=self.id, path=path, content=content)
 
+    async def kill(self) -> None:
+        """Kill this shard's game at once, see :meth:`ShardModule.kill_shard`.
+
+        |coro|
+
+        """
+        await self._module.kill_shard(shard_id=self.id)
+
     async def migrate_to_spire(
         self,
         target_spire_id: str,
@@ -1174,6 +1190,36 @@ class ShardModule(Base):
 
     """
 
+    async def abort_shard_update(self, shard_id: str) -> None:
+        """Abort a shard's running update, eg. one waiting at a game's sign-in prompt.
+
+        |coro|
+
+        Endpoint: ``POST /api/shards/{shard_id}/update/abort``
+
+        AMP stops the update's tools, killing them after a short grace period, and the update's task ends as failed.
+        AMP answers before the update has stopped, so follow the abort with :meth:`get_shard_state`.
+
+        - Within a few seconds the shard's `ShardStatus.status` reads `ShardState.stopped`, and its
+          `ShardStatus.status_code` reads ``"agent.msg.updateAborted"``.
+        - A shard with no update running is answered 202 too, with no error.
+        - A short update can finish before the abort reaches it.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If there's no shard with that ID `shards.error.notFound`.\n
+            **409** - If the shard's spire refuses the abort, from AMP's docs and not seen live.\n
+            **503** - If the shard's spire doesn't answer, from AMP's docs and not seen live.
+
+        """
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/update/abort")
+
     async def accept_shard_eula(self, shard_id: str) -> None:
         """Accept the game's licence for a shard, eg. Minecraft's EULA, which the shard needs before it can start.
 
@@ -1183,8 +1229,7 @@ class ShardModule(Base):
 
         - AMP records the acceptance in the game's own settings, eg. Minecraft's ``eula.txt``, and in the audit log.
         - A shard held waiting on its licence (see :meth:`decline_shard_eula`) has its `ShardStatus.status` set back to
-          `ShardState.stopped`, from AMP's docs and not seen live. Accepting doesn't start the shard, so call
-          :meth:`start_shard` after.
+          `ShardState.stopped`. Accepting doesn't start the shard, so call :meth:`start_shard` after.
         - For a game with no licence, the call changes nothing, from AMP's docs and not seen live.
 
         Parameters
@@ -1203,8 +1248,8 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/eula/decline``
 
         A start no person was waiting on, eg. a scheduled start or a start on boot, holds a shard whose licence isn't
-        accepted. While the shard is held, its `ShardStatus.status` reads `ShardState.awaiting_user_action` and its
-        `ShardStatus.awaits_licence` is `True`.
+        accepted. A restart of the stopped shard holds it too. While the shard is held, its `ShardStatus.status` reads
+        `ShardState.awaiting_user_action` and its `ShardStatus.awaits_licence` is `True`.
 
         - Declining sets the shard's `ShardStatus.status` back to `ShardState.stopped`. Nothing is accepted.
         - The next start asks for the licence again.
@@ -1625,7 +1670,7 @@ class ShardModule(Base):
         await self._request(method="DELETE", path=f"/api/shards/{shard_id}/files", parameters={"path": path})
 
     # TODO: Reword Raises once AMP refuses an early dismissal cleanly (U22a).
-    # AMP 3.0.0 and 3.0.1 answer 500 to a dismissal while the move is starting or copying.
+    # As of AMP 3.0.2 a dismissal while the move is starting or copying is still answered 500.
     async def delete_shard_migration(self, shard_id: str) -> None:
         """Dismiss a shard's done or failed move, so :meth:`get_shard_migration` has no move to show.
 
@@ -2074,6 +2119,8 @@ class ShardModule(Base):
         -------
         :class:`ShardFileResponse`
             The file's size and when it changed. A folder's `isDirectory` is `True`.
+            - A folder the logged in user may only pass through, on the way to a granted path, gives its name alone, as
+              :meth:`get_shard_files` lists it.
 
         Raises
         ------
@@ -2129,8 +2176,11 @@ class ShardModule(Base):
         Returns
         -------
         list[:class:`ShardFileResponse`]
-            The entries, each `path` relative to the shard's folder. AMP's own ``.amp`` folder and anything the logged in
-            user may not read are left out.
+            The entries, each `path` relative to the shard's folder.
+            - AMP's own ``.amp`` folder and anything the logged in user may not read are left out.
+            - A folder the logged in user may not read, but that leads to a path the logged in user was granted, is
+              listed by name alone, so the granted path can be walked down to. Its `size` reads 0 and its `modified`
+              reads ``"0001-01-01T00:00:00+00:00"``.
 
         Raises
         ------
@@ -2367,6 +2417,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/schedules/catalog")
 
+    # As of AMP 3.0.2 a panel updated from 3.0.1 with schedule runs stored answers 500 here (upstream U37a).
     async def get_shard_schedule_history(
         self,
         shard_id: str,
@@ -2379,6 +2430,10 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``GET /api/shards/{shard_id}/schedules/{schedule_id}/history``
+
+        .. warning::
+            On a panel updated from an older AMP version, the schedule runs that version stored can make every history
+            read answer 500 ``"common.error.unexpected"``.
 
         Parameters
         ----------
@@ -2470,6 +2525,10 @@ class ShardModule(Base):
         |coro|
 
         Endpoint: ``GET /api/shards/{shard_id}/settings``
+
+        - A password setting's value reads as asterisks, of a random length, so neither the password nor its length
+          shows.
+        - A setting :meth:`set_shard_settings` refuses has its `SettingSpec.readOnly` set, eg. ``"$ApplicationIPBinding"``.
 
         Parameters
         ----------
@@ -2633,8 +2692,38 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/config/import", data={"path": path, "content": content})
 
+    async def kill_shard(self, shard_id: str) -> None:
+        """Kill a shard's game at once, with no grace period and no stop command, so the game's unsaved data is lost.
+
+        |coro|
+
+        Endpoint: ``POST /api/shards/{shard_id}/kill``
+
+        It's for a game that ignores :meth:`stop_shard`. AMP answers before the game is killed, so follow the kill with
+        :meth:`get_shard_state`.
+
+        - Within a few seconds the shard's `ShardStatus.status` reads `ShardState.stopped`, and its
+          `ShardStatus.status_code` reads ``"shards.msg.forciblyKilled"``.
+        - The shard's console reads "The application was forcibly killed by user request."
+        - A stopped shard is answered 202 too, with no error.
+
+        Parameters
+        ----------
+        shard_id : :class:`str`
+            The shard's ID.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **404** - If there's no shard with that ID `shards.error.notFound`.\n
+            **409** - If the shard's spire refuses the kill, from AMP's docs and not seen live.\n
+            **503** - If the shard's spire doesn't answer, from AMP's docs and not seen live.
+
+        """
+        await self._request(method="POST", path=f"/api/shards/{shard_id}/kill")
+
     # TODO: Trim the move notes once AMP refuses another spire's datastore with its own error (U22b).
-    # AMP 3.0.0 and 3.0.1 answer 409 to another spire's datastore.
+    # As of AMP 3.0.2 another spire's datastore is still answered 409.
     async def migrate_shard_to_spire(
         self,
         shard_id: str,
@@ -2753,12 +2842,18 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/schedules/preview-firings", data={"trigger": trigger})
 
+    # As of AMP 3.0.2 a panel updated from 3.0.1 with schedule runs stored answers 202 here, removes the files and
+    # leaves the shard deleted rather than purged (upstream U37b).
     async def purge_shard(self, shard_id: str) -> None:
         """Remove a deleted shard for good, its files included. AMP finishes it within a few seconds.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/purge``
+
+        .. warning::
+            On a panel updated from an older AMP version, the schedule runs that version stored can make the purge
+            answer 202, remove the shard's files and leave the shard deleted rather than purged.
 
         Parameters
         ----------
@@ -2782,10 +2877,24 @@ class ShardModule(Base):
 
         Follow it with :meth:`get_shard_state`; AMP answers before the game is back.
 
+        - The restart waits for the ports the game's old run held to be free before it starts the game again.
+        - While it waits, the shard's `ShardStatus.status` reads `ShardState.starting`, and its
+          `ShardStatus.status_code` reads ``"agent.msg.portReleaseWaiting"``.
+        - AMP refuses a restart of a stopped shard whose licence isn't accepted. AMP then holds the shard waiting on the
+          licence, see :meth:`decline_shard_eula`.
+
         Parameters
         ----------
         shard_id : :class:`str`
             The shard's ID.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            **409** - If the shard is stopped and its game's licence isn't accepted `shards.error.eulaRequired`. See
+            :meth:`accept_shard_eula`.\n
+            **409** - If the shard is stopped and a setting the game needs is empty
+            `shards.error.settingRequiredBeforeStart`. The shard stays stopped.
 
         """
         await self._request(method="POST", path=f"/api/shards/{shard_id}/restart")
@@ -2811,13 +2920,14 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/restore")
 
     async def restore_shard_snapshot(self, shard_id: str, snapshot_id: str) -> Snapshot:
-        """Restore a shard to one of its snapshots. A running shard can be restored too.
+        """Restore a shard to one of its snapshots.
 
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/snapshots/{snapshot_id}/restore``
 
-        AMP takes a snapshot named ``"Before restore"`` first, so the restore can be undone.
+        - AMP takes a snapshot named ``"Before restore"`` first, so the restore can be undone.
+        - AMP stops a running shard, restores it, then starts it again.
 
         Parameters
         ----------
@@ -2982,8 +3092,8 @@ class ShardModule(Base):
         return await self._request(method="PATCH", path=f"/api/shards/{shard_id}", data=self._without_none(mapping=data))
 
     # TODO: Reword the warning and Raises once AMP lets a deny be undone and answers a bad `state` with a 400 (U24a, U24b).
-    # AMP 3.0.0 and 3.0.1 answer the undo of a deny with 403 "files.acl.error.notYoursToGrant".
-    # AMP 3.0.1 answers a bad `state` with 200 and ignores it, on a path where no deny is in the way.
+    # As of AMP 3.0.2 the undo of a deny is still answered 403 "files.acl.error.notYoursToGrant".
+    # As of AMP 3.0.2 a bad `state` is still answered 200 and ignored, on a path where no deny is in the way.
     async def set_shard_file_acl(self, shard_id: str, path: str, changes: list[FileACLChange]) -> ShardFileACLResponse:
         """Change who may read, write and delete a path inside a shard.
 
@@ -3154,6 +3264,9 @@ class ShardModule(Base):
 
         Endpoint: ``PATCH /api/shards/{shard_id}/settings``
 
+        A shard held waiting on its required settings (`ShardStatus.awaits_settings`) has its `ShardStatus.status` set
+        back to `ShardState.stopped` once each required setting has a value. Giving the values doesn't start the shard.
+
         Parameters
         ----------
         shard_id : :class:`str`
@@ -3162,12 +3275,18 @@ class ShardModule(Base):
             Each setting's `fieldName` to its new value, always a string, eg. ``{"motd": "Hello", "MaxMemory": "2048"}``.
             - AMP checks an enum's value, but not a number's.
             - AMP ignores a setting name it doesn't know.
+            - A password setting sent back as the asterisks :meth:`get_shard_settings` reads keeps its stored password, so
+              every setting can be sent back as it was read.
 
         Raises
         ------
         AMPAPIRequestError
             **400** - If the setting doesn't allow an enum value `shards.error.valueNotAllowed`.\n
-            **400** - If `$MaxUsers` is above the shard's `ShardInfraSettings.max_users_cap` `shards.error.maxUsersAboveCap`.
+            **400** - If `$MaxUsers` is above the shard's `ShardInfraSettings.max_users_cap` `shards.error.maxUsersAboveCap`.\n
+            **400** - If `values` accepts the game's licence, eg. ``{"eula": "true"}`` `shards.error.settingsNotWritable`.
+            Use :meth:`accept_shard_eula` instead.\n
+            **400** - If `values` names a hidden or read-only setting `shards.error.settingsNotWritable`, from AMP's docs
+            and not seen live.
 
         """
         await self._request(method="PATCH", path=f"/api/shards/{shard_id}/settings", data=values)
@@ -3241,7 +3360,7 @@ class ShardModule(Base):
         await self._request(method="POST", path=f"/api/shards/{shard_id}/sleep")
 
     # TODO: Remove the second sentence once AMP refuses to start a shard that was never updated (U15).
-    # AMP 3.0.0 and 3.0.1 answer the start with 202, then the start fails after pulling its container.
+    # As of AMP 3.0.2 the start is still answered 202, then fails after pulling its container.
     async def start_shard(self, shard_id: str) -> None:
         """Start a shard's game.
 
@@ -3263,8 +3382,10 @@ class ShardModule(Base):
             **400** - If the shard is suspended `shards.error.suspended`.\n
             **409** - If the game's licence isn't accepted `shards.error.eulaRequired`. See :meth:`accept_shard_eula`.
             The error's `params` holds the game's name as `app`, the licence's `url` and the shard `setting` that keeps
-            the acceptance, eg. ``"eula"``.\n
-            **409** - If a setting the game needs is empty `shards.error.settingRequiredBeforeStart`.\n
+            the acceptance, eg. ``"eula"``. The shard stays stopped.\n
+            **409** - If a setting the game needs is empty `shards.error.settingRequiredBeforeStart`. The error's
+            `params` names the settings, as `fields` and by their keys as `fieldKeys`, eg. ``"DownloadType"``. The shard
+            stays stopped.\n
             **409** - If the shard is already running.
 
         """
@@ -3311,7 +3432,7 @@ class ShardModule(Base):
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/files/upload-start", data={"path": path, "size": size})
 
     # TODO: Reword Raises once AMP refuses a bad target datastore with its own error (U22b).
-    # AMP 3.0.0 and 3.0.1 answer 409 "spire.error.internal" to the shard's own datastore or an unknown one.
+    # As of AMP 3.0.1 the shard's own datastore or an unknown one is answered 409 "spire.error.internal".
     async def start_shard_migration(self, shard_id: str, target_datastore_id: str) -> None:
         """Move a shard to another datastore on its spire.
 
@@ -3347,12 +3468,11 @@ class ShardModule(Base):
         Endpoint: ``POST /api/shards/{shard_id}/stop``
 
         Follow it with :meth:`get_shard_state`; AMP answers before the game has stopped. A game still running after its
-        template's `TemplateLifecycle.exitTimeout` is killed (``"shards.msg.stopGraceExpired"``). On a shard that is
-        updating, it aborts the update (``"Update aborted"``); it is the only call that does, as
-        :meth:`TaskModule.cancel_task` doesn't.
+        template's `TemplateLifecycle.exitTimeout` is killed (``"shards.msg.stopGraceExpired"``). :meth:`kill_shard`
+        kills a game at once.
 
-        AMP 3.0.0 and 3.0.1 have no call that kills a game at once. A schedule step of the task ``"power.kill"`` does,
-        run with :meth:`run_shard_schedule` (``"shards.msg.forciblyKilled"``).
+        A stop of a shard that is updating aborts the update (``"Update aborted"``), as :meth:`abort_shard_update` does.
+        :meth:`TaskModule.cancel_task` doesn't end an update.
 
         Parameters
         ----------
@@ -3458,7 +3578,8 @@ class ShardModule(Base):
 
         Endpoint: ``POST /api/shards/{shard_id}/update``
 
-        A running shard is stopped for the update and left stopped. :meth:`stop_shard` aborts an update.
+        A running shard is stopped for the update and left stopped. :meth:`abort_shard_update` aborts an update, and so
+        does :meth:`stop_shard`.
 
         Parameters
         ----------
@@ -3533,6 +3654,13 @@ class ShardModule(Base):
             The container image to run instead of the template's.
             - ``""`` goes back to the template's image.
             - An image from AMP's own repository that AMP doesn't build is stored, but the shard fails at its next start.
+        allow_lan_access : :class:`bool`, optional
+            If the shard's container can reach the spire's local network or not.
+            - With it off, a Podman container on a Linux spire reaches only the internet, AMP's bus and the spire's DNS
+              resolvers.
+            - A change takes effect after a stop and a start, not after a restart.
+            - If AMP can't apply the filter, the update or start is refused with
+              `shards.error.containerLanFilterFailed`. `ShardInfraSettings.allow_lan_access` says why.
         memory_limit_mb : :class:`int`, optional
             The shard's memory limit in MiB, 0 for no limit.
             - A native shard takes the limit too.
@@ -3559,6 +3687,7 @@ class ShardModule(Base):
             - The players have to be told that analytics is in use.
         minimum_session_time_for_retention : :class:`int`, optional
             The shortest session in seconds that analytics keeps.
+            - It can't be above `ShardInfra.max_minimum_session_seconds`, eg. 6000.
         enable_geo_filtering : :class:`bool`, optional
             If AMP blocks players from certain countries or not.
         blocked_countries : list[:class:`str`], optional
@@ -3583,6 +3712,8 @@ class ShardModule(Base):
         import_config_files_from_sftp : :class:`bool`, optional
             If AMP reads a config file it manages back into the shard's settings when the file is written over SFTP or
             not.
+            - With it on, the change shows in the shard's settings within seconds.
+            - With it off, AMP writes the shard's settings over the file's change at the shard's next start.
         extra_environment : dict[:class:`str`, :class:`str`], optional
             Extra environment variables for the game's process or container, by name.
             - The dict replaces the stored variables, and ``{}`` removes them all.
@@ -3598,7 +3729,9 @@ class ShardModule(Base):
             **400** - If `container_mode` isn't a mode AMP knows.\n
             **400** - If the memory reservation is above the shard's memory limit
             `shards.error.memoryReservationExceedsLimit`.\n
-            **400** - If the memory and swap limit is below the shard's memory limit `shards.error.memorySwapLessThanLimit`.
+            **400** - If the memory and swap limit is below the shard's memory limit `shards.error.memorySwapLessThanLimit`.\n
+            **409** - If the shard's settings changed under every attempt to save them `shards.error.infraChangedMeanwhile`.
+            Nothing is saved. This is from AMP's docs and not seen live.
         TypeError
             If a keyword argument isn't a setting. Nothing is sent.
         ValueError

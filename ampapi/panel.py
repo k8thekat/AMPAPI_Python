@@ -229,7 +229,7 @@ class Panel(
             raise
 
     # TODO: Remove the note once AMP refuses to start a shard that was never updated (U15).
-    # AMP 3.0.0 and 3.0.1 answer the start with 202, then the start fails after pulling its container.
+    # As of AMP 3.0.2 the start is still answered 202, then fails after pulling its container.
     async def create_shard(
         self,
         template_slug: str,
@@ -374,15 +374,15 @@ class Panel(
         return [self._make_shard(data=entry) for entry in result]
 
     async def get_shards_awaiting_action(self) -> list[ShardAttentionResponse]:
-        """Get the shards waiting on a user, eg. for a sign-in prompt.
+        """Get the shards waiting on a person, eg. at a sign-in prompt or for a licence.
 
         |coro|
 
         Endpoint: ``GET /api/shards/attention``
 
-        Seen live with a ``"hytale"`` shard whose update waited for a device sign-in: its state read
-        `ShardState.awaiting_user_action` and the sign-in URL was in `message`. :meth:`ShardModule.stop_shard` ends the
-        wait by aborting the update.
+        - A ``"hytale"`` shard whose update waits for a device sign-in is listed with the sign-in URL in `message`. Its
+          state reads `ShardState.awaiting_user_action`, and :meth:`ShardModule.abort_shard_update` ends the wait.
+        - A shard held waiting on its licence or its required settings is listed too, see `ShardStatus.awaits_person`.
 
         Returns
         -------
@@ -398,6 +398,10 @@ class Panel(
         |coro|
 
         Endpoint: ``POST /api/shards/{shard_id}/purge``
+
+        .. warning::
+            On a panel updated from an older AMP version, the purge can leave the shard deleted rather than purged, see
+            :meth:`ShardModule.purge_shard`.
 
         Parameters
         ----------
