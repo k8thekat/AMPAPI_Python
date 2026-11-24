@@ -81,9 +81,9 @@ the session handling is debugged by them.
 - Still logged as they are: file contents (`read_file_chunk`), console output, and anything an app keeps in its own
   config files.
 
-**The `aiohttp.ClientSession` is the Bridge's** (#46b). Each Bridge makes one on the first call and every object on
-it sends its calls through it. Before #46b each object held its own, and `clean_up` on an Instance closed the one its
-Controller shared with it (vm1: the Controller's next call logged an ERROR, slept 1.01 s and made a new one).
+**The `aiohttp.ClientSession` is the Bridge's** (#46b). Each Bridge makes a session on the first call, and every object
+on the Bridge sends its calls through that session. Before #46b each object held its own session, and `clean_up` on an
+Instance closed the session its Controller shared with it (vm1: the Controller's next call logged an ERROR, slept 1.01 s and made a new one).
 - aiohttp ties a session to the event loop it was made in and has no public way to read that loop, so the Bridge
   keeps it. A session from a finished loop still says `closed` is False, and its `post` raises "Event loop is
   closed", so `_get_client_session` replaces one from another loop and closes the old one.
@@ -128,7 +128,7 @@ user with no roles got `Core.RoleManagement.ViewRoles` from `get_role_ids`).
 - One login for concurrent calls (#22, Kat's idea of checking the state instead of a lock): a call that logs in puts
   a marker in the Bridge's `_logins_pending` under its Instance ID, and the other calls for that ID wait for that
   login and use the session it stored. There's no lock to outlive an event loop, since the marker only exists while
-  a login runs, and one from a finished loop is dropped. If that login fails, each waiting call tries its own login,
+  a login runs, and a marker from a finished loop is dropped. If that login fails, each waiting call tries its own login,
   one at a time (Kat's choice). Live on vm1 after an `ampinstmgr -r`: 20 concurrent calls made 20 logins before, and
   1 after. With a wrong password, 5 calls made 5 failed logins, one at a time, and all raised.
 - The marker was on the object until #46g. Two objects for one Instance ID (two Controllers, or a Controller and an

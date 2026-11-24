@@ -795,8 +795,8 @@ class APIParams:
     url : :class:`str`
         The URL to access the Web GUI panel home page/login page. A trailing `/` is removed.
     user : :class:`str`
-        The AMP User name to login to the Web Panel, default is "".
-        In the `oidc` mode :meth:`Core.oidc_login <ampapi.Core.oidc_login>` fills it in from the login.
+        The AMP User name to login to the Web Panel, default is "".\n
+        - In the `oidc` mode, :meth:`Core.oidc_login <ampapi.Core.oidc_login>` sets `user` to the AMP user it logged in as.
     password : :class:`str`
         The AMP User password to login to the Web Panel, default is "".
     use_2fa : bool

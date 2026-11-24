@@ -2326,8 +2326,9 @@ class Core(Base):
         Parameters
         ----------
         redirect_uri : Union[:class:`str`, None], optional
-            The URL the provider sends the browser back to. It must be the same in :meth:`oidc_login`, by default None.
-            None uses the panel's own URL, with a trailing `/`.
+            The URL the provider sends the browser back to, by default None.\n
+            - Pass the same URL to :meth:`oidc_login`.
+            - With None, AMP sends the browser back to the panel's URL with a trailing `/` added.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`
@@ -3614,8 +3615,9 @@ class Core(Base):
         Endpoint: `Core/Logout`
 
         .. versionchanged:: 5.0.0
-            The stored session is cleared, and the next call logs in again.
-            It ends the stored session as it is, with no login first, and does nothing when there is none.
+            The stored session is cleared, so the next call logs in again.
+            Ends the stored session without logging in first.
+            Does nothing when there is no stored session.
 
         Parameters
         ----------
@@ -3759,12 +3761,15 @@ class Core(Base):
         code : :class:`str`
             The authorization code the provider sent back to `redirect_uri`.
         state : :class:`str`
-            The `state` value the provider sent back with the code. AMP accepts each one once.
+            The `state` value the provider sent back with the code.\n
+            - AMP accepts each `state` value once.
         redirect_uri : :class:`str`
-            The URL the provider sends the browser back to. It must be the same as in :meth:`get_oidc_login_url`.
+            The URL the provider sends the browser back to.\n
+            - Pass the same URL given to :meth:`get_oidc_login_url`.
         instance_id : Union[:class:`str`, None], optional
-            The Instance ID, see :attr:`~Instance.instance_id`. None sends null, like the panel does, by default None.
-            An Instance ID still gives a session only the Controller accepts, so leave it None.
+            The Instance ID, see :attr:`~Instance.instance_id`, by default None.\n
+            - None sends null, like the panel does.
+            - An Instance ID still gives a session only the Controller accepts, so leave it None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional
             Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
         **response_params : :class:`Unpack[ResponseHandlerOptions]`

@@ -47,10 +47,11 @@ class Bridge(APIParams):
         _bridge: Bridge = Bridge(api_params=_params)
         del _params
 
-    A user that signs in through an OIDC provider has no password, so set `auth_mode` to
+    An AMP user that signs in through an OIDC provider has no password, so set `auth_mode` to
     :attr:`AuthMode.oidc <ampapi._enums.AuthMode.oidc>` on the :class:`APIParams` instead.
-    Your app sends the user to the URL from :meth:`~Core.get_oidc_login_url`, catches the redirect to `redirect_uri` and
-    passes the `code` and `state` it carries to :meth:`~Core.oidc_login`. After that every call uses the stored session.
+    Your app sends the browser to the URL from :meth:`~Core.get_oidc_login_url`, catches the redirect to `redirect_uri`
+    and passes the `code` and `state` it carries to :meth:`~Core.oidc_login`. After that every call uses the AMP login
+    session :meth:`~Core.oidc_login` stored.
 
     .. code-block:: python
         :linenos:
@@ -59,18 +60,18 @@ class Bridge(APIParams):
         _bridge: Bridge = Bridge(api_params=_params)
         controller = Controller()
 
-        # Send the user's browser to this URL
+        # Send the browser to this URL to sign in
         login_url = await controller.get_oidc_login_url(redirect_uri="https://example.com/callback")
 
         # Your app receives the redirect with `code` and `state` in its query
         await controller.oidc_login(code=code, state=state, redirect_uri="https://example.com/callback")
 
     .. note::
-        Each :class:`Bridge`, the singleton or one made with ``singleton=False``, holds its own
+        Each :class:`Bridge`, the singleton or a Bridge made with ``singleton=False``, holds its own
         :class:`aiohttp.ClientSession`, and every object made with it sends its calls through that session.
         It is made on the first call, and a session from an event loop that has finished is replaced.
         Close it with ``await bridge.clean_up()``, ``async with bridge:`` or :meth:`~Base.clean_up` on your :class:`Controller`.
-        To use your own, pass it as `session` or set :attr:`session`. It is yours, so it is never closed for you.
+        To use your own session, pass it as `session` or set :attr:`session`. It is yours, so it is never closed for you.
 
 
     .. versionchanged:: 5.0.0
@@ -86,9 +87,10 @@ class Bridge(APIParams):
     singleton : :class:`bool`, optional
         If `True`, the :class:`Bridge` will be created as a singleton, by default True.
     session : Union[:class:`aiohttp.ClientSession`, None], optional
-        A session for every object made with this :class:`Bridge` to send its calls through, by default None.
-        It is never closed for you, and without one the :class:`Bridge` makes its own on the first call.
-        Only the first ``Bridge()`` of a singleton takes it, so set :attr:`session` after that.
+        A session for every object made with this :class:`Bridge` to send its calls through, by default None.\n
+        - A session passed in is never closed for you.
+        - With no session passed in, the :class:`Bridge` makes a session on the first call.
+        - A later ``Bridge()`` call on the singleton ignores `session`, so set :attr:`session` instead.
 
     """
 
@@ -105,9 +107,11 @@ class Bridge(APIParams):
     def session(self) -> Union[aiohttp.ClientSession, None]:
         """The :class:`aiohttp.ClientSession` every object made with this :class:`Bridge` sends its calls through.
 
-        Reading it gives a session passed in while it is open, otherwise the one we made, which is None until the first
-        call. Setting it uses your session from the next call on, and it is never closed for you. Setting None goes back
-        to the session we make.
+        - Reading it gives your session, passed to ``Bridge()`` or set here, while your session is open.
+        - Otherwise reading it gives the session we made.
+        - The session we make is None until the first call.
+        - Setting it sends every call through your session from the next call on. Your session is never closed for you.
+        - Setting None goes back to the session we make.
 
         .. versionadded:: 5.0.0
 
@@ -279,8 +283,11 @@ class Bridge(APIParams):
 
         Get the :class:`aiohttp.ClientSession` a call is sent through.
 
-        A session passed in is used while it is open. Otherwise we use our own, and make a new one in the running event
-        loop when we have none, ours is closed, or ours belongs to another event loop.
+        A session passed in is used while it is open. Otherwise we use the session we made.
+        We make a new session in the running event loop when:\n
+        - We haven't made a session yet.
+        - Our session is closed.
+        - Our session belongs to another event loop.
 
         Returns
         -------
@@ -306,7 +313,7 @@ class Bridge(APIParams):
         return client_session
 
     def _get_pending_login(self, instance_id: str) -> Union[asyncio.Future[None], None]:
-        """Get the login running for this Instance ID in the running event loop, if there is one."""
+        """Get the login running for this Instance ID in the running event loop, or None."""
         pending: Union[asyncio.Future[None], None] = self._logins_pending.get(instance_id)
         # A login cut off when its event loop ended can't be awaited here, so we drop it
         if pending is not None and pending.get_loop() is not asyncio.get_running_loop():

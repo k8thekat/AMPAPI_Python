@@ -51,10 +51,11 @@ class AMPAPIResponseError(AMPAPIError):
 
 
 class AMPAPIOIDCSessionError(AMPAPIResponseError):
-    """Raised in the OIDC mode when there is no session, so the user has to log in through the provider again.
+    """Raised in the OIDC mode when there is no session, so a new login through the provider is needed.
 
-    That is any call before :meth:`~ampapi.Core.oidc_login`, after :meth:`~ampapi.Core.logout`, or after AMP ended the
-    session. Send the user to :meth:`~ampapi.Core.get_oidc_login_url` and call :meth:`~ampapi.Core.oidc_login` again.
+    It's raised on the call itself, for any call made before :meth:`~ampapi.Core.oidc_login`, after
+    :meth:`~ampapi.Core.logout`, or after AMP ended the session.
+    Send the browser to the URL from :meth:`~ampapi.Core.get_oidc_login_url`, then call :meth:`~ampapi.Core.oidc_login` again.
 
     .. versionadded:: 5.0.0
     """

@@ -83,7 +83,7 @@ Changed methods
   :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
   itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
 - `session_ttl` is removed. A stored session is used until AMP ends it, then the library logs in again and resends the
-  call. 4.x logged in again every 240 seconds, and AMP kept each old session alive.
+  call. 4.x logged in again every 240 seconds, which left each old session alive on AMP.
 - The repr of :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) leaves out `password`, `token` and
   the stored sessions, so the debug logs don't print them.
 - :meth:`~ampapi.adsmodule.ADSModule.create_instance`, :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`
@@ -148,11 +148,11 @@ Changed methods
   `UpdateInstanceInfo` takes. 4.x could not send them.
 - :meth:`~ampapi.Core.oidc_login` is now ``oidc_login(code, state, redirect_uri, instance_id=None)``. AMP requires
   `state`, and 4.x never sent it, so the call always failed. `instance_id` is optional and AMP is sent null without it.
-  It needs no session, so it no longer logs in first, and it stores the session of a successful login. With
+  It needs no session, so it no longer logs in first. A successful login stores its session. With
   ``AuthMode.oidc`` it also sets the Bridge's `user` from the login.
 - :meth:`~ampapi.Core.get_oidc_login_url` needs no session either, so it no longer logs in first.
-- :meth:`~ampapi.Core.logout` ends the stored session as it is, and does nothing without one. 4.x could log in first and
-  then end that new session, which left the stored one alive on AMP.
+- :meth:`~ampapi.Core.logout` ends the stored session as it is, and does nothing when there is no stored session.
+  4.x could log in first and end that new session instead, which left the stored session alive on AMP.
 - :meth:`~ampapi.Core.set_config` and :meth:`~ampapi.Core.set_configs` send a list, tuple or dict value as a JSON string.
   AMP needs that for a `List<String>` setting, and 4.x raised "Missing Field" for a list. Both also accept
   :class:`bool` and :class:`int` values.

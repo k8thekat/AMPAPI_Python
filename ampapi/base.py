@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import Callable, Coroutine
 
-    # The session TTL is off for now, and it was the only user
+    # Unused while the session TTL is off
     # from datetime import timedelta
     from types import TracebackType
     from typing import Concatenate, Self
@@ -176,7 +176,7 @@ def _hide_secrets(data: Any) -> Any:
         source_list: list[Any] = data  # pyright: ignore[reportUnknownVariableType]
         return [_hide_secrets(entry) for entry in source_list]
 
-    # The 2FA setup link holds the secret too, and AMP sends it under a plain `Url` key
+    # AMP sends the 2FA setup link, which holds the secret, under a plain `Url` key
     if isinstance(data, str) and data.startswith("otpauth://"):
         return "<hidden>"
     return data
@@ -680,7 +680,7 @@ class Base:
 
         LOGGER.debug("<%s.%s> | BRIDGE: %s | SESSION: %s |", __class__.__name__, "__init__", bridge, session)
         # self.session: aiohttp.ClientSession | None = session
-        # A session passed in still goes on the Bridge, and without one we keep what the Bridge has
+        # A session passed in still goes on the Bridge. With no session passed in, the Bridge's session stays as it is
         if session is not None:
             msg = "The `session` parameter is deprecated. Pass it to <Bridge> or set <Bridge>.session instead."
             # This skips our own files, so the warning names the caller's line and Python shows it
@@ -890,7 +890,7 @@ class Base:
                 # # Attempting to re-open the session if it is somehow closed during usage.
                 # if isinstance(e.args[0], str) and "session is closed" in e.args[0].lower():
                 #     self.session = aiohttp.ClientSession()
-                # The next pass asks the Bridge again, and it replaces a closed session
+                # On the next pass the Bridge replaces a closed session
 
                 # retry: int | float = self._backoff.delay()
                 # LOGGER.error(
@@ -997,7 +997,7 @@ class Base:
                     response_params["allow_null"] = True
                 result: ResponseAliasFull = await self._response_handler(response=response, sanitize_json=sanitize_json, **response_params)
             except _SessionDeadError as dead_session:
-                # A second dead answer, or one to the login itself, is a real failure
+                # A dead session answer to the retry or to the login itself is a real failure
                 if session_retried is True or url == "Core/Login":
                     raise AMPAPIResponseError(
                         title=dead_session.title,
@@ -1451,9 +1451,10 @@ class Base:
         Parameters
         ----------
         logout : :class:`bool`, optional
-            If to call `Core/Logout` first or not, by default False.
-            It also resets the stored session, and is skipped when there is no session.
-            A failed logout is logged as a warning and the session is still closed.
+            If to call `Core/Logout` first or not, by default False.\n
+            - `Core/Logout` ends the AMP login session and clears it from the Bridge.
+            - With no AMP login session stored, `Core/Logout` is skipped.
+            - A failed `Core/Logout` doesn't raise, and the :class:`aiohttp.ClientSession` is still closed.
 
         """
         stored: Union[APISession, None] = self._bridge._sessions.get(self._instance_id)  # pyright: ignore[reportPrivateUsage]

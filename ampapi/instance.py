@@ -983,8 +983,9 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         bridge : Union[:class:`Bridge`, None], optional
             The Bridge to connect through, uses the Singleton <Bridge> if None, by default None.
         session : Union[:class:`aiohttp.ClientSession`, None], optional
-            A session for every object on the Bridge to send its calls through, by default None.
-            It is never closed for you, and without one the Bridge makes its own on the first call.
+            A session for every object on the Bridge to send its calls through, by default None.\n
+            - A session passed in is never closed for you.
+            - With no session passed in, the Bridge makes a session on the first call.
 
             .. versionchanged:: 5.0.0
                 Goes on the :class:`Bridge`, so every object made with it uses this session.
