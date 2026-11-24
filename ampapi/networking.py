@@ -58,7 +58,7 @@ class NetworkModule(Base):
     # TODO: Trim the note and the warning once AMP fixes the gateway status gaps and keeps the publications (U26b, U26e, U31).
     # As of AMP 3.0.2 a running shard still routes only after it restarts, and a new tunnel reads `Fault` while it connects.
     # As of AMP 3.0.2 making the gateway still deletes the shard's publications.
-    async def create_gateway(self, shard_id: str, front_spire_id: str) -> GatewayResponse:
+    async def create_gateway(self, *, shard_id: str, front_spire_id: str) -> GatewayResponse:
         """Route a shard through a front spire, so players reach it at that spire's address.
 
         |coro|
@@ -113,11 +113,11 @@ class NetworkModule(Base):
     # Then the publication's `state` reads `Active` by itself.
     async def create_publication(
         self,
+        *,
         front_spire_id: str,
         public_port: int,
         shard_id: str,
         port_reference: str,
-        *,
         front_public_host: Optional[str] = None,
     ) -> PublicationResponse:
         """Forward a public port on a front spire to a shard's port.

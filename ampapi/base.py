@@ -21,7 +21,6 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
@@ -51,14 +50,6 @@ class Base:
 
     def __init__(self, session: Session) -> None:  # noqa: D107
         self.session = session
-
-    @staticmethod
-    def _to_enum[E: Enum, V: (int, str)](enum: type[E], value: V) -> Union[E, V]:
-        """`value` as a member of `enum`, or the plain number or name when AMP sent one the library doesn't know yet."""
-        try:
-            return enum(value)
-        except ValueError:
-            return value
 
     @staticmethod
     def _without_none[V](mapping: Mapping[str, Optional[V]]) -> dict[str, V]:

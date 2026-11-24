@@ -33,14 +33,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, TypeGuard, Unio
 
 from aiohttp import ClientError, ClientSession, FormData
 
-from .errors import (
-    AMPAPILoginError,
-    AMPAPIPasskeyRequiredError,
-    AMPAPIPasswordChangeRequiredError,
-    AMPAPIRequestError,
-    _is_dotted_key,  # pyright: ignore[reportPrivateUsage]
-    _is_json_object,  # pyright: ignore[reportPrivateUsage]
-)
+from .errors import AMPAPILoginError, AMPAPIPasskeyRequiredError, AMPAPIPasswordChangeRequiredError, AMPAPIRequestError
+from .utils import is_dotted_key, is_json_object
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
@@ -129,7 +123,7 @@ def redact(value: Any, key: str = "") -> Any:
         A copy of `value` with its secrets hidden.
 
     """
-    if _is_json_object(value=value):
+    if is_json_object(value=value):
         return {item_key: redact(item, item_key) for item_key, item in value.items()}
     if _is_json_list(value=value):
         return [redact(item, key) for item in value]
@@ -140,7 +134,7 @@ def redact(value: Any, key: str = "") -> Any:
     if SECRET_KEYS.search(key) and value:
         return f"<redacted str len={len(value)}>"
     # A recovery code is sent as `code`, but AMP's error codes there are dotted keys and a crash's exit code is a number
-    if key.lower() == "code" and value and _is_dotted_key(value=value) is False and value.lstrip("-").isdigit() is False:
+    if key.lower() == "code" and value and is_dotted_key(value=value) is False and value.lstrip("-").isdigit() is False:
         return f"<redacted str len={len(value)}>"
     value = SIGN_IN_CODES.sub(r"\1<redacted>", value)
     if ADDRESS_KEYS.search(key):
@@ -502,7 +496,7 @@ class Session:
             )
             if download is True:
                 return status, authenticate_header, body
-            code: Optional[str] = body.get("code") if _is_json_object(value=body) else None
+            code: Optional[str] = body.get("code") if is_json_object(value=body) else None
             if status != 503 or code not in self._outage_codes or retries == len(self._outage_delays):
                 return status, authenticate_header, body
 
@@ -1109,7 +1103,7 @@ class Session:
         data: LoginRequest = {"username": self.username, "password": self._password, "rememberMe": self.remember_me}
         status, _authenticate_header, body = await self._send(method="POST", path="/api/auth/login", data=data, use_token=False)
         if status == 401:
-            reason: str = body.get("message", "") if _is_json_object(value=body) else ""
+            reason: str = body.get("message", "") if is_json_object(value=body) else ""
             raise AMPAPILoginError(username=self.username, reason=reason)
         if not 200 <= status < 300:
             raise AMPAPIRequestError(status=status, method="POST", path="/api/auth/login", data=body)

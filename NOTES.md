@@ -69,9 +69,9 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
 - Calls return TypedDicts, except where a reply has the same shape as a hub event: then it's the event's object
   (`objects.py`, an `AMPObject` with snake_case attributes and the raw dict on `.data`), eg. `get_shard_state` gives
   a `ShardStatus` (Kat, 2026-11-07). `Shard` and `Spire` are classes too. There is no `format_data`.
-    - Settings a user reads and then changes are `AMPObject`s too, changed through keyword arguments or passed back
-      whole (#3-66, Kat 2026-11-19, discord.py's `Guild` / `guild.edit(...)` split): `ShardInfra`,
-      `ShardInfraSettings`, `ShardInfraSaveResult` and `Preferences`.
+    - Settings a user reads and then changes are `AMPSettings` objects (#3-51.11, Kat 2026-11-22): `ShardInfraSettings`,
+      `ShardInfraSaveResult` and `Preferences`, with `ShardInfra` holding the infra settings. Each is read from AMP or
+      made from typed keyword arguments, and an update sends only the fields set on it.
 - `Session._send` waits out a 503 whose `code` is `session.storeUnavailable` or `common.error.busUnavailable` (1, 2,
   4, 8, 8 seconds, as the web panel does), so logins, renewals and the session's own calls get it too, and every
   module call goes through `Session`'s single relogin on a dead session; `Base._request` only hands the call over
@@ -112,9 +112,8 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   with a field doc naming its enum, eg. a gateway's `status.state` is ``"Active"``, and `GatewayState(state)` gives the
   member (a `StrEnum` compares equal to its string). Request bodies take the enum's value; the method parameters keep
   the enum types. Converting into enums is the `AMPObject`s' job, from their hints.
-    - `ShardInfraChanges` and `PreferencesChanges` (#3-66c) type keyword arguments, but keep the rule too (Kat,
-      2026-11-19, #3-66e): `container_mode`, `amp_experience` and `time_format` are a plain `str`, and an enum
-      member passes as its value. The objects still read them as enums.
+    - An `AMPSettings` field typed with an enum takes the member or a plain `str`, and the update call sends the
+      member's value (`container_mode`, `amp_experience`, `time_format`).
 - A `bool` in a query is sent as `"true"` / `"false"` by `Session._send`, as yarl (aiohttp's query builder) refuses a
   `bool` (#3-51.4j). Calls send their flags every time, eg. `demo=false`, where they used to leave a `False` one out.
 - `Session` holds `accept_invite` and `preview_invite`, as the invitee has no account yet (#3-50.7). `accept_invite`
@@ -152,8 +151,11 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
   kept for behaviour a user must know, eg. a file ACL deny that can't be undone (U24a) or a call that changes how the
   panel is reached. Each one is typed properly once a capture shows it.
 - Numbers AMP sends for states are the web panel's own enums in `_enums.py` (`ShardState`, `SnapshotKind`,
-  `TaskState`, ...). `Base._to_enum` converts them where they're returned and keeps a number it doesn't know as a
-  plain `int`, so a new AMP state can't break a read; the fields are typed `Union[Enum, int]`.
+  `TaskState`, ...). `AMPObject._convert` converts them where they're returned and keeps a number it doesn't know as
+  a plain `int`, so a new AMP state can't break a read; the fields are typed `Union[Enum, int]`.
+- A bodiless POST sends what the web panel sends (#3-51.2q): some calls send `{}` (the renew, logout and hub token,
+  task cancels, recovery codes, updates, a shard's suspend, unsuspend, disk warning, snapshot restore and schedule
+  run), the rest no body at all.
 - Downloads come back as `bytes` (`_request(raw_bytes=True)`); they need the Bearer header, as AMP takes no other
   credential, and are held whole in memory. Uploads send the web panel's form (`files`) or, for a big file, the
   chunked upload in 8 MiB chunks.
@@ -164,22 +166,29 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
       gone.
     - `set_shard_infra` and `Shard.set_infra` were removed (Kat, 2026-11-19, while 6.0.0 is a beta): on 3.0.1 they sent
       the same PATCH as `update_shard_infra`.
-    - Keyword arguments and an optional object since #3-66 (Kat, 2026-11-19, a breaking change while 6.0.0 is a beta):
-      `update_shard_infra(shard_id, settings=None, **changes)`, `Shard.update_infra(settings=None, **changes)` and
-      `update_preferences(preferences=None, **changes)` replace the `changes` / `values` TypedDict.
-        - `changes` is typed `Unpack[ShardInfraChanges]` / `Unpack[PreferencesChanges]`, snake_case keys (#3-66c).
-        - A name that isn't a setting is a `TypeError` before sending, worded as Python's own.
-        - The object is sent whole from its attributes, so an edited attribute goes too. AMP's `shardId`, `tenantId`,
-          `updatedAt`, `updatedByUserId` and a save's `clampRefused` aren't settings, so they stay out.
-        - An object's `container_image_override` of `None` is sent as `""`, as AMP reads `null` as "keep". A
-          `Preferences` attribute of `None` is left out.
-        - The keyword arguments win over the object's values, field by field.
-        - `None` keeps a value, as AMP's own PATCH contract says for both routes (OpenAPI `ShardInfraPatch` and
+    - `AMPSettings` objects since #3-51.11 (Kat, 2026-11-22, a breaking change while 6.0.0 is a beta), replacing
+      #3-66's keyword arguments and object sent whole: `update_shard_infra(shard_id, settings)`,
+      `Shard.update_infra(settings)` and `update_preferences(preferences)`.
+        - `AMPSettings` (`objects.py`) is under `typing.dataclass_transform`, so pyright and Pylance build a typed
+          keyword constructor from the fields: one field list, where #3-66 kept `ShardInfraChanges` /
+          `PreferencesChanges` beside the objects by hand. Both TypedDicts are gone.
+        - Each field's class default is `UNSET`, for the type checker only; `__init_subclass__` removes it, so a field
+          never set raises `AttributeError` (Kat: safer, should a value ever take a `None` setting).
+        - The library builds the objects from AMP's replies through `from_data`, with no field recorded. The other
+          `AMPObject` classes keep `Cls(data=...)`.
+        - The object records each field set after it was made; the update sends only those, so a setting another
+          program changed since the read stays. The recorded fields are cleared once AMP accepts, and kept on a refusal.
+        - Nothing recorded, or only `None` or AMP's own fields, is a `ValueError` before sending (#3-66b).
+        - AMP's `shardId`, `tenantId`, `updatedAt`, `updatedByUserId` and a save's `clampRefused` are never sent.
+        - `container_image_override` set to `None` is sent as `""`, as AMP reads `null` as "keep". Any other `None` is
+          left out, as AMP's own PATCH contract says for both routes (OpenAPI `ShardInfraPatch` and
           `PatchPreferencesRequest`). `Base._key_name` turns each name back into AMP's camelCase.
-    - `ShardInfraSettings` (the TypedDict), `ShardInfraResponse`, `ShardInfraUpdateResponse` and `PreferencesResponse`
-      were removed. `ShardInfraChanges` and `PreferencesChanges` came back with snake_case keys for the keyword
-      arguments. The PATCH bodies are built from them, so `ShardInfraUpdateRequest` and `PreferencesUpdateRequest`
-      went too.
+        - `__getattr__` and `__setattr__` sit under `if not TYPE_CHECKING:`, as either one makes pyright accept any
+          attribute name, a misspelt one too.
+        - Live on vm3 (3.0.2), `scripts/live_3_51_11.py`: read-edit-send and keyword objects change only their fields,
+          a list empties, `None` brings back the template's image, preferences through a throwaway user.
+    - `ShardInfraSettings` (the TypedDict), `ShardInfraResponse`, `ShardInfraUpdateResponse`, `PreferencesResponse`,
+      `ShardInfraUpdateRequest` and `PreferencesUpdateRequest` went in #3-66.
     - Checked live on vm3 (3.0.1) 2026-11-19: a `{}` PATCH answers 200 on both routes and changes nothing, but the infra
       one still stamps `updatedAt` and `updatedByUserId`. Kat chose a `ValueError` before sending for an update with
       no arguments (#3-66b), on both routes.
@@ -189,6 +198,14 @@ Kat's decisions of 2026-11-06 (the plan is `.local_data/plans/amp3_exploration/p
         - `extraEnvironment` and the country lists replace the stored ones.
         - A `null` field keeps its value on both routes, so a preference can't go back to `None`.
         - A preference list replaces the stored list, and `add_favourite` puts the new slug first.
+    - `Preferences.default()` (#3-67) sends the value the web panel shows for each `null` preference, read from the
+      panel's 3.0.2 bundle (`.local_data/plans/preferences_default/panel_defaults.md`); live on vm3 7/7.
+        - AMP stores `""` for `theme` and `locale`, and doesn't check a theme's name or a pinned shard's ID.
+        - The panel reads an empty theme as none chosen, so `default()` sends `theme=""`.
+        - The panel reads an empty locale as English, not the browser's language, so `default()` leaves `locale` out
+          (Kat's #3-67e).
+        - The panel never reads `notifyOnStateChange` or `notifyOnUpdateAvailable`, so `default()` leaves them out
+          (#3-67d).
     - What each infra field does on a running game is in `.local_data/plans/settings_objects/findings/infra_fields.md`
       (#3-66 Phase 2). On vm3 a Podman shard's memory and CPU limits aren't enforced, as rootless Podman falls back to
       cgroupfs without a systemd user session for `amp`; that's the host's setup, so the docs say only what AMP sets.
@@ -221,8 +238,8 @@ latest AMP, so a field AMP 3.0.2 added is typed as always sent, and a 3.0.1 pane
     - `TemplateMetadata.arch` and `HTTPSCheck.detail` are gone, as AMP 3.0.2 dropped both.
 - `kill_shard` / `Shard.kill` and `abort_shard_update` / `Shard.abort_update` are new (U12, fixed in 3.0.2). Both answer
   202 when there's nothing to kill or abort, and 404 `shards.error.notFound` for an unknown shard.
-- `allow_lan_access` (AMP's `allowLanAccess`) is in `ShardInfraChanges`, `ShardInfraSettings` and
-  `ShardInfraSettingsResponse`.
+- `allow_lan_access` (AMP's `allowLanAccess`) is in `ShardInfraSettings` and `ShardInfraSettingsResponse`
+  (`ShardInfraChanges` too, until #3-51.11 removed it).
     - Before it, `update_shard_infra(allow_lan_access=...)` raised the library's `TypeError`, and an object read on
       3.0.2 was sent without it, so AMP kept the stored value.
     - Off by default. Off, a Podman container on vm3 reached 1.1.1.1:443 and the router's DNS but not dotHack's SSH
@@ -244,6 +261,22 @@ latest AMP, so a field AMP 3.0.2 added is typed as always sent, and a 3.0.1 pane
   filter in a helper container from the shard's image. CubeCoders rebuilt both with `nft` that evening. A spire keeps
   the image it pulled, so one holding a broken build needs a `podman pull` as AMP's `amp` user. `allow_lan_access`'s
   docs say what the refusal is.
+
+## Code analysis groups E, F and H, and settings objects (#3-51.10, #3-51.11)
+
+- Breaking while 6.0.0 is a beta, told here as this branch has no `docs/upgrading.rst`:
+    - An `AMPObject` is read by attribute only (Kat's #3-51.1i): `state["status"]` is now `state.status`, and `data`
+      holds the dict as AMP sent it. A TypedDict reply is still read by key.
+    - `create_gateway` and `create_publication` take every parameter by keyword (#3-51.3d), so the shard and front
+      spire IDs can't be swapped.
+    - The infra and preference updates take an `AMPSettings` object only (#3-51.11), see "`PATCH /infra`" above.
+    - The audit calls' `origin`, `min_severity` and `sort` take `AuditOrigin`, `AuditSeverity` and `AuditSort`
+      members (Kat: an Enum where a key's range of values won't change). The `AuditOriginName` and
+      `AuditSeverityName` Literals are gone. AMP 3.0.2 reads an origin or severity as its number or its name, in any
+      case, and answers 400 for a number it doesn't know.
+- AMP 3.0.2 answers a cancel with no move running 409 `{code: "shards.error.moveNotRunning", message}`, where 3.0.0
+  sent `{error: "shards.migration.notRunning"}`. No `{error}` body is in the 3.0.2 captures, so which calls still send
+  that shape is unchecked.
 
 ## Live events (#3-47.2)
 

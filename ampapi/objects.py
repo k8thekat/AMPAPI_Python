@@ -26,10 +26,10 @@ import re
 import types
 from collections.abc import Mapping
 from enum import Enum
-from typing import Any, ClassVar, Optional, Union, get_args, get_origin, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, Union, dataclass_transform, get_args, get_origin, get_type_hints
 
 # The names below are read at run time by `typing.get_type_hints`, so they can't sit under `TYPE_CHECKING`.
-from ._enums import (  # noqa: TC001
+from ._enums import (
     LifecycleKind,
     MigrationStatus,
     ShardContainerMode,
@@ -53,10 +53,10 @@ from ._types import (  # noqa: TC001
     SpireResponse,
     WrappedID,
 )
-from .base import Base
 
 __all__ = (
     "AMPObject",
+    "AMPSettings",
     "ConsoleHistory",
     "ConsoleLine",
     "LifecycleEvent",
@@ -81,6 +81,9 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 
 # A lower case letter or digit followed by a capital, where camelCase starts a new word.
 _WORD_BREAK: re.Pattern[str] = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+# The class body default of each `AMPSettings` field, so the typed keyword constructor takes any of them.
+# `AMPSettings.__init_subclass__` removes it from the class again, so a field never set has no value to read.
+UNSET: Any = object()
 
 
 def _attribute_name(key: str) -> str:
@@ -135,17 +138,12 @@ class AMPObject:
         shown: list[str] = [f"{name}={getattr(self, name)!r}" for name in self._repr_names if name in hints and hasattr(self, name)][:3]
         return f"<{type(self).__name__} {' '.join(shown)}>"
 
-    # TODO: Decide if the dict-style access stays once the live checks read attributes (#3-47.2.2).
-    # It lets code written against the old TypedDict replies, eg. `state["status"]`, keep working.
-    def __getitem__(self, key: str) -> Any:  # noqa: D105
-        return getattr(self, _attribute_name(key=key))
-
     @classmethod
     def _type_hints(cls) -> dict[str, Any]:
         """The class's annotations, resolved once and kept, as `get_type_hints` reads them at run time."""
         if cls not in AMPObject._hints:
             hints: dict[str, Any] = get_type_hints(cls)
-            AMPObject._hints[cls] = {name: hint for name, hint in hints.items() if name not in ("data", "_repr_names", "_hints")}
+            AMPObject._hints[cls] = {name: hint for name, hint in hints.items() if name not in ("data", "_repr_names", "_hints", "_edits")}
 
         return AMPObject._hints[cls]
 
@@ -156,7 +154,7 @@ class AMPObject:
             return None
 
         origin: Any = get_origin(hint)
-        # `Optional[X]` and `Union[Enum, int]`: the first member that converts is the one used.
+        # `Optional[X]` and `Union[Enum, int]`: we convert with the first member that isn't `None`, `int` or `str`.
         if origin is Union or origin is types.UnionType:
             for member in get_args(hint):
                 if member is not type(None) and member is not int and member is not str:
@@ -167,13 +165,129 @@ class AMPObject:
             item_hint: Any = get_args(hint)[0] if get_args(hint) else Any
             return [cls._convert(hint=item_hint, value=entry) for entry in value]  # pyright: ignore[reportUnknownVariableType]
 
+        # An `AMPSettings` takes keywords for the caller's edits, so AMP's dict goes through `from_data`
+        if isinstance(hint, type) and issubclass(hint, AMPSettings) and isinstance(value, Mapping):
+            return hint.from_data(data=value)  # pyright: ignore[reportUnknownArgumentType]
         if isinstance(hint, type) and issubclass(hint, AMPObject) and isinstance(value, Mapping):
             return hint(data=value)  # pyright: ignore[reportUnknownArgumentType]
-        if isinstance(hint, type) and issubclass(hint, Enum) and isinstance(value, int):
-            return Base._to_enum(enum=hint, value=value)  # pyright: ignore[reportPrivateUsage]
-        if isinstance(hint, type) and issubclass(hint, Enum) and isinstance(value, str):
-            return Base._to_enum(enum=hint, value=value)  # pyright: ignore[reportPrivateUsage]
+        if isinstance(hint, type) and issubclass(hint, Enum) and isinstance(value, (int, str)):
+            # A number or name the library doesn't know yet stays as AMP sent it.
+            try:
+                return hint(value)
+            except ValueError:
+                return value
         return value
+
+
+@dataclass_transform(kw_only_default=True, eq_default=False)
+class AMPSettings(AMPObject):
+    """Settings an update call sends to AMP, read from AMP's reply or made from keyword arguments.
+
+    .. code-block:: python
+
+        # Read the settings, change a field and send the settings back
+        infra: ShardInfra = await shard.get_infra()
+        infra.settings.memory_limit_mb = 4096
+        await shard.update_infra(settings=infra.settings)
+
+        # Or set only the fields to change, with no read first
+        await shard.update_infra(settings=ShardInfraSettings(memory_limit_mb=4096))
+
+    - The object records each field changed after it was made, from a keyword argument or an attribute assigned later.
+    - An update call sends only the recorded fields, so a setting another program changed since the read stays as it is.
+    - An update call raises :exc:`ValueError` before sending anything when the object has no recorded field.
+    - Once AMP accepts the update, the object's recorded fields are cleared, so sending the object again needs a new edit.
+    - The library builds the object from AMP's reply through :meth:`from_data`, with every field AMP sent and no field
+      recorded.
+    - Reading a field that wasn't read from AMP or set raises :exc:`AttributeError`, eg. a field the keyword arguments
+      left out.
+    - Assigning an attribute that isn't one of the class's fields raises :exc:`AttributeError`, eg. a misspelt name.
+    - An object made from keyword arguments has an empty `data`.
+
+    .. versionadded:: 6.0.0
+
+    Parameters
+    ----------
+    **changes : Any
+        The fields to set, by name, eg. `memory_limit_mb=4096`.
+        - Each field given is recorded as an edit.
+
+    Raises
+    ------
+    TypeError
+        If a keyword argument isn't one of the class's fields.
+
+    """
+
+    # The names of the fields changed since the object was made or last sent, see `__setattr__`
+    _edits: set[str]
+
+    def __init__(self, **changes: Any) -> None:  # noqa: D107
+        # The type checker reads the keywords from the subclass's fields, so this check is for a caller it doesn't see
+        for name in changes:
+            if name not in self._type_hints():
+                msg = f"{type(self).__name__}.__init__() got an unexpected keyword argument '{name}'"
+                raise TypeError(msg)
+
+        object.__setattr__(self, "data", {})
+        object.__setattr__(self, "_edits", set())
+        for name, value in changes.items():
+            setattr(self, name, value)
+
+    def __init_subclass__(cls) -> None:  # noqa: D105
+        super().__init_subclass__()
+        # The `UNSET` defaults are only for the type checker, so a field never set reads through `__getattr__` instead
+        for name, value in list(vars(cls).items()):
+            if value is UNSET:
+                delattr(cls, name)
+
+    def clear(self) -> Self:
+        """Clear the recent edits of this object."""
+        self._edits.clear()
+        return self
+
+    # Hidden from the type checker, as either one makes it accept any attribute name, a misspelt one too
+    if not TYPE_CHECKING:
+
+        def __getattr__(self, name: str) -> Any:  # noqa: D105
+            # Only reached for an attribute the object doesn't have
+            if name in self._type_hints():
+                msg = f"The <{type(self).__name__}> field '{name}' wasn't read from AMP or set."
+                raise AttributeError(msg)
+            msg = f"'{type(self).__name__}' object has no attribute '{name}'"
+            raise AttributeError(msg)
+
+        def __setattr__(self, name: str, value: Any) -> None:  # noqa: D105
+            # `from_data` unpacks AMP's reply before `_edits` exists, so every key AMP sends is set and no field is recorded
+            if "_edits" not in self.__dict__:
+                object.__setattr__(self, name, value)
+                return
+            if name not in self._type_hints():
+                msg = f"'{type(self).__name__}' object has no attribute '{name}'"
+                raise AttributeError(msg)
+
+            object.__setattr__(self, name, value)
+            self._edits.add(name)
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> Self:
+        """Build the object from AMP's dict, unpacked as `AMPObject` does, with no field recorded as an edit.
+
+        Parameters
+        ----------
+        data : Mapping[:class:`str`, Any]
+            The dict as AMP sent it.
+
+        Returns
+        -------
+        Self
+            The object, with every key AMP sent set as an attribute.
+
+        """
+        settings: Self = cls.__new__(cls)
+        AMPObject.__init__(settings, data=data)
+        object.__setattr__(settings, "_edits", set())
+        return settings
 
 
 class ConsoleHistory(AMPObject):
@@ -306,73 +420,137 @@ class NetworkStatus(AMPObject):
     """eg. ``"The file does not exist."`` while a first tunnel's agent is set up."""
 
 
-class Preferences(AMPObject):
+class Preferences(AMPSettings):
     """The logged in user's web panel preferences, from ``GET /api/users/me/preferences``.
+
+    .. code-block:: python
+
+        # Read the preferences, change a preference and send the preferences back
+        preferences: Preferences = await panel.get_preferences()
+        preferences.theme = "light"
+        await panel.update_preferences(preferences=preferences)
+
+        # Or set only the preferences to change, with no read first
+        await panel.update_preferences(preferences=Preferences(theme="light", streamer_mode=True))
+
+        # Or set the preferences back to the web panel's defaults
+        await panel.update_preferences(preferences=Preferences.default())
 
     - :meth:`AccountModule.update_preferences`, :meth:`AccountModule.add_favourite` and
       :meth:`AccountModule.delete_favourite` answer with all of the preferences too.
-    - A preference never set is `None`, which means the web panel's default.
+    - A preference AMP sends as `None` means the web panel's default.
+    - :meth:`AccountModule.update_preferences` sends only the preferences changed on the object, and leaves out a
+      preference changed to `None`.
+    - Reading a preference that wasn't read from AMP or given raises :exc:`AttributeError`.
+    - :class:`AMPSettings` says how the object records the changes.
 
     .. versionadded:: 6.0.0
     """
 
-    theme: Optional[str]
-    """The web panel's theme, eg. ``"dark"``."""
-    locale: Optional[str]
-    """The language code, eg. ``"en-GB"``."""
-    favourite_app_slugs: list[str]
+    theme: Optional[str] = UNSET
+    """The web panel's theme: ``"proteus"``, ``"light"``, ``"corporate"``, ``"lcars"``, ``"platinum"`` or ``"high-contrast"``.
+    - `None`, ``""`` or a name the web panel doesn't know uses the theme saved in the browser, then the panel's default
+      theme, then ``"proteus"``.
+    - AMP doesn't check the name."""
+    locale: Optional[str] = UNSET
+    """The web panel's language code: ``"en"``, ``"de"``, ``"fr"`` or ``"nl"``.
+    - `None` uses the language saved in the browser, then the browser's own language, then English.
+    - Once set, AMP can't set it back to `None`, and ``""`` shows the web panel in English."""
+    favourite_app_slugs: list[str] = UNSET
     """The slugs of the logged in user's favourite templates, newest first, eg. ``["teeworlds"]``.
     - The web panel lists the favourites first among the templates.
     - AMP doesn't check the slugs against the templates."""
-    pinned_shard_ids: list[str]
+    pinned_shard_ids: list[str] = UNSET
     "The IDs of the shards pinned to the web panel's overview, in the order they were pinned."
-    notify_on_state_change: Optional[bool]
+    notify_on_state_change: Optional[bool] = UNSET
     "If the web panel notifies the logged in user when a shard's state changes or not."
-    notify_on_update_available: Optional[bool]
+    notify_on_update_available: Optional[bool] = UNSET
     "If the web panel notifies the logged in user when an update is available or not."
-    compact_shard_header: Optional[bool]
+    compact_shard_header: Optional[bool] = UNSET
     "If a shard's page shows a compact header without the live graph or not."
-    hide_unrouted_shards: Optional[bool]
+    hide_unrouted_shards: Optional[bool] = UNSET
     """If the networking page hides shards that have no route or not.
     - `None` means off."""
-    hide_private_ports: Optional[bool]
+    hide_private_ports: Optional[bool] = UNSET
     """If the networking page hides the ports a game doesn't expose publicly or not.
     - `None` means on, as a private port can't be published."""
-    file_details_width: Optional[int]
-    """The width in pixels of the file manager's details pane, `None` for the default width.
-    - The web panel keeps the width in range as it reads it, so any number is safe."""
-    amp_experience: Optional[Union[UserExperienceLevel, str]]
+    file_details_width: Optional[int] = UNSET
+    """The width in pixels of the file manager's details pane, `None` for the default width of 300.
+    - The web panel keeps the width between 220 and 560 as it reads it, so any number is safe."""
+    amp_experience: Optional[Union[UserExperienceLevel, str]] = UNSET
     """How familiar the logged in user said they are with AMP at their first login, `None` if never asked.
     - A name the library doesn't know stays a plain str."""
-    show_tutorials: Optional[bool]
+    show_tutorials: Optional[bool] = UNSET
     """If the web panel offers its guided tutorials or not.
     - AMP sets it at the first login from `amp_experience`: on for new and returning users, off for experienced ones."""
-    tutorial_prompt_dismissed: Optional[bool]
+    tutorial_prompt_dismissed: Optional[bool] = UNSET
     """If the logged in user turned down the getting started tutorial for good, or finished it.
     - It stops only the automatic offer. `show_tutorials` still governs each page's tutorial button.
     - `None` or `False` means the web panel still offers the tutorial."""
-    tutorials_completed: list[str]
+    tutorials_completed: list[str] = UNSET
     "The IDs of the tutorials the logged in user ran to the end."
-    accessibility_hints_enabled: Optional[bool]
+    accessibility_hints_enabled: Optional[bool] = UNSET
     """If the web panel shows extra accessibility hints or not, eg. how to work its confirm slider by keyboard.
     - `None` if never asked."""
-    onboarding_completed: Optional[bool]
+    onboarding_completed: Optional[bool] = UNSET
     """If the logged in user finished the first login's onboarding or not.
     - `None` or `False` shows the onboarding at the next login."""
-    reduced_motion: Optional[bool]
+    reduced_motion: Optional[bool] = UNSET
     """If the web panel cuts animation that isn't needed or not.
     - It adds to the browser's own reduced motion setting, and either one turns it on.
     - `None` or `False` follows the browser's setting alone."""
-    analytics_enabled: Optional[bool]
+    analytics_enabled: Optional[bool] = UNSET
     """If the logged in user agreed to anonymous product analytics or not.
     - `None` or `False` means no analytics."""
-    streamer_mode: Optional[bool]
+    streamer_mode: Optional[bool] = UNSET
     """If the web panel blurs each IP address it shows or not, for streaming or recording the screen.
     - Console and log text is shown as it is."""
-    time_format: Optional[Union[TimeFormat, str]]
+    time_format: Optional[Union[TimeFormat, str]] = UNSET
     """How the web panel writes clock times, 12 or 24 hour.
     - `None` reads as `TimeFormat.system`, which follows the logged in user's language.
     - A name the library doesn't know stays a plain str."""
+
+    @classmethod
+    def default(cls) -> Self:
+        """Build the preferences the web panel shows a new user, to send through :meth:`AccountModule.update_preferences`.
+
+        .. code-block:: python
+
+            await panel.update_preferences(preferences=Preferences.default())
+
+        - AMP reads a `None` preference as "keep", so each preference is set to the value the web panel shows for `None`.
+        - `favourite_app_slugs`, `pinned_shard_ids` and `tutorials_completed` are emptied, so the logged in user's
+          favourites and pinned shards go too.
+        - `theme` is set to ``""``, which the web panel reads as no theme chosen.
+        - `locale` is left out and keeps its value, as AMP can't set it back to `None` and ``""`` shows English.
+        - `notify_on_state_change` and `notify_on_update_available` are left out and keep their values, as the web panel
+          doesn't use them.
+
+        Returns
+        -------
+        Self
+            The preferences, with each one set recorded as an edit.
+
+        """
+        return cls(
+            theme="",
+            favourite_app_slugs=[],
+            pinned_shard_ids=[],
+            compact_shard_header=False,
+            hide_unrouted_shards=False,
+            hide_private_ports=True,
+            file_details_width=300,
+            amp_experience=UserExperienceLevel.new,
+            show_tutorials=False,
+            tutorial_prompt_dismissed=False,
+            tutorials_completed=[],
+            accessibility_hints_enabled=False,
+            onboarding_completed=False,
+            reduced_motion=False,
+            analytics_enabled=False,
+            streamer_mode=False,
+            time_format=TimeFormat.system,
+        )
 
 
 class RunningTask(AMPObject):
@@ -505,50 +683,62 @@ class ShardInfra(AMPObject):
     "The most `ShardInfraSettings.minimum_session_time_for_retention` can be set to, in seconds, eg. 6000."
 
 
-class ShardInfraSettings(AMPObject):
+class ShardInfraSettings(AMPSettings):
     """A shard's settings for how it runs: container, limits, start up, analytics and geo filtering.
+
+    .. code-block:: python
+
+        # Read the settings, change a setting and send the settings back
+        infra: ShardInfra = await shard.get_infra()
+        infra.settings.memory_limit_mb = 4096
+        await shard.update_infra(settings=infra.settings)
+
+        # Or set only the settings to change, with no read first
+        await shard.update_infra(settings=ShardInfraSettings(memory_limit_mb=4096, cpu_limit=1.5))
 
     - `ShardInfra.settings` holds them, from :meth:`ShardModule.get_shard_infra`.
     - :attr:`Shard.infra_settings` holds the settings a shard was made with.
-    - :meth:`ShardModule.update_shard_infra` changes them.
+    - :meth:`ShardModule.update_shard_infra` changes them, sending only the settings changed on the object.
+    - Reading a setting that wasn't read from AMP or given raises :exc:`AttributeError`.
+    - :class:`AMPSettings` says how the object records the changes.
 
     .. versionadded:: 6.0.0
     """
 
-    shard_id: str
-    tenant_id: str
-    start_on_boot: bool
+    shard_id: str = UNSET
+    tenant_id: str = UNSET
+    start_on_boot: bool = UNSET
     """If the shard starts when its spire's machine starts or not.
     - With it on, the shard starts whether it was running or stopped when the machine went down.
     - With it off, the shard stays stopped, even if it was running when the machine went down.
     - A restart of AMP alone starts no shard."""
-    auto_restart_on_crash: bool
+    auto_restart_on_crash: bool = UNSET
     """If AMP restarts the game when it exits without a stop being asked for or not.
     - Only a game that was ready and ran for at least 5 minutes is restarted."""
-    startup_order: int
+    startup_order: int = UNSET
     """The order shards start in when their spire's machine starts, lowest first, 100 by default.
     - It orders only the shards with `start_on_boot` on.
     - The shards start one at a time, each once the shard before it is running.
     - Shards with the same order start by name."""
-    sleep_mode: bool
+    sleep_mode: bool = UNSET
     """If the shard sleeps while no player is connected or not.
     - While asleep, AMP stops the game and holds its ports, so the shard still shows online.
     - AMP starts the game again when a player tries to connect.
     - It does nothing unless the template can sleep, see `ShardInfra.supports_sleep`.
     - A change takes effect when the shard next starts."""
-    advertised_address: str
+    advertised_address: str = UNSET
     """The address players are given for the shard, eg. ``"play.example.com"`` or ``"play.example.com:25565"``.
     - ``""`` lets AMP work out the address itself.
     - AMP hands the address out as it's given, eg. for a domain, an SRV record or a proxy in front of the shard."""
-    advertised_address_includes_port: bool
+    advertised_address_includes_port: bool = UNSET
     """If AMP adds the shard's port to `advertised_address` or not.
     - `False` suits an SRV record or a proxy, where players connect to the host alone.
     - AMP ignores it when `advertised_address` already has a port."""
-    container_mode: Union[ShardContainerMode, str]
+    container_mode: Union[ShardContainerMode, str] = UNSET
     """How the shard runs, straight on its spire or in a container.
     - `ShardContainerMode` says what each mode does.
     - A name the library doesn't know stays a plain str."""
-    container_image_override: Optional[str]
+    container_image_override: Optional[str] = UNSET
     """The container image to run instead of the template's, `None` for the template's image.
     - An image from AMP's own repository, ``cubecoders/amp3base``, has to name a tag AMP builds, eg.
       ``"docker.io/cubecoders/amp3base:java-25"``.
@@ -556,7 +746,7 @@ class ShardInfraSettings(AMPObject):
       fails at its next start.
     - AMP pulls an image from any other repository and runs it as given.
     - An image that isn't built for AMP, eg. ``"docker.io/library/debian:trixie-slim"``, fails to start."""
-    allow_lan_access: bool
+    allow_lan_access: bool = UNSET
     """If the shard's container can reach the spire's local network or not, `False` by default.
     - With it off, a Podman container on a Linux spire reaches only the internet, AMP's bus and the spire's DNS
       resolvers. AMP refuses the private, carrier-grade NAT and link-local address ranges, and the spire's own IPv6
@@ -569,64 +759,64 @@ class ShardInfraSettings(AMPObject):
       when it's one of AMP's, and of AMP's default image otherwise. If that fails, the update or start is refused with
       `shards.error.containerLanFilterFailed` and the shard isn't started.
     - A native shard isn't filtered, from AMP's docs and not seen live."""
-    memory_limit_mb: int
+    memory_limit_mb: int = UNSET
     """The shard's memory limit in MiB, 0 for no limit.
     - AMP sets the limit on the container, or on a native shard's systemd unit.
     - AMP stores a negative number without complaint.
     - A container with a negative memory limit runs with no memory limit."""
-    memory_reservation_mb: int
+    memory_reservation_mb: int = UNSET
     """The container's soft memory limit in MiB, 0 for none.
     - AMP refuses a reservation above `memory_limit_mb`.
     - A native shard has no soft memory limit."""
-    memory_swap_mb: int
+    memory_swap_mb: int = UNSET
     """The container's memory and swap together in MiB.
     - -1 for no limit.
     - 0 for the container runtime's default, about twice `memory_limit_mb`.
     - AMP refuses any other number below `memory_limit_mb`.
     - AMP ignores the swap while `memory_limit_mb` is 0.
     - A native shard has no swap limit."""
-    cpu_limit: float
+    cpu_limit: float = UNSET
     """The shard's CPU limit in cores, eg. 1.5, 0 for no limit.
     - AMP sets the limit on the container, or on a native shard's systemd unit."""
-    max_users_cap: int
+    max_users_cap: int = UNSET
     """The most players AMP lets in at once, whatever the shard's `$MaxUsers` setting says, 0 for no cap.
     - A cap below `$MaxUsers` lowers `$MaxUsers` at once, with the shard running or stopped.
     - A running game's config file keeps the old number, eg. ``max-players`` in a Minecraft ``server.properties``.
     - A cap above `$MaxUsers` leaves `$MaxUsers` as it is.
     - AMP refuses a `$MaxUsers` above the cap, see :meth:`ShardModule.set_shard_settings`.
     - A cap suits hosting that sells a set number of player slots."""
-    enable_analytics: bool
+    enable_analytics: bool = UNSET
     """If AMP collects analytics on the players who join or not, where the game reports them.
     - With it off, the shard adds no sessions to analytics."""
-    user_specific_data: bool
+    user_specific_data: bool = UNSET
     """If analytics keeps data on each player or not, eg. who plays the most.
     - The players have to be told that analytics is in use.
     - With it off, AMP doesn't look up a player's address, so each session has an unknown country.
     - With it off, player names and IDs are left out too.
     - Turning it on doesn't change the sessions already recorded."""
-    minimum_session_time_for_retention: int
+    minimum_session_time_for_retention: int = UNSET
     "The shortest session in seconds that analytics keeps, to leave out very short sessions."
-    enable_geo_filtering: bool
+    enable_geo_filtering: bool = UNSET
     """If AMP blocks players from certain countries or not.
     - AMP sends `geo_filter_kick_command` to the game's console for a player from a country the shard doesn't accept.
     - It needs a game that logs connections with an address and takes a kick command."""
-    blocked_countries: list[str]
+    blocked_countries: list[str] = UNSET
     """The countries to block, as ISO 3166-1 alpha-2 codes, eg. ``["US"]``."""
-    allowed_countries: list[str]
+    allowed_countries: list[str] = UNSET
     """The countries to allow, as ISO 3166-1 alpha-2 codes.
     - An empty list allows every country that isn't in `blocked_countries`."""
-    block_unknown_countries: bool
+    block_unknown_countries: bool = UNSET
     """If AMP also blocks players whose country can't be worked out or not.
     - That includes every player who comes through a published port without a gateway, as the game sees the tunnel's
       address."""
-    geo_filter_kick_message: str
+    geo_filter_kick_message: str = UNSET
     """The message a player blocked by geo filtering gets.
     - ``{CountryCode}`` and ``{CountryName}`` are replaced with the player's country."""
-    geo_filter_kick_command: str
+    geo_filter_kick_command: str = UNSET
     """The console command that disconnects a player blocked by geo filtering, eg. ``'kick "{UserName}" "{Reason}"'``.
     - ``{UserName}``, ``{UserID}``, ``{Reason}``, ``{CountryCode}`` and ``{CountryName}`` are replaced.
     - ``{Reason}`` is `geo_filter_kick_message`."""
-    disk_limit_mb: int
+    disk_limit_mb: int = UNSET
     """The disk limit in MB for the shard's folder, 0 for no limit.
     - It holds for a shard in a container and a native shard alike.
     - AMP checks the limit at the spire's disk scans, so the shard can go over it between scans.
@@ -635,16 +825,16 @@ class ShardInfraSettings(AMPObject):
     - AMP gives no other warning, neither a platform warning nor an entry in :meth:`Panel.get_shards_awaiting_action`.
     - AMP stops the shard at the first disk scan that finds it over the limit.
     - A scan counts the shard as over the limit at `ShardInfra.disk_enforce_percent` of it, from AMP's docs."""
-    import_config_files_from_sftp: bool
+    import_config_files_from_sftp: bool = UNSET
     """If AMP reads a config file it manages back into the shard's settings when the file is written over SFTP or not.
     - With it on, the change shows in the shard's settings within seconds.
     - With it off, AMP writes the shard's settings over the file's change at the shard's next start."""
-    extra_environment: dict[str, str]
+    extra_environment: dict[str, str] = UNSET
     """Extra environment variables for the game's process or container, by name.
     - They're added to the template's variables, and these win where both have a name."""
-    updated_at: str
+    updated_at: str = UNSET
     "When the settings last changed, an ISO 8601 time."
-    updated_by_user_id: str
+    updated_by_user_id: str = UNSET
     "The ID of the user who last changed the settings."
 
 
@@ -656,7 +846,7 @@ class ShardInfraSaveResult(ShardInfraSettings):
 
     # TODO: Check against a live capture; typed from AMP's OpenAPI `ShardInfraSaveResult` alone (#3-56.1z).
     # Every capture has it `None`; it needs a game that refuses to lower its `$MaxUsers`.
-    clamp_refused: Optional[CodedErrorResponse]
+    clamp_refused: Optional[CodedErrorResponse] = UNSET
     """Why the game's `$MaxUsers` wasn't lowered to a new `max_users_cap`, eg. ``"shards.error.maxUsersClampRefused"``.
     - `None` when `$MaxUsers` was lowered, or didn't need to be.
     - AMP saves the cap either way."""

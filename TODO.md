@@ -24,9 +24,22 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 ---
 
 - (#3-48) A structure pass: lower-case routes and an Endpoint line on every call, docstrings without test-run context, request TypedDicts, body spacing. *DONE*
-- (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`): group A, the `Session` paths, *DONE*; group B (stale objects, the registry) *DONE* (#3-51.6); group C (writes that lose data) *DONE* (#3-51.7); group G (structure) *DONE* (#3-51.8); group D (uncatchable errors) *DONE* (#3-51.9); groups E (names), F (types) and H (docs) open.
-- (#3-56) Match the library to AMP's own OpenAPI document (`.local_data/plans/openapi_compare/plan.md`): the shards area *DONE* (#3-56.6); spires and platform *DONE* (#3-56.7); accounts and session (#3-56.8) and first-run setup (#3-56.9) open.
+- (#3-51) Fix the code analysis findings (`.local_data/plans/code_analysis/summary.md`).
+    - Group A, the `Session` paths. *DONE*
+    - Group B, stale objects and the registry. *DONE* (#3-51.6)
+    - Group C, writes that lose data. *DONE* (#3-51.7)
+    - Group G, structure. *DONE* (#3-51.8)
+    - Group D, uncatchable errors. *DONE* (#3-51.9)
+    - Groups E (names), F (types) and H (docs). *DONE* (#3-51.10)
+- (#3-51.11) Shard infra and preferences as `AMPSettings` objects, built from keywords or read from AMP, where the update calls send only the fields set. *DONE*
+- (#3-51.10f) Request TypedDicts: `NotRequired` for keys the library leaves out, `Optional` only for keys sent as null.
+- (#3-56) Match the library to AMP's own OpenAPI document (`.local_data/plans/openapi_compare/plan.md`).
+    - The shards area. *DONE* (#3-56.6)
+    - Spires and platform. *DONE* (#3-56.7)
+    - Accounts and session. *DONE* (#3-56.8)
+    - First-run setup. *DONE* (#3-56.9)
 - (#3-65) Bring the library up to AMP 3.0.2 "Neptune": diff its OpenAPI against 3.0.1's, recheck the U reports its release notes touch, and reword the docs that still name 3.0.1. *DONE*
+- (#3-67) `Preferences.default()`: a `Preferences` holding the web panel's default for each preference, to reset them through `update_preferences`. *DONE*
 
 ## ampapi/panel.py
 

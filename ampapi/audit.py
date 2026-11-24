@@ -26,14 +26,8 @@ from typing import TYPE_CHECKING, Optional, Union
 from .base import Base
 
 if TYPE_CHECKING:
-    from ._types import (
-        AuditFacetsResponse,
-        AuditOriginName,
-        AuditPageResponse,
-        AuditRootsPageResponse,
-        AuditSeverityName,
-        AuditTreeResponse,
-    )
+    from ._enums import AuditOrigin, AuditSeverity, AuditSort
+    from ._types import AuditFacetsResponse, AuditPageResponse, AuditRootsPageResponse, AuditTreeResponse
 
 __all__ = ("AuditModule",)
 
@@ -52,8 +46,8 @@ class AuditModule(Base):
         *,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        origin: Optional[AuditOriginName] = None,
-        min_severity: Optional[AuditSeverityName] = None,
+        origin: Optional[AuditOrigin] = None,
+        min_severity: Optional[AuditSeverity] = None,
         target_type: Optional[str] = None,
         target_id: Optional[str] = None,
         correlation_id: Optional[str] = None,
@@ -62,16 +56,13 @@ class AuditModule(Base):
         to_time: Optional[str] = None,
         page: Optional[int] = None,
         page_size: Optional[int] = None,
-        sort: Optional[str] = None,
+        sort: Optional[AuditSort] = None,
     ) -> AuditPageResponse:
         """Get one page of the audit log.
 
         |coro|
 
         Endpoint: ``GET /api/audit``
-
-        .. note::
-            AMP ignores a filter it doesn't know, so a misspelt one gives the whole log rather than an error.
 
         Parameters
         ----------
@@ -80,12 +71,11 @@ class AuditModule(Base):
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
             - See :meth:`get_audit_facets` for the actions logged so far.
-        origin : Union[:class:`AuditOriginName`, None], optional
-            ``"System"``, ``"User"``, ``"UserFlow"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-            - An event's `origin` holds the matching :class:`AuditOrigin` number.
-        min_severity : Union[:class:`AuditSeverityName`, None], optional
-            ``"Info"``, ``"Warning"`` or ``"Security"``, for events of that severity or higher, by default None.
-            - An event's `severity` holds the matching :class:`AuditSeverity` number.
+            - An action AMP doesn't know, eg. a misspelt action, gives no events rather than an error.
+        origin : Union[:class:`AuditOrigin`, None], optional
+            Only events with this origin, by default None.
+        min_severity : Union[:class:`AuditSeverity`, None], optional
+            Only events of this severity or higher, by default None.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional
@@ -102,15 +92,27 @@ class AuditModule(Base):
             The latest time, ISO 8601, by default None.
         page : Union[:class:`int`, None], optional
             The page, from 1, by default None.
+            - AMP reads page 0 as page 1.
         page_size : Union[:class:`int`, None], optional
-            Events a page, by default None. AMP gives 50 unless asked, and at most 200.
-        sort : Union[:class:`str`, None], optional
-            ``"asc"`` for oldest first, by default None (newest first).
+            Events a page, by default None. AMP gives 50 unless asked.
+            - AMP reads a size below 1 as 1, and a size above 200 as 200.
+        sort : Union[:class:`AuditSort`, None], optional
+            The order of the events, by default None for newest first.
 
         Returns
         -------
         :class:`AuditPageResponse`
             The page of events and the total that match.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            AMP's 400 for a filter AMP can't read carries no `code`.\n
+            **400** - If `origin` is a number no `AuditOrigin` member has. The error's `errors` is keyed by ``"origin"``.\n
+            **400** - If `min_severity` is a number no `AuditSeverity` member has. The error's `errors` is keyed by
+            ``"minSeverity"``.\n
+            **400** - If AMP can't read `from_time`. The error's `errors` is keyed by ``"from"``.\n
+            **400** - If AMP can't read `to_time`. The error's `errors` is keyed by ``"to"``.
 
         """
         filters: dict[str, Optional[Union[str, int]]] = {
@@ -154,8 +156,8 @@ class AuditModule(Base):
         *,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        origin: Optional[AuditOriginName] = None,
-        min_severity: Optional[AuditSeverityName] = None,
+        origin: Optional[AuditOrigin] = None,
+        min_severity: Optional[AuditSeverity] = None,
         target_type: Optional[str] = None,
         target_id: Optional[str] = None,
         search: Optional[str] = None,
@@ -163,7 +165,7 @@ class AuditModule(Base):
         to_time: Optional[str] = None,
         page: Optional[int] = None,
         page_size: Optional[int] = None,
-        sort: Optional[str] = None,
+        sort: Optional[AuditSort] = None,
     ) -> AuditRootsPageResponse:
         """Get one page of the audit log grouped into flows, each led by the event that started it.
 
@@ -181,12 +183,12 @@ class AuditModule(Base):
         action : Union[:class:`str`, None], optional
             Only this action, eg. ``"ShardCreated"`` (any case), by default None.
             - See :meth:`get_audit_facets` for the actions logged so far.
-        origin : Union[:class:`AuditOriginName`, None], optional
-            ``"System"``, ``"User"``, ``"Scheduled"`` or ``"Impersonation"``, by default None.
-            - A flow never starts with a ``"UserFlow"`` event, so ``"UserFlow"`` finds no flows.
-        min_severity : Union[:class:`AuditSeverityName`, None], optional
-            ``"Info"``, ``"Warning"`` or ``"Security"``, by default None.
-            - A flow is listed when any event in the flow reached that severity or higher.
+            - An action AMP doesn't know, eg. a misspelt action, gives no flows rather than an error.
+        origin : Union[:class:`AuditOrigin`, None], optional
+            Only flows started with this origin, by default None.
+            - A flow never starts with an `AuditOrigin.user_flow` event, so `AuditOrigin.user_flow` finds no flows.
+        min_severity : Union[:class:`AuditSeverity`, None], optional
+            Only flows with an event of this severity or higher, by default None.
         target_type : Union[:class:`str`, None], optional
             Only events about this kind of target, eg. ``"Shard"``, by default None.
         target_id : Union[:class:`str`, None], optional
@@ -199,15 +201,27 @@ class AuditModule(Base):
             The latest time, ISO 8601, by default None.
         page : Union[:class:`int`, None], optional
             The page, from 1, by default None.
+            - AMP reads page 0 as page 1.
         page_size : Union[:class:`int`, None], optional
             Flows a page, by default None.
-        sort : Union[:class:`str`, None], optional
-            ``"asc"`` for oldest first, by default None (newest first).
+            - AMP reads a size below 1 as 1, and a size above 200 as 200.
+        sort : Union[:class:`AuditSort`, None], optional
+            The order of the flows, by default None for newest first.
 
         Returns
         -------
         :class:`AuditRootsPageResponse`
             The page of flows and the total that match.
+
+        Raises
+        ------
+        AMPAPIRequestError
+            AMP's 400 for a filter AMP can't read carries no `code`.\n
+            **400** - If `origin` is a number no `AuditOrigin` member has. The error's `errors` is keyed by ``"origin"``.\n
+            **400** - If `min_severity` is a number no `AuditSeverity` member has. The error's `errors` is keyed by
+            ``"minSeverity"``.\n
+            **400** - If AMP can't read `from_time`. The error's `errors` is keyed by ``"from"``.\n
+            **400** - If AMP can't read `to_time`. The error's `errors` is keyed by ``"to"``.
 
         """
         filters: dict[str, Optional[Union[str, int]]] = {

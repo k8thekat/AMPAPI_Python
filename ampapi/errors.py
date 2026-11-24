@@ -21,7 +21,9 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional, TypeGuard
+from typing import Any, Optional
+
+from .utils import is_dotted_key, is_json_object
 
 __all__ = (
     "AMPAPIError",
@@ -33,21 +35,7 @@ __all__ = (
     "AMPAPIUploadError",
 )
 
-LOGGER: logging.Logger = logging.getLogger("AMPAPI_Python.errors")
-
-
-def _is_dotted_key(value: object) -> bool:
-    """If `value` is one of AMP's dotted keys, eg. ``"shards.migration.notRunning"``, rather than an English sentence."""
-    # A sentence has spaces in it.
-    if not isinstance(value, str) or value.split() != [value]:
-        return False
-    # A key has its dots between words; a one word sentence would only end with a dot.
-    return "." in value.rstrip(".")
-
-
-def _is_json_object(value: object) -> TypeGuard[dict[str, Any]]:
-    """If `value` is a decoded JSON object; its keys are always strings."""
-    return isinstance(value, dict)
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class AMPAPIError(Exception):
@@ -169,7 +157,7 @@ class AMPAPIRequestError(AMPAPIError):
         The path of the request, eg. ``/api/me/permissions``.
     code : Union[:class:`str`, None]
         AMP's dotted error key, eg. ``"auth.error.reproofRejected"``, when it sent one: as `code`, as `reason`, or
-        alone in `error`, eg. ``{"error": "shards.migration.notRunning"}``.
+        alone in `error`.
     message : Union[:class:`str`, None]
         AMP's message, when it sent one. A body of only ``{"error": ...}`` lands here, a dotted key and a sentence alike;
         only a dotted key is the `code` too.
@@ -180,6 +168,9 @@ class AMPAPIRequestError(AMPAPIError):
     data : Any
         The decoded response body, `None` for an empty one, or the text of a body that isn't JSON, eg. a proxy's error
         page.
+        - A JSON body is one of AMP's error shapes, eg. :class:`CodedErrorResponse`, :class:`MessageErrorResponse`,
+          :class:`ReasonErrorResponse` or :class:`ValidationErrorResponse`.
+        - The `code`, `message`, `params` and `errors` attributes are read from the JSON body.
 
     """
 
@@ -203,13 +194,13 @@ class AMPAPIRequestError(AMPAPIError):
         self.errors = None
 
         # Each error shape AMP sends has a different set of these keys, so we take whichever are there.
-        if _is_json_object(value=data):
+        if is_json_object(value=data):
             # A refused recovery code carries its dotted key as `reason`, everything else as `code`.
             self.code = data.get("code", data.get("reason"))
             # Invites, running tasks, spire enrolment and shard moves send `{error}`, with a dotted key or an English sentence in it.
             self.message = data.get("message", data.get("title", data.get("error")))
             # A dotted key there is the code as well, so `code` reads the same whichever shape AMP chose.
-            if self.code is None and _is_dotted_key(value=data.get("error")) is True:
+            if self.code is None and is_dotted_key(value=data.get("error")) is True:
                 self.code = data["error"]
 
             self.params = data.get("params")

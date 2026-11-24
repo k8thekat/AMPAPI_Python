@@ -22,10 +22,9 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Self, Unpack
+from typing import TYPE_CHECKING, Any, Optional, Self
 
 from ._enums import CloneContent, SnapshotContent, SnapshotKind
-from ._types import ShardInfraChanges
 from .base import Base
 from .errors import AMPAPIRequestError, AMPAPIUploadError
 
@@ -199,7 +198,7 @@ class Shard:
 
         :meth:`get_infra` gives the current settings, as its `ShardInfra.settings`.
         """
-        return ShardInfraSettings(data=self._created["infraSettings"]) if self._created is not None else None
+        return ShardInfraSettings.from_data(data=self._created["infraSettings"]) if self._created is not None else None
 
     @property
     def over_licence_limit(self) -> Optional[bool]:
@@ -554,7 +553,7 @@ class Shard:
         """
         return await self._module.get_shard_endpoints(shard_id=self.id)
 
-    async def get_file_acl(self, path: str) -> ShardFileACLResponse:
+    async def get_file_acl(self, path: str = "") -> ShardFileACLResponse:
         """Get who may do what to a path in this shard, see :meth:`ShardModule.get_shard_file_acl`.
 
         |coro|
@@ -570,7 +569,7 @@ class Shard:
         """
         return await self._module.get_shard_file_content(shard_id=self.id, path=path)
 
-    async def get_file_ignores(self, path: str) -> ShardFileIgnoresResponse:
+    async def get_file_ignores(self, path: str = "") -> ShardFileIgnoresResponse:
         """Get the ignored entries in one of this shard's folders, see :meth:`ShardModule.get_shard_file_ignores`.
 
         |coro|
@@ -626,7 +625,7 @@ class Shard:
         """
         return await self._module.get_shard_ip_options(shard_id=self.id)
 
-    async def get_managed_files(self, path: str) -> list[ShardManagedFileResponse]:
+    async def get_managed_files(self, path: str = "") -> list[ShardManagedFileResponse]:
         """Get which files under a path AMP writes itself, see :meth:`ShardModule.get_shard_managed_files`.
 
         |coro|
@@ -1101,17 +1100,13 @@ class Shard:
         """
         return await self._module.update_shard(shard_id=self.id)
 
-    async def update_infra(
-        self,
-        settings: Optional[ShardInfraSettings] = None,
-        **changes: Unpack[ShardInfraChanges],
-    ) -> ShardInfraSaveResult:
-        """Change any available settings for how this shard runs, keeping the rest, see :meth:`ShardModule.update_shard_infra`.
+    async def update_infra(self, settings: ShardInfraSettings) -> ShardInfraSaveResult:
+        """Save the changes recorded on `settings` to this shard's infra, see :meth:`ShardModule.update_shard_infra`.
 
         |coro|
 
         """
-        return await self._module.update_shard_infra(shard_id=self.id, settings=settings, **changes)
+        return await self._module.update_shard_infra(shard_id=self.id, settings=settings)
 
     async def update_schedule(
         self,
@@ -1324,7 +1319,7 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **409** - If no move is running `shards.migration.notRunning`. The shard may have had no move, or its last
+            **409** - If no move is running `shards.error.moveNotRunning`. The shard may have had no move, or its last
             move is done, failed, cancelled or dismissed.
 
         """
@@ -2030,7 +2025,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/endpoints")
 
-    async def get_shard_file_acl(self, shard_id: str, path: str) -> ShardFileACLResponse:
+    async def get_shard_file_acl(self, shard_id: str, path: str = "") -> ShardFileACLResponse:
         """Get who may read, write and delete a path inside a shard.
 
         |coro|
@@ -2041,8 +2036,8 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        path : :class:`str`
-            The path, empty for the shard's folder.
+        path : :class:`str`, optional
+            The path, by default "" (the shard's own folder).
 
         Returns
         -------
@@ -2079,7 +2074,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/files/content", parameters={"path": path})
 
-    async def get_shard_file_ignores(self, shard_id: str, path: str) -> ShardFileIgnoresResponse:
+    async def get_shard_file_ignores(self, shard_id: str, path: str = "") -> ShardFileIgnoresResponse:
         """Get the ignored entries among a folder's children in a shard.
 
         |coro|
@@ -2090,8 +2085,8 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        path : :class:`str`
-            The folder, empty for the shard's own. A file's path gives empty lists.
+        path : :class:`str`, optional
+            The folder, by default "" (the shard's own folder). A file's path gives empty lists.
 
         Returns
         -------
@@ -2253,7 +2248,7 @@ class ShardModule(Base):
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/ip-options")
 
-    async def get_shard_managed_files(self, shard_id: str, path: str) -> list[ShardManagedFileResponse]:
+    async def get_shard_managed_files(self, shard_id: str, path: str = "") -> list[ShardManagedFileResponse]:
         """Get which files under a path AMP writes itself from the settings.
 
         |coro|
@@ -2264,9 +2259,9 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        path : :class:`str`
-            The path. Only the shard's root (``""`` or ``"/"``) has listed anything; a folder or a file gives an empty
-            list, even ``"server.properties"`` itself.
+        path : :class:`str`, optional
+            The path, by default "" (the shard's own folder). Only the shard's root (``""`` or ``"/"``) has listed
+            anything. A folder or a file gives an empty list, even ``"server.properties"`` itself.
 
         Returns
         -------
@@ -3601,21 +3596,33 @@ class ShardModule(Base):
         """
         return await self._request(method="POST", path=f"/api/shards/{shard_id}/update")
 
-    async def update_shard_infra(
-        self,
-        shard_id: str,
-        settings: Optional[ShardInfraSettings] = None,
-        **changes: Unpack[ShardInfraChanges],
-    ) -> ShardInfraSaveResult:
-        """Change any available settings for how a shard runs, keeping the rest.
+    async def update_shard_infra(self, shard_id: str, settings: ShardInfraSettings) -> ShardInfraSaveResult:
+        """Save the changes recorded on `settings` to a shard's infra, leaving the rest as AMP holds them.
 
         |coro|
 
         Endpoint: ``PATCH /api/shards/{shard_id}/infra``
 
-        - A setting left out stays as it is.
+        .. code-block:: python
+
+            # Read the settings, change a setting and send the settings back
+            infra: ShardInfra = await panel.get_shard_infra(shard_id=shard_id)
+            infra.settings.memory_limit_mb = 4096
+            await panel.update_shard_infra(shard_id=shard_id, settings=infra.settings)
+
+            # Or set only the settings to change, with no read first
+            await panel.update_shard_infra(shard_id=shard_id, settings=ShardInfraSettings(memory_limit_mb=4096))
+
+        - :class:`AMPSettings` says how `settings` records the changes and when it clears them.
         - Most changes take effect when the shard next starts.
-        - A lower `max_users_cap` lowers the shard's `$MaxUsers` setting at once.
+        - A lower `ShardInfraSettings.max_users_cap` lowers the shard's `$MaxUsers` setting at once, see
+          `ShardInfraSaveResult.clamp_refused`.
+        - A list or dict replaces the stored one, eg. `ShardInfraSettings.blocked_countries`. An empty
+          `ShardInfraSettings.extra_environment` removes every extra variable.
+        - `ShardInfraSettings.container_image_override` set to `None` or ``""`` goes back to the template's image.
+        - AMP's own `ShardInfraSettings.shard_id`, `ShardInfraSettings.tenant_id`, `ShardInfraSettings.updated_at`,
+          `ShardInfraSettings.updated_by_user_id` and `ShardInfraSaveResult.clamp_refused` are never sent.
+        - Any other setting set to `None` is left out, as AMP reads `None` as "leave unchanged".
 
         :meth:`get_shard_infra` reads the settings, and :class:`ShardInfraSettings` describes each setting further.
 
@@ -3623,99 +3630,10 @@ class ShardModule(Base):
         ----------
         shard_id : :class:`str`
             The shard's ID.
-        settings : Union[:class:`ShardInfraSettings`, None], optional
-            The shard's settings to send whole, eg. :meth:`get_shard_infra`'s `ShardInfra.settings` with an attribute
-            changed, by default None.
-            - Each setting is sent from the object's attributes, so an attribute changed on the object is sent too.
-            - A keyword argument wins over the object's value for the same setting.
-            - The object overwrites any change made to the shard's settings since the object was read.
+        settings : :class:`ShardInfraSettings`
+            The settings to change, eg. :meth:`get_shard_infra`'s `ShardInfra.settings` with a setting changed, or a
+            :class:`ShardInfraSettings` made from keyword arguments.
             - A :class:`ShardInfraSaveResult` works too.
-        start_on_boot : :class:`bool`, optional
-            If the shard starts when its spire's machine starts or not.
-        auto_restart_on_crash : :class:`bool`, optional
-            If AMP restarts the game when it exits without a stop being asked for or not.
-            - Only a game that was ready and ran for at least 5 minutes is restarted.
-        startup_order : :class:`int`, optional
-            The order the shard starts in when its spire's machine starts, lowest first.
-            - AMP gives a new shard 100.
-        sleep_mode : :class:`bool`, optional
-            If the shard sleeps while no player is connected or not.
-            - It does nothing unless the template can sleep, see `ShardInfra.supports_sleep`.
-        advertised_address : :class:`str`, optional
-            The address players are given for the shard, eg. ``"play.example.com"``.
-            - ``""`` lets AMP work out the address itself.
-        advertised_address_includes_port : :class:`bool`, optional
-            If AMP adds the shard's port to the advertised address or not.
-        container_mode : :class:`ShardContainerMode`, optional
-            How the shard runs, straight on its spire or in a container.
-            - `ShardContainerMode` says what each mode does.
-        container_image_override : :class:`str`, optional
-            The container image to run instead of the template's.
-            - ``""`` goes back to the template's image.
-            - An image from AMP's own repository that AMP doesn't build is stored, but the shard fails at its next start.
-        allow_lan_access : :class:`bool`, optional
-            If the shard's container can reach the spire's local network or not.
-            - With it off, a Podman container on a Linux spire reaches only the internet, AMP's bus and the spire's DNS
-              resolvers.
-            - A change takes effect after a stop and a start, not after a restart.
-            - If AMP can't apply the filter, the update or start is refused with
-              `shards.error.containerLanFilterFailed`. `ShardInfraSettings.allow_lan_access` says why.
-        memory_limit_mb : :class:`int`, optional
-            The shard's memory limit in MiB, 0 for no limit.
-            - A native shard takes the limit too.
-            - AMP stores a negative number without complaint.
-        memory_reservation_mb : :class:`int`, optional
-            The container's soft memory limit in MiB, 0 for none.
-            - It can't be above the shard's memory limit.
-        memory_swap_mb : :class:`int`, optional
-            The container's memory and swap together in MiB.
-            - -1 for no limit.
-            - 0 for the container runtime's default, about twice the memory limit.
-            - Any other number can't be below the shard's memory limit.
-        cpu_limit : :class:`float`, optional
-            The shard's CPU limit in cores, eg. 1.5, 0 for no limit.
-            - A native shard takes the limit too.
-        max_users_cap : :class:`int`, optional
-            The most players AMP lets in at once, whatever the shard's `$MaxUsers` setting says, 0 for no cap.
-            - A lower cap lowers `$MaxUsers` at once, see `ShardInfraSaveResult.clamp_refused`.
-            - A running game's config file keeps the old number.
-        enable_analytics : :class:`bool`, optional
-            If AMP collects analytics on the players who join or not.
-        user_specific_data : :class:`bool`, optional
-            If analytics keeps data on each player or not, eg. who plays the most.
-            - The players have to be told that analytics is in use.
-        minimum_session_time_for_retention : :class:`int`, optional
-            The shortest session in seconds that analytics keeps.
-            - It can't be above `ShardInfra.max_minimum_session_seconds`, eg. 6000.
-        enable_geo_filtering : :class:`bool`, optional
-            If AMP blocks players from certain countries or not.
-        blocked_countries : list[:class:`str`], optional
-            The countries to block, as ISO 3166-1 alpha-2 codes, eg. ``["US"]``.
-            - The list replaces the stored list.
-        allowed_countries : list[:class:`str`], optional
-            The countries to allow, as ISO 3166-1 alpha-2 codes.
-            - The list replaces the stored list.
-            - An empty list allows every country that isn't blocked.
-        block_unknown_countries : :class:`bool`, optional
-            If AMP also blocks players whose country can't be worked out or not.
-        geo_filter_kick_message : :class:`str`, optional
-            The message a player blocked by geo filtering gets.
-            - ``{CountryCode}`` and ``{CountryName}`` are replaced with the player's country.
-        geo_filter_kick_command : :class:`str`, optional
-            The console command that disconnects a player blocked by geo filtering.
-            - ``{UserName}``, ``{UserID}``, ``{Reason}``, ``{CountryCode}`` and ``{CountryName}`` are replaced.
-        disk_limit_mb : :class:`int`, optional
-            The disk limit in MB for the shard's folder, 0 for no limit.
-            - AMP checks the limit at the spire's disk scans.
-            - AMP stops the shard at the first disk scan that finds it over the limit.
-        import_config_files_from_sftp : :class:`bool`, optional
-            If AMP reads a config file it manages back into the shard's settings when the file is written over SFTP or
-            not.
-            - With it on, the change shows in the shard's settings within seconds.
-            - With it off, AMP writes the shard's settings over the file's change at the shard's next start.
-        extra_environment : dict[:class:`str`, :class:`str`], optional
-            Extra environment variables for the game's process or container, by name.
-            - The dict replaces the stored variables, and ``{}`` removes them all.
 
         Returns
         -------
@@ -3725,44 +3643,40 @@ class ShardModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If `container_mode` isn't a mode AMP knows.\n
+            **400** - If `ShardInfraSettings.container_mode` isn't a mode AMP knows.\n
             **400** - If the memory reservation is above the shard's memory limit
             `shards.error.memoryReservationExceedsLimit`.\n
             **400** - If the memory and swap limit is below the shard's memory limit `shards.error.memorySwapLessThanLimit`.\n
             **409** - If the shard's settings changed under every attempt to save them `shards.error.infraChangedMeanwhile`.
             Nothing is saved. This is from AMP's docs and not seen live.
-        TypeError
-            If a keyword argument isn't a setting. Nothing is sent.
         ValueError
-            If neither `settings` nor a setting is given. Nothing is sent.
+            If nothing was changed on `settings`. Nothing is sent.\n
+            If every change is left out, as a `None` or as a change to AMP's own fields. Nothing is sent.
 
         """
-        # The same refusal Python gives a keyword argument the signature doesn't have, before anything is sent
-        for name in changes:
-            if name not in ShardInfraChanges.__optional_keys__:
-                msg = f"ShardModule.update_shard_infra() got an unexpected keyword argument '{name}'"
-                raise TypeError(msg)
+        # We send only the settings changed on the object, as the rest may have been changed elsewhere since the read.
+        # AMP's own `shard_id`, `tenant_id`, `updated_*` and a save's `clamp_refused` aren't settings, so they stay out.
+        values: dict[str, Any] = {
+            name: getattr(settings, name)
+            for name in settings._edits  # pyright: ignore[reportPrivateUsage]
+            if name not in ("shard_id", "tenant_id", "updated_at", "updated_by_user_id", "clamp_refused")
+        }
+        # AMP reads `None` as "keep", so the object's `None` for the template's image goes as `""`
+        if "container_image_override" in values and values["container_image_override"] is None:
+            values["container_image_override"] = ""
 
-        values: dict[str, Any] = {}
-        if settings is not None:
-            # We send every setting from the object's attributes, as they may have been changed since the read.
-            # AMP's own `shard_id`, `tenant_id`, `updated_*` and a save's `clamp_refused` aren't settings, so they stay out.
-            values = {name: getattr(settings, name) for name in ShardInfraChanges.__optional_keys__ if hasattr(settings, name)}
-            # The object's `None` means the template's image, and AMP reads `None` as "keep", so we send `""`
-            if "container_image_override" in values and values["container_image_override"] is None:
-                values["container_image_override"] = ""
-
-        values.update(changes)
         # A `None` is left out, so AMP keeps that setting
         body: dict[str, Any] = {
             self._key_name(name=name): value.value if isinstance(value, Enum) else value
             for name, value in self._without_none(mapping=values).items()
         }
         if not body:
-            msg = "At least one infra setting must be given."
+            msg = "At least one infra setting other than AMP's own fields must be changed on <ShardInfraSettings>, to not None."
             raise ValueError(msg)
         result: dict[str, Any] = await self._request(method="PATCH", path=f"/api/shards/{shard_id}/infra", data=body)
-        return ShardInfraSaveResult(data=result)
+        # AMP saved them, so the object only records what's changed after this
+        settings.clear()
+        return ShardInfraSaveResult.from_data(data=result)
 
     async def update_shard_schedule(
         self,

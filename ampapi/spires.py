@@ -390,7 +390,7 @@ class Spire:
         """
         return await self._module.rescan_spire_usage(spire_id=self.id)
 
-    async def scan_imports(self, roots: list[str], *, automatic: bool = False) -> SpireImportScanResponse:
+    async def scan_imports(self, roots: Optional[list[str]] = None, *, automatic: bool = False) -> SpireImportScanResponse:
         """Look for game servers from other panels on this spire, see :meth:`SpireModule.scan_spire_imports`.
 
         |coro|
@@ -451,8 +451,9 @@ class Spire:
 
 
 class SpireModule(Base):
-    """The calls for one spire, AMP 3's name for an ADS or Target, each taking its ID: datastores, ports, start order
-    and disk use.
+    """The calls for one spire, AMP 3's name for an ADS or Target, each taking its ID: settings, datastores, addresses
+    and ports, start order, disk use and purges, imports from other panels, the AMP update, the state and deleting the
+    spire.
 
     The calls over all of the panel's spires, eg. :meth:`Panel.get_spires` and :meth:`Panel.get_spire_roster`, are on
     the :class:`Panel`. Joining a new spire to the panel is :class:`EnrollmentModule`.
@@ -1000,7 +1001,13 @@ class SpireModule(Base):
         """
         return await self._request(method="POST", path=f"/api/spires/{spire_id}/usage/rescan")
 
-    async def scan_spire_imports(self, spire_id: str, roots: list[str], *, automatic: bool = False) -> SpireImportScanResponse:
+    async def scan_spire_imports(
+        self,
+        spire_id: str,
+        roots: Optional[list[str]] = None,
+        *,
+        automatic: bool = False,
+    ) -> SpireImportScanResponse:
         """Look for game servers from other panels on a spire, eg. Pterodactyl, LinuxGSM or AMP 2.
 
         |coro|
@@ -1017,9 +1024,9 @@ class SpireModule(Base):
         ----------
         spire_id : :class:`str`
             The spire's ID.
-        roots : list[:class:`str`]
-            The folders to look in. AMP refuses an empty list (``"import.error.noRoots"``) unless `automatic` is set,
-            and ignores the list with it.
+        roots : Union[list[:class:`str`], None], optional
+            The folders to look in, by default None for no folders.
+            - Needed unless `automatic` is True, as AMP then picks the folders itself and ignores the list.
         automatic : :class:`bool`, optional
             If AMP should pick the folders itself or not, by default False.
 
@@ -1028,8 +1035,14 @@ class SpireModule(Base):
         :class:`SpireImportScanResponse`
             What AMP found.
 
+        Raises
+        ------
+        AMPAPIRequestError
+            **400** - If `roots` is empty and `automatic` is False `import.error.noRoots`.
+
         """
-        data: SpireImportScanRequest = {"roots": roots}
+        # AMP's body always carries `roots`, so no folders is sent as an empty list.
+        data: SpireImportScanRequest = {"roots": roots if roots is not None else []}
 
         if automatic is True:
             data["automatic"] = True

@@ -25,6 +25,7 @@ from enum import IntEnum, IntFlag, StrEnum
 __all__ = (
     "AuditOrigin",
     "AuditSeverity",
+    "AuditSort",
     "CloneContent",
     "GatewayState",
     "LifecycleKind",
@@ -46,7 +47,7 @@ class AuditOrigin(IntEnum):
     """How an audit event came about, named as the web panel names it. AMP sends the number.
 
     An audit event's `origin` and an origin count's `origin` hold the number. The `origin` filter of
-    :meth:`AuditModule.get_audit_events` takes the name instead, eg. ``"UserFlow"`` (see `AuditOriginName`).
+    :meth:`AuditModule.get_audit_events` and :meth:`AuditModule.get_audit_roots` takes a member.
 
     - `system`: AMP acted by itself. An event written before AMP kept an origin reads `system` too.
     - `user`: a user acted directly, eg. through a click in the web panel.
@@ -68,7 +69,7 @@ class AuditSeverity(IntEnum):
     """How much an audit event matters, named as the web panel names it. AMP sends the number.
 
     An audit event's `severity` and a flow's `maxSeverity` hold the number. The `min_severity` filter of
-    :meth:`AuditModule.get_audit_events` takes the name instead, eg. ``"Warning"`` (see `AuditSeverityName`).
+    :meth:`AuditModule.get_audit_events` and :meth:`AuditModule.get_audit_roots` takes a member.
 
     .. versionadded:: 6.0.0
     """
@@ -76,6 +77,19 @@ class AuditSeverity(IntEnum):
     info = 0
     warning = 1
     security = 2
+
+
+class AuditSort(StrEnum):
+    """The order the audit calls list events and flows in. AMP reads the value, which each member equals.
+
+    - `ascending` lists the oldest first.
+    - `descending` lists the newest first, as AMP does when no order is given.
+
+    .. versionadded:: 6.0.0
+    """
+
+    ascending = "asc"
+    descending = "desc"
 
 
 class CloneContent(IntFlag):

@@ -54,15 +54,14 @@ __all__: tuple[str, ...] = (
     "AnalyticsUserMatch",
     "AnalyticsUserSessionsResponse",
     "AnalyticsUsersResponse",
+    "AnalyticsWindow",
     "AuditActionCount",
     "AuditEvent",
     "AuditFacetsResponse",
     "AuditOriginCount",
-    "AuditOriginName",
     "AuditPageResponse",
     "AuditRoot",
     "AuditRootsPageResponse",
-    "AuditSeverityName",
     "AuditTreeNode",
     "AuditTreeResponse",
     "AuditUserCount",
@@ -146,7 +145,6 @@ __all__: tuple[str, ...] = (
     "PlatformWarningResponse",
     "PortClaimResponse",
     "PortProtocol",
-    "PreferencesChanges",
     "PreviewStatus",
     "PreviewUpdate",
     "Principal",
@@ -221,7 +219,6 @@ __all__: tuple[str, ...] = (
     "ShardFileStartResponse",
     "ShardImportResponse",
     "ShardImportSkippedFile",
-    "ShardInfraChanges",
     "ShardInfraSettingsResponse",
     "ShardManagedFileResponse",
     "ShardMigrationRequest",
@@ -560,8 +557,8 @@ class AnalyticsSession(TypedDict):
 class AnalyticsSessionsResponse(TypedDict):
     """``GET /api/analytics/sessions``, the player summary for the analytics page."""
 
-    window: dict[str, str]
-    """``"from"`` and ``"to"``, ISO 8601; the last 30 days unless asked."""
+    window: AnalyticsWindow
+    "The span the numbers cover, the last 30 days unless asked."
     current: AnalyticsTotals
     previous: AnalyticsTotals
     change: dict[str, Optional[float]]
@@ -744,6 +741,17 @@ class AnalyticsUsersResponse(TypedDict):
     "A summary of the address when the search text is an address, else `None`."
 
 
+# The span of `AnalyticsSessionsResponse.window`, in the functional form as its `from` key is a Python keyword.
+# Both ends are ISO 8601 in UTC, eg. "2026-10-11T00:07:52.6209832+00:00".
+AnalyticsWindow = TypedDict(
+    "AnalyticsWindow",
+    {
+        "from": str,
+        "to": str,
+    },
+)
+
+
 class AuditActionCount(TypedDict):
     """One action and how often it was logged, from `AuditFacetsResponse.actions`."""
 
@@ -769,8 +777,8 @@ class AuditEvent(TypedDict):
     targetId: str
     taskId: Optional[str]
     correlationId: Optional[WrappedID]
-    """Shared by every event in one flow, see `AuditModule.get_audit_tree`. `None` only for an event written before
-    AMP kept flows."""
+    """Shared by every event in one flow. `AuditModule.get_audit_tree` takes the event's `correlationId["value"]`.
+    `None` only for an event written before AMP kept flows."""
     actionId: Optional[WrappedID]
     "`None` only for an event written before AMP kept actions."
     causationActionId: Optional[WrappedID]
@@ -859,6 +867,8 @@ class AuditTreeResponse(TypedDict):
 
     correlationId: str
     rootMissing: bool
+    """`True` when AMP's index no longer holds the flow's first events, so the tree starts at the earliest event it
+    holds."""
     eventCount: int
     startedAt: str
     endedAt: str
@@ -1899,33 +1909,6 @@ class PortClaimResponse(TypedDict):
     """eg. ``"the AMP panel"`` or ``"a WireGuard tunnel"``."""
 
 
-class PreferencesChanges(TypedDict, total=False):
-    """The preferences `AccountModule.update_preferences` takes as keyword arguments, each described there."""
-
-    theme: str
-    locale: str
-    favourite_app_slugs: list[str]
-    pinned_shard_ids: list[str]
-    notify_on_state_change: bool
-    notify_on_update_available: bool
-    compact_shard_header: bool
-    hide_unrouted_shards: bool
-    hide_private_ports: bool
-    file_details_width: int
-    amp_experience: str
-    "A `UserExperienceLevel` member or its value."
-    show_tutorials: bool
-    tutorial_prompt_dismissed: bool
-    tutorials_completed: list[str]
-    accessibility_hints_enabled: bool
-    onboarding_completed: bool
-    reduced_motion: bool
-    analytics_enabled: bool
-    streamer_mode: bool
-    time_format: str
-    "A `TimeFormat` member or its value."
-
-
 class PreviewStatus(TypedDict):
     """The preview build's countdown in `HealthStatusResponse`."""
 
@@ -2841,38 +2824,6 @@ class ShardImportSkippedFile(TypedDict):
     "Relative to the server's folder, with forward slashes."
     reason: str
     "AMP's token for why."
-
-
-class ShardInfraChanges(TypedDict, total=False):
-    """The settings `ShardModule.update_shard_infra` takes as keyword arguments, each described there."""
-
-    start_on_boot: bool
-    auto_restart_on_crash: bool
-    startup_order: int
-    sleep_mode: bool
-    advertised_address: str
-    advertised_address_includes_port: bool
-    container_mode: str
-    "A `ShardContainerMode` member or its value."
-    container_image_override: str
-    allow_lan_access: bool
-    memory_limit_mb: int
-    memory_reservation_mb: int
-    memory_swap_mb: int
-    cpu_limit: float
-    max_users_cap: int
-    enable_analytics: bool
-    user_specific_data: bool
-    minimum_session_time_for_retention: int
-    enable_geo_filtering: bool
-    blocked_countries: list[str]
-    allowed_countries: list[str]
-    block_unknown_countries: bool
-    geo_filter_kick_message: str
-    geo_filter_kick_command: str
-    disk_limit_mb: int
-    import_config_files_from_sftp: bool
-    extra_environment: dict[str, str]
 
 
 class ShardInfraSettingsResponse(TypedDict):
@@ -4397,10 +4348,6 @@ class WrappedID(TypedDict):
     value: str
 
 
-# The `origin` the audit calls filter on, the names of the `AuditOrigin` numbers.
-AuditOriginName = Literal["System", "User", "UserFlow", "Scheduled", "Impersonation"]
-# The `min_severity` the audit calls filter on, the names of the `AuditSeverity` numbers.
-AuditSeverityName = Literal["Info", "Warning", "Security"]
 # A credential's `kind`.
 CredentialKind = Literal["SteamCmd", "Smtp", "DiscordWebhook", "ApiKey"]
 # Who may use a credential.

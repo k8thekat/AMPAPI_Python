@@ -22,9 +22,8 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Unpack
+from typing import TYPE_CHECKING, Any, Optional
 
-from ._types import PreferencesChanges
 from .base import Base
 from .objects import Preferences
 
@@ -94,7 +93,7 @@ class AccountModule(Base):
 
         """
         result: dict[str, Any] = await self._request(method="POST", path=f"/api/users/me/preferences/favourites/{template_slug}")
-        return Preferences(data=result)
+        return Preferences.from_data(data=result)
 
     async def add_ssh_key(self, key: str, label: Optional[str] = None, *, expires_at: Optional[str] = None) -> SSHKeyResponse:
         """Add an SSH key to the logged in user's account, for SFTP.
@@ -312,7 +311,7 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If a role already has `name`. The error's `errors` names the role.\n
+            **400** - If a role already has `name` `access.error.roleNameTaken`.\n
             **403** - If `permissions` grants a permission the logged in user doesn't hold, from AMP's docs and not seen
             live.
 
@@ -401,7 +400,7 @@ class AccountModule(Base):
 
         """
         result: dict[str, Any] = await self._request(method="DELETE", path=f"/api/users/me/preferences/favourites/{template_slug}")
-        return Preferences(data=result)
+        return Preferences.from_data(data=result)
 
     async def delete_invite(self, invite_id: str) -> None:
         """Revoke an invite, so its code stops working.
@@ -628,7 +627,7 @@ class AccountModule(Base):
 
         """
         result: dict[str, Any] = await self._request(method="GET", path="/api/users/me/preferences")
-        return Preferences(data=result)
+        return Preferences.from_data(data=result)
 
     async def get_profile(self) -> ProfileResponse:
         """Get the logged in user's account.
@@ -865,71 +864,38 @@ class AccountModule(Base):
         """
         await self._request(method="PATCH", path=f"/api/profile/passkeys/{passkey_id}", data={"name": name})
 
-    async def update_preferences(self, preferences: Optional[Preferences] = None, **changes: Unpack[PreferencesChanges]) -> Preferences:
-        """Change some of the logged in user's web panel preferences. A preference left out stays as it is.
+    async def update_preferences(self, preferences: Preferences) -> Preferences:
+        """Save the changes recorded on `preferences` for the logged in user, leaving the rest as AMP holds them.
 
         |coro|
 
         Endpoint: ``PATCH /api/users/me/preferences``
 
+        .. code-block:: python
+
+            # Read the preferences, change a preference and send the preferences back
+            preferences: Preferences = await panel.get_preferences()
+            preferences.streamer_mode = True
+            await panel.update_preferences(preferences=preferences)
+
+            # Or set only the preferences to change, with no read first
+            await panel.update_preferences(preferences=Preferences(streamer_mode=True))
+
+        - :class:`AMPSettings` says how `preferences` records the changes and when it clears them.
+        - A list replaces the stored list, eg. `Preferences.favourite_app_slugs`.
+        - :meth:`add_favourite` and :meth:`delete_favourite` change one favourite at a time.
+        - :class:`Preferences` describes each preference.
+
         .. note::
-            A preference can't be set back to `None` (the web panel's default) through this call, as AMP reads `None`
-            as "leave unchanged".
+            AMP reads `None` as "leave unchanged", so a preference changed to `None` is left out, and no preference
+            can go back to `None` through this call. :meth:`Preferences.default` sets each one to the web panel's
+            default instead.
 
         Parameters
         ----------
-        preferences : Union[:class:`Preferences`, None], optional
-            The logged in user's preferences to send whole, eg. :meth:`get_preferences`'s reply with an attribute changed,
-            by default None.
-            - Each preference is sent from the object's attributes, so an attribute changed on the object is sent too.
-            - A preference that is `None` on the object stays as it is.
-            - A keyword argument wins over the object's value for the same preference.
-            - The object overwrites any change made to the preferences since the object was read.
-        theme : :class:`str`, optional
-            The web panel's theme, eg. ``"dark"``.
-        locale : :class:`str`, optional
-            The language code, eg. ``"en-GB"``.
-        favourite_app_slugs : list[:class:`str`], optional
-            The slugs of the logged in user's favourite templates.
-            - The list replaces the stored list.
-            - :meth:`add_favourite` and :meth:`delete_favourite` change one favourite at a time.
-        pinned_shard_ids : list[:class:`str`], optional
-            The IDs of the shards pinned to the web panel's overview, in pin order.
-            - The list replaces the stored list.
-        notify_on_state_change : :class:`bool`, optional
-            If the web panel notifies the logged in user when a shard's state changes or not.
-        notify_on_update_available : :class:`bool`, optional
-            If the web panel notifies the logged in user when an update is available or not.
-        compact_shard_header : :class:`bool`, optional
-            If a shard's page shows a compact header without the live graph or not.
-        hide_unrouted_shards : :class:`bool`, optional
-            If the networking page hides shards that have no route or not.
-        hide_private_ports : :class:`bool`, optional
-            If the networking page hides the ports a game doesn't expose publicly or not.
-        file_details_width : :class:`int`, optional
-            The width in pixels of the file manager's details pane.
-        amp_experience : :class:`UserExperienceLevel`, optional
-            How familiar the logged in user is with AMP.
-        show_tutorials : :class:`bool`, optional
-            If the web panel offers its guided tutorials or not.
-        tutorial_prompt_dismissed : :class:`bool`, optional
-            If the web panel stops offering the getting started tutorial by itself or not.
-        tutorials_completed : list[:class:`str`], optional
-            The IDs of the tutorials the logged in user ran to the end.
-            - The list replaces the stored list.
-        accessibility_hints_enabled : :class:`bool`, optional
-            If the web panel shows extra accessibility hints or not.
-        onboarding_completed : :class:`bool`, optional
-            If the logged in user finished the first login's onboarding or not.
-            - `False` shows the onboarding at the next login.
-        reduced_motion : :class:`bool`, optional
-            If the web panel cuts animation that isn't needed or not.
-        analytics_enabled : :class:`bool`, optional
-            If the logged in user agrees to anonymous product analytics or not.
-        streamer_mode : :class:`bool`, optional
-            If the web panel blurs each IP address it shows or not.
-        time_format : :class:`TimeFormat`, optional
-            How the web panel writes clock times.
+        preferences : :class:`Preferences`
+            The preferences to change, eg. :meth:`get_preferences`'s reply with a preference changed, or a
+            :class:`Preferences` made from keyword arguments.
 
         Returns
         -------
@@ -938,33 +904,25 @@ class AccountModule(Base):
 
         Raises
         ------
-        TypeError
-            If a keyword argument isn't a preference. Nothing is sent.
         ValueError
-            If neither `preferences` nor a preference is given. Nothing is sent.
+            If nothing was changed on `preferences`. Nothing is sent.\n
+            If every change is to `None`. Nothing is sent.
 
         """
-        # The same refusal Python gives a keyword argument the signature doesn't have, before anything is sent
-        for name in changes:
-            if name not in PreferencesChanges.__optional_keys__:
-                msg = f"AccountModule.update_preferences() got an unexpected keyword argument '{name}'"
-                raise TypeError(msg)
-
-        values: dict[str, Any] = {}
-        if preferences is not None:
-            # We send every preference from the object's attributes, as they may have been changed since the read
-            values = {name: getattr(preferences, name) for name in PreferencesChanges.__optional_keys__ if hasattr(preferences, name)}
-        values.update(changes)
+        # We send only the preferences changed on the object, as the rest may have been changed elsewhere since the read
+        values: dict[str, Any] = {name: getattr(preferences, name) for name in preferences._edits}  # pyright: ignore[reportPrivateUsage]
         # A `None` is left out, so AMP keeps that preference
         body: dict[str, Any] = {
             self._key_name(name=name): value.value if isinstance(value, Enum) else value
             for name, value in self._without_none(mapping=values).items()
         }
         if not body:
-            msg = "At least one preference must be given."
+            msg = "At least one preference must be changed on <Preferences> to a value other than None."
             raise ValueError(msg)
         result: dict[str, Any] = await self._request(method="PATCH", path="/api/users/me/preferences", data=body)
-        return Preferences(data=result)
+        # AMP saved them, so the object only records what's changed after this
+        preferences.clear()
+        return Preferences.from_data(data=result)
 
     async def update_profile(self, display_name: Optional[str] = None, *, email: Optional[str] = None) -> ProfileResponse:
         """Change the logged in user's display name and email. Anything left as `None` stays as it is.
@@ -1038,6 +996,7 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
+            **400** - If another role already has `name` `access.error.roleNameTaken`.\n
             **403** - If the change adds or removes a permission the logged in user doesn't hold, from AMP's docs and
             not seen live.\n
             **404** - If there's no role with that ID.\n

@@ -104,7 +104,9 @@ class EnrollmentModule(Base):
             other machines (:meth:`expand_message_bus`).
 
         The new machine takes the join file's `joinBlob` in its own first-run setup, then waits for
-        :meth:`approve_spire_enrollment`. :meth:`PlatformModule.get_health_status` on the new machine shows the wait.
+        :meth:`approve_spire_enrollment`. This library doesn't wrap the new machine's first-run setup, so the join file
+        goes into the new machine's setup page. :meth:`PlatformModule.get_health_status` on the new machine shows the
+        wait.
 
         A public entry node is a relay and a front door for the panel that hosts no shards. Its enrolment reads `role`
         ``"publicentrynode"``.
