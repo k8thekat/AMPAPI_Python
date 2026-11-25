@@ -1,3 +1,268 @@
+# Version - 5.0.1 - [88a782a](https://github.com/k8thekat/AMPAPI_Python/commit/88a782a)
+## 5.0.1 fixes and docs
+- *Claude AI-Assisted*
+
+## __init__.py
+- Bumped the version to 5.0.1.
+
+## errors.py
+- Added `AMPAPIPanelVersionError` for an AMP 3 panel URL.
+- `AMPAPIOIDCSessionError` says it's raised on the call itself, and sends the browser rather than "the user".
+
+## base.py
+- Added an AMP 3 panel check to `_post` after a 404.
+	- AMP 3 answers every `/API/` route with a 404, and AMP 2 never does.
+- `clean_up`: the facts under `logout` are `- ` lines, and they tell the AMP login session apart from the `aiohttp.ClientSession`.
+- Comments name their noun instead of "one", and say one fact each.
+- Put back Kat's `match response.status` arms, commented out above the status check that replaced them in #46i.
+- Added `.. versionadded:: 5.0.0` to `__aenter__` and `__aexit__`, and gave `clean_up` a one-line summary.
+- The `AuthMode.oidc` references link to the enum.
+- Shortened the longest comments, and removed the blank line before `except _SessionDeadError` in `_post`.
+
+## modules.py
+- Typed `ImportConfig`'s lists as `list[str]` and `settings` as `dict[str, str]`.
+	- Each list holds lines like "Server Name = My Server".
+- Added `referenced_methods` to `ScheduleData`.
+	- AMP 2.8 lists each method its scheduled tasks run, and 5.0.0 dropped the key.
+- `APIParams.user` says `oidc_login` sets it to the AMP user it logged in as.
+- The `AuthMode` and `Core.oidc_login` references in `APIParams` link.
+- `APISession.ttl` is the login time.
+
+## _types.py
+- Updated `ImportConfigResponse` to match.
+- Added `referenced_methods` to `ScheduleDataResponse`.
+
+## generic.py
+- Documented which file `import_config` reads, and the `"Importable": true` flag it needs.
+
+## adsmodule.py
+- Documented why `servers()` has no response type: `ADSModule/Servers` is AMP's forwarding route.
+
+## upgrading.rst
+- Added the AMP 2 requirement, and how to install `cc-ampapi>=6` for AMP 3.
+- Added the new `ScheduleData` field.
+- The `session_ttl`, `oidc_login` and `logout` notes say one fact per sentence and name their nouns.
+- Moved the `ampapi.backoff` removal to "Moved modules".
+- Added `async with` on a Controller, and `oidc_login` setting the Bridge's `user` in the OIDC mode.
+- `ExponentialBackoff` is removed.
+- `logout` ends the stored session as it is.
+- `session_ttl` is removed.
+- The Bridge's shared session, `clean_up`, `Bridge(session=)` and the deprecated routes, the removed `__del__` and `__adel__`, and a second `asyncio.run`.
+- Added the `session_ttl` and `APIParams` repr changes.
+- Notes for `AuthMode`, the `APIParams` defaults, the `oidc_login` signature and `AMPAPIOIDCSessionError`.
+
+## README.md
+- Updated the Quick Example to match `sample.py`.
+	- Each call passes `format_data=True` and checks the dataclass came back.
+- Added that 5.x is for AMP 2, and how to install for AMP 3.
+- The same steps, and the Quick Example ends with `clean_up()`.
+- The example whitelists through the console, since AMP 2.6.5.0 removed the whitelist endpoints.
+
+## index.rst
+- Added the AMP 2 note to Installing.
+- Basic Usage gains step 4, closing with `clean_up()` or `async with`, and names `Bridge(session=)` and the OIDC mode.
+
+## CONTRIBUTING.md
+- Updated the nullable types rule for Python 3.12.
+
+## pyproject.toml
+- Added the `[tool.land_check]` table.
+- Ruff and check_code's pyright skip `docs/samples/sample.py`, as documentation for reading (Kat).
+
+## unit_test.py
+- Moved the tests to the AMP 2.8.0.8 captures.
+- Removed the capture calls for endpoints AMP 2.6.5.0 removed.
+- Fixed the unused imports and unknown types.
+
+## NOTES.md
+- Added "An AMP 3 panel", how the panels are told apart.
+- Added "GenericModule/ImportConfig": the file path, the `Importable` flag and the reply.
+- Added what `ReferencedMethods` holds, and when it's empty.
+- The Bridge session notes name the session and the marker instead of "one" and "its own".
+- "Sessions": at vm1's 15 minutes, AMP ended idle sessions between 17 and 20 minutes.
+- "Sessions": what the DEBUG log hides by setting and endpoint, and what it can't.
+- "Sessions": the login marker is the Bridge's, and why it moved.
+- "Sessions": the TTL is off, and what the vm1 and vm2 timeout runs showed.
+- "Sessions": the Bridge's `aiohttp.ClientSession`, who closes it, and where a passed-in session goes.
+- "Sessions": `session_ttl` counts from the last successful call, and what the DEBUG logs hide.
+- "OIDC logins": how AMP's OIDC flow works and what the vm1 and vm2 runs confirmed.
+
+## The #45 and #46 docs follow the new docstring rules
+
+
+## bridge.py
+- The `session` parameter and property list their facts as `- ` lines, and a later `Bridge()` on the singleton is said to ignore `session`.
+- The OIDC example sends the browser, not "the user", and names the login session `oidc_login` stored.
+- Added `.. versionadded:: 5.0.0` to `__aenter__` and `__aexit__`.
+- The `AuthMode.oidc` reference links to the enum.
+- Shortened the attribute comments.
+- Added an OIDC example to the `Bridge` docstring.
+
+## core.py
+- `get_oidc_login_url` and `oidc_login` list their further parameter facts as `- ` lines.
+- `logout`'s change note says "no stored session" instead of "none".
+- The `AuthMode.oidc` reference in `oidc_login` links to the enum.
+- Shortened the comment in `logout`.
+
+## instance.py
+- The `session` parameter of `Controller` lists its facts as `- ` lines.
+- Shortened the comments in `_oidc_reauth`.
+
+## Once-over of #45 and #46 before the push
+
+
+## _enums.py
+- `AuthMode` links to `Bridge`.
+
+## sample.py
+- The `pprint` import is commented out like the call that used it.
+
+## ExponentialBackoff is removed, nothing uses it now (#46r)
+
+
+## base.py *w/Claude
+- `Base._backoff` and its import are gone. The RuntimeError retry was its only user (Kat).
+- `_hide_secrets` hides a setting's value by the setting: a Password input, or a node named like a secret.
+	- That covers `get_setting_spec`, `get_config(s)` and what `set_config(s)` sends (vm1: `NewInstanceKey`'s value was in the log).
+- `_SECRET_ENDPOINTS` hides the whole response of `GetRemoteLoginToken`, `ManageInstance` and `GetTargetPairingCode`.
+- `_reauth` waits on and sets the Bridge's marker for its Instance ID, in place of the object's `_login_pending`.
+	- Two objects for one Instance ID each logged in, and AMP kept the extra session (vm1: 10 calls on two Controllers, 2 logins).
+- A dead answer to `Core/Logout` resets the stored session, with no login and no resend.
+	- `logout()` and `clean_up(logout=True)` logged in only to log the new session out.
+- `_post` asks the Bridge for its session again after a RuntimeError, and retries at once only when it gets a different one.
+	- A closed session of ours is replaced by the Bridge, and a passed-in one the user closed falls back to ours.
+	- The same session raises `AMPAPINetworkError`, where it retried forever (vm1: 4 retries in 8 seconds, never ending).
+- A passed-in session from a finished event loop says it belongs to the loop it was made in (`_passed_session_failed`).
+- Kat's backoff retry stays commented out, and the "no limit" TODO and the retry counter are gone.
+- `_reauth`'s `session_ttl` check is commented out, so it only logs in when there is no stored session.
+	- `_post` already logs in again on AMP's dead-session answer and resends the call.
+	- Each TTL login left the old session alive on AMP, and AMP's own timeout is the panel's `Core.Privacy.SessionTimeout`.
+- The `session_ttl` property, `_session_ttl` and `_post`'s TTL stamp are commented out, nothing reads them now.
+- The `Base` note says a stored session is used until AMP ends it.
+- `Base.session` reads `Bridge.session`. Setting it, or passing `session`, still goes on the Bridge with a `DeprecationWarning`.
+	- The warning skips the library's own files, so it names the caller's line and Python shows it.
+- `_post` gets its session from the Bridge on every pass. Kat's reopen on "session is closed" is commented out.
+- `clean_up()` closes the Bridge's session, except on an Instance a Controller built (`_closes_client_session`).
+	- One object closing no longer breaks the others (vm1: an ERROR, a 1 s sleep and an unshared new session after `async with instance:`).
+- `clean_up` is marked `versionadded`, since 4.6.0 had none.
+- The TTL refresh only checks the stored session is the very one we sent.
+- The `aiohttp` imports moved under TYPE_CHECKING, nothing uses them at runtime now.
+- The Attributes block named `api_url` and `session`, both properties, so it is gone.
+- `Base.__init__` runs `parse_bridge` on the Singleton <Bridge> path too, so `endpoint_url` is set and the 2FA token checks run (#46a).
+	- Without it every call posted to `/API/Core/Login` with no panel URL, 4.6.0 always called `parse_bridge`.
+- Added `_hide_secrets`, and `_post`'s REQ_PARAMS and `_response_handler`'s RESP_JSON debug lines log through it when DEBUG is on (#46c).
+	- Passwords, tokens, 2FA codes and secrets, the OIDC code, licence keys and `otpauth://` links show as `<hidden>`.
+	- Hiding copies the data, which cost 314 us per `get_updates` and 21.7 ms on the 7 MB application list, so it is skipped without DEBUG.
+- `_post` stamps the stored session's TTL after a successful call, so `session_ttl` counts from the last successful call (#46d).
+- `_reauth` returns early for a stored session younger than `session_ttl`, and the login body lost a level (#46e).
+- `_reauth` returns `Union[LoginResultsResponse, None]` (#46f).
+- `parse_bridge`'s docstring names `endpoint_url` and the 8 character token check, and its comment no longer names `_connect` (#46h).
+- `_post`'s ten status cases are one raise with the HTTP reason, and the `match` is a guard (#46i).
+- The `Base` note and `session_ttl` docstring say what `session_ttl` counts now.
+- `_reauth` hands off to the new `_oidc_reauth` when the Bridge's `auth_mode` is `AuthMode.oidc`.
+- `_oidc_reauth` uses a stored session as it is and raises `AMPAPIOIDCSessionError` when there is none.
+- `_reauth` checks the login answer with `is_response_type`, so a refused login is told apart by `success` alone.
+	- An answer that isn't a LoginResults raises `AMPAPITypeError`, like the endpoint methods.
+- Added the OIDC message ClassVars beside `_login_failed`.
+- The `Base` note and `session_ttl` say the OIDC mode doesn't use the 240 second limit.
+
+## __init__.py *w/Claude
+- No longer exports `ampapi.backoff`.
+
+## backoff.py
+- Removed.
+
+## modules.rst
+- Dropped the Exponential Backoff section.
+
+## The usage sample passes the session to the Bridge, and its own errors are fixed (#46s)
+
+
+## sample.py *w/Claude
+- The session goes to `Bridge(session=)`, where `Controller(session=)` now warns. Kat's lines are commented out.
+- The whitelist goes through the console, since AMP 2.6.5.0 removed the whitelist endpoints.
+- `get_status`, `get_user_list` and `get_analytics_summary` ask for the dataclass and check they got it before reading it.
+- The names are lowercase (`sample_api`, `ads`, `ads_instances`), it has the GPL header, and `print` replaces `pprint`.
+- Ruff and strict pyright are clean on it.
+
+## The usage steps say how to close the session and where your own goes (#46s)
+
+
+## Settings and token endpoints are hidden in the DEBUG log too (#46q)
+
+
+## One login per Instance ID across every object on a Bridge (#46g)
+
+
+## bridge.py *w/Claude
+- `_logins_pending` holds the login running for each Instance ID, beside the stored sessions it fills.
+- `_get_pending_login` gives the one running in this event loop, and drops one left by a finished loop.
+- The Bridge holds the session: `_client_session`, the event loop it was made in, and a passed-in `_external_session`.
+- `_get_client_session()` gives a call the passed-in session while it is open, else ours, made in the running loop.
+	- A session from a finished loop is replaced, then closed, so a second `asyncio.run` no longer retries forever.
+	- It swaps before the close, so concurrent first calls make one session.
+- `clean_up()` and `async with bridge:` close our session. A passed-in one is never closed.
+- `Bridge` takes `session`, and `Bridge.session` reads and sets it.
+	- `__new__` names `session`, since it passed unknown keywords on to `object.__new__`.
+- The `singleton` directive is `versionchanged`, and the docstring says how the session is made and closed.
+- The OIDC paragraph says `auth_mode` is set on `APIParams`.
+
+## instance.py *w/Claude
+- `Instance._oidc_reauth` uses the Bridge's marker the same way.
+- An Instance built with a Controller sets `_closes_client_session` False.
+- `instance_conversion` and the `TargetADS` build no longer pass `session=`, the Bridge carries it.
+- `Controller.__adel__` is commented out. Nothing called it.
+- The Controller's `session` parameter is deprecated.
+- `Instance._oidc_reauth` logs an Instance in with a `ManageInstance` token from its Controller.
+	- One login for concurrent calls through `_login_pending`, as `_reauth` does.
+
+## logout() ends the stored session, with no login first (#46p1)
+
+
+## core.py *w/Claude
+- `logout` sends `Core/Logout` with the stored session as it is, and returns without one. Kat's `_reauth()` call is commented out.
+	- A login first ended that new session and left the stored one alive on AMP (vm1: the user's session count didn't drop).
+- `get_oidc_login_url` and `oidc_login` no longer call `_reauth`, since AMP answers both without a session.
+- `oidc_login` is now `(code, state, redirect_uri, instance_id=None)`, sends null for no `instance_id` and stores the session.
+	- In the OIDC mode it also sets the Bridge's `user` from the login.
+- `get_oidc_login_url` says a None `redirect_uri` uses the panel's own URL.
+
+## A RuntimeError is retried only on a different session (#46r)
+
+
+## A stored session is used until AMP ends it, the session TTL is off for now (#46p2)
+
+
+## The Bridge holds the aiohttp.ClientSession every object on it shares (#46b, #46j, #46k, #46l, #46m, #46n, #46o)
+
+
+## unit_test.py *w/Claude
+- `capture_instance_responses` builds its MinecraftInstance on the Bridge instead of `session=ads.session`.
+
+## Session and URL handling fixes (#46a, #46c, #46d, #46e, #46f, #46h, #46i)
+
+
+## modules.py *w/Claude
+- `APIParams.password`, `token` and `_sessions` are left out of the repr, which the debug logs print (#46c).
+- `APISession.ttl` describes the last successful call or login.
+- `APIParams` gains `auth_mode`, and `user` and `password` default to "".
+	- `__post_init__` raises `ValueError` for the password mode with either empty.
+
+## OIDC logins: an OIDC user is never sent a password login (#45)
+
+
+## _enums.py *w/Claude
+- Added `AuthMode` (`password`, `oidc`), exported from `ampapi`.
+
+## errors.py *w/Claude
+- Added `AMPAPIOIDCSessionError`, an `AMPAPIResponseError` raised in the OIDC mode when there is no session.
+
+## _types.py *w/Claude
+- Added the `LOGIN_RESULTS_REQUIRED_KEYS` / `LOGIN_RESULTS_EXCLUDED_KEYS` pair for the login answers.
+
+## types.rst
+- Listed `AuthMode`.
+
 # Version - 5.0.0 - [f5610b6](https://github.com/k8thekat/AMPAPI_Python/commit/f5610b6)
 ## A dead session on an ActionResult endpoint logs in again (#44)
 
