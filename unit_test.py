@@ -26,18 +26,16 @@ from ampapi.modules import (
     RunningTask,
     ScheduleData,
     Session,
-    SettingSpec,
     Status,
     UpdateInfo,
     Updates,
-    UserApplicationData,
     UserInfo,
 )
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 # _response_dir = Path(__file__).parent / "_responses"
-# These tests read our 2.6.5 ADS captures
-_response_dir = Path(__file__).parent / "_responses" / "2.6.5" / "ads"
+# These tests read our 2.8.0.8 ADS captures
+_response_dir = Path(__file__).parent / "_responses" / "2.8.0.8" / "ads"
 
 
 def _load_response(filename: str) -> dict[str, Any] | list[Any]:
@@ -227,15 +225,18 @@ async def capture_ads_responses(section: str = "LIVE") -> list[EndpointResult]:
         result = await _safe_call(name, factory())
         results.append(result)
 
-        if result.success and name == "get_instances" and isinstance(result.data, list):
-            for controller_entry in result.data:
+        if result.success and name == "get_instances":
+            # The raw answer is always a list of dicts, one per ADS
+            controller_entries: list[dict[str, Any]] = result.data
+            for controller_entry in controller_entries:
                 for inst in controller_entry.get("available_instances", []):
                     discovered.setdefault("instance_id", inst.get("instance_id"))
                     discovered.setdefault("instance_name", inst.get("instance_name"))
                     discovered.setdefault("module_name", inst.get("module"))
 
-        if result.success and name == "get_datastores" and isinstance(result.data, list) and result.data:
-            discovered.setdefault("datastore_id", result.data[0].get("id"))
+        if result.success and name == "get_datastores" and result.data:
+            datastores: list[dict[str, Any]] = result.data
+            discovered.setdefault("datastore_id", datastores[0].get("id"))
 
     # Parameterized endpoints; skipped when the required value was never discovered.
     if "instance_id" in discovered:
@@ -330,11 +331,6 @@ async def capture_instance_responses(section: str = "LIVE") -> list[EndpointResu
         "get_file_chunk": lambda: mc.get_file_chunk(
             file_path="server.properties", index=0, length=512,
             format_data=False, **rp),
-        "mc_get_op_whitelist": lambda: mc.mc_get_op_whitelist(format_data=False, **rp),
-        "mc_get_whitelist": lambda: mc.mc_get_whitelist(format_data=False, **rp),
-        "mc_load_op_list": lambda: mc.mc_load_op_list(format_data=False, **rp),
-        "mc_buk_get_installed_plugins": lambda: mc.mc_buk_get_installed_plugins(format_data=False, **rp),
-        "mc_buk_get_popular_plugins": lambda: mc.mc_buk_get_popular_plugins(format_data=False, **rp),
         "get_analytics_summary": lambda: mc.get_analytics_summary(format_data=False, **rp),
     }
 

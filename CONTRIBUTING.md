@@ -43,7 +43,8 @@ python -m venv .venv
 
 - Docstrings are NumPy style, following `ampapi/docstring/template/numpy-overwrite.mustache`.
   Parameters are written `name : :class:`Type`` with a space either side of the colon.
-- Nullable types are `Union[X, None]`, in the signature and the docstring.
+- Nullable types are `Optional[X]` or `Union[X, None]` in a parameter list, and any form on a return or annotation.
+  Match the method you're in.
 - Responses are narrowed to a TypedDict with `is_response_type()` / `is_response_list()`, never `typing.cast`.
   See `NOTES.md` for how the response TypedDicts and dataclasses fit together.
 

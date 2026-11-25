@@ -57,12 +57,17 @@ class GenericModule(Base):
 
         Import the settings from a config file in the Instance's files.
 
+        AMP saves each imported value as the Instance's setting. A value AMP rejects is skipped, and the rest are still imported.
+
         Endpoint: `GenericModule/ImportConfig`
 
         Parameters
         ----------
         filename : :class:`str`
-            The name of the config file to import.
+            The config file to import, as the Generic template's `metaconfig.json` lists it, eg. ``"etmain/etl_server.cfg"``.\n
+            - The path is relative to the game server's folder, `App.BaseDirectory` in the Generic template.
+            - AMP only reads a file that the Generic template marks ``"Importable": true``.
+            - For any other file, the :class:`ImportConfig` has every list empty and nothing is raised.
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data, by default None.
         request_params : :class:`AioHTTPRequestOptions` | None, optional

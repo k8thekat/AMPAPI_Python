@@ -33,6 +33,9 @@ To install run the below command in a Terminal.
 .. note::
     5.0.0 breaks backwards compatibility with 4.x; see :doc:`upgrading` for what changed.
 
+.. note::
+    cc-ampapi 5.x is for an AMP 2 panel. For an AMP 3 panel, install the 6.x beta with ``pip install --pre "cc-ampapi>=6"``.
+
 
 
 Basic Usage

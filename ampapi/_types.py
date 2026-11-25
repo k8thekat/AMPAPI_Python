@@ -714,13 +714,11 @@ class FileChunkResponse(TypedDict):
 class ImportConfigResponse(TypedDict):
     """The raw response from :meth:`GenericModule.import_config`."""
 
-    # TODO: Confirm the element types
-    # These lists are typed as Any until we see one with entries
-    settings: dict[str, Any]
-    imported: list[Any]
-    not_imported: list[Any]
-    unrecognised: list[Any]
-    rejected: list[Any]
+    settings: dict[str, str]
+    imported: list[str]
+    not_imported: list[str]
+    unrecognised: list[str]
+    rejected: list[str]
 
 
 class InstanceDatastoreResponse(TypedDict):
@@ -1393,6 +1391,7 @@ class ScheduleDataResponse(TypedDict):
     available_methods: list[MethodsResponse]
     available_triggers: list[TriggersResponse]
     populated_triggers: list[TriggersResponse]
+    referenced_methods: NotRequired[list[MethodsResponse]]
 
 
 class SecurityCheckResponse(TypedDict):

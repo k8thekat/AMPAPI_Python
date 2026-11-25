@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, ParamSpec, TypedDict, TypeGuard, Union, Unpack, overload
 
 # from dataclass_wizard import fromdict
+from aiohttp import ClientError
 from pyotp import TOTP
 from typing_extensions import deprecated
 
@@ -55,7 +56,7 @@ from ._types import (
     is_response_type,
 )
 from .bridge import Bridge
-from .errors import AMPAPIError, AMPAPINetworkError, AMPAPIOIDCSessionError, AMPAPIResponseError, AMPAPITypeError
+from .errors import AMPAPIError, AMPAPINetworkError, AMPAPIOIDCSessionError, AMPAPIPanelVersionError, AMPAPIResponseError, AMPAPITypeError
 from .key_drift import KeyDriftCheck
 from .modules import APISession, BuildInfo, Status, timestamp_converter
 
@@ -799,6 +800,7 @@ class Base:
 
         .. warning::
             Will raise :exc:`AMPAPINetworkError` or :exc:`AMPAPIResponseError` if any errors occur when attempting to call the API.
+            Will raise :exc:`AMPAPIPanelVersionError` if the panel URL is AMP 3, which needs cc-ampapi 6.0.0 or newer.
 
         .. note::
             When AMP says the stored session does not exist, this logs in again and sends the request once more.
@@ -933,6 +935,19 @@ class Base:
                     e,
                 )
                 raise AMPAPINetworkError(status=0, url=_url, reason=str(e)) from e
+
+            # AMP 2 never answers an `/API/` route with 404, and AMP 3 answers every one of them with it
+            if response.status == 404:
+                health_data: Any = None
+                try:
+                    async with client_session.get(url=self._bridge.url + "/api/health/status") as health_response:
+                        health_data = await health_response.json(content_type=None)
+                # Anything but JSON, eg. AMP 2's HTML page, means the panel isn't AMP 3
+                except (ClientError, TimeoutError, ValueError):
+                    LOGGER.debug("<%s.%s> | `/api/health/status` gave no JSON, so the panel isn't AMP 3", __class__.__name__, "_post")
+                # Only AMP 3 answers its health route with a `phase`, and without a login
+                if isinstance(health_data, dict) and "phase" in health_data:
+                    raise AMPAPIPanelVersionError(url=self._bridge.url, phase=str(health_data["phase"]))  # pyright: ignore[reportUnknownArgumentType]
 
             if response.content_length == 0:
                 raise AMPAPINetworkError(status=response.status, url=_url, reason="The HTTP Header content length was 0.")

@@ -20,7 +20,15 @@ Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
 
 import logging
 
-__all__ = ("AMPAPIError", "AMPAPIKeyError", "AMPAPINetworkError", "AMPAPIOIDCSessionError", "AMPAPIResponseError", "AMPAPITypeError")
+__all__ = (
+    "AMPAPIError",
+    "AMPAPIKeyError",
+    "AMPAPINetworkError",
+    "AMPAPIOIDCSessionError",
+    "AMPAPIPanelVersionError",
+    "AMPAPIResponseError",
+    "AMPAPITypeError",
+)
 
 LOGGER = logging.getLogger("AMPAPI_Python.errors")
 
@@ -59,6 +67,35 @@ class AMPAPIOIDCSessionError(AMPAPIResponseError):
 
     .. versionadded:: 5.0.0
     """
+
+
+class AMPAPIPanelVersionError(AMPAPIError):
+    """Raised when the `url` in :class:`~ampapi.APIParams` is an AMP 3 panel. This library, cc-ampapi 5.x, is for AMP 2.
+
+    For an AMP 3 panel, install cc-ampapi 6.0.0 or newer in place of 5.x: ``pip install --pre "cc-ampapi>=6"``.
+    Until 6.0.0 is released, every 6.x version is a beta, and pip installs a beta only with ``--pre``.
+
+    .. versionadded:: 5.0.1
+
+    Attributes
+    ----------
+    url : :class:`str`
+        The panel URL from :class:`~ampapi.APIParams`.
+    phase : :class:`str`
+        The setup stage the AMP 3 panel reports, eg. ``"ready"``.\n
+        - For diagnosis only.
+
+    """
+
+    url: str
+    phase: str
+
+    def __init__(self, url: str, phase: str) -> None:  # noqa: D107
+        self.url = url
+        self.phase = phase
+        message = 'The panel is AMP 3, and this library is for AMP 2. For AMP 3: pip install --pre "cc-ampapi>=6" | URL: %s | Phase: %s'
+        super().__init__(message % (url, phase))
+        LOGGER.error(message, url, phase)
 
 
 class AMPAPITypeError(AMPAPIError):

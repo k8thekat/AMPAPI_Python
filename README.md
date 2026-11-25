@@ -53,6 +53,8 @@ To install run the below command via your preferred terminal or IDE.
 
 > **5.0.0 breaks backwards compatibility with 4.x.** See [Upgrading from 4.x] for what changed, or pin `cc-ampapi<5` until you're ready~
 
+> **cc-ampapi 5.x is for an AMP 2 panel.** For an AMP 3 panel, install the 6.x beta with `pip install --pre "cc-ampapi>=6"`.
+
 ### PyPi
 
 ---
@@ -95,6 +97,7 @@ from ampapi import (
     InstanceState,
     MinecraftInstance,
     Players,
+    Status,
 )
 
 # You can pull these values from an `.ini` or a `.env` file,
@@ -125,11 +128,11 @@ async def Sample_API() -> None:
     # We can break out all our instances into their own attributes.
     for instance in ADSinstances:
         # Pre populated from the dataclass and has the API endpoints too!
-        if isinstance(instance, Instance):
-            if instance.friendly_name == "ArkInstance":
-                arkinstance = instance
-            elif instance.friendly_name == "Minecraft_PVP":
-                mcinstance = instance
+        # Every converted Instance is already an `Instance`, so there is nothing to check
+        if instance.friendly_name == "ArkInstance":
+            arkinstance = instance
+        elif instance.friendly_name == "Minecraft_PVP":
+            mcinstance = instance
 
     if arkinstance is None or mcinstance is None or not isinstance(mcinstance, MinecraftInstance):
         return
@@ -172,14 +175,17 @@ async def Sample_API() -> None:
     await mcinstance.update_application()
 
     # To get the current Instance State call the function below, it returns a `Status` dataclass.
-    status = await mcinstance.get_status()
-    status.state
-    # You can also check Metrics of an Instance easily.
-    status.metrics
+    # A call gives the raw dict when `format_data` is off, so we ask for the dataclass and check we got it
+    status = await mcinstance.get_status(format_data=True)
+    if isinstance(status, Status):
+        print(status.state)
+        # You can also check Metrics of an Instance easily.
+        print(status.metrics)
 
     # Want to kick a random person? Here ya go~
-    players: Players = await mcinstance.get_user_list()
-    await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
+    players = await mcinstance.get_user_list(format_data=True)
+    if isinstance(players, Players) and len(players.sorted) > 0:
+        await mcinstance.mc_kick_user_by_id(user_id=players.sorted[0].uuid)
 
     # When you are done, close the session the Bridge made for us.
     await ADS.clean_up()
@@ -202,19 +208,25 @@ async def Sample_Analytics_API():
     if mcinstance is None:
         return
     # Example analytics call without a filter.
-    Analytics: AnalyticsSummary = await mcinstance.get_analytics_summary()
-    # Then with that class you can access lots of Information, such as Top Players, Stats and SessionTime.
-    Analytics.top_players # This is a list of this Instances Top Players.
-    Analytics.stats # This is a list of different fields such as Unique Users, New Users, etc..
+    Analytics = await mcinstance.get_analytics_summary(format_data=True)
+    if isinstance(Analytics, AnalyticsSummary):
+        # Then with that class you can access lots of Information, such as Top Players, Stats and SessionTime.
+        print(Analytics.top_players) # This is a list of this Instances Top Players.
+        print(Analytics.stats) # This is a list of different fields such as Unique Users, New Users, etc..
     # _____________________________________________
     # Now you can also filter the results to look at a specific User or Country. Simply define the `AnalyticsFilter` class and pass it into the method call.
     country_filter: AnalyticsFilter = AnalyticsFilter(country="US") # The country parameter supports `ISO 3166-1 Alpha-2 format` only.
     # These results will be filtered to only users within the US.
-    filtered_analytics: AnalyticsSummary = await mcinstance.get_analytics_summary(filters=country_filter)
+    filtered_analytics = await mcinstance.get_analytics_summary(filters=country_filter, format_data=True)
+    print(filtered_analytics)
 
     user_filter: AnalyticsFilter = AnalyticsFilter(username="k8_thekat") # The IGN/Username of the user connected to the Server.
     # These results will be filtered to only users with that match the parameter username. (eg. k8_thekat).
-    filtered_analytics2: AnalyticsSummary = await mcinstance.get_analytics_summary(filters=user_filter)
+    filtered_analytics2 = await mcinstance.get_analytics_summary(filters=user_filter, format_data=True)
+    print(filtered_analytics2)
+
+    # When you are done, close the session the Bridge made for us.
+    await ADS.clean_up()
 
 
 ```

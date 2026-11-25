@@ -2038,31 +2038,28 @@ class FolderUploadFile:
 class ImportConfig(ResponseData):
     """Represents the JSON response data from :meth:`GenericModule.import_config`.
 
-    .. note::
-        Only empty lists have been seen, so the element types are UNK.
+    The four lists hold a line of text for each setting, written for a person to read.
 
     Attributes
     ----------
-    settings : dict[:class:`str`, Any]
-        The settings read from the file.
-    imported : list[Any]
-        The settings that were imported.
-    not_imported : list[Any]
-        The settings that were not imported.
-    unrecognised : list[Any]
-        The settings AMP did not recognise.
-    rejected : list[Any]
-        The settings AMP rejected.
+    settings : dict[:class:`str`, :class:`str`]
+        The settings in `imported`, keyed by AMP's setting node, eg. ``"Meta.GenericModule.sv_hostname"``.
+    imported : list[:class:`str`]
+        A line per imported setting, with its display name and value, eg. ``"Server Name = My Server"``.
+    not_imported : list[:class:`str`]
+        A line per AMP setting in the file that AMP didn't import, eg. ``"Server Port = 27961"``.
+    unrecognised : list[:class:`str`]
+        A line per key in the file that matches no AMP setting, eg. ``"some_cvar = 1"``.
+    rejected : list[:class:`str`]
+        A line per value AMP skipped, with the reason in brackets, eg. ``"Timeout For Connected Clients = abc (not a number)"``.
 
     """
 
-    # TODO: Need the element types from a real import
-    # Only empty lists were seen, so they are Any for now
-    settings: dict[str, Any] = field(default_factory=dict[str, Any])
-    imported: list[Any] = field(default_factory=list[Any])
-    not_imported: list[Any] = field(default_factory=list[Any])
-    unrecognised: list[Any] = field(default_factory=list[Any])
-    rejected: list[Any] = field(default_factory=list[Any])
+    settings: dict[str, str] = field(default_factory=dict[str, str])
+    imported: list[str] = field(default_factory=list[str])
+    not_imported: list[str] = field(default_factory=list[str])
+    unrecognised: list[str] = field(default_factory=list[str])
+    rejected: list[str] = field(default_factory=list[str])
 
 
 @dataclass(slots=True)
@@ -3666,14 +3663,21 @@ class ScheduleData:
         The available triggers.
     populated_triggers : list[:class:`Triggers`]
         The populated triggers.
+    referenced_methods : list[:class:`Methods`]
+        The :class:`Methods` named by each task's `task_method_name` in `populated_triggers`, one entry per method.\n
+        - A method can be in both this list and `available_methods`.
+        - The list is empty when no trigger has a task, and always empty on AMP 2.6.5, which doesn't send the key.
+
+        .. versionadded:: 5.0.1
 
     """
 
     available_methods: list[Methods]
     available_triggers: list[Triggers]
     populated_triggers: list[Triggers]
+    referenced_methods: list[Methods]
 
-    __slots__ = ("available_methods", "available_triggers", "populated_triggers")
+    __slots__ = ("available_methods", "available_triggers", "populated_triggers", "referenced_methods")
 
     def __init__(self, data: ScheduleDataResponse) -> None:
         """..."""
@@ -3682,8 +3686,8 @@ class ScheduleData:
             if value is None:
                 setattr(self, key, [])
                 continue
-            if key == "available_methods":
-                self.available_methods = [Methods.from_response(entry) for entry in value]
+            if key == "available_methods" or key == "referenced_methods":
+                setattr(self, key, [Methods.from_response(entry) for entry in value])
                 continue
             if key == "available_triggers" or key == "populated_triggers":
                 setattr(self, key, [Triggers.from_response(entry) for entry in value])

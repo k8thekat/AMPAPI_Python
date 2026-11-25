@@ -192,6 +192,47 @@ How #45 handles it (Kat 2026-11-05: a separate function, so the password session
   own session. Only a new Instance login needs the Controller.
 
 
+## GenericModule/ImportConfig
+
+Checked live on vm1's ETLTest01 (AMP 2.8.0.8, 2026-11-24). The capture is `_responses/2.8.0.8/generic/importconfig.json`.
+- `filename` is a `ConfigFile` path from the template's `metaconfig.json`, relative to `App.BaseDirectory`
+  (`etmain/etl_server.cfg`). The path from the Instance's root gave empty lists.
+- AMP only reads an entry marked `"Importable": true`. Without it, every list is empty and nothing is logged.
+  `Meta.ImportableExtensions` in the module's kvp made no difference either way.
+- The import is applied: the accepted values replace the Instance's settings. AMP logs
+  `Importing config file ... (KVP format)` and a warning per rejected value.
+- The reply's lists hold display lines, eg. `"Server Name = AMPAPI Import Test"`, and for `rejected`,
+  `"DDoS Protection Mode = 7 (not one of this setting's options)"`. `settings` maps the setting node
+  (`Meta.GenericModule.sv_hostname`) to the value, for the imported settings only.
+- The port setting went to `not_imported`, and a key no setting maps to went to `unrecognised`.
+- TF2's `server.cfg` is a `template` config file and has no `Importable` flag, so it gave empty lists too.
+
+
+## Core/GetScheduleData's ReferencedMethods
+
+AMP 2.8 added `ReferencedMethods` to the reply, and AMP 2.6.5 doesn't send it. Checked live on vm1's CustomTest01 (AMP
+2.8.0.8, 2026-11-25), and against all 8 `getscheduledata.json` captures for 2.8.0.8.
+- It holds a `Methods` entry for each method the tasks in `PopulatedTriggers` run, in the same shape as
+  `AvailableMethods`. A method is listed even when it is also in `AvailableMethods`.
+- With no tasks the list is empty, which is why the ADS captures showed `[]`.
+- The panel (`WebRoot/Scripts/AMP.js`) merges it with `AvailableMethods` to describe each task, and reads a missing
+  list as empty (`result.ReferencedMethods ?? []`).
+
+
+## An AMP 3 panel (#47)
+
+The AMP 3 line is cc-ampapi 6.x (the AMP3-beta branch), and each line raises a clear error on the other line's panel.
+AMP3 #3-69 is the other side.
+- AMP 3 answers every `/API/` route, `Core/Login` included, with 404 and an empty body. Before #47 the login raised
+  "The HTTP Header content length was 0."
+- AMP 2 never answers an `/API/` route with 404. An unknown method gets 200 "Missing Method", and `/api/health/status`
+  gets the panel's HTML page.
+- So `_post` asks `GET /api/health/status` after a 404, with no login. AMP 3 answers it with JSON holding a `phase`
+  (`"ready"` once set up), which raises `AMPAPIPanelVersionError`. Any other answer keeps the old error.
+- Checked 2026-11-24: vm3 (AMP 3) raised it, vm1 (AMP 2) logged in as before, and a local server answering 404 to
+  everything still raised `AMPAPINetworkError`.
+
+
 ## Dataclasses vs. the raw JSON
 
 Response dataclasses inherit `ResponseData` and are built with `Cls.from_response(result)` (`modules.py`), never
@@ -319,7 +360,7 @@ Raw dicts that stay raw on purpose (#16, 2026-10-21): maps with dynamic keys and
 `get_instance_live_settings`, `get_role_ids`), `StructuredDiagnostics.application` (keys differ per module), and
 `ADSData.available_instances` (an `Instance` needs a bridge, not a dataclass). `APISpec` and `ActionSpec` are type
 aliases over dynamic module and method keys; `automodule` skips aliases, so they are not in the docs. Fields AMP has
-never sent in a capture stay `Any` (Bukkit, `ImportConfig`, `Fitness`, `Backup.meta`, `SettingSpec.warn_when_value`).
+never sent in a capture stay `Any` (Bukkit, `Fitness`, `Backup.meta`, `SettingSpec.warn_when_value`).
 `Core.get_user_list` answers `{}` with no players in every capture; `[]` is handled as empty too.
 
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is

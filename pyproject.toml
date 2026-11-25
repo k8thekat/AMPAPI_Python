@@ -135,3 +135,13 @@ dev = [
 # skip_pyright = ["unit_test.py"]
 # The usage sample is skipped the same way.
 skip_pyright = ["unit_test.py", "docs/samples/sample.py"]
+
+[tool.land_check]
+# The shared landing check in ~/.claude/hooks. The library gets the whole-package gates on top of the changed files.
+paths = ["ampapi", "docs", "*.md", ".scripts"]
+format = ["ampapi/"]
+pyright_project = true
+# A public method is API that nothing in the repo calls, so only unused `_` names are dead code.
+dead_code = "private"
+# Her last AI-free commit (CODING_STYLE.md section 0), so `her-line` can tell her lines apart.
+voice_pins = ["c819777"]

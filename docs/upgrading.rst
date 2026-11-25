@@ -14,6 +14,9 @@ Requirements
 
 - Python 3.12 or higher (4.x supported 3.10).
 - AMP ``2.6.2.8`` or newer. The session is sent in the `Authorization` header now, and the old `SESSIONID` parameter is gone.
+- An AMP 2 panel. For an AMP 3 panel the library raises :exc:`~ampapi.errors.AMPAPIPanelVersionError` on the first call,
+  since AMP 3 needs ``cc-ampapi>=6``. Until 6.0.0 is released, every 6.x version is a beta, so install it with
+  ``pip install --pre "cc-ampapi>=6"``.
 
 
 Renamed classes
@@ -283,6 +286,8 @@ Returned data
   :class:`~ampapi.modules.SettingsSpecParent` gains `backups`, `meta_config` and `minecraft`, and `modules`
   holds the categories with a colon in the name (eg. ``valheim:stadiacontroller``) as a dict of lists of
   :class:`~ampapi.modules.SettingSpec`.
+- :class:`~ampapi.modules.ScheduleData` gains `referenced_methods`, the :class:`~ampapi.modules.Methods` named by
+  the tasks in `populated_triggers`. AMP 2.6.5 doesn't send the key, so on 2.6.5 the list is always empty.
 - :meth:`~ampapi.Core.get_webauthn_credential_ids` returns the dict AMP sends (`ids` and `challenge`). The wrapper
   typed it as a list, and raised on every call.
 - :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup` returns a :class:`~ampapi.modules.RunningTask`, which is

@@ -3115,7 +3115,8 @@ class ADSModule(Base):
             return result
         raise AMPAPIKeyError("status", "ADSModule/RestartInstance", result)  # noqa: EM101
 
-    # TODO: Returns Any, so we need to build a dataclass and TypedDict.
+    # `ADSModule/Servers` forwards a call to an Instance, so the answer comes from the Instance and has no type here
+    # Each Instance method already calls through `ADSModule/Servers/<ID>/API/...` and types its own answer
     @Base.ads_only
     async def servers(
         self,
@@ -3138,6 +3139,7 @@ class ADSModule(Base):
         .. warning::
             `ADSModule/Servers` is AMP's proxy route, the one the library uses as a URL path in `ADSModule/Servers/<ID>/API/...`.
             Calling it as an endpoint fails with "Index was outside the bounds of the array".
+            `servers` raises :exc:`NotImplementedError`. Call the method on the :class:`Instance` instead, which goes through this route.
 
 
         Parameters
@@ -3154,7 +3156,7 @@ class ADSModule(Base):
         Returns
         -------
         Any
-            UNK.
+            Nothing, as `servers` raises :exc:`NotImplementedError`.
 
         """
         raise NotImplementedError
