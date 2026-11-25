@@ -1,4 +1,4 @@
-.. currentmodule:: ampapi.enums_
+.. currentmodule:: ampapi._enums
 
 Enums
 ~~~~~~
@@ -12,9 +12,6 @@ Enums
 .. autoenum:: AMPDownloadMirrorState
     :members:
 
-.. autoenum:: AMPInstanceState
-    :members:
-
 .. autoenum:: AMPTheme
     :members:
 
@@ -24,23 +21,38 @@ Enums
 .. autoenum:: AppStartupModeState
     :members:
 
+.. autoenum:: AuthMode
+    :members:
+
 .. autoenum:: ContainerMemoryPolicyState
     :members:
 
 .. autoenum:: DefaultIPBindingState
     :members:
 
+.. autoenum:: IfOperators
+    :members:
+
+.. autoenum:: InstanceState
+    :members:
+
 .. autoenum:: LoggingLevelState
+    :members:
+
+.. autoenum:: MailPriority
+    :members:
+
+.. autoenum:: Module
     :members:
 
 .. autoenum:: PortAssignmentState
     :members:
 
-.. autoenum:: PostCreateActionsState
+.. autoenum:: PostCreateState
     :members:
 
-.. autoenum:: PostCreateState
-    :members: 
+.. autoenum:: Protocols
+    :members:
 
 .. autoenum:: ReleaseStreamState
     :members:
@@ -48,49 +60,13 @@ Enums
 .. autoenum:: TwoFactoryModeState
     :members:
 
-.. currentmodule:: ampapi.types_
+.. currentmodule:: ampapi._types
 
 Types
 ~~~~~~
 These are all :class:`TypedDicts`
 
-.. autoclass:: ActionSpec
-    :members:
-
-.. autoclass:: APISpec
-    :members:
-
-.. autoclass:: APISPecEndpointData
-    :members:
-    
-.. autoclass:: APISpecEndpointParameters
-    :members:
-    
-.. autoclass:: BukkitCategories
-    :members:
-    
-.. autoclass:: Consumes
-    :members:
-    
-.. autoclass:: MethodsData
-    :members:
-    
-.. autoclass:: ParameterMapping
-    :members:
-    
-.. autoclass:: PermissionNode
-    :members:
-    
-.. autoclass:: ScheduleDataData
-    :members:
-    
-.. autoclass:: TriggersData
-    :members:
-    
-.. autoclass:: TriggerTasksData
-    :members:
-    
-.. autoclass:: MCUserData
+.. automodule:: ampapi._types
     :members:
 
 
@@ -98,4 +74,12 @@ Data Modules
 ~~~~~~~~~~~~~
 
 .. automodule:: ampapi.modules
+    :members:
+    :exclude-members: Player
+
+.. autoclass:: ampapi.modules.Player
+    :members:
+    :exclude-members: uuid, name
+
+.. autoclass:: ampapi.modules.Module
     :members:

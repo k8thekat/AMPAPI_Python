@@ -7,10 +7,10 @@ example_note = """
     :linenos:
 
     # We are going to access Privacy.AllowAnalytics.
-    # ... assume we created our Bridge object and API Params to login.
+    # ... assume we created our Bridge object and API Params to login, and `controller` is our `Controller`.
     import ampapi
     node = "Settings.Core.Privacy.AllowAnalytics"
-    res = ADSModule.set_instance_config(instance_name="AMPInstance01", setting_node= node, value= True)
+    res = await controller.set_instance_config(instance_name="AMPInstance01", setting_node=node, value="True")
     print(res) # This should be an ActionResult class which we can see the results via its `__repr__` definition.
 
 
@@ -23,10 +23,10 @@ example_note = """
     :linenos:
 
     # We are going to access InstanceManagement.StopInstances.
-    # ... assume we created our Bridge object and API Params to login.
+    # ... assume we created our Bridge object and API Params to login, and `controller` is our `Controller`.
     import ampapi
     node = "ADS.InstanceManagement.StopInstances"
-    res = ADSModule.set_instance_config(instance_name="AMPInstance01", setting_node= node, value= True)
+    res = await controller.set_instance_config(instance_name="AMPInstance01", setting_node=node, value="True")
     print(res) # This should be an ActionResult class which we can see the results via its `__repr__` definition.
 
 

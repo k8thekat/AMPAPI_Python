@@ -4,20 +4,20 @@
 {{extendedSummaryPlaceholder}}
 {{#parametersExist}}
 Parameters
------------
+----------
 {{#args}}
-{{var}}: :class:`{{typePlaceholder}}`
+{{var}} : :class:`{{typePlaceholder}}`
     {{descriptionPlaceholder}}.
 {{/args}}
 {{#kwargs}}
-{{var}}: :class:`{{typePlaceholder}}`, optional
+{{var}} : :class:`{{typePlaceholder}}`, optional
     {{descriptionPlaceholder}}, by default {{&default}}.
 {{/kwargs}}
 {{/parametersExist}}
 {{#returnsExist}}
 
 Returns
---------
+-------
 {{#returns}}
 :class:`{{typePlaceholder}}`
     {{descriptionPlaceholder}}.
@@ -26,7 +26,7 @@ Returns
 {{#yieldsExist}}
 
 Yields
--------
+------
 {{#yields}}
 :class:`{{typePlaceholder}}`
     {{descriptionPlaceholder}}.
@@ -35,7 +35,7 @@ Yields
 {{#exceptionsExist}}
 
 Raises
--------
+------
 {{#exceptions}}
 :exc:`{{type}}`
     {{descriptionPlaceholder}}.

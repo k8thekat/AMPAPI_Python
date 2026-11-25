@@ -17,6 +17,13 @@ All Modules/Plugins inherit from this class.
 .. autoclass:: Base
    :members:
 
+Response Handler Options
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The keyword arguments every endpoint forwards to its response handler through ``**response_params``.
+
+.. autoclass:: ResponseHandlerOptions
+   :members:
+
 
 ADS Module
 ~~~~~~~~~~~
@@ -54,8 +61,29 @@ Local File Backup Module
    :members:
    :show-inheritance:
 
+Generic Module
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: GenericModule
+   :members:
+   :show-inheritance:
+
 Minecraft Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: MinecraftModule
+   :members:
+   :show-inheritance:
+
+SteamCMD Plugin
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: SteamCMDPlugin
+   :members:
+   :show-inheritance:
+
+
+Error Classes
+~~~~~~~~~~~~~
+Every error the library raises inherits from :class:`~ampapi.errors.AMPAPIError`, and all of them are importable from `ampapi`.
+
+.. automodule:: ampapi.errors
    :members:
    :show-inheritance:

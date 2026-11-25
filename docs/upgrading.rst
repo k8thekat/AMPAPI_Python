@@ -1,0 +1,403 @@
+Upgrading from 4.x
+==================
+
+**5.0.0 is a major version bump, because it breaks backwards compatibility with 4.x.**
+Code written for ``4.6.0`` will need a few changes before it runs, so pin ``cc-ampapi<5`` if you aren't ready to upgrade yet~
+
+.. code-block:: bash
+
+    pip install "cc-ampapi<5"
+
+
+Requirements
+------------
+
+- Python 3.12 or higher (4.x supported 3.10).
+- AMP ``2.6.2.8`` or newer. The session is sent in the `Authorization` header now, and the old `SESSIONID` parameter is gone.
+- An AMP 2 panel. For an AMP 3 panel the library raises :exc:`~ampapi.errors.AMPAPIPanelVersionError` on the first call,
+  since AMP 3 needs ``cc-ampapi>=6``. Until 6.0.0 is released, every 6.x version is a beta, so install it with
+  ``pip install --pre "cc-ampapi>=6"``.
+
+
+Renamed classes
+---------------
+
+==============================  ==================================================
+4.x                             5.0.0
+==============================  ==================================================
+`AMPControllerInstance`         :class:`~ampapi.instance.Controller`
+`AMPInstance`                   :class:`~ampapi.instance.Instance`
+`AMPMinecraftInstance`          :class:`~ampapi.instance.MinecraftInstance`
+`AMPADSInstance`                :class:`~ampapi.instance.TargetADS`
+`AMPInstanceState`              :class:`~ampapi._enums.InstanceState`
+`Metric`                        :class:`~ampapi.modules.Metrics`
+`User`                          :class:`~ampapi.modules.UserInfo`
+`APISPecEndpointData`           :class:`~ampapi._types.APISpecEndpointData`
+`DCConsumes`                    :class:`~ampapi.modules.Consumes`
+`DCParameterMapping`            :class:`~ampapi.modules.ParameterMapping`
+==============================  ==================================================
+
+Renamed attributes: `Base.url` -> `endpoint_url`, `FileChunk.base_64_data` -> `base64_data`,
+`InstanceDatastore.sanitized_name` -> `sanitised_name`, `Module.end_point_ur` -> `endpoint_uri` and
+`PortInfo.us_user_defined` -> `is_user_defined`.
+
+- The raw response TypedDicts in `ampapi._types` (4.x `ampapi.types_`) are named after their dataclass, with a
+  `Response` suffix: `types_.Consumes` -> `ConsumesResponse`, `MethodsData` -> `MethodsResponse`,
+  `types_.ParameterMapping` -> `ParameterMappingResponse` and `MCUserData` -> `MCUserResponse`. `Consumes`
+  and `ParameterMapping` are now the dataclasses in :mod:`ampapi.modules`.
+- The response dataclasses in :mod:`ampapi.modules` are slotted (``@dataclass(slots=True)``). They have no
+  `__dict__`: ``vars(obj)`` raises, an attribute that isn't a field can't be set on them, and they can't be weakly
+  referenced. :func:`dataclasses.asdict`, :func:`dataclasses.fields`, :func:`dataclasses.replace`, pickling and copying
+  work as before.
+
+
+Moved modules
+-------------
+
+Everything public is still available straight from `ampapi`.
+
+- `ampapi.controller` was removed; :class:`~ampapi.instance.Controller` lives in `ampapi.instance`.
+- `ampapi.enums_` -> `ampapi._enums`. Every Enum in it is now exported from `ampapi`, where 4.x exported only five
+  (eg. :class:`~ampapi._enums.AMPTheme` and :class:`~ampapi._enums.LoggingLevelState` are new there).
+- `ampapi.types_` -> `ampapi._types`
+- `ampapi.util` holds developer tools and is no longer star-imported, so its functions (eg. `amp_api_update`,
+  `find_missing_endpoints`) are no longer on `ampapi`. Import the module instead: ``from ampapi import util``.
+- `ampapi.backoff` and its `ExponentialBackoff` were removed. Only the library's RuntimeError retry used it, and that
+  retry now happens only when the Bridge has a different session, with no wait.
+
+
+Changed methods
+---------------
+
+- ``Base.dataclass_to_dict()`` and ``Base.json_to_dataclass()`` were removed. The dataclasses sent as API parameters
+  have their own ``to_dict()``.
+- :meth:`~ampapi.Core.login` renamed `rememberME` to `remember_me`.
+- ``Base.call_end_point()`` is now ``_call_end_point()``; it is a dev tool for testing endpoints that have no wrapper yet.
+- :meth:`~ampapi.Core.get_oidc_login_url` dropped its `state` parameter and returns the login URL; 4.x always returned None.
+- `format_data` was removed from methods whose response has no dataclass (eg. `get_new_guid`, `get_group`,
+  `set_configs`); passing it now raises a :exc:`TypeError`.
+- `Bridge.api_params` was removed. :class:`~ampapi.Bridge` is an :class:`~ampapi.modules.APIParams` itself, so read
+  `bridge.url`, `bridge.user` and the rest straight off it. ``Bridge(api_params=...)`` still works.
+- :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) gains `auth_mode`, an
+  :class:`~ampapi._enums.AuthMode` that defaults to ``AuthMode.password``. `user` and `password` default to ``""``, and
+  the password mode raises a :exc:`ValueError` when either is empty, where 4.x required both.
+- With ``AuthMode.oidc`` the library sends no password login. Log in once with :meth:`~ampapi.Core.oidc_login`, and
+  every call uses that session until AMP ends it. A call with no session raises the new
+  :exc:`~ampapi.errors.AMPAPIOIDCSessionError`, an :exc:`~ampapi.errors.AMPAPIResponseError`. An Instance logs in by
+  itself with a token from the Controller's :meth:`~ampapi.adsmodule.ADSModule.manage_instance`.
+- `session_ttl` is removed. A stored session is used until AMP ends it, then the library logs in again and resends the
+  call. 4.x logged in again every 240 seconds, which left each old session alive on AMP.
+- The repr of :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) leaves out `password`, `token` and
+  the stored sessions, so the debug logs don't print them.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance`, :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`
+  and :meth:`~ampapi.adsmodule.ADSModule.apply_instance_configuration` return a :class:`~ampapi.modules.RunningTask`,
+  which is what AMP sends. 4.x returned an `ActionResult`, and the last two raised on AMP 2.8's reply.
+- :meth:`~ampapi.minecraft.MinecraftModule.mc_reject_eula` returns a bool like `mc_accept_eula`; 4.x returned None.
+- :meth:`~ampapi.Core.restart_amp`, :meth:`~ampapi.Core.upgrade_amp`, :meth:`~ampapi.Core.update_amp_instance`,
+  :meth:`~ampapi.filebackup.LocalFileBackupPlugin.delete_local_backup` and
+  :meth:`~ampapi.filebackup.LocalFileBackupPlugin.set_backup_sticky` return an :class:`~ampapi.modules.ActionResult`
+  (AMP's reply) and take `format_data`. 4.x returned None.
+- :meth:`~ampapi.Core.restart_amp` runs on any Instance and restarts that Instance's AMP process. 4.x raised a
+  :exc:`RuntimeError` unless it was called on an ADS.
+- `Instance.update_instance` is renamed :meth:`~ampapi.instance.Instance.upgrade_instance`, to match
+  :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance` and ``ADSModule/UpgradeInstance``.
+- :meth:`~ampapi.Core.enable_two_factor` returns a :class:`~ampapi.modules.TwoFactorSetupInfo` (`url` and
+  `manual_key`), and :meth:`~ampapi.Core.activate_amp_license` returns a :class:`~ampapi.modules.LicenceInfo`. 4.x
+  returned the `ActionResult` around them, with the data in `result`.
+- :attr:`ActionResult.result <ampapi.modules.ActionResult.result>` can be a dict, where AMP answers an object.
+- `Core.restart_instance` and `Core.kill_instance` are removed (deprecated in 4.6.0). Use
+  :meth:`~ampapi.Core.restart_application` and :meth:`~ampapi.Core.kill_application`. An Instance's own
+  `restart_instance` is unchanged.
+- :meth:`~ampapi.Core.run_security_check` returns a list of :class:`~ampapi.modules.SecurityCheck` and takes
+  `format_data`. 4.x returned the raw response. AMP's `Pass` key is `passed`, since `pass` is a Python keyword.
+- :meth:`~ampapi.adsmodule.ADSModule.cancel_pairing` and :meth:`~ampapi.Core.refresh_settings_source_cache` return None
+  and no longer take `format_data`. AMP answers JSON null for both, and never sent the `ActionResult` 4.x annotated.
+- `ADSModule.create_local_instance` is removed. AMP 2.8.0.8 answers a null reference to every Instance shape sent, and
+  its `LocalAMPInstance` is undocumented. Use :meth:`~ampapi.adsmodule.ADSModule.create_instance` or
+  :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec`.
+- `FileManagerPlugin.append_file_chunk` is removed. On AMP 2.8.0.8 it creates no file and appends to none. Use
+  :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk`.
+- The 16 :class:`~ampapi.minecraft.MinecraftModule` methods whose endpoints were removed in AMP 2.6.5.0 are
+  deprecated: the OP list and whitelist methods (`mc_add_op_entry`, `mc_add_to_whitelist`, `mc_get_op_whitelist`,
+  `mc_get_whitelist`, `mc_load_op_list`, `mc_remove_op_entry`, `mc_remove_whitelist_entry`), the `mc_buk_*` plugin
+  methods and `mc_get_head_by_uuid`. :class:`~ampapi.modules.OPWhitelist` and `OPWhitelistResponse` are deprecated
+  with them.
+- :class:`~ampapi.instance.Instance` has the :class:`~ampapi.generic.GenericModule` and
+  :class:`~ampapi.steamcmd.SteamCMDPlugin` endpoints, which Generic Instances (module `GenericModule` or `Generic`)
+  serve. On any other module they raise :exc:`RuntimeError`.
+- `PostCreateActionsState` was removed; it never matched AMP's `PostCreateAppActions` (eg. its `start_instance`
+  was AMP's `update_once`, and `every_time` = 16 doesn't exist). :class:`~ampapi.CreateInstance`,
+  `DeploymentTemplate` and `create_instance_from_spec` take
+  :class:`~ampapi._enums.PostCreateState`, whose values are AMP's.
+- :class:`~ampapi.modules.CreateInstance` fills `new_instance_id` with the zero GUID (AMP picks the ID),
+  `admin_username` with ``"admin"`` and `admin_password` with a generated password, since AMP rejects empty values.
+- :class:`~ampapi.modules.CreateInstance` defaults `ip_binding` to ``"0.0.0.0"`` (every IPv4 address). 4.x used
+  ``"192.168.0.1"``, which AMP rejects on a machine without that address.
+- :class:`~ampapi.modules.CreateInstance` requires `instance_name` and `port_number`, which now follow `module`. 4.x
+  defaulted them to ``""`` and ``8001``. AMP fails a local creation with an empty name, and a fixed port works only
+  until one Instance holds it. A call that passes the fields after `module` by position needs them as keywords.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance` takes a keyword-only `wait` (default False) and `wait_timeout`
+  (default 300 seconds). With `wait`, it waits for the creation task to end and raises
+  :exc:`~ampapi.AMPAPIResponseError` when the task fails.
+- :meth:`~ampapi.adsmodule.ADSModule.update_instance_info` sends AMP's parameter names (eg. `InstanceId` and
+  `FriendlyName`) from :meth:`InstanceInfo.to_dict <ampapi.modules.InstanceInfo.to_dict>`, and it returns a
+  :class:`~ampapi.modules.RunningTask`, which is what AMP answers. 4.x sent the attribute names, so AMP always answered
+  that the call requires `InstanceId`.
+- :class:`~ampapi.modules.InstanceInfo` needs only `instance_id`. Every other field defaults to None and is left out of
+  the call, so AMP leaves that value unchanged. In 4.x nine fields were required, and `memory_policy` and
+  `start_on_boot` defaulted to real values that overwrote the Instance's own.
+- :class:`~ampapi.modules.InstanceInfo` gains `container_swap`, `container_cpu_set`, `custom_mount_bindings`,
+  `extra_container_packages`, `is_multi_ip_aware`, `use_host_mode_network`, `display_group` and `save_only`, which AMP's
+  `UpdateInstanceInfo` takes. 4.x could not send them.
+- :meth:`~ampapi.Core.oidc_login` is now ``oidc_login(code, state, redirect_uri, instance_id=None)``. AMP requires
+  `state`, and 4.x never sent it, so the call always failed. `instance_id` is optional and AMP is sent null without it.
+  It needs no session, so it no longer logs in first. A successful login stores its session. With
+  ``AuthMode.oidc`` it also sets the Bridge's `user` from the login.
+- :meth:`~ampapi.Core.get_oidc_login_url` needs no session either, so it no longer logs in first.
+- :meth:`~ampapi.Core.logout` ends the stored session as it is, and does nothing when there is no stored session.
+  4.x could log in first and end that new session instead, which left the stored session alive on AMP.
+- :meth:`~ampapi.Core.set_config` and :meth:`~ampapi.Core.set_configs` send a list, tuple or dict value as a JSON string.
+  AMP needs that for a `List<String>` setting, and 4.x raised "Missing Field" for a list. Both also accept
+  :class:`bool` and :class:`int` values.
+- :meth:`~ampapi.Core.oidc_login` returns a :class:`~ampapi.modules.LoginResults`; 4.x returned the raw dict.
+- These methods gain keyword-only parameters from AMP's API spec. Each defaults to None and is left out of the call
+  when None, so AMP keeps its own default and no existing call changes:
+
+  - :meth:`~ampapi.adsmodule.ADSModule.apply_template`: `new_friendly_name`, `secret` and
+    `restart_if_previously_running`.
+  - :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance`: `restart_if_running`.
+  - :meth:`~ampapi.adsmodule.ADSModule.set_instance_suspended`: `suspend_reason`.
+  - :meth:`~ampapi.adsmodule.ADSModule.set_instance_network_info`: `advertised_address` and
+    `advertised_address_includes_port`.
+  - :meth:`~ampapi.Core.create_user`: `is_oidc_user` and `oidc_sub`.
+  - :meth:`~ampapi.Core.get_setting_values`: `with_refresh`.
+  - :meth:`~ampapi.analytics.AnalyticsPlugin.get_analytics_summary`: `player_count`.
+  - :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup`: `was_created_automatically`, `dirty_only` and
+    `backup_while_running`. With `dirty_only` and no file changed, it returns an :class:`~ampapi.modules.ActionResult`
+    instead of a :class:`~ampapi.modules.RunningTask`, because AMP takes no backup.
+  - :meth:`~ampapi.filemanager.FileManagerPlugin.create_archive`: `overwrite_existing`.
+
+- :meth:`~ampapi.Core.edit_interval_trigger` takes lists of ints for `months`, `days`, `hours`, `minutes` and
+  `days_of_month`, like :meth:`~ampapi.Core.add_interval_trigger`, and checks each int against its range. 4.x sent single
+  ints, which AMP always rejected.
+- :meth:`~ampapi.Core.get_audit_log_entries` takes `before` as a :class:`~datetime.datetime` (default None, the time of
+  the call) and sends it as an ISO 8601 string. 4.x sent a POSIX timestamp, which AMP ignores, so every call answered the
+  newest entries. Its default was also fixed when the module was imported.
+- :meth:`~ampapi.analytics.AnalyticsPlugin.get_analytics_summary` sends `start_date` as an ISO 8601 string, which is
+  AMP's `DateTime` format. 4.x sent a POSIX timestamp, and raised an :exc:`UnboundLocalError` when `start_date` was None.
+- :meth:`~ampapi.adsmodule.ADSModule.create_instance_from_spec` annotates `target_datastore` as an :class:`int`, which
+  is what AMP takes. 4.x annotated it as a :class:`str`.
+- :attr:`InstanceInfo.container_max_cpu <ampapi.modules.InstanceInfo.container_max_cpu>` is a :class:`float`, AMP's
+  `Single`. 4.x annotated it as a :class:`str`.
+- :meth:`~ampapi.Core.refresh_setting_value_list` sends AMP's `Node` parameter. 4.x sent `Name`, so AMP always answered
+  that the call requires `Node`.
+- :meth:`~ampapi.adsmodule.ADSModule.deploy_template` sends AMP's parameter names (eg. `TemplateID` and `NewUsername`)
+  from :meth:`Template.to_dict <ampapi.modules.Template.to_dict>`, and it returns a
+  :class:`~ampapi.modules.RunningTask`, which is what AMP's spec names. 4.x sent the attribute names.
+- :meth:`~ampapi.adsmodule.ADSModule.add_datastore` and :meth:`~ampapi.adsmodule.ADSModule.update_datastore` send
+  AMP's parameter names (eg. `FriendlyName` and `SoftLimitMB`) from
+  :meth:`InstanceDatastore.to_dict <ampapi.modules.InstanceDatastore.to_dict>`. 4.x sent the attribute names, so AMP
+  saved a datastore with no name, and the ADS then failed to start until that datastore was removed.
+  :meth:`~ampapi.adsmodule.ADSModule.update_datastore` also takes the raw dict from
+  :meth:`~ampapi.adsmodule.ADSModule.get_datastore`.
+- ``Base.version_validation()`` takes the `endpoint` it guards, and :meth:`~ampapi.Core.get_webserver_metrics` raises
+  the :exc:`RuntimeError` instead of returning it.
+- The :class:`~ampapi.Bridge` holds the `aiohttp.ClientSession`, which it makes on the first call, and every object
+  made with that Bridge sends its calls through it. 4.x gave every object its own session, and a Controller passed its
+  own on to the Instances it built.
+- :meth:`~ampapi.Base.clean_up` is new. It closes the Bridge's session, and with `logout` (default False) it calls
+  ``Core/Logout`` first. On an Instance a Controller built it leaves the session open, since the Controller and its
+  other Instances share it. ``async with Controller() as controller:`` (or any other class) calls it on the way out.
+  :meth:`Bridge.clean_up <ampapi.Bridge.clean_up>` and ``async with bridge:`` close it too, and a later call makes a
+  new one.
+- Your own session goes to the :class:`~ampapi.Bridge` as `session`, or set
+  :attr:`Bridge.session <ampapi.Bridge.session>`. Every object on that Bridge uses it while it is open, and the library
+  never closes it. 4.x took it on a :class:`~ampapi.instance.Controller` (or any other class) and used it only there
+  and on the Instances that Controller built.
+- `session` on a Controller or any other class, and setting :attr:`~ampapi.Base.session`, are deprecated. Both still
+  hand the session to the Bridge, with a :exc:`DeprecationWarning`. Reading :attr:`~ampapi.Base.session` gives the
+  Bridge's session, which is None until the first call.
+- `Controller.__del__` and `Controller.__adel__` are removed. Neither closed the session from inside a running event
+  loop, so close it with one of the above.
+- An object used in a second ``asyncio.run`` gets a new session there. 4.x kept retrying the session from the first,
+  closed event loop.
+- Every :class:`~ampapi.instance.Instance` knows the ADS that holds it, :attr:`~ampapi.instance.Instance.ads`: the
+  :class:`~ampapi.instance.Controller` for its own Instances, the :class:`~ampapi.instance.TargetADS` for a remote
+  Target's. :meth:`~ampapi.instance.Instance.start_instance`, `stop_instance`, `restart_instance`,
+  `upgrade_instance` and `get_instance_status` go through that ADS, so the name is looked up on the right one. 4.x
+  sent them to the Controller, which acts on its own Instance when two ADSs share a name (every ADS is `ADS01`).
+- :attr:`~ampapi.instance.Controller.instances` is no longer flat. It holds only the Instances the Controller itself
+  holds (its local Target), and the remote Targets are in the new :attr:`~ampapi.instance.Controller.targets`, keyed by
+  the Target's ADS ID. Each :class:`~ampapi.instance.TargetADS` holds its own Instances in
+  :attr:`~ampapi.instance.TargetADS.instances`. Code that read a remote Target's Instances from
+  `Controller.instances` has to read them from `Controller.targets` instead.
+- :meth:`~ampapi.instance.Controller.get_instances` fills every `TargetADS.instances` at the same time, with one extra
+  call per Target. A Target that fails logs a warning and keeps an empty `instances`. A Target that does not list its
+  own ADS Instance is skipped.
+- :meth:`~ampapi.instance.Controller.get_instance` raises a :exc:`ValueError` for an Instance a cached `TargetADS`
+  holds, because the Controller's copy of it differs from the Target's own data. Use
+  :meth:`~ampapi.instance.TargetADS.get_instance` for it. A Target's ADS ID returns the cached `TargetADS`.
+- :meth:`~ampapi.adsmodule.ADSModule.get_provision_fitness` returns None when AMP has no fitness data (JSON null),
+  instead of raising.
+- :meth:`~ampapi.adsmodule.ADSModule.get_group` returns the Target dictionary (the shape of one
+  :meth:`~ampapi.adsmodule.ADSModule.get_instances` entry), or None when AMP answers JSON null.
+- :meth:`~ampapi.filemanager.FileManagerPlugin.write_file_chunk` renamed `append` to `final_chunk`. It was always
+  sent as AMP's `FinalChunk`, which marks the last chunk of the file, not an append.
+- `APIParams` (and so :class:`~ampapi.Bridge`) strips a trailing ``/`` from `url`.
+- :attr:`~ampapi.instance.Instance.url` is ``Union[str, None]`` and defaults to None, since AMP never sends a URL
+  for an Instance; 4.x typed it `str`. A :class:`~ampapi.instance.TargetADS` holds its Target's URL. Instance fields
+  AMP sends as null hold their documented default (``""`` for `description`, `display_image_source` and
+  `module_display_name`, None otherwise).
+- `Base.sanitize_path` (used by every file method) only drops leading ``/`` now. 4.x refused any `_` (so
+  `AMP_Logs` was out of reach), turned ``..`` into ``.`` and stripped a leading ``.`` (so ``.trash`` became
+  `trash`). AMP takes all of those as given.
+- `DeploymentTemplate.settings_mappings` is now `setting_mappings`, AMP's own key; its `description`, `module`,
+  `template_role` and `template_base_app` can be None. With templates present, 4.x could not build the class at all.
+- ``Base.version_validation()`` checked the wrong way round and never fired; it now raises once AMP is at or past the
+  version the endpoint was removed in.
+- :meth:`~ampapi.Core.get_remote_login_token` works without `is_temporary`. A parameter left as None is no longer
+  sent, and AMP takes its default. 4.x sent a null, which AMP rejects, so the call failed.
+
+
+Errors
+------
+
+API errors are now raised (see `ampapi.errors`) instead of an `ActionResultError` being returned. Every error
+class can be imported from `ampapi` directly (eg. ``from ampapi import AMPAPIResponseError``).
+
+Methods that return None now raise :exc:`~ampapi.AMPAPIResponseError` when AMP reports a failure in the reply (an error
+title or ``Status: false``), which 4.x dropped. AMP answers those with HTTP 200, and 4.x returned None as if the call worked.
+
+A session that AMP no longer knows (after an AMP restart, a logout or the panel) is logged in again and the call is sent
+once more. A second refusal raises :exc:`~ampapi.AMPAPIResponseError`, as does a permission error, which is never retried.
+"Instance Unavailable" raises as before but no longer forces a new login.
+
+
+Returned data
+-------------
+
+- :meth:`~ampapi.Core.get_updates` fills the `console_entries`, `messages`, `ports` and `tasks` of
+  :class:`~ampapi.modules.Updates` with dataclasses (`ConsoleEntries`, `Messages`, `Port` and `RunningTask`);
+  4.x left them as dicts.
+- ``dataclass-wizard`` is no longer a dependency. A key AMP sends that a dataclass doesn't declare is still dropped,
+  as in 4.x, but is now logged once as a warning. Nested data is built into its dataclass as in 4.x (eg.
+  `RemoteTargetInfo.platform_info`, `Methods.consumes`).
+- :meth:`~ampapi.Core.get_setting_spec` builds on AMP 2.8, which sends no `branding` category. The
+  :class:`~ampapi.modules.SettingsSpecParent` gains `backups`, `meta_config` and `minecraft`, and `modules`
+  holds the categories with a colon in the name (eg. ``valheim:stadiacontroller``) as a dict of lists of
+  :class:`~ampapi.modules.SettingSpec`.
+- :class:`~ampapi.modules.ScheduleData` gains `referenced_methods`, the :class:`~ampapi.modules.Methods` named by
+  the tasks in `populated_triggers`. AMP 2.6.5 doesn't send the key, so on 2.6.5 the list is always empty.
+- :meth:`~ampapi.Core.get_webauthn_credential_ids` returns the dict AMP sends (`ids` and `challenge`). The wrapper
+  typed it as a list, and raised on every call.
+- :meth:`~ampapi.filebackup.LocalFileBackupPlugin.take_backup` returns a :class:`~ampapi.modules.RunningTask`, which is
+  what AMP sends. The wrapper expected an `ActionResult` and raised, although the backup was taken.
+- :meth:`~ampapi.instance.Instance.get_updates` and :meth:`~ampapi.instance.Instance.get_application_status` take
+  `request_params` and the ``**response_params`` the other methods take (eg. `to_file`).
+- :meth:`~ampapi.Core.get_api_spec` takes `sanitize_json` (default True), and False keeps AMP's own key names. The
+  other endpoint methods always sanitize, because they check the response against the sanitized key names.
+- :class:`~ampapi.modules.ParameterMapping` holds the arguments of every task method in AMP 2.8.0.8 (eg.
+  `seconds`, `message`, `!input`); 4.x kept only `user`, `reason`, `title` and `subtitle`. An argument
+  the task doesn't hold is `None`, not ``""``. Booleans, numbers, `state`, `operation` (:class:`~ampapi._enums.IfOperators`),
+  `priority` (:class:`~ampapi._enums.MailPriority`) and `when` (a naive `datetime`) are converted from AMP's strings
+  (a value that doesn't parse stays a string).
+- :attr:`~ampapi.modules.RemoteTargetInfo.datastores` holds :class:`~ampapi.modules.TargetDatastore` (an ID and a
+  name, all AMP sends there); 4.x typed it as `InstanceDatastore`.
+- `AnalyticsCountryData.session_percent` is renamed
+  :attr:`~ampapi.modules.AnalyticsCountryData.sessions_percent`, the key AMP sends; 4.x never filled it.
+- :class:`~ampapi.modules.UserApplicationData` is a dataclass with a new `display_name`. 4.x raised a
+  :exc:`TypeError` on AMP 2.8's `DisplayName` key.
+- :attr:`~ampapi.modules.Role.members` holds :class:`~ampapi.modules.RoleMember` (`!id` and `name`); 4.x hinted it
+  ``list[str]``.
+- :attr:`~ampapi.modules.Status.metrics` is built into a :class:`~ampapi.modules.Metrics` dataclass; 4.x left it as a dict.
+- :attr:`~ampapi.modules.Consumes.enum_values` is None when the argument has no values, not ``""``.
+- :attr:`~ampapi.modules.Module.branding` is a :class:`~ampapi.modules.Branding` dataclass; 4.x left it as a dict.
+- :attr:`~ampapi.modules.AnalyticsSummary.busiest_time`, `quietest_time` and `graph_data` hold
+  :class:`~ampapi.modules.AnalyticsGraphData` (`date`, `end_date` and `count`); 4.x left them as dicts.
+- :attr:`~ampapi.modules.Messages.parameters` is built by the message type. 4.x had no `parameters`.
+
+  - ADSModule `metrics` and LocalFileBackupPlugin `BackupFailed` hold a :class:`~ampapi.modules.MessageParameters`
+    (its `metrics` a :class:`~ampapi.modules.Metrics`, its `uptime` an :class:`~ampapi.modules.Uptime` and its
+    `state` an :class:`~ampapi._enums.InstanceState`).
+  - Core `refreshTask` holds a :class:`~ampapi.modules.RunningTask`.
+  - Core `settingValueUpdate` holds the new :class:`~ampapi.modules.SettingValueUpdate` (`node` and `new_value`).
+  - ADSModule `instupdate` holds the new :class:`~ampapi.modules.InstanceUpdate` (`!id`, `target` and `instance`,
+    which stays a dict).
+  - ADSModule `remotePairStatus` holds an :class:`~ampapi.modules.ActionResult`, the result of a Target's pairing.
+  - Core `userlistchanged` holds a :class:`~ampapi.modules.UserApplicationData`, the player who joined or left.
+  - Any other message keeps what AMP sent: a dict, a string or None.
+
+- :attr:`~ampapi.instance.Instance.application_endpoints` holds :class:`~ampapi.modules.Endpoints`, and the
+  `datastores` of a :class:`~ampapi.instance.Controller` or :class:`~ampapi.instance.TargetADS` hold
+  :class:`~ampapi.modules.TargetDatastore`; 4.x left both as dicts.
+- `ampapi._types.APISpec` and `ActionSpec` are dicts keyed by module name then method name, matching what
+  :meth:`~ampapi.Core.get_api_spec` and :meth:`~ampapi.Core.get_user_action_spec` return. 4.x declared fixed module keys.
+  `APISpecEndpointData` and `APISpecEndpointParameters` follow AMP's keys (eg. `type_name`,
+  `required_permissions`).
+- :meth:`~ampapi.Core.get_permissions_spec` returns :class:`~ampapi.modules.PermissionNode` dataclasses (with
+  `children` built the same way) and takes `format_data`. 4.x returned the dicts, which are now
+  `ampapi._types.PermissionNodeResponse`.
+- :meth:`~ampapi.instance.Controller.get_instances` leaves the Controller's own ADS Instance (eg. `ADS01`) out of
+  :attr:`~ampapi.instance.Controller.instances`, since that Instance is the Controller; its data is copied onto the
+  Controller. The ADS Instances of remote Targets come back as :class:`~ampapi.instance.TargetADS` in
+  :attr:`~ampapi.instance.Controller.targets`; 4.x returned an `AMPADSInstance` for every ADS Instance, the
+  Controller's own included.
+- The Controller attributes copied from :meth:`~ampapi.instance.Controller.get_instances` (eg. `friendly_name`,
+  `state`) raise an `AttributeError` naming ``get_instances()`` until it has run, and log a warning on each read
+  once that data is older than 300 seconds.
+- `get_instances` no longer takes `include_self` (on `ADSModule`, :class:`~ampapi.instance.Controller` and
+  :class:`~ampapi.instance.TargetADS`). AMP's `ForceIncludeSelf` is always sent as True, which was the 4.x default.
+  False either changed nothing or dropped a Controller's local Target, leaving the Controller's own data unset.
+- Keys holding a dot are AMP setting nodes and keep AMP's spelling (eg. `deployment_args` keeps
+  `ADSModule.Defaults.DefaultAuthServerURL`); 4.x rewrote them like field names
+  (`ads_module._defaults._default_auth_server_url`).
+- Every response dataclass inherits :class:`~ampapi.modules.ResponseData`, and
+  :meth:`~ampapi.modules.ResponseData.from_response` builds one from a raw, snake_cased answer with its nested
+  dataclasses (eg. ``Status.from_response(data)``). Built directly (``Status(**data)``), the nested fields stay as
+  dicts, as they did in 4.x.
+- :class:`~ampapi.modules.DeploymentTemplate` is a dataclass and takes the same arguments as in 4.x. A key AMP sends
+  that it doesn't declare is logged instead of raising a :exc:`TypeError`.
+- :attr:`~ampapi.modules.TimedTrigger.tasks` is a list of :class:`~ampapi.modules.TriggerTasks`. AMP sends the tasks
+  keyed by task ID, and each task keeps its `!id`.
+- Some hints now match what AMP sends:
+
+  - These fields can be None, where 4.x hinted a value: `~ampapi.modules.UserInfo.email_address`,
+    `~ampapi.modules.TriggerTasks.created_by`, the `current_value`, `meta`, `placeholder` and `suffix` of
+    `~ampapi.modules.SettingSpec`, and the `setting_mappings`, `tags` and `zip_overlay_path` of
+    `~ampapi.modules.DeploymentTemplate`.
+  - `~ampapi.modules.TimedTrigger.enabled_state` is an int, since AMP sends 0 or 1.
+  - The `min_value` and `max_value` of `~ampapi.modules.SettingSpec` are an int or a float.
+  - `~ampapi.modules.AnalyticsCountryData.session_time_percent` and `~ampapi.modules.AnalyticsTopPlayers.percent`
+    can be the string ``"Infinity"``.
+  - `~ampapi.modules.ProvisionSettingInfo.default_value` can be a list.
+  - `Instance.port` is documented as an int, which is what AMP sends.
+
+
+Target ADS
+----------
+
+- :class:`~ampapi.instance.TargetADS` gains the :class:`~ampapi.adsmodule.ADSModule` methods, and they go to that
+  Target.
+- Its :meth:`~ampapi.instance.TargetADS.start_instance`, :meth:`~ampapi.instance.TargetADS.stop_instance` and
+  :meth:`~ampapi.instance.TargetADS.restart_instance` now take an `instance_name` and act on an Instance on that
+  Target. In 4.6.0 they took no argument and went through the Controller by name, so for an ADS named like the
+  Controller's (eg. `ADS01`) they acted on the Controller's own ADS.
+- :meth:`~ampapi.instance.TargetADS.upgrade_instance` (4.6.0's `update_instance`) does the same: it takes an
+  `instance_name` and upgrades that Instance on the Target. To upgrade the Target ADS itself, use
+  :meth:`~ampapi.Core.upgrade_amp`.
+- :meth:`~ampapi.instance.Controller.get_instance` on the Controller's own ADS ID (and
+  :meth:`~ampapi.instance.TargetADS.get_instance` on a `TargetADS`'s own ID) returns that object itself. The
+  Controller learns its own ADS ID from :meth:`~ampapi.instance.Controller.get_instances`, or from the new
+  ``auto_detect=True`` argument. Without either, an ADS Instance logs a warning and comes back as a `TargetADS`.
+- :meth:`~ampapi.instance.TargetADS.get_instances` returns the Instances on that Target, leaving out the Target's own
+  ADS Instance, and keeps them on `TargetADS.instances`. The Target's own data in the reply refreshes the
+  `TargetADS` itself, and each returned Instance has the `TargetADS` as its `ads`.
+- A `TargetADS` carries its Target's data flat on itself like the `Controller` does (`!platform`, `url`,
+  `state`, `datastores`, `available_instances` and the rest). `friendly_name`, `description` and `tags`
+  stay the Instance's values. The data arrives with :meth:`~ampapi.instance.Controller.get_instances` (the
+  Controller's copy), then the `TargetADS`'s own :meth:`~ampapi.instance.TargetADS.get_instances` replaces it with
+  the Target's own view. Reading it before that raises :exc:`AttributeError`, as on the `Controller`.
+- :meth:`~ampapi.instance.Controller.get_instances` and :meth:`~ampapi.instance.TargetADS.get_instances` update
+  existing objects in place, matched by Instance ID, instead of building new ones. `Controller.targets`,
+  `Controller.instances` and `TargetADS.instances` stay the same objects, so a reference to an Instance or a
+  `TargetADS` stays valid across refreshes. Instances AMP no longer lists are dropped.

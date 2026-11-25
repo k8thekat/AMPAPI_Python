@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Docstring: Add/Update Attributes (current class)",
+            "type": "shell",
+            "command": "python3",
+            "args": [
+                "${workspaceFolder}/numpy_template/docstring_attrs.py",
+                "${file}",
+                "--line",
+                "${lineNumber}",
+                "--write"
+            ],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "focus": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Docstring: Preview Attributes diff (current class)",
+            "type": "shell",
+            "command": "python3",
+            "args": [
+                "${workspaceFolder}/numpy_template/docstring_attrs.py",
+                "${file}",
+                "--line",
+                "${lineNumber}"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

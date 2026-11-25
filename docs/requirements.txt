@@ -1,3 +1,4 @@
+sphinx>=8.0,<9
 enum_tools>=0.12.0
 sphinx-toolbox>=3.8.1
 furo>=2024.8.6
