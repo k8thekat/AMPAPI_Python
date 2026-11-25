@@ -33,7 +33,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, TypeGuard, Unio
 
 from aiohttp import ClientError, ClientSession, FormData
 
-from .errors import AMPAPILoginError, AMPAPIPasskeyRequiredError, AMPAPIPasswordChangeRequiredError, AMPAPIRequestError
+from .errors import (
+    AMPAPILoginError,
+    AMPAPIPanelVersionError,
+    AMPAPIPasskeyRequiredError,
+    AMPAPIPasswordChangeRequiredError,
+    AMPAPIRequestError,
+)
 from .utils import is_dotted_key, is_json_object
 
 if TYPE_CHECKING:
@@ -104,8 +110,8 @@ def redact(value: Any, key: str = "") -> Any:
     """Hide the secrets in a request or a reply, at any depth.
 
     A string under a secret-looking key (a token, password, key, secret, recovery code, download ticket, or the
-    `Authorization` header) becomes ``"<redacted str len=N>"``. A game's sign-in code is blanked wherever it sits in a string, and a
-    public IP address under an address-like key (`host`, `address`, `url`, ...) becomes ``"<public ip>"``.
+    `Authorization` header) becomes ``"<redacted str len=N>"``. A game's sign-in code is blanked wherever it sits in a
+    string. A public IP under a key such as `host`, `address` or `url` becomes ``"<public ip>"``.
     Private addresses are left as they are. Running `redact` again over a redacted copy changes nothing.
 
     .. versionadded:: 6.0.0
@@ -390,7 +396,7 @@ class Session:
         """Send a request and decode the reply. Raises nothing for an error status, the caller decides.
 
         `data` is sent as JSON, or as it is with ``Content-Type: application/octet-stream`` when it's bytes. `files` is
-        sent as the web panel's upload form instead, a `files` part and a `paths` part for each file.
+        sent as the web panel's upload form instead, with a `files` part and a `paths` part per entry.
         `setup_code` is sent as the ``X-Setup-Token`` header the first-run setup calls need, with the whitespace around
         the code removed.
 
@@ -409,6 +415,8 @@ class Session:
 
         Raises
         ------
+        AMPAPIPanelVersionError
+            If the session's `url` is an AMP 2 panel.
         ValueError
             If `setup_code` is empty or only whitespace. Nothing is sent.
 
@@ -496,6 +504,9 @@ class Session:
             )
             if download is True:
                 return status, authenticate_header, body
+            # An AMP 2 panel answers each AMP 3 route with a 200 naming the module it doesn't have, eg. `auth`
+            if is_json_object(value=body) and body.get("Title") == "Invalid Module":
+                raise AMPAPIPanelVersionError(url=self.url, reason=str(body.get("Message", "")))
             code: Optional[str] = body.get("code") if is_json_object(value=body) else None
             if status != 503 or code not in self._outage_codes or retries == len(self._outage_delays):
                 return status, authenticate_header, body
@@ -871,8 +882,8 @@ class Session:
             The library can't repeat a passkey login.
 
             - The new session renews like any other.
-            - Once AMP ends the session, or the session runs out, the next call that needs a session logs in by password
-              with the `Session`'s `username` and password.
+            - Once the session ends or times out, the next call needing a login logs in by password with the
+              `Session`'s `username` and password.
             - Under the passkey policy ``"Required"`` that password login raises :exc:`AMPAPIPasskeyRequiredError`.
 
         Parameters
@@ -916,7 +927,7 @@ class Session:
         This call needs no login. AMP answers the same whether or not the flow exists.
 
         AMP limits how many passkey flows the caller's IP address can have open. An open flow counts toward that limit
-        until the flow runs out, so abandoning the flow frees its place sooner.
+        until it expires. Abandoning a flow you won't finish frees its place sooner.
 
         Parameters
         ----------
@@ -1093,6 +1104,8 @@ class Session:
             If the account is suspended. The error's `reason` reads "This account has been suspended."
         AMPAPIPasswordChangeRequiredError
             If the account has to change its password first, see :meth:`change_expired_password`.
+        AMPAPIPanelVersionError
+            If the session's `url` is an AMP 2 panel.
         AMPAPIPasskeyRequiredError
             If the account needs a second factor, see :meth:`second_factor`.
         AMPAPIRequestError
@@ -1258,8 +1271,8 @@ class Session:
             The library can't repeat a login made with a recovery code.
 
             - The new session renews like any other.
-            - Once AMP ends the session, eg. a logout or an admin's force logout, or the session runs out because no call
-              renewed the session in time, the next call that needs a session logs in by password and raises
+            - Once AMP ends the session (eg. a logout or an admin's force logout), or it runs out because no call renewed
+              it in time, the next call needing a login logs in by password and raises
               :exc:`AMPAPIPasskeyRequiredError`. Catch :exc:`AMPAPIPasskeyRequiredError`, then call :meth:`second_factor`
               again with a new recovery code.
             - With `remember_me` the session lasts 28 days instead of 8 hours.

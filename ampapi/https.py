@@ -189,7 +189,7 @@ class HTTPSModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **400** - If `address` is neither an IP address nor a network `https.error.proxyAddressInvalid`.\n
+            **400** - If `address` is neither an IP nor a network `https.error.proxyAddressInvalid`.\n
             **409** - If AMP's own HTTPS is set up.
 
         """

@@ -46,7 +46,7 @@ __all__ = (
 class AuditOrigin(IntEnum):
     """How an audit event came about, named as the web panel names it. AMP sends the number.
 
-    An audit event's `origin` and an origin count's `origin` hold the number. The `origin` filter of
+    The `origin` field of an audit event, and of an origin count, holds the number. The `origin` filter of
     :meth:`AuditModule.get_audit_events` and :meth:`AuditModule.get_audit_roots` takes a member.
 
     - `system`: AMP acted by itself. An event written before AMP kept an origin reads `system` too.
@@ -294,8 +294,8 @@ class TaskState(IntEnum):
     """A running task's `state`, named as the web panel names it.
 
     - A task's `state` reads `waiting` while an update downloads, and `running` while a clone or a move copies.
-    - The `state` reads `succeeded` when the task is finished, `failed` for a failed move or update, and `cancelled`
-      for a cancelled move or a cancelled clone on the same spire.
+    - The `state` reads `succeeded` when the task is finished, and `failed` for a failed move or update.
+    - The `state` reads `cancelled` once a move, or a clone on the same spire, is cancelled.
     - A cancelled clone to another spire has its `state` read `cancelling`, then `running` again, and the clone
       finishes anyway.
 

@@ -149,9 +149,9 @@ class NetworkModule(Base):
             The shard port's `ref`, eg. ``"ServerPort"``, see :meth:`ShardModule.get_shard_ports`. The port has to be
             marked publicly reachable in the shard's ports.
         front_public_host : Union[:class:`str`, None], optional
-            A public host for the front spire, eg. ``"amp.example.com"``, by default None. A front spire without a
-            public host keeps this host as its ``"spire.publicHost"`` setting; a front spire that already has a public
-            host ignores it.
+            A public host for the front spire, eg. ``"amp.example.com"``, by default None.
+            - A front spire with no public host saves this value as its ``"spire.publicHost"`` setting.
+            - A front spire that already has a public host ignores this value.
 
         Returns
         -------
@@ -360,16 +360,17 @@ class NetworkModule(Base):
 
         A gateway sends all of the shard's traffic through the front spire, and the front spire drops anything bound for
         a private network by default (10/8, 172.16/12, 192.168/16, 100.64/10, 169.254/16 and loopback). This allow list
-        is the exception. The front spire's own services aren't covered by the list: a service the front spire serves
-        on its network address stays reachable unless the front spire's firewall says otherwise.
+        is the exception. The list doesn't cover the front spire's own services: a service it serves on its network
+        address stays reachable unless its firewall says otherwise.
 
         Parameters
         ----------
         gateway_id : :class:`str`
             The gateway's ID, see :meth:`get_gateways`.
         allow_list : list[:class:`str`]
-            IPv4 networks in CIDR form, no wider than a /8, eg. ``["192.168.4.0/24"]``, at most 32 networks. The list
-            replaces the gateway's old list, and an empty list leaves the shard the internet only.
+            IPv4 networks in CIDR form, no wider than a /8, eg. ``["192.168.4.0/24"]``, at most 32 networks.
+            - Each call replaces the gateway's allow list.
+            - An empty list blocks every private network, leaving the shard only the internet.
 
         Returns
         -------

@@ -562,9 +562,9 @@ class SpireModule(Base):
 
         Endpoint: ``DELETE /api/spires/{spire_id}``
 
-        The machine keeps running AMP, and its health reads ``"waiting"``. Joining the machine to the panel again was
-        only seen after reinstalling AMP on the machine (see :meth:`EnrollmentModule.create_spire_enrollment`), and the
-        machine came back as a new spire with a new ID.
+        The machine keeps running AMP, and its health reads ``"waiting"``. The machine rejoined the panel only after AMP
+        was reinstalled on it (see :meth:`EnrollmentModule.create_spire_enrollment`), and came back as a new spire with
+        a new ID.
 
         Parameters
         ----------
@@ -919,8 +919,11 @@ class SpireModule(Base):
         Endpoint: ``POST /api/spires/{spire_id}/datastores/{datastore_id}/purge-orphans``
 
         AMP measures the disk use again for the reply, so the purge needs no :meth:`rescan_spire_usage` after. A
-        datastore with no orphans gets the same reply. A folder AMP can't delete is skipped, and so are a deleted
-        shard's folder (see :meth:`ShardModule.purge_shard`) and the folders AMP keeps for itself, eg. the backups.
+        datastore with no orphans gets the same reply. The purge skips these folders:
+
+        - A folder AMP can't delete.
+        - A deleted shard's folder, see :meth:`ShardModule.purge_shard`.
+        - The folders AMP keeps for itself, eg. the backups.
 
         Parameters
         ----------
@@ -961,7 +964,8 @@ class SpireModule(Base):
         datastore_id : :class:`str`
             The datastore's ID.
         name : :class:`str`
-            The folder's name, an ``"Orphan"`` entry's `name` in :meth:`get_spire_usage`; a single folder, not a path.
+            The folder to delete: the `name` of an ``"Orphan"`` entry from :meth:`get_spire_usage`.
+            - One folder's bare name, as the entry gives it.
 
         Returns
         -------
@@ -1056,8 +1060,8 @@ class SpireModule(Base):
 
         Endpoint: ``POST /api/settings/spire/{spire_id}/values``
 
-        AMP answers 204. No call reads the setting values back by themselves; the values are in
-        :meth:`get_spire_settings_manifest`'s `values`.
+        AMP answers 204. To read the settings back, use :meth:`get_spire_settings_manifest`, which carries them in its
+        `values`.
 
         Parameters
         ----------

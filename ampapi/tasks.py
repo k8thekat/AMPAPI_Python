@@ -52,9 +52,11 @@ class TaskModule(Base):
 
         Endpoint: ``POST /api/running-tasks/{task_id}/cancel``
 
-        Clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) have `isCancellable` set and an update task
-        doesn't, so cancelling an update is refused; :meth:`ShardModule.abort_shard_update` ends an update. To stop a
-        shard move, use :meth:`ShardModule.cancel_shard_migration`.
+        `isCancellable` is true for clone and move tasks (``"ShardClone"``, ``"ShardMigration"``) and false for an update
+        task.
+
+        - AMP refuses to cancel an update. :meth:`ShardModule.abort_shard_update` ends an update instead.
+        - To stop a shard move, use :meth:`ShardModule.cancel_shard_migration`.
 
         .. warning::
             Cancelling a clone to another spire is answered 202 and the clone's task reads `TaskState.cancelling`, then
@@ -143,8 +145,8 @@ class TaskModule(Base):
 
         Endpoint: ``GET /api/running-tasks``
 
-        A failed task stays for about 30 minutes, unless :meth:`delete_running_task` dismisses the task or a later task of
-        the same type on the same target ends. Nothing in the list says when a failed task will go.
+        A failed task stays for about 30 minutes, unless :meth:`delete_running_task` dismisses it, or another task of the
+        same type on the same target ends. Nothing in the list says when a failed task will go.
 
         Returns
         -------

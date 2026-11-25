@@ -29,6 +29,7 @@ __all__ = (
     "AMPAPIError",
     "AMPAPIHubError",
     "AMPAPILoginError",
+    "AMPAPIPanelVersionError",
     "AMPAPIPasskeyRequiredError",
     "AMPAPIPasswordChangeRequiredError",
     "AMPAPIRequestError",
@@ -91,6 +92,34 @@ class AMPAPILoginError(AMPAPIError):
         message = "AMP refused the login. Reason: %s | Username: %s"
         super().__init__(message % (reason, username))
         LOGGER.error(message, reason, username)
+
+
+class AMPAPIPanelVersionError(AMPAPIError):
+    """Raised when a session's `url` is an AMP 2 panel, as this library is for AMP 3.
+
+    Each request made through the session raises it, a login included, so the first call does.
+    For an AMP 2 panel, install this library's 5.x releases instead: ``pip install "cc-ampapi~=5.0"``.
+
+    .. versionadded:: 6.0.0
+
+    Attributes
+    ----------
+    url : :class:`str`
+        The session's `url`.
+    reason : :class:`str`
+        The AMP 2 panel's message, eg. "No such module loaded: 'auth'".
+
+    """
+
+    url: str
+    reason: str
+
+    def __init__(self, url: str, reason: str) -> None:  # noqa: D107
+        self.url = url
+        self.reason = reason
+        message = "The panel is AMP 2, and this library is for AMP 3. For AMP 2, install cc-ampapi~=5.0. | URL: %s | Reason: %s"
+        super().__init__(message % (url, reason))
+        LOGGER.error(message, url, reason)
 
 
 class AMPAPIPasskeyRequiredError(AMPAPIError):

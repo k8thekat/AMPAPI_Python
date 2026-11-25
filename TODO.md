@@ -12,6 +12,13 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 - (#3-47.1) Confirm `PasskeyRequiredResponse` and `Session.second_factor` live; needs the panel on HTTPS, a passkey and recovery codes. *DONE*
 - (#3-47.2) A SignalR hub client for live events, logging in with `Session.get_hub_token`. *DONE* to Kat's design (`hubs.py`, `objects.py`), now set aside while Kat reworks it (#3-50.1); left: an `auto_state` setter (waits for Kat), `UserLeft` (never arrived when Kat left her world, U18f), `Lifecycle` kinds 4 and 6.
 - (#3-47.3) Confirm upstream report 01 (passkey registration needs `transports`) in a browser; trust vm3's Caddy root CA first.
+- (#3-69) Raise `AMPAPIPanelVersionError` when the URL is an AMP 2 panel, pointing to `cc-ampapi~=5.0`. *DONE* (the AMP 2 line's own check is 5.x #47)
+
+## Releases
+
+---
+
+- (#3-70) Publish the 6.0.0 betas to PyPI as pre-releases from AMP3-beta, then 6.0.0 when AMP 3 is out (steps in NOTES.md, "Releases").
 
 ## README.md and samples/
 
@@ -40,6 +47,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
     - First-run setup. *DONE* (#3-56.9)
 - (#3-65) Bring the library up to AMP 3.0.2 "Neptune": diff its OpenAPI against 3.0.1's, recheck the U reports its release notes touch, and reword the docs that still name 3.0.1. *DONE*
 - (#3-67) `Preferences.default()`: a `Preferences` holding the web panel's default for each preference, to reset them through `update_preferences`. *DONE*
+- (#3-68) Docstrings: one meaning per word (CODING_STYLE.md §20), the 8 `param-as-noun` and 30 repeated-word sentences `land_check.py` found. *DONE*
 
 ## ampapi/panel.py
 

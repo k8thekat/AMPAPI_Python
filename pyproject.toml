@@ -135,3 +135,14 @@ dev = [
 # unit_test.py is a test file that calls a live AMP server, so pyright skips it as Ruff does.
 # TODO: Put this back if `unit_test.py` returns to this branch (#3-52.1o).
 # skip_pyright = ["unit_test.py"]
+
+[tool.land_check]
+# The shared landing check in ~/.claude/hooks. The library gets the whole-package gates on top of the changed files.
+paths = ["ampapi", "docs", "*.md", ".scripts"]
+format = ["ampapi/"]
+pyright_project = true
+# A public method is API that nothing in the repo calls, so only unused `_` names are dead code.
+dead_code = "private"
+# Her last AI-free commit (CODING_STYLE.md section 0), so `her-line` can tell her lines apart.
+# This branch doesn't descend from it, so it counts only the lines copied word for word from it.
+voice_pins = ["c819777"]

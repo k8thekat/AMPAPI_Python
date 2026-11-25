@@ -42,7 +42,7 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class EnrollmentModule(Base):
-    """The calls for joining a new spire to the panel: the message bus a spire joins over, and the join files (enrolments).
+    """The calls for adding a new spire to the panel: the message bus a spire connects over, and the join files (enrolments).
 
     An enrolment is a machine that isn't a spire yet. Open the message bus with :meth:`expand_message_bus`, make a join
     file with :meth:`create_spire_enrollment`, then :meth:`approve_spire_enrollment` once the machine has used the join
@@ -125,8 +125,8 @@ class EnrollmentModule(Base):
             How long the join file works for, 1 to 720, by default None for AMP's 72.
         hosts : Union[list[:class:`str`], None], optional
             The addresses the new machine should reach the panel on, by default None for the network address the
-            message bus is bound to. The machine uses the first address it can reach, so a network address and a public
-            address together cover a machine on the panel's network and a machine outside it. See
+            message bus is bound to. The machine uses the first address it can reach. Listing both the panel's network
+            address and its public address covers machines on the panel's network and outside it. See
             :meth:`get_spire_enrollment_hosts`.
         entry_node : :class:`bool`, optional
             If the machine joins as a public entry node rather than a spire or not, by default False.

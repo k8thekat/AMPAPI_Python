@@ -775,9 +775,9 @@ class Hub:
 class ShardHub(Hub):
     """The shard level: listeners for one shard's events, eg. a `Shard` subclass's.
 
-    It is its own subscriber. Its events come through the `Panel`'s shared `/hubs/shard` socket, except `console`:
-    AMP's console lines don't name their shard, so a `console` listener opens this shard's own socket, and hears only
-    that one.
+    It is its own subscriber. Its events come through the `Panel`'s shared `/hubs/shard` socket, except `console`.
+    AMP's console lines don't name their shard, so a `console` listener opens this shard's own socket and hears only
+    this shard.
 
     .. versionadded:: 6.0.0
 
@@ -994,8 +994,8 @@ class PanelHub(Hub):
     this panel's and the spires' `console` listeners unattributed.
 
     A shard or spire object made with `auto_state` keeps its `state` current with no listener and no
-    :meth:`start_listening`: the shared shard socket opens for it, and the spire socket joins its spire. Each state
-    from any socket is applied once, through `_apply_state`, and only if it is newer than the one held.
+    :meth:`start_listening`. The shared shard socket opens for a shard, and the spire socket joins the object's spire.
+    Each state from any socket is applied once, and only if it is newer than the object's current state.
 
     .. versionadded:: 6.0.0
 
@@ -1271,7 +1271,7 @@ class PanelHub(Hub):
     #         self._in_background(coroutine=self._sync_sockets())
 
     def _apply_state(self, state: Union[ShardStatus, SpireStatus]) -> None:
-        """Set `state` on each object of its shard or spire that keeps its state, unless the object holds a newer one.
+        """Apply `state` to each object of its shard or spire that tracks its status, unless the object holds a newer status.
 
         Every state from every socket comes through here. A shard's state goes by its `revision`, a spire's (which has
         none) by its `last_heartbeat`, so a copy from a second socket isn't applied twice and a late one can't win.

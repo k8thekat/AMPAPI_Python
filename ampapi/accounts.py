@@ -174,8 +174,8 @@ class AccountModule(Base):
 
         Endpoint: ``POST /api/profile/passkeys/register/complete``
 
-        When the `Session` holds an enrolment-only session (see :attr:`Session.enrolment_only`), AMP ends that session and
-        hands over a full session in its place. The `Session` keeps the full session's token.
+        When the `Session` is enrolment-only (see :attr:`Session.enrolment_only`), AMP replaces its enrolment-only token
+        with a full token, which the `Session` keeps.
 
         Parameters
         ----------
@@ -312,8 +312,7 @@ class AccountModule(Base):
         ------
         AMPAPIRequestError
             **400** - If a role already has `name` `access.error.roleNameTaken`.\n
-            **403** - If `permissions` grants a permission the logged in user doesn't hold, from AMP's docs and not seen
-            live.
+            **403** - If `permissions` grants access the logged in user doesn't have, from AMP's docs and not seen live.
 
         """
         data: RoleRequest = {"name": name, "description": description, "permissions": permissions}
@@ -450,8 +449,8 @@ class AccountModule(Base):
         Raises
         ------
         AMPAPIRequestError
-            **409** - If the passkey is the only passkey while the passkey policy is ``"Required"``, from AMP's docs and
-            not seen live.\n
+            **409** - If the logged in user has no other passkey and the passkey policy is ``"Required"``, from AMP's
+            docs and not seen live.\n
             **409** - If the passkey is the only way into an account with no password, from AMP's docs and not seen live.
 
         """
@@ -827,7 +826,8 @@ class AccountModule(Base):
         Resetting the logged in user's password keeps the new password for later logins.
 
         - AMP also ends the user's SFTP connections.
-        - A forced password change on the account stays in place, so the new password can be a temporary password.
+        - If the user must change their password at the next login, that requirement stays, so the new password can be
+          temporary.
 
         Parameters
         ----------

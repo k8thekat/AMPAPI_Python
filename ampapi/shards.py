@@ -1770,8 +1770,8 @@ class ShardModule(Base):
 
         Endpoints: ``POST /api/shards/{shard_id}/files/zip-ticket``, then ``GET /api/shards/{shard_id}/files/zip``
 
-        AMP zips through a ticket. This call asks for a ticket that names the paths, then sends the ticket as the zip
-        request's `ticket` query parameter at once, as a ticket works only once and only for 60 seconds.
+        AMP zips through a ticket. This call asks for a ticket naming the paths and spends it on the zip request at once,
+        as a ticket works only once and only for 60 seconds.
 
         - The zip skips any path the logged in user may not read.
         - Entry names in the zip are relative to the folder that holds the first path.
@@ -1998,9 +1998,10 @@ class ShardModule(Base):
         Returns
         -------
         Union[:class:`ShardUsage`, None]
-            The shard's entry from :meth:`SpireModule.get_spire_usage`, its `limitLevel` ``"Critical"`` near the limit and
-            ``"Exceeded"`` once the use passes the limit; `None` (a 204) with no disk limit, before a scan has covered the
-            shard or when the scan didn't find its folder. Read `None` as unknown, never as under the limit.
+            The shard's entry from :meth:`SpireModule.get_spire_usage`, or `None` (a 204).
+            - Its `limitLevel` reads ``"Critical"`` near the disk limit and ``"Exceeded"`` past it.
+            - `None` comes with no disk limit, before a scan has covered the shard, or when the scan didn't find the
+              shard's folder. Read `None` as unknown, never as under the limit.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/disk")
@@ -2339,8 +2340,8 @@ class ShardModule(Base):
         Returns
         -------
         list[:class:`ShardMigrationTargetResponse`]
-            The spire's other datastores, without the datastore the shard is in; empty when the spire has a single
-            datastore.
+            The datastores on the shard's spire that the shard isn't in.
+            - Empty when the spire has a single datastore.
 
         """
         return await self._request(method="GET", path=f"/api/shards/{shard_id}/migration/targets")
@@ -2985,8 +2986,8 @@ class ShardModule(Base):
         command : :class:`str`
             The command, eg. ``"say hello"``.
         prompt_reply : :class:`bool`, optional
-            If `command` answers a prompt the game is waiting on rather than being a command or not, by default False.
-            - With no prompt waiting, `command` is sent as a command.
+            If `command` is an answer to a prompt the game is waiting on or not, by default False.
+            - With no prompt waiting, `command` runs in the console as usual.
 
         """
         data: ShardConsoleRequest = {"command": command, "promptReply": prompt_reply}
@@ -3097,9 +3098,9 @@ class ShardModule(Base):
         Endpoint: ``PUT /api/shards/{shard_id}/files/acl``
 
         .. warning::
-            - A user who denies themself a verb can't undo the deny: sending ``"inherit"`` or ``"allow"`` back answers
-              403 ``"files.acl.error.notYoursToGrant"``, even for the admin, and the deny stays until the shard is
-              deleted. The deny itself takes effect, eg. writing the file then gets 403.
+            - A user who denies themself a verb can't lift the denial: sending ``"inherit"`` or ``"allow"`` answers 403
+              ``"files.acl.error.notYoursToGrant"``, even for the admin, and the denial stays until the shard is
+              deleted. The denial does take effect, eg. writing the file then gets 403.
             - AMP answers a `state` other than ``"allow"``, ``"deny"`` or ``"inherit"`` with 200 and ignores the
               change, so the path's rules stay as they were. Check the rules in the reply.
 
@@ -3259,8 +3260,8 @@ class ShardModule(Base):
 
         Endpoint: ``PATCH /api/shards/{shard_id}/settings``
 
-        A shard held waiting on its required settings (`ShardStatus.awaits_settings`) has its `ShardStatus.status` set
-        back to `ShardState.stopped` once each required setting has a value. Giving the values doesn't start the shard.
+        Once each required setting has a value, a shard held waiting on them (`ShardStatus.awaits_settings`) has its
+        `ShardStatus.status` changed to `ShardState.stopped`. Giving the values doesn't start the shard.
 
         Parameters
         ----------
@@ -3805,10 +3806,10 @@ class ShardModule(Base):
 
         Endpoints: ``POST /api/shards/{shard_id}/files/upload-start``, ``.../upload-chunk`` and ``.../upload-commit``
 
-        A start for a path with an unfinished upload hands back that upload, whatever size the start asks for, and AMP
-        keeps the upload for 24 hours. No call cancels it. Finishing the upload with another file's bytes splices the
-        held upload and the new file into one, so we refuse to carry on an upload AMP already holds part of unless
-        `resume` is True.
+        Starting on a path with an unfinished upload hands back that upload, whatever size the new start asks for. AMP
+        keeps an unfinished upload for 24 hours, and no call cancels it. Finishing a held upload with another file's
+        bytes splices the held part and the new file together, so this call refuses to carry on an upload AMP already
+        holds part of, unless `resume` is True.
 
         .. warning::
             On a shard on a remote spire (`via` ``"agent"``), AMP resizes the file at `path` as the upload starts, so a

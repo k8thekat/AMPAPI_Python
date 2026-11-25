@@ -41,7 +41,8 @@ length, and some `agentVersion` values carry a "version lost to a scrub" marker.
 The worktree carries its own copies, all gitignored, so nothing reaches back into the Refactor checkout:
 - `.venv`: the main venv's packages (aiohttp, ruff, pyright, sphinx, pytest, ...) plus `cryptography`.
 - `local.ini`: a copy of the main one, with `[VM_AMP3]` and `[VM_AMP3_B]`. The two now differ, so AMP3 logins live here.
-- `.scripts/vms.py` and `.scripts/land_check.py`: copies. The `vms.py` copy lists only the AMP3 VMs (vm3, vm4, vm5) and
+- `.scripts/vms.py`: a copy. The landing check is the shared `~/.claude/hooks/land_check.py`, set up by
+  `[tool.land_check]` in `pyproject.toml`, as in the Refactor checkout. The `vms.py` copy lists only the AMP3 VMs (vm3, vm4, vm5) and
   keeps only the VM lifecycle (status, start, stop, create, remove, refresh-urls); its AMP2 steps are gone (Kat), so
   the AMP2 pair is still run from the Refactor checkout.
 - `.scripts/amp3/`: `capture.py` (one call, or `--poll=FIELD`), the live checks `session_check.py` (`Session`),
@@ -476,6 +477,39 @@ AMP 3 answers errors in six shapes, so `AMPAPIRequestError` reads whichever keys
   `auth.login.errorInvalid`.
 - ASP.NET ProblemDetails `{type, title, status, errors: {Field: [str]}, traceId}` for a malformed body.
 - No body at all: 401 (with `WWW-Authenticate`) and 403 (no permission).
+
+An AMP 2 panel answers each AMP 3 route with **200** and `{Title: "Invalid Module", Message: "No such module loaded:
+'auth'"}` (checked on vm1, 2026-11-23), as its API is `/API/<Module>/<Method>`. Without a check the login read that
+as a success; `Session._send` raises `AMPAPIPanelVersionError` on it instead (#3-69), for every request.
+
+## Releases: the AMP 2 and AMP 3 lines (Kat, 2026-11-23)
+
+Both lines publish as `cc-ampapi` on PyPI: 5.x for AMP 2 (`main`, then a `5.x` branch), 6.x for AMP 3 (AMP3-beta).
+Nothing in `pyproject.toml` picks the line. A user picks it with the version they ask pip for.
+- A version with `b` in it (`6.0.0b6`) is a pre-release. `pip install cc-ampapi` skips it, so the betas can be on
+  PyPI while the default install stays 5.x. A beta is installed with `pip install --pre cc-ampapi` or
+  `cc-ampapi==6.0.0b6`.
+- Once 6.0.0 is out, the default install is AMP 3. AMP 2 users pin `cc-ampapi~=5.0` (`>=5.0, <6.0`). The README and
+  the 6.0.0 release notes say so.
+- A 5.x fix after 6.0.0 is released from the 5.x branch as 5.0.1, etc. PyPI takes an older line's version at any time,
+  and the `~=5.0` pin picks it up.
+- Each line raises a clear error on the other line's panel: #3-69 here, 5.x #47 on the AMP 2 line.
+- One package name means AMP 2 and AMP 3 can't be driven from one program. Two names would allow it, at the cost of
+  splitting the users and the docs, so it waits until someone needs it.
+
+Publishing a beta (#3-70): `.github/workflows/build.yml` publishes on any published GitHub release, from the commit
+the release's tag points at, with PyPI's trusted publishing (environment `release`), so AMP3-beta needs no new setup.
+1. Bump `__version__` and `version_info` (eg. `6.0.0b6`) and commit.
+2. Push AMP3-beta (`git push origin AMP3-beta`).
+3. On GitHub, draft a release with a new tag (eg. `v6.0.0b6`) targeting AMP3-beta, and tick "Set as a pre-release".
+   Publishing it runs the build and the upload. pip treats it as a beta from the `b` in the version, whatever the
+   tick says; the tick keeps GitHub's "latest release" on the 5.x line.
+4. Check `pip install --pre cc-ampapi` in a scratch venv.
+
+The order:
+- 5.0.0 from `main` first.
+- Then the 6.0.0 betas from AMP3-beta.
+- At AMP 3's release, 6.0.0 final, and the AMP 3 line becomes `main`, and the AMP 2 line moves to a `5.x` branch.
 
 ## First-run setup
 

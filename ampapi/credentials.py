@@ -97,7 +97,7 @@ class CredentialModule(Base):
 
         Endpoint: ``DELETE /api/credentials/{credential_id}``
 
-        Shards that used this credential have no credential until their next update, which picks a credential again.
+        Shards that used this credential are left without a credential until their next game update picks a replacement.
 
         Parameters
         ----------
