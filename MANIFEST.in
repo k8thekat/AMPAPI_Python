@@ -1,0 +1,3 @@
+# The hubs are being reworked (#3-50.1), so the sdist leaves them out and pip's wheel never has them.
+# TODO: Remove this line when the hubs come back.
+exclude ampapi/hubs.py

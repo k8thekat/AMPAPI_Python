@@ -10,7 +10,7 @@ CubeCoders AMP 3 API wrapper in Python.
 
 ![Version](https://img.shields.io/pypi/v/cc-ampapi?label=PyPI&include_prereleases)
 
-> **This is the AMP 3 beta, `6.0.0b5`.** It is built against AMP 3's preview builds, tested on AMP 3.0.0, 3.0.1 and 3.0.2, and only talks to AMP 3.
+> **This is the AMP 3 beta, `6.0.0b6`.** It is built against AMP 3's preview builds, tested on AMP 3.0.0, 3.0.1 and 3.0.2, and only talks to AMP 3.
 > For AMP 2, use the 5.x releases, which keep supporting it. A plain `pip install cc-ampapi` never picks up this beta.
 >
 > A version named in the docs, eg. "AMP 3.0.0", is AMP's version. The library's own version is `ampapi.__version__`.

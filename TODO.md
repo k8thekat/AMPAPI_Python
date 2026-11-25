@@ -57,7 +57,7 @@ The `3-` marks the AMP3 index, so its numbers never meet the 5.x index's; AMP3 w
 - (#3-50) Module layout by what a call acts on: collections and lookups on `Panel`, shards under their spire, the hubs set aside, then `NetworkModule` (#3-50.5), `AuditModule` (#3-50.6), invites onto `Session` (#3-50.7) and `EnrollmentModule` with the message bus calls (#3-50.8). *DONE*
 - (#3-50b) Look at what `create_shard` drops from AMP's reply (`infraSettings`, `appConfig`, `ports`, `portOutcomes`, `overLicenceLimit`) and decide what to hand back. *DONE* in #3-50.11: read-only properties on the `Shard`.
 - (#3-50.11d) Type `ShardPortOutcome.reason` once we know what its numbers mean; only 0 has been seen. *DONE* from AMP's own docs (#3-54).
-- (#3-50.1) Bring the hubs back: `hubs.py` out of pyright's exclude list, `Panel`/`Shard`/`Spire` on the hub classes again, `auto_state`, the samples and the README's live events section, and the `# TODO:` markers on `AMPAPIHubError`, `LifecycleEvent` and `NetworkStatus`.
+- (#3-50.1) Bring the hubs back: `hubs.py` out of pyright's exclude list and `MANIFEST.in`, `Panel`/`Shard`/`Spire` on the hub classes again, `auto_state`, the samples and the README's live events section, and the `# TODO:` markers on `AMPAPIHubError`, `LifecycleEvent` and `NetworkStatus`.
 - (#3-52.1q) When the hubs come back, the README's live events section and `samples/live_events.py` say the panel holds its shards weakly; it keeps them in a plain dict now.
 - (#3-47.7) Type `Panel.get_shards_awaiting_action`'s items; needs a game waiting for input. *DONE* with a `hytale` shard waiting for sign-in (#3-54).
 
