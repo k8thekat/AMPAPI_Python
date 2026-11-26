@@ -94,6 +94,7 @@ def gitHub_commit() -> None:
         log_command.extend(["--not", "origin/main"])
     output = subprocess.check_output(log_command)
     files: dict[str, list[str]] = {}
+    release_notes: list[str] = []
     cur_data = output.decode("utf-8")
     cur_data = cur_data.strip()
     cur_data = cur_data.split("\n")
@@ -104,6 +105,10 @@ def gitHub_commit() -> None:
             continue
         if entry.startswith("$"):
             # This should skip our auto generated changelog commit from Github Actions.
+            continue
+        if entry.startswith(">"):
+            # A `>` line is a note for the library's users, listed on its own at the top of the version
+            release_notes.append(entry.lstrip(">").strip())
             continue
 
         if entry.startswith("#"):
@@ -121,7 +126,7 @@ def gitHub_commit() -> None:
                 files[file_name] = []
             files[file_name].append(_entry)
 
-    update_changelog(version=version, new_commit=new_commit, files=files)
+    update_changelog(version=version, new_commit=new_commit, files=files, release_notes=release_notes)
 
 
 def gitHub_initial_commit() -> None:
@@ -135,6 +140,7 @@ def gitHub_initial_commit() -> None:
     # Format the git log data into a dictionary for Changelog.
     output = subprocess.check_output(["git", "log", "--format=%B"])
     files: dict[str, list[str]] = {}
+    release_notes: list[str] = []
     cur_data = output.decode("utf-8")
     cur_data = cur_data.strip()
     cur_data = cur_data.split("\n")
@@ -145,6 +151,10 @@ def gitHub_initial_commit() -> None:
             continue
         if entry.startswith("$"):
             # This should skip our auto generated changelog commit from Github Actions.
+            continue
+        if entry.startswith(">"):
+            # A `>` line is a note for the library's users, listed on its own at the top of the version
+            release_notes.append(entry.lstrip(">").strip())
             continue
 
         if entry.startswith("#"):
@@ -162,13 +172,17 @@ def gitHub_initial_commit() -> None:
                 files[file_name] = []
             files[file_name].append(_entry)
 
-    update_changelog(version=version, new_commit=new_commit, files=files)
+    update_changelog(version=version, new_commit=new_commit, files=files, release_notes=release_notes)
 
 
-def update_changelog(version: str, new_commit: str, files: dict[str, list[str]]) -> None:
+def update_changelog(version: str, new_commit: str, files: dict[str, list[str]], release_notes: list[str]) -> None:
     # Format the data into the `CHANGELOG.md`
     set_version = f"# Version - {version} - [{new_commit[:7]}]({repo_url}/commit/{new_commit})\n"
     data = set_version
+    # The release notes come first, with the breaking changes at the top
+    if release_notes:
+        release_notes.sort(key=lambda note: not note.startswith("BREAKING"))
+        data = data + "## Release notes\n" + "\n".join("- " + note for note in release_notes) + "\n\n"
     for file_name, file_changes in files.items():
         data: str = data + file_name + "\n" + "\n".join(file_changes) + "\n\n"
 

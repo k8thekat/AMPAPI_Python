@@ -17,6 +17,27 @@ Requirements
 - An AMP 2 panel. For an AMP 3 panel the library raises :exc:`~ampapi.errors.AMPAPIPanelVersionError` on the first call,
   since AMP 3 needs ``cc-ampapi>=6``. Until 6.0.0 is released, every 6.x version is a beta, so install it with
   ``pip install --pre "cc-ampapi>=6"``.
+- `typing_extensions` is a new dependency. ``dataclass-wizard`` is no longer a dependency (see "Returned data").
+
+
+Changes in 5.1.0
+----------------
+
+5.1.0 breaks code written for 5.0 that reads `fitness` as a dict, or passes `format_data` by position.
+
+- :attr:`~ampapi.instance.Controller.fitness` and :attr:`~ampapi.instance.TargetADS.fitness` hold a
+  :class:`~ampapi.modules.Fitness` dataclass instead of a dict. Read ``fitness.score`` where 5.0 read
+  ``fitness["score"]``. As in 5.0, `fitness` is None when AMP sends no fitness data.
+- The six :class:`~ampapi.instance.Instance` methods that took `format_data` by position in 5.0 take it as a keyword
+  only, like every other method: `get_application_status`, `get_updates`, `start_instance`, `stop_instance`,
+  `restart_instance` and `upgrade_instance`. Write ``instance.get_updates(format_data=True)`` where 5.0 allowed
+  ``instance.get_updates(True)``.
+- `Instance.start_instance`, `stop_instance`, `restart_instance` and `upgrade_instance` take `request_params` and
+  ``**response_params``, like every other method.
+- :class:`~ampapi.modules.Provision` gains `score_description` and `score_zero_factors`. AMP 2.8 sends both keys.
+- :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance` (and the `Instance` and `TargetADS` versions) returns a
+  :class:`~ampapi.modules.RunningTask`, which is what AMP 2.8 sends. 5.0 raised :exc:`~ampapi.errors.AMPAPIKeyError` on every
+  call, although AMP started the upgrade.
 
 
 Renamed classes
@@ -76,6 +97,9 @@ Changed methods
 - :meth:`~ampapi.Core.get_oidc_login_url` dropped its `state` parameter and returns the login URL; 4.x always returned None.
 - `format_data` was removed from methods whose response has no dataclass (eg. `get_new_guid`, `get_group`,
   `set_configs`); passing it now raises a :exc:`TypeError`.
+- `format_data` is keyword-only on every method, so a 4.x call like ``get_status(True)`` raises a :exc:`TypeError`.
+  Write ``get_status(format_data=True)``. In 5.0, six :class:`~ampapi.instance.Instance` methods still took it by
+  position (see "Changes in 5.1.0").
 - `Bridge.api_params` was removed. :class:`~ampapi.Bridge` is an :class:`~ampapi.modules.APIParams` itself, so read
   `bridge.url`, `bridge.user` and the rest straight off it. ``Bridge(api_params=...)`` still works.
 - :class:`~ampapi.modules.APIParams` (and so :class:`~ampapi.Bridge`) gains `auth_mode`, an
@@ -401,3 +425,21 @@ Target ADS
   existing objects in place, matched by Instance ID, instead of building new ones. `Controller.targets`,
   `Controller.instances` and `TargetADS.instances` stay the same objects, so a reference to an Instance or a
   `TargetADS` stays valid across refreshes. Instances AMP no longer lists are dropped.
+
+
+New methods
+-----------
+
+5.0 wraps these AMP 2.8 endpoints, which had no method in 4.x.
+
+- :class:`~ampapi.ADSModule`: `clone_instance`, `get_instance_live_settings`, `get_mode`,
+  `get_supported_app_summaries` and `prepare_file_transfer`.
+- :class:`~ampapi.AnalyticsPlugin`: `get_user_details`.
+- :class:`~ampapi.Core`: `add_interval_trigger`, `get_oidc_logout_url`, `get_structured_diagnostics`, `sleep`,
+  `update_tools`, and the OIDC user methods `convert_user_to_oidc`, `update_oidc_sub` and `revert_user_from_oidc`.
+- :class:`~ampapi.FileManagerPlugin`: `download_folder_as_zip` and `upload_folder`.
+- :class:`~ampapi.LocalFileBackupPlugin`: `backup_will_stop_server`.
+- :class:`~ampapi.GenericModule`: `import_config`, `refresh_remote_options`, `refresh_tool_discovery`,
+  `reload_generic_config` and `request_server_info`.
+- :class:`~ampapi.SteamCMDPlugin`: `cancel_steam_guard`, `steam_guard_code` and `steam_username_password`.
+- Every class has :meth:`~ampapi.Base.clean_up` and ``async with``, as "Changed methods" describes.

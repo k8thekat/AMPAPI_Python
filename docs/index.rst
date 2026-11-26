@@ -57,6 +57,7 @@ Basic Usage
     :maxdepth: 2
     :caption: Upgrading:
 
+    whats_new
     upgrading
 
 .. toctree::

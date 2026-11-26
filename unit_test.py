@@ -18,10 +18,12 @@ from ampapi.modules import (
     ActionResult,
     AuditLogEntry,
     Diagnostics,
+    Fitness,
     LoginResults,
     LoginUserInfo,
     Module,
     Port,
+    Provision,
     Role,
     RunningTask,
     ScheduleData,
@@ -606,6 +608,27 @@ class TestPortUnpack:
                 assert any(f.name == m and f.default is not f.default_factory for f in fields(Port)), (  # noqa: B023  # pyright: ignore[reportFunctionMemberAccess]
                     f"Missing key {m!r} has no default"
                 )
+
+
+class TestProvisionUnpack:
+    """Verify Provision and Fitness unpack from the GetProvisionFitness answer, as both carry its keys."""
+
+    def test_unpack(self) -> None:  # noqa: D102
+        if not _response_exists("getprovisionfitness.json"):
+            pytest.skip("Response file not captured yet")
+        data: dict[str, Any] = _load_response("getprovisionfitness.json")  # pyright: ignore[reportAssignmentType]
+        provision = Provision(**data)
+        fitness = Fitness(**data)
+        assert isinstance(provision.score, float)
+        assert isinstance(fitness.score_description, str)
+        assert isinstance(fitness.score_zero_factors, list)
+
+    def test_no_extra_keys(self) -> None:  # noqa: D102
+        if not _response_exists("getprovisionfitness.json"):
+            pytest.skip("Response file not captured yet")
+        data: dict[str, Any] = _load_response("getprovisionfitness.json")  # pyright: ignore[reportAssignmentType]
+        for dataclass_type in (Provision, Fitness):
+            _assert_keys_match(data, dataclass_type)
 
 
 class TestRoleUnpack:

@@ -1999,7 +1999,11 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetProvisionFitness`
 
         .. note::
-            AMP answers with JSON `null` when it has no fitness data.
+            AMP answers with JSON `null` when it has no fitness data or when on a AMP Professional licence.
+            You will recieve a `None` return.
+
+        .. versionchanged:: 5.1.0
+            The returned :class:`Provision` gains `score_description` and `score_zero_factors`.
 
         Parameters
         ----------
@@ -3953,7 +3957,7 @@ class ADSModule(Base):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Update or Upgrade the Instance.
@@ -3963,6 +3967,9 @@ class ADSModule(Base):
         .. note::
             The `instance_name` parameter is referring to :attr:`~Instance.instance_name` attribute of an Instance.
 
+        .. versionchanged:: 5.1.0
+            Returns a :class:`RunningTask`, which is what AMP 2.8 sends. 5.0 expected an :class:`ActionResult` and
+            raised :exc:`AMPAPIKeyError` on every call, although AMP started the upgrade.
 
         Parameters
         ----------
@@ -3981,8 +3988,8 @@ class ADSModule(Base):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns a :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns the :class:`RunningTask` that tracks the upgrade, or the raw dictionary when `format_data` is False.
 
         """
         await self._reauth()
@@ -4004,8 +4011,9 @@ class ADSModule(Base):
         if format_data is None:
             format_data = self.format_data
 
-        if is_response_type(result, ActionResultResponse, ACTION_RESULT_REQUIRED_KEYS, ACTION_RESULT_EXCLUDED_KEYS):
+        # AMP 2.8 answers with the upgrade's RunningTask, which also carries `status` and `reason`
+        if is_response_type(result, RunningTaskResponse, RUNNING_TASK_REQUIRED_KEYS, RUNNING_TASK_EXCLUDED_KEYS):
             if format_data is True:
-                return ActionResult.from_response(result)
+                return RunningTask.from_response(result)
             return result
         raise AMPAPIKeyError("status", "ADSModule/UpgradeInstance", result)  # noqa: EM101

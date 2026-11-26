@@ -311,13 +311,21 @@ Found while triggering them (vm1, 2026-10-24):
 - `Template.to_dict()` had the same problem for `deploy_template` (#29, fixed in 247f4a4). That endpoint also takes
   flat parameters (`TemplateID`, `NewUsername`, ...). With AMP's names, AMP read the template and looked for a Target,
   then failed: "No viable deployment target could be found ... target reported no provisioning fitness data", for
-  both Targets. Both Targets' `fitness` is null in `GetInstances`, and `GetProvisionFitness` answers null too (#3), so
-  the `RunningTask` return the spec names is unconfirmed until a Target reports fitness (#30).
-  What fills fitness is unknown (#30 phase B, 2026-10-24). `ADSModule.dll` has `UpdateLocalFitness` and the
-  messages "Provision fitness score: {0}" and "Failed to get fitness from remote instance", but neither VM's ADS log
-  has ever logged one. Restarting vm1's ADS01 left fitness null after two minutes. No setting names fitness, both
-  VMs allow 32 Instances and local creation, and their Professional licence's `feature_set` is `RunAMP`,
-  `ControllerTargetMode` and `InstanceCloning`. Untried: a different licence edition, and reading the DLL's code.
+  both Targets. Both Targets' `fitness` was null in `GetInstances`, and `GetProvisionFitness` answered null too (#3).
+  On the Professional licence (`feature_set` `RunAMP`, `ControllerTargetMode`, `InstanceCloning`) fitness stayed
+  null after an ADS restart, and no setting names it (#30 phase B, 2026-10-24).
+  The licence is what fills it (2026-11-25, #3 and #29). vm1 has had the Patreon Supporter licence since the OIDC tests
+  (its `feature_set` adds `Templating`, `SSOLogins`, `InstanceMigration` and more). There, `GetProvisionFitness` and the
+  "Local Instances" Target's `fitness` both answer the same 11 keys, now `Provision` and `Fitness`. vm2, still on
+  Professional, answers null for both. The capture is `_responses/2.8.0.8/ads/getprovisionfitness.json`.
+  `deploy_template` then worked on vm1: AMP logged "Evaluated 2 deployment target(s)", chose "Local Instance Manager
+  (score 0.33)" and created the Instance. The answer is a `RunningTask` that also carries `ActionResult`'s `status`,
+  `reason`, `support_url` and `support_title`, with no key drift (`_responses/2.8.0.8/ads/deploytemplate.json`).
+  A refused deploy answers the same shape with `status` false and AMP's text in `reason`, which raises
+  `AMPAPIResponseError` (eg. "Template has no module or base template specified"). A template's `module` is the
+  `module_name` from `GetSupportedApplications`, eg. `Minecraft`. With `MinecraftModule`, AMP answered "Couldn't
+  determine OS compatibility".
+  - `score_zero_factors` was `[]` in every answer, so its entries are still `Any`.
 - `InstanceDatastore.to_dict()` had the same problem, although `add_datastore` and `update_datastore` send it as one
   nested object (#43, see "Endpoint shapes confirmed on the VMs"). AMP reads the nested object's keys by name too.
 - `CreateInstance.ip_binding` defaulted to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
@@ -360,7 +368,7 @@ Raw dicts that stay raw on purpose (#16, 2026-10-21): maps with dynamic keys and
 `get_instance_live_settings`, `get_role_ids`), `StructuredDiagnostics.application` (keys differ per module), and
 `ADSData.available_instances` (an `Instance` needs a bridge, not a dataclass). `APISpec` and `ActionSpec` are type
 aliases over dynamic module and method keys; `automodule` skips aliases, so they are not in the docs. Fields AMP has
-never sent in a capture stay `Any` (Bukkit, `Fitness`, `Backup.meta`, `SettingSpec.warn_when_value`).
+never sent in a capture stay `Any` (Bukkit, `Fitness.score_zero_factors`, `Backup.meta`, `SettingSpec.warn_when_value`).
 `Core.get_user_list` answers `{}` with no players in every capture; `[]` is handled as empty too.
 
 Where a field is richer than the wire format (an enum, or a nested dataclass), the annotation is
@@ -389,9 +397,9 @@ survey checked every value in the 151 captures from 2.8.0.8 against both the Typ
   VaskelsServer).
 Key drift couldn't see inside `list[Any]` fields, so #35 gave the nested Analytics and `SettingSpec` items their own
 TypedDicts (`AnalyticsCountryDataResponse`, `AnalyticsTopPlayersResponse`, `SettingSpecActionResponse`,
-`SettingSpecSelectionSourceResponse`, `SettingsSpecAttributeResponse`). `BuildInfo`, `BukkitPlugin`, `OPList` and
-`Fitness` have none: AMP sends a version string for `BuildInfo`, the endpoints behind `BukkitPlugin` and `OPList`
-were removed in 2.6.5.0, and `fitness` is null in every capture.
+`SettingSpecSelectionSourceResponse`, `SettingsSpecAttributeResponse`). `BuildInfo`, `BukkitPlugin` and `OPList`
+have no TypedDict: AMP sends a version string for `BuildInfo`, and the endpoints behind `BukkitPlugin` and `OPList` were
+removed in 2.6.5.0. `Fitness` got `FitnessResponse` in 5.1.0, once a licence with fitness data answered (#3).
 The survey script (`dc_survey.py`) lived in a session scratchpad; it pairs each wrapper's narrowing check with its
 `from_response` call and needs `key_drift.declared_keys`, because `__required_keys__` ignores `Required`/`NotRequired`
 under string annotations on 3.12.
@@ -457,7 +465,6 @@ they can't show the casing; "No such web method" on a method the spec lists is t
 
 Shapes not yet confirmed against a live payload:
 
-- `ProvisionResponse`, derived from the dataclass and docs. `GetProvisionFitness` answers null on the VMs (#3).
 - `OPWhitelistResponse`, built from the `OPWhitelist` dataclass. `GetOPWhitelist` was removed in AMP 2.6.5.0, so it
   can't be confirmed. AMP 2.8.0.8 answers "Missing Method" (checked on FTBEvolution01, 2026-10-26).
 
@@ -649,7 +656,6 @@ Checked on the VM pair, AMP 2.8.0.8, one Controller with only its ADS and one Ta
   `TargetDirectory`; subfolders in `RelativePath` are created. The panel uploads folders file by file instead.
 - `FileManagerPlugin/AppendFileChunk`: answers null and has no visible effect. It creates no file, doesn't append to
   one WriteFileChunk made, and `Delete` True leaves it alone. The panel never calls it.
-- `ADSModule/GetProvisionFitness`: JSON null on the VMs (no fitness data), so its shape is still unknown.
 - `ADSModule/UpdateDatastore` (2026-10-31, vm1): sent with `InstanceDatastore.to_dict()`'s snake_case keys, AMP
   stored a datastore with a null name. Every `GetDatastores` after it was an unhandled exception, and ADS01 then
   crashed on start in `InstanceDatastore.get_SanitisedName()`. Moving `ADS01/datastore.dat` aside let it start with

@@ -39,7 +39,20 @@ from .filebackup import LocalFileBackupPlugin
 from .filemanager import FileManagerPlugin
 from .generic import GenericModule
 from .minecraft import MinecraftModule
-from .modules import ActionResult, APISession, BuildInfo, Endpoints, InstanceState, Metrics, PlatformInfo, Status, TargetDatastore, Updates
+from .modules import (
+    ActionResult,
+    APISession,
+    BuildInfo,
+    Endpoints,
+    Fitness,
+    InstanceState,
+    Metrics,
+    PlatformInfo,
+    RunningTask,
+    Status,
+    TargetDatastore,
+    Updates,
+)
 from .steamcmd import SteamCMDPlugin
 
 if TYPE_CHECKING:
@@ -50,7 +63,7 @@ if TYPE_CHECKING:
     from aiohttp.client import _RequestOptions as AioHTTPRequestOptions  # pyright: ignore[reportPrivateUsage]
     from typing_extensions import ParamSpec, TypeVar
 
-    from ._types import ActionResultResponse, ControllerResponse, InstanceResponse, StatusResponse, UpdatesResponse
+    from ._types import ActionResultResponse, ControllerResponse, InstanceResponse, RunningTaskResponse, StatusResponse, UpdatesResponse
     from .base import ResponseHandlerOptions
     from .bridge import Bridge
 
@@ -88,7 +101,7 @@ class ADSData(Base):
     url: Union[str, None]
     last_updated: datetime.datetime | str
     state: InstanceState
-    fitness: Union[dict[str, Any], None]
+    fitness: Union[Fitness, None]
     state_reason: Union[str, None]
     tags_list: Union[str, None]
 
@@ -145,6 +158,10 @@ class ADSData(Base):
             self.platform = PlatformInfo.from_response(data["platform"])
         if "datastores" in self.__cached__:
             self.datastores = [TargetDatastore.from_response(entry) for entry in data.get("datastores") or []]
+        # A Target without fitness data sends null
+        fitness = data.get("fitness")
+        if "fitness" in self.__cached__ and fitness is not None:
+            self.fitness = Fitness.from_response(fitness)
 
         # last_updated is an ISO string, so we convert it
         self.last_updated = self.timestamp_converter(timestamp=data["last_updated"])
@@ -543,8 +560,8 @@ class Instance(
     @online
     async def get_application_status(
         self,
-        format_data: Union[bool, None] = None,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> Status | StatusResponse:
@@ -554,6 +571,9 @@ class Instance(
 
         .. note::
             The Instance MUST be running (:attr:`~Instance.running = True`) or you will get a :class:`ConnectionError`
+
+        .. versionchanged:: 5.1.0
+            `format_data` is keyword-only, so passing it by position raises :exc:`TypeError`.
 
 
         Parameters
@@ -629,8 +649,8 @@ class Instance(
     @online
     async def get_updates(
         self,
-        format_data: Union[bool, None] = None,
         *,
+        format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
     ) -> Updates | UpdatesResponse:
@@ -641,6 +661,9 @@ class Instance(
 
         .. note::
             The Instance MUST be running (:attr:`~Instance.running = True`) or you will get a :class:`ConnectionError`
+
+        .. versionchanged:: 5.1.0
+            `format_data` is keyword-only, so passing it by position raises :exc:`TypeError`.
 
 
         Parameters
@@ -677,8 +700,11 @@ class Instance(
     @has_controller
     async def start_instance(
         self,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Start the Instance.
@@ -692,10 +718,18 @@ class Instance(
         .. note::
             The call goes to :attr:`ads`, the ADS that holds this Instance.
 
+        .. versionchanged:: 5.1.0
+            `format_data` is keyword-only, so passing it by position raises :exc:`TypeError`.
+            Gains `request_params` and `**response_params`.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Raises
         ------
@@ -711,14 +745,22 @@ class Instance(
         """
         # This mimics `ADSModule.start_instance()`, which we call on the ADS holding us
         assert self.ads is not None  # noqa: S101
-        return await self.ads.start_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        return await self.ads.start_instance(
+            instance_name=self.instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
 
     @online
     @has_controller
     async def stop_instance(
         self,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Stops the Instance.
@@ -735,10 +777,18 @@ class Instance(
         .. note::
             The call goes to :attr:`ads`, the ADS that holds this Instance.
 
+        .. versionchanged:: 5.1.0
+            `format_data` is keyword-only, so passing it by position raises :exc:`TypeError`.
+            Gains `request_params` and `**response_params`.
+
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Raises
         ------
@@ -755,14 +805,22 @@ class Instance(
         """
         # This mimics `ADSModule.stop_instance()`, which we call on the ADS holding us
         assert self.ads is not None  # noqa: S101
-        return await self.ads.stop_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        return await self.ads.stop_instance(
+            instance_name=self.instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
 
     @online
     @has_controller
     async def restart_instance(
         self,
+        *,
         format_data: Union[bool, None] = None,
-    ) -> ActionResult:
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> ActionResult | ActionResultResponse:
         """|coro|
 
         Restart the Instance.
@@ -778,10 +836,18 @@ class Instance(
         .. note::
             The call goes to :attr:`ads`, the ADS that holds this Instance.
 
+        .. versionchanged:: 5.1.0
+            `format_data` is keyword-only, so passing it by position raises :exc:`TypeError`.
+            Gains `request_params` and `**response_params`.
+
         Parameters
         ----------
         format_data : Union[bool, None], optional
             Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Raises
         ------
@@ -798,10 +864,21 @@ class Instance(
         """
         # This mimics `ADSModule.restart_instance()`, which we call on the ADS holding us
         assert self.ads is not None  # noqa: S101
-        return await self.ads.restart_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        return await self.ads.restart_instance(
+            instance_name=self.instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
 
     @has_controller
-    async def upgrade_instance(self, format_data: Union[bool, None] = None) -> ActionResult:
+    async def upgrade_instance(
+        self,
+        *,
+        format_data: Union[bool, None] = None,
+        request_params: Optional[AioHTTPRequestOptions] = None,
+        **response_params: Unpack[ResponseHandlerOptions],
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
         Upgrade the AMP version of this Instance.
 
@@ -815,21 +892,35 @@ class Instance(
         .. versionchanged:: 5.0.0
             Renamed from `update_instance`, to match :meth:`ADSModule.upgrade_instance`.
 
+        .. versionchanged:: 5.1.0
+            `format_data` is keyword-only, so passing it by position raises :exc:`TypeError`.
+            Gains `request_params` and `**response_params`.
+            Returns a :class:`RunningTask`, as :meth:`ADSModule.upgrade_instance` does.
+
 
         Parameters
         ----------
         format_data : Union[:class:`bool`, None], optional
             Format the JSON response data. (Uses `FORMAT_DATA` global constant if None), by default None.
+        request_params : :class:`AioHTTPRequestOptions` | None, optional
+            Extra keyword arguments forwarded to :meth:`aiohttp.ClientSession.post`, by default None.
+        **response_params : :class:`Unpack[ResponseHandlerOptions]`
+            Keyword arguments forwarded to :meth:`_response_handler`. See :class:`ResponseHandlerOptions` for details.
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns the :class:`RunningTask` that tracks the upgrade, or the raw dictionary when `format_data` is False.
 
         """
         # This mimics `ADSModule.upgrade_instance()`, which we call on the ADS holding us
         assert self.ads is not None  # noqa: S101
-        return await self.ads.upgrade_instance(instance_name=self.instance_name, format_data=format_data)  # type: ignore -- See the @has_controller decorator.
+        return await self.ads.upgrade_instance(
+            instance_name=self.instance_name,
+            format_data=format_data,
+            request_params=request_params,
+            **response_params,
+        )
 
 
 class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin):
@@ -877,8 +968,12 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
         The Controller/Instance ID tied to the Instance, default is "0".
     state : :py:class:`InstanceState`
         The state the Controller/Instance is in. See enum :py:class:`InstanceState`, default is ``InstanceState.UNDEFINED``.
-    fitness : Union[dict[:class:`str`, Any], None]
-        UNK.
+    fitness : Union[:class:`Fitness`, None]
+        The deployment fitness of the Controller's own Target. It is None when AMP sends no fitness data, or on a
+        AMP Professional licence.
+
+        .. versionchanged:: 5.1.0
+            Was a dict, and is now a :class:`Fitness` dataclass.
     friendly_name : :class:`str`
         The Controller/Instance friendly name.
     state_reason : Union[:class:`str`, None]
@@ -1670,8 +1765,12 @@ class TargetADS(ADSData, ADSModule, Instance):
         When the Target last updated, converted into a datetime object.
     state : :class:`InstanceState`
         The state the Target is in.
-    fitness : Union[dict[:class:`str`, Any], None]
-        UNK.
+    fitness : Union[:class:`Fitness`, None]
+        The Target's deployment fitness. It is None when AMP sends no fitness data, or on a
+        AMP Professional licence.
+
+        .. versionchanged:: 5.1.0
+            Was a dict, and is now a :class:`Fitness` dataclass.
     state_reason : Union[:class:`str`, None]
         UNK.
     tags_list : Union[:class:`str`, None]
@@ -1874,7 +1973,7 @@ class TargetADS(ADSData, ADSModule, Instance):
         format_data: Union[bool, None] = None,
         request_params: Optional[AioHTTPRequestOptions] = None,
         **response_params: Unpack[ResponseHandlerOptions],
-    ) -> ActionResult | ActionResultResponse:
+    ) -> RunningTask | RunningTaskResponse:
         """|coro|
 
         Upgrade the AMP version of an Instance of this Target, picked by its name on this Target.
@@ -1884,6 +1983,9 @@ class TargetADS(ADSData, ADSModule, Instance):
 
         .. versionchanged:: 5.0.0
             Acts on the Instance `instance_name` names on this Target, not on the Target ADS itself.
+
+        .. versionchanged:: 5.1.0
+            Returns a :class:`RunningTask`, as :meth:`ADSModule.upgrade_instance` does.
 
         Parameters
         ----------
@@ -1898,8 +2000,8 @@ class TargetADS(ADSData, ADSModule, Instance):
 
         Returns
         -------
-        :class:`ActionResult`
-            On success returns an :class:`ActionResult` dataclass.
+        :class:`RunningTask` | :class:`RunningTaskResponse`
+            On success returns the :class:`RunningTask` that tracks the upgrade, or the raw dictionary when `format_data` is False.
 
         """
         return await ADSModule.upgrade_instance(

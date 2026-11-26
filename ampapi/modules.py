@@ -1960,7 +1960,12 @@ class FileChunk(ResponseData):
 
 @dataclass(slots=True)
 class Fitness(ResponseData):
-    """Represents the JSON response data for :attr:`Instance.fitness` attribute.
+    """Represents a Target's deployment fitness, in :attr:`Controller.fitness` and :attr:`TargetADS.fitness`.
+
+    AMP deploys a template to the Target with the highest `score`.
+
+    .. versionchanged:: 5.1.0
+        :attr:`Controller.fitness` and :attr:`TargetADS.fitness` hold this dataclass, in place of a dict.
 
     Attributes
     ----------
@@ -3389,6 +3394,9 @@ class PortInfo(ResponseData):
 class Provision(ResponseData):
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
+    .. versionchanged:: 5.1.0
+        Gains `score_description` and `score_zero_factors`. AMP 2.8 sends both keys.
+
     Attributes
     ----------
     available : :class:`bool`
@@ -3405,6 +3413,10 @@ class Provision(ResponseData):
         The remaining Instance slots.
     score : :class:`float`
         The score.
+    score_description : :class:`str`
+        AMP's text explaining the `score`, eg. ``"Calculation takes the lowest number from these values - ..."``.
+    score_zero_factors : list[Any]
+        The factors that bring `score` to 0. The list is empty while `score` is above 0.
     thread_queue_length : :class:`int`
         The thread queue length.
     total_services : :class:`int`
@@ -3419,6 +3431,8 @@ class Provision(ResponseData):
     load_avg: float
     remaining_instance_slots: int
     score: float
+    score_description: str
+    score_zero_factors: list[Any]
     thread_queue_length: int
     total_services: int
 

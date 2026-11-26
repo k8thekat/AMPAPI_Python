@@ -588,8 +588,7 @@ class ControllerResponse(TypedDict):
     # description: str
     description: Union[str, None]
     disabled: bool
-    # UNK, see the Fitness dataclass
-    fitness: Union[dict[str, Any], None]
+    fitness: Union[FitnessResponse, None]
     friendly_name: str
     id: int
     instance_id: str
@@ -709,6 +708,26 @@ class EndpointsResponse(TypedDict):
 class FileChunkResponse(TypedDict):
     base64_data: str
     bytes_length: int
+
+
+class FitnessResponse(TypedDict):
+    """Represents a Target's `fitness` in :class:`ControllerResponse`, the same keys as :class:`ProvisionResponse`.
+
+    .. versionadded:: 5.1.0
+
+    """
+
+    available: bool
+    total_services: int
+    free_ram_mb: int
+    free_disk_mb: int
+    cpu_service_ratio: float
+    thread_queue_length: int
+    load_avg: float
+    remaining_instance_slots: int
+    score: float
+    score_description: str
+    score_zero_factors: list[Any]
 
 
 class ImportConfigResponse(TypedDict):
@@ -1289,14 +1308,11 @@ class PortResponse(TypedDict):
     min_listening: NotRequired[int]
 
 
-# TODO: Verify these keys
-# They come from the `Provision` dataclass and docs, and the endpoint returns a null body on the ADS and Controller
 class ProvisionResponse(TypedDict):
     """Represents the JSON response data from :meth:`ADSModule.get_provision_fitness`.
 
-    .. note::
-        The related :class:`Fitness` dataclass carries two extra fields, `score_description` and
-        `score_zero_factors`, which belong to a target's `fitness` block.
+    .. versionchanged:: 5.1.0
+        Gains `score_description` and `score_zero_factors`.
 
     """
 
@@ -1307,6 +1323,8 @@ class ProvisionResponse(TypedDict):
     load_avg: float
     remaining_instance_slots: int
     score: float
+    score_description: str
+    score_zero_factors: list[Any]
     thread_queue_length: int
     total_services: int
 
