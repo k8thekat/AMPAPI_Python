@@ -1999,8 +1999,8 @@ class ADSModule(Base):
         Endpoint: `ADSModule/GetProvisionFitness`
 
         .. note::
-            AMP answers with JSON `null` when it has no fitness data or when on a AMP Professional licence.
-            You will recieve a `None` return.
+            AMP answers with JSON `null` when it has no fitness data or when on an AMP Professional licence.
+            You will receive a `None` return.
 
         .. versionchanged:: 5.1.0
             The returned :class:`Provision` gains `score_description` and `score_zero_factors`.

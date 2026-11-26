@@ -9,6 +9,14 @@ What changed in each release, newest first. Each section is also the release's n
 form of each change since 4.x.
 
 
+v5.1.1
+------
+
+.. rubric:: Docs
+
+- Fixed two typos in the note on :meth:`~ADSModule.get_provision_fitness`.
+
+
 v5.1.0
 ------
 
