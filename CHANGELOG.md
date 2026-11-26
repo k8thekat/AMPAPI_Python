@@ -1,3 +1,19 @@
+# Version - 5.1.1 - [f7ee74c](https://github.com/k8thekat/AMPAPI_Python/commit/f7ee74c)
+## Release notes
+- Fixed two typos in the note on `ADSModule.get_provision_fitness`.
+
+## Typo fixes
+- *Claude AI-Assisted*
+
+## __init__.py
+- Bumped the version to 5.1.1.
+
+## adsmodule.py
+- Fixed "recieve" and "a AMP" in `get_provision_fitness`'s note.
+
+## whats_new.rst
+- Added the 5.1.1 section.
+
 # Version - 5.1.0 - [93d2170](https://github.com/k8thekat/AMPAPI_Python/commit/93d2170)
 ## Release notes
 - BREAKING: `Controller.fitness` and `TargetADS.fitness` hold a `Fitness` dataclass instead of a dict. Read `fitness.score` where 5.0 read `fitness["score"]`.
