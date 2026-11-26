@@ -1,3 +1,60 @@
+# Version - 5.1.0 - [93d2170](https://github.com/k8thekat/AMPAPI_Python/commit/93d2170)
+## Release notes
+- BREAKING: `Controller.fitness` and `TargetADS.fitness` hold a `Fitness` dataclass instead of a dict. Read `fitness.score` where 5.0 read `fitness["score"]`.
+- BREAKING: `Instance.get_application_status`, `get_updates`, `start_instance`, `stop_instance`, `restart_instance` and `upgrade_instance` take `format_data` as a keyword only, like every other method. Write `get_updates(format_data=True)`.
+- `Instance.start_instance`, `stop_instance`, `restart_instance` and `upgrade_instance` take `request_params` and `**response_params`.
+- `upgrade_instance` returns a `RunningTask`, which is what AMP 2.8 sends. In 5.0 it raised `AMPAPIKeyError` on every call, although AMP started the upgrade.
+- `Provision` gains `score_description` and `score_zero_factors`, which `get_provision_fitness` dropped with a warning.
+- `deploy_template` is confirmed to return a `RunningTask` on AMP 2.8.
+- The docs gain a "What's New" page with each release's notes, and the upgrade guide lists the methods new in 5.0.
+
+## Fitness data, keyword format_data and release notes
+- *Claude AI-Assisted*
+
+## __init__.py
+- Bumped the version to 5.1.0.
+
+## instance.py
+- Filled `fitness` with a `Fitness` dataclass, or None.
+- Made `format_data` keyword-only on the last six `Instance` methods.
+- Added `request_params` and `**response_params` to the start, stop, restart and upgrade calls.
+- Changed both `upgrade_instance` returns to a `RunningTask`.
+- Typed the start, stop and restart returns as `ActionResult | ActionResultResponse`, like the ADS methods they call.
+	- Their `# type: ignore` comments only covered that mismatch, so they were removed.
+
+## modules.py
+- Added `score_description` and `score_zero_factors` to `Provision`.
+	- AMP sends them with the rest, and 5.0 dropped them.
+- Updated `Fitness`'s summary to name the attributes it fills.
+
+## _types.py
+- Added `FitnessResponse` for a Target's `fitness`.
+- Added the two keys to `ProvisionResponse`, and removed its `# TODO:`.
+
+## adsmodule.py
+- Noted that a Professional licence gets `null` from `get_provision_fitness`.
+- Fixed `upgrade_instance` raising on AMP 2.8's `RunningTask` reply.
+
+## whats_new.rst
+- Added the "What's New" page, with the 5.1.0 and 5.0.1 notes.
+
+## index.rst
+- Added "What's New" above the upgrade guide.
+
+## upgrading.rst
+- Added "Changes in 5.1.0", with the `fitness` break.
+- Added "New methods", `typing_extensions`, and `format_data` being keyword-only.
+
+## gen_changelog.py
+- Added `>` lines, listed as "Release notes" at the top of each version.
+	- A line starting with `BREAKING` goes first.
+
+## unit_test.py
+- Added `Provision` and `Fitness` tests on the `GetProvisionFitness` capture.
+
+## NOTES.md
+- Added that the licence fills fitness, and the live `deploy_template` answer.
+
 # Version - 5.0.1 - [88a782a](https://github.com/k8thekat/AMPAPI_Python/commit/88a782a)
 ## 5.0.1 fixes and docs
 - *Claude AI-Assisted*
