@@ -1,3 +1,33 @@
+# Version - 5.1.2 - [cddf142](https://github.com/k8thekat/AMPAPI_Python/commit/cddf142)
+## Release notes
+- `Fitness` and `Provision` say only what AMP's replies have shown about `score` and `score_zero_factors`.
+
+## Docs once-over
+- *Claude AI-Assisted*
+
+## __init__.py
+- Bumped the version to 5.1.2.
+
+## base.py
+- Reworded the AMP 3 check's comment.
+- Documented `ResponseHandlerOptions.to_file` and `path`, which were placeholders.
+
+## modules.py
+- Removed two unconfirmed claims from `Fitness` and `Provision`.
+
+## instance.py
+- Fixed "a AMP" in the `fitness` notes of `Controller` and `TargetADS`.
+
+## upgrading.rst
+- Reworded the 5.1.0 notes on the new parameters.
+
+## whats_new.rst
+- Reworded the intro and the 5.1.0 section, and qualified 5.0.1's `format_data` line.
+- Added the 5.1.2 section.
+
+## NOTES.md
+- Added the `UpgradeInstance` answer, and narrowed the licence finding to the evidence.
+
 # Version - 5.1.1 - [f7ee74c](https://github.com/k8thekat/AMPAPI_Python/commit/f7ee74c)
 ## Release notes
 - Fixed two typos in the note on `ADSModule.get_provision_fitness`.
