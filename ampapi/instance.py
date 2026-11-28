@@ -969,7 +969,7 @@ class Controller(ADSData, ADSModule, Core, EmailSenderPlugin, FileManagerPlugin)
     state : :py:class:`InstanceState`
         The state the Controller/Instance is in. See enum :py:class:`InstanceState`, default is ``InstanceState.UNDEFINED``.
     fitness : Union[:class:`Fitness`, None]
-        The deployment fitness of the Controller's own Target. It is None when AMP sends no fitness data, or on a
+        The deployment fitness of the Controller's own Target. It is None when AMP sends no fitness data, or on an
         AMP Professional licence.
 
         .. versionchanged:: 5.1.0
@@ -1766,7 +1766,7 @@ class TargetADS(ADSData, ADSModule, Instance):
     state : :class:`InstanceState`
         The state the Target is in.
     fitness : Union[:class:`Fitness`, None]
-        The Target's deployment fitness. It is None when AMP sends no fitness data, or on a
+        The Target's deployment fitness. It is None when AMP sends no fitness data, or on an
         AMP Professional licence.
 
         .. versionchanged:: 5.1.0

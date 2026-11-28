@@ -201,9 +201,9 @@ class ResponseHandlerOptions(TypedDict, total=False):
     Options:
     --------
     to_file : :class:`bool`
-        ...
+        Write the response JSON to ``<path>/<endpoint name>.json``, by default False.
     path : :class:`pathlib.Path`
-        ...
+        The folder for that file, used only with `to_file`.
     check_key_drift : :class:`bool`
         Dev check, only with `to_file`: compare the capture with the TypedDict its endpoint narrows to.
     allow_null : :class:`bool`
@@ -936,7 +936,7 @@ class Base:
                 )
                 raise AMPAPINetworkError(status=0, url=_url, reason=str(e)) from e
 
-            # AMP 2 never answers an `/API/` route with 404, and AMP 3 answers every one of them with it
+            # AMP 3 answers every `/API/` route with a 404, which AMP 2 never does
             if response.status == 404:
                 health_data: Any = None
                 try:

@@ -3,10 +3,21 @@
 What's New
 ==========
 
-What changed in each release, newest first. Each section is also the release's notes on
-`GitHub <https://github.com/k8thekat/AMPAPI_Python/releases>`_. The full record of every commit is the
-`CHANGELOG <https://github.com/k8thekat/AMPAPI_Python/blob/main/CHANGELOG.md>`_, and :doc:`upgrading` has the long
-form of each change since 4.x.
+What changed in each release, newest first. :doc:`upgrading` has the long form of each change since 4.x, and the
+`CHANGELOG <https://github.com/k8thekat/AMPAPI_Python/blob/main/CHANGELOG.md>`_ lists every commit. Each version also
+has a `release on GitHub <https://github.com/k8thekat/AMPAPI_Python/releases>`_.
+
+
+v5.1.2
+------
+
+.. rubric:: Docs
+
+- :class:`~ampapi.modules.Fitness` and :class:`~ampapi.modules.Provision` say only what AMP's replies have shown about
+  `score` and `score_zero_factors`.
+- This page's 5.1.0 notes are reworded, and the 5.0.1 notes say `format_data` became keyword-only on every method in
+  5.1.0.
+- :class:`ResponseHandlerOptions` documents `to_file` and `path`.
 
 
 v5.1.1
@@ -20,8 +31,7 @@ v5.1.1
 v5.1.0
 ------
 
-5.1.0 types each Target's fitness data, checked against a live AMP 2.8 panel, and makes `format_data` keyword-only on
-every method. Code written for 5.0 that reads `fitness` as a dict, or passes `format_data` by position, needs a change.
+5.1.0 types each Target's fitness data and makes `format_data` keyword-only on every method. Code written for 5.0 that reads `fitness` as a dict, or passes `format_data` by position, needs a change.
 
 .. rubric:: Breaking changes
 
@@ -36,7 +46,7 @@ every method. Code written for 5.0 that reads `fitness` as a dict, or passes `fo
 .. rubric:: New
 
 - :meth:`Instance.start_instance`, :meth:`~Instance.stop_instance`, :meth:`~Instance.restart_instance` and
-  :meth:`~Instance.upgrade_instance` take `request_params` and ``**response_params``, like every other method.
+  :meth:`~Instance.upgrade_instance` gain `request_params` and ``**response_params``.
 
 .. rubric:: Fixes
 
@@ -48,9 +58,8 @@ every method. Code written for 5.0 that reads `fitness` as a dict, or passes `fo
 
 .. rubric:: Docs
 
-- AMP only sends fitness data on a licence that includes it. On an AMP Professional licence,
-  :meth:`~ADSModule.get_provision_fitness` returns None and `fitness` is None.
-- :meth:`~ADSModule.deploy_template` is confirmed to return a :class:`~ampapi.modules.RunningTask`.
+- On an AMP Professional licence, AMP sends no fitness data, so :meth:`~ADSModule.get_provision_fitness` returns None
+  and `fitness` is None.
 - :doc:`upgrading` gains a "New methods" list, the new `typing_extensions` dependency, and the 4.x calls that pass
   `format_data` by position.
 
@@ -113,7 +122,8 @@ The two changes most code meets first are the class names and errors being raise
   Close it with ``await controller.clean_up()`` or ``async with Controller() as controller:``. To use your own
   session, pass it as ``Bridge(api_params=..., session=...)``. `session_ttl` is removed, and `Bridge.api_params` is
   removed because the :class:`Bridge` is an :class:`~ampapi.modules.APIParams` itself.
-- **Calling methods.** `format_data` is keyword-only, so write ``get_status(format_data=False)``. Several methods are
+- **Calling methods.** `format_data` is keyword-only on almost every method (on all of them from 5.1.0), so write
+  ``get_status(format_data=False)``. Several methods are
   renamed or removed (eg. `update_instance` is now `upgrade_instance`), and the 16 `MinecraftModule` methods whose
   endpoints AMP 2.6.5.0 removed are deprecated.
 - **Controller and Targets.** :attr:`Controller.instances` holds only the Controller's own Instances. Each remote

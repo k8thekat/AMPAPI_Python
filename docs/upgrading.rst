@@ -32,8 +32,8 @@ Changes in 5.1.0
   only, like every other method: `get_application_status`, `get_updates`, `start_instance`, `stop_instance`,
   `restart_instance` and `upgrade_instance`. Write ``instance.get_updates(format_data=True)`` where 5.0 allowed
   ``instance.get_updates(True)``.
-- `Instance.start_instance`, `stop_instance`, `restart_instance` and `upgrade_instance` take `request_params` and
-  ``**response_params``, like every other method.
+- `Instance.start_instance`, `stop_instance`, `restart_instance` and `upgrade_instance` gain `request_params` and
+  ``**response_params``.
 - :class:`~ampapi.modules.Provision` gains `score_description` and `score_zero_factors`. AMP 2.8 sends both keys.
 - :meth:`~ampapi.adsmodule.ADSModule.upgrade_instance` (and the `Instance` and `TargetADS` versions) returns a
   :class:`~ampapi.modules.RunningTask`, which is what AMP 2.8 sends. 5.0 raised :exc:`~ampapi.errors.AMPAPIKeyError` on every

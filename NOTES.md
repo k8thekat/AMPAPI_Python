@@ -314,8 +314,9 @@ Found while triggering them (vm1, 2026-10-24):
   both Targets. Both Targets' `fitness` was null in `GetInstances`, and `GetProvisionFitness` answered null too (#3).
   On the Professional licence (`feature_set` `RunAMP`, `ControllerTargetMode`, `InstanceCloning`) fitness stayed
   null after an ADS restart, and no setting names it (#30 phase B, 2026-10-24).
-  The licence is what fills it (2026-11-25, #3 and #29). vm1 has had the Patreon Supporter licence since the OIDC tests
-  (its `feature_set` adds `Templating`, `SSOLogins`, `InstanceMigration` and more). There, `GetProvisionFitness` and the
+  The licence looks like what fills it (2026-11-25, #3 and #29). vm1 answered null on Professional, and has had the
+  Patreon Supporter licence since the OIDC tests (its `feature_set` adds `Templating`, `SSOLogins`, `InstanceMigration`
+  and more). There, `GetProvisionFitness` and the
   "Local Instances" Target's `fitness` both answer the same 11 keys, now `Provision` and `Fitness`. vm2, still on
   Professional, answers null for both. The capture is `_responses/2.8.0.8/ads/getprovisionfitness.json`.
   `deploy_template` then worked on vm1: AMP logged "Evaluated 2 deployment target(s)", chose "Local Instance Manager
@@ -326,6 +327,9 @@ Found while triggering them (vm1, 2026-10-24):
   `module_name` from `GetSupportedApplications`, eg. `Minecraft`. With `MinecraftModule`, AMP answered "Couldn't
   determine OS compatibility".
   - `score_zero_factors` was `[]` in every answer, so its entries are still `Any`.
+- `UpgradeInstance` answers with the same shape as `DeployTemplate`: a `RunningTask` that also carries `status` and
+  `reason` (vm1, 2026-11-25, `_responses/2.8.0.8/ads/upgradeinstance.json`). 5.0's wrapper checked for an
+  `ActionResult`, so it raised `AMPAPIKeyError` on every call although the upgrade task started. Fixed in 5.1.0.
 - `InstanceDatastore.to_dict()` had the same problem, although `add_datastore` and `update_datastore` send it as one
   nested object (#43, see "Endpoint shapes confirmed on the VMs"). AMP reads the nested object's keys by name too.
 - `CreateInstance.ip_binding` defaulted to `"192.168.0.1"`, as in 4.6.0. AMP's create task fails on a machine without
